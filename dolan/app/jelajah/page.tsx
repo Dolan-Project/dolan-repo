@@ -45,7 +45,7 @@ export default function JelajahPage() {
           className="absolute inset-0 bg-cover bg-center"
           style={{ backgroundImage: `url('${ASSETS.mapBali}')` }}
         >
-          <div className="absolute inset-0 bg-gradient-to-b from-surface/35 via-transparent to-surface/65" />
+          <div className="absolute inset-0 bg-linear-to-b from-surface/35 via-transparent to-surface/65" />
           <svg
             className="absolute inset-0 h-full w-full opacity-80"
             viewBox="0 0 390 700"
@@ -70,7 +70,7 @@ export default function JelajahPage() {
 
           <div className="absolute left-[28%] top-[26%]">
             <span className="absolute inset-0 animate-ping rounded-full bg-primary-container/30" />
-            <div className="relative flex max-w-[11rem] items-center gap-1.5 rounded-full bg-surface-container-lowest p-1 pr-2.5 shadow-lg">
+            <div className="relative flex max-w-44 items-center gap-1.5 rounded-full bg-surface-container-lowest p-1 pr-2.5 shadow-lg">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 alt=""
@@ -83,7 +83,7 @@ export default function JelajahPage() {
             </div>
           </div>
           <div className="absolute left-[52%] top-[42%]">
-            <div className="relative flex max-w-[10rem] items-center gap-1.5 rounded-full bg-surface-container-lowest p-1 pr-2.5 shadow-lg">
+            <div className="relative flex max-w-40 items-center gap-1.5 rounded-full bg-surface-container-lowest p-1 pr-2.5 shadow-lg">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 alt=""
@@ -97,7 +97,7 @@ export default function JelajahPage() {
           </div>
         </div>
 
-        <div className="relative z-10 mx-auto max-w-[1200px] px-margin pt-3 md:px-margin-desktop md:pt-5">
+        <div className="relative z-10 mx-auto max-w-300 px-margin pt-3 md:px-margin-desktop md:pt-5">
           <div className="flex gap-2">
             <div className="flex flex-1 items-center gap-2.5 rounded-full bg-surface-container-lowest/95 px-3.5 py-2.5 shadow-lg backdrop-blur-md">
               <Icon name="search" className="text-[20px] text-secondary" />
@@ -146,8 +146,8 @@ export default function JelajahPage() {
           </div>
         </div>
 
-        <div className="relative z-10 mx-auto hidden max-w-[1200px] grid-cols-12 gap-5 px-margin-desktop pb-8 pt-5 md:grid">
-          <div className="col-span-5 col-start-8 max-h-[calc(100dvh-9rem)] overflow-y-auto rounded-[24px] bg-surface-container-lowest/95 p-4 shadow-xl backdrop-blur-xl">
+        <div className="relative z-10 mx-auto hidden max-w-300 grid-cols-12 gap-5 px-margin-desktop pb-8 pt-5 md:grid">
+          <div className="col-span-5 col-start-8 max-h-[calc(100dvh-9rem)] overflow-y-auto rounded-t-3xl bg-surface-container-lowest/95 p-4 shadow-xl backdrop-blur-xl">
             <div className="mb-3 flex items-start justify-between gap-3">
               <div>
                 <h2 className="type-subtitle text-on-surface">
@@ -182,7 +182,7 @@ export default function JelajahPage() {
           }`}
         >
           <div
-            className={`rounded-t-[24px] bg-surface-container-lowest shadow-[0_-12px_40px_rgba(17,24,39,0.12)] transition-all ${
+            className={`rounded-t-3xl bg-surface-container-lowest shadow-[0_-12px_40px_rgba(17,24,39,0.12)] transition-all ${
               sheetOpen ? "h-full overflow-y-auto pb-20" : "pb-16"
             }`}
           >
