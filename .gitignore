@@ -56,3 +56,6 @@ stitch-html/
 # embedded postgres used by store tests
 **/.tmp-pg*/
 
+# local database dumps
+/backups/
+

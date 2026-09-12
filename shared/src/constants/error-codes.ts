@@ -13,6 +13,7 @@ export const AuthErrorCode = {
   QUOTA_EXCEEDED: "QUOTA_EXCEEDED",
   INVALID_GENERATION: "INVALID_GENERATION",
   ROOM_READ_ONLY: "ROOM_READ_ONLY",
+  RATE_LIMITED: "RATE_LIMITED",
 } as const;
 
 export type AuthErrorCode = (typeof AuthErrorCode)[keyof typeof AuthErrorCode];

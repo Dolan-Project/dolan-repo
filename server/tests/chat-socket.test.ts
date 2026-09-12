@@ -74,6 +74,43 @@ describe("chat socket rooms", () => {
       );
     });
   });
+
+  it("stops delivering room events after a member is evicted", async () => {
+    const store = new MemoryChatStore();
+    store.seedTrip({ tripId: TRIP, hostUserId: HOST, participants: [MEMBER] });
+    const chat = new ChatService(store);
+    const auth = new AuthService(new MockAuthAdapter(), new MemoryUserRepository());
+    const httpServer = createServer();
+    const sockets = createSocketServer(httpServer, auth, chat);
+    await new Promise<void>((resolve) => httpServer.listen(0, resolve));
+    const address = httpServer.address();
+    if (!address || typeof address === "string") throw new Error("no port");
+    const url = `http://127.0.0.1:${address.port}`;
+
+    const member = await connectClient(url, cookieFor("mock-admin"));
+    const joined = await new Promise<{ ok: boolean }>((resolve) => {
+      member.emit("room.join", { tripId: TRIP }, resolve);
+    });
+    expect(joined.ok).toBe(true);
+    const received: unknown[] = [];
+    member.on("message.created", (payload) => received.push(payload));
+
+    await chat.evictFromRoom(TRIP, MEMBER);
+    await chat.sendMessage(TRIP, HOST, {
+      clientMessageId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      body: "setelah keluar",
+    });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(received).toHaveLength(0);
+
+    closers.push(async () => {
+      member.close();
+      sockets.io.close();
+      await new Promise<void>((resolve, reject) =>
+        httpServer.close((error) => (error ? reject(error) : resolve())),
+      );
+    });
+  });
 });
 
 function connectClient(url: string, cookie: string): Promise<ClientSocket> {

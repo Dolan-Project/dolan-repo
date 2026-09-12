@@ -66,5 +66,6 @@ export interface QuotaStore {
     period: string;
     userId: string | null;
     limit: number;
+    estimatedCost?: number;
   }): Promise<number>;
 }

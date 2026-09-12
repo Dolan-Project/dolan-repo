@@ -59,6 +59,12 @@ export class SearchService {
   async searchTrips(query: TripSearchQuery) {
     const city = normalizeCityName(query.city) ?? query.city;
     this.assertCity(city);
+    if (query.sort === "nearest" && (query.lat === undefined || query.lng === undefined)) {
+      throw badRequest(SearchErrorCode.INVALID_FILTER, "Nearest sort requires lat and lng", {
+        lat: "Required for sort=nearest",
+        lng: "Required for sort=nearest",
+      });
+    }
     const result = await this.store.searchPublicTrips({ ...query, city });
     return apiPage(result.items, query.page, query.limit, result.total);
   }

@@ -33,8 +33,20 @@ import type { StoredComment, StoredJoin, StoredTrip, TripAccess, TripStore } fro
 
 const IDEMPOTENCY_TTL_MS = 24 * 60 * 60 * 1000;
 
+export type TripRealtime = {
+  evictFromRoom?(tripId: string, userId: string): Promise<unknown> | unknown;
+  onPublished?(tripId: string, hostUserId: string): Promise<unknown> | unknown;
+  onJoinRequested?(tripId: string, userId: string): Promise<unknown> | unknown;
+  onMemberJoined?(tripId: string, userId: string): Promise<unknown> | unknown;
+  onJoinClosed?(tripId: string, userId: string): Promise<unknown> | unknown;
+  onCancelled?(tripId: string): Promise<unknown> | unknown;
+};
+
 export class TripService {
-  constructor(private readonly store: TripStore) {}
+  constructor(
+    private readonly store: TripStore,
+    private readonly realtime?: TripRealtime,
+  ) {}
 
   async createDraft(actor: SessionActor, body: CreateTripBody, idempotencyKey: string | undefined) {
     const user = requireUser(actor);
@@ -173,7 +185,9 @@ export class TripService {
         });
         await this.store.ensureHostMembership(tripId, user.id);
         await this.store.ensureChatRoom(tripId);
-        return this.toDetail(updated, user);
+        const detail = await this.toDetail(updated, user);
+        await this.realtime?.onPublished?.(tripId, user.id);
+        return detail;
       });
     });
   }
@@ -201,6 +215,7 @@ export class TripService {
   async cancel(actor: SessionActor, tripId: string) {
     const detail = await this.transition(actor, tripId, "CANCELLED", ["DRAFT", "OPEN", "CLOSED", "ONGOING"]);
     await this.store.setChatReadOnly(tripId, new Date());
+    await this.realtime?.onCancelled?.(tripId);
     return detail;
   }
 
@@ -302,7 +317,9 @@ export class TripService {
           targetType: "trip",
           targetId: tripId,
         });
-        return this.toJoin(join);
+        const created = await this.toJoin(join);
+        await this.realtime?.onJoinRequested?.(tripId, user.id);
+        return created;
       });
     });
   }
@@ -323,7 +340,8 @@ export class TripService {
       if (!request) throw hiddenTrip();
       return this.store.withTripLock(request.tripId, async (trip) => {
         await this.assertHost(trip, user);
-        if (request.status !== "PENDING") {
+        const locked = await this.store.getJoinRequest(requestId);
+        if (!locked || locked.status !== "PENDING") {
           throw badRequest(TripErrorCode.INVALID_TRANSITION, "Only pending requests can be reviewed");
         }
         if (trip.status === "CANCELLED" || trip.status === "COMPLETED") {
@@ -337,22 +355,25 @@ export class TripService {
           if (trip.maxParticipants != null && active >= trip.maxParticipants) {
             throw conflict(TripErrorCode.TRIP_FULL, "This trip is full");
           }
-          await this.store.addParticipant(trip.id, request.userId);
+          await this.store.addParticipant(trip.id, locked.userId);
         }
-        const updated = await this.store.updateJoin(request.id, {
+        const updated = await this.store.updateJoin(locked.id, {
           status: decision === "accept" ? "ACCEPTED" : "REJECTED",
           reviewedByUserId: user.id,
           reviewedAt: new Date().toISOString(),
         });
         await this.store.createNotification({
-          recipientUserId: request.userId,
+          recipientUserId: locked.userId,
           actorUserId: user.id,
           type: "join_request.reviewed",
           targetType: "join_request",
-          targetId: request.id,
+          targetId: locked.id,
           data: { decision },
         });
-        return this.toJoin(updated);
+        const reviewed = await this.toJoin(updated);
+        if (decision === "accept") await this.realtime?.onMemberJoined?.(trip.id, locked.userId);
+        else await this.realtime?.onJoinClosed?.(trip.id, locked.userId);
+        return reviewed;
       });
     });
   }
@@ -372,7 +393,9 @@ export class TripService {
       throw badRequest(TripErrorCode.INVALID_TRANSITION, "Only a pending request can be withdrawn");
     }
     const updated = await this.store.updateJoin(request.id, { status: "WITHDRAWN" });
-    return this.toJoin(updated);
+    const withdrawn = await this.toJoin(updated);
+    await this.realtime?.onJoinClosed?.(request.tripId, user.id);
+    return withdrawn;
   }
 
   async listComments(actor: SessionActor, tripId: string, page: number, limit: number) {
@@ -451,7 +474,7 @@ export class TripService {
 
   async leaveTrip(actor: SessionActor, tripId: string) {
     const user = requireUser(actor);
-    return this.store.withTripLock(tripId, async (trip) => {
+    const detail = await this.store.withTripLock(tripId, async (trip) => {
       if (trip.hostUserId === user.id) {
         throw forbidden(AuthErrorCode.FORBIDDEN, "Host cannot leave; cancel the trip instead");
       }
@@ -472,6 +495,8 @@ export class TripService {
       });
       return this.toDetail(trip, user);
     });
+    await this.realtime?.evictFromRoom?.(tripId, user.id);
+    return detail;
   }
 
   async accessFor(tripId: string, userId: string | null): Promise<TripAccessContext | null> {
@@ -647,6 +672,9 @@ export class TripService {
       participantCount: members.filter((member) => member.membershipStatus === "ACTIVE").length,
       pendingRequestCount: joins.filter((row) => row.status === "PENDING").length,
       coverPlace: await this.store.getCoverPlace(trip.id),
+      publicMeetingPointLabel: trip.publicMeetingPointLabel,
+      publicMeetingPointLatitude: trip.publicMeetingPointLatitude,
+      publicMeetingPointLongitude: trip.publicMeetingPointLongitude,
       host: host ? toPublicUser(host) : placeholderUser(trip.hostUserId),
       maxParticipants: trip.maxParticipants,
     };

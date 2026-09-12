@@ -10,17 +10,6 @@ function attachAccess(chat: ChatService, capability: "read_chat" | "send_message
     async (req: import("express").Request, _res: import("express").Response, next: import("express").NextFunction) => {
       try {
         const tripId = String(req.params.tripId);
-        const queryStatus = String(req.query.membership ?? "");
-        const queryRole = String(req.query.role ?? "");
-        if (queryStatus || queryRole) {
-          withTripContext({
-            tripId,
-            memberRole: queryRole === "HOST" || queryRole === "PARTICIPANT" ? queryRole : null,
-            membershipStatus: queryStatus === "ACTIVE" ? "ACTIVE" : null,
-            joinRequestStatus: queryStatus === "PENDING" ? "PENDING" : null,
-          })(req, _res, next);
-          return;
-        }
         const access = await chat.accessFor(tripId, req.authUser!.id);
         withTripContext({
           tripId,

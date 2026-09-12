@@ -8,7 +8,7 @@ import { providerUnavailable } from "../src/lib/api-error.ts";
 import { MockAuthAdapter } from "../src/integrations/supabase/mock-auth-adapter.ts";
 import { AuthService } from "../src/modules/auth/auth-service.ts";
 import { MemoryUserRepository } from "../src/modules/auth/user-repository.ts";
-import { MEMORY_TEMPLATE_ID, MemorySearchStore } from "../src/modules/search/memory-store.ts";
+import { MEMORY_PLACE_MALIOBORO, MEMORY_TEMPLATE_ID, MemorySearchStore } from "../src/modules/search/memory-store.ts";
 
 function app(search = createMemorySearchService()) {
   return createApp(new AuthService(new MockAuthAdapter(), new MemoryUserRepository()), () => 0, search);
@@ -58,6 +58,92 @@ describe("WIRA-D2 search and popularity APIs", () => {
     const ids = response.body.data.map((trip: { id: string }) => trip.id);
     expect(ids).toContain("public-trip-1");
     expect(ids).not.toContain("private-trip-1");
+  });
+
+  it("returns each public trip once when a place appears twice on the itinerary", async () => {
+    const store = new MemorySearchStore();
+    const original = store.trips.find((item) => item.id === "public-trip-1");
+    if (!original) throw new Error("missing seeded public trip");
+    store.trips.push({
+      ...original,
+      visitingGooglePlaceIds: [...original.visitingGooglePlaceIds, MEMORY_PLACE_MALIOBORO.googlePlaceId],
+    });
+    const search = createMemorySearchService({ store });
+    const response = await request(app(search)).get(
+      `/api/v1/places/${MEMORY_PLACE_MALIOBORO.googlePlaceId}/trips`,
+    );
+    expect(response.status).toBe(200);
+    const ids = response.body.data.map((item: { id: string }) => item.id);
+    expect(ids.filter((id: string) => id === "public-trip-1")).toHaveLength(1);
+  });
+
+  it("sorts trips by soonest departure and keeps recent as an alias", async () => {
+    const store = new MemorySearchStore();
+    const later = store.trips.find((item) => item.id === "public-trip-1");
+    if (!later) throw new Error("missing seeded public trip");
+    later.startDate = "2099-12-01";
+    store.trips.push({
+      ...later,
+      id: "public-trip-soon",
+      title: "Berangkat Lebih Cepat",
+      startDate: "2099-10-01",
+      endDate: "2099-10-03",
+      visitingGooglePlaceIds: [],
+    });
+    const search = createMemorySearchService({ store });
+    const soonest = await request(app(search)).get("/api/v1/search/trips?city=Yogyakarta&sort=soonest");
+    const recent = await request(app(search)).get("/api/v1/search/trips?city=Yogyakarta&sort=recent");
+    expect(soonest.status).toBe(200);
+    expect(soonest.body.data.map((item: { id: string }) => item.id).slice(0, 2)).toEqual([
+      "public-trip-soon",
+      "public-trip-1",
+    ]);
+    expect(recent.body.data[0].id).toBe("public-trip-soon");
+  });
+
+  it("sorts trips by nearest public meeting point", async () => {
+    const store = new MemorySearchStore();
+    const malioboro = store.trips.find((item) => item.id === "public-trip-1");
+    if (!malioboro) throw new Error("missing seeded public trip");
+    store.trips.push({
+      ...malioboro,
+      id: "public-trip-prambanan",
+      title: "Prambanan Sunrise",
+      publicMeetingPointLabel: "Candi Prambanan",
+      publicMeetingPointLatitude: -7.752,
+      publicMeetingPointLongitude: 110.4915,
+      visitingGooglePlaceIds: ["ChIJf5UqGYeXeY4RwZVQ9n0s7oE"],
+    });
+    const search = createMemorySearchService({ store });
+    const response = await request(app(search)).get(
+      "/api/v1/search/trips?city=Yogyakarta&sort=nearest&lat=-7.752&lng=110.4915",
+    );
+    expect(response.status).toBe(200);
+    expect(response.body.data[0].id).toBe("public-trip-prambanan");
+    expect(response.body.data[0].publicMeetingPointLatitude).toBe(-7.752);
+  });
+
+  it("rejects trip nearest sort without coordinates", async () => {
+    const response = await request(app()).get("/api/v1/search/trips?sort=nearest");
+    expect(response.status).toBe(400);
+    expect(response.body.error.code).toBe(SearchErrorCode.INVALID_FILTER);
+  });
+
+  it("sorts trips by Dolan popularity", async () => {
+    const store = new MemorySearchStore();
+    const seeded = store.trips.find((item) => item.id === "public-trip-1");
+    if (!seeded) throw new Error("missing seeded public trip");
+    store.trips.push({
+      ...seeded,
+      id: "public-trip-busy",
+      title: "Trip Ramai",
+      participantCount: 12,
+      visitingGooglePlaceIds: [],
+    });
+    const search = createMemorySearchService({ store });
+    const response = await request(app(search)).get("/api/v1/search/trips?city=Yogyakarta&sort=popular");
+    expect(response.status).toBe(200);
+    expect(response.body.data[0].id).toBe("public-trip-busy");
   });
 
   it("labels curated templates and does not mark unused templates as popular", async () => {

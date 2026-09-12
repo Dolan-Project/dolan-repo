@@ -25,7 +25,8 @@ import { SequelizeQuotaStore } from "./modules/search/sequelize-quota.ts";
 import { SequelizeSearchStore } from "./modules/search/sequelize-store.ts";
 import { MemoryTripStore } from "./modules/trips/memory-store.ts";
 import { SequelizeTripStore } from "./modules/trips/sequelize-store.ts";
-import { TripService } from "./modules/trips/trip-service.ts";
+import { TripService, type TripRealtime } from "./modules/trips/trip-service.ts";
+import { MemorySocialStore, SequelizeSocialStore } from "./modules/social/social-queries.ts";
 
 export function createAuthAdapter(): AuthAdapter {
   if (env.authAdapter === "supabase" && env.supabaseUrl && env.supabaseServiceRoleKey) {
@@ -94,11 +95,20 @@ export function createProductionSearchService() {
   );
 }
 
-export function createMemoryTripService(store = new MemoryTripStore()) {
-  return new TripService(store);
+export function createMemoryTripService(store = new MemoryTripStore(), realtime?: TripRealtime) {
+  return new TripService(store, realtime);
 }
 
-export function createProductionTripService() {
+export function createProductionTripService(realtime?: TripRealtime) {
   initModels();
-  return new TripService(new SequelizeTripStore());
+  return new TripService(new SequelizeTripStore(), realtime);
+}
+
+export function createMemorySocialStore() {
+  return new MemorySocialStore();
+}
+
+export function createProductionSocialStore() {
+  initModels();
+  return new SequelizeSocialStore();
 }
