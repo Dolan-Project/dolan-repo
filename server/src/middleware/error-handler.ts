@@ -1,4 +1,5 @@
 import type { NextFunction, Request, Response } from "express";
+import { ZodError } from "zod";
 import { AuthErrorCode } from "@dolan/shared";
 import { HttpError, toApiError } from "../lib/api-error.ts";
 import { logger } from "../lib/logger.ts";
@@ -8,6 +9,12 @@ export function errorHandler(error: unknown, req: Request, res: Response, _next:
 
   if (error instanceof HttpError) {
     res.status(error.status).json(toApiError(error, requestId));
+    return;
+  }
+
+  if (error instanceof ZodError) {
+    const fields = Object.fromEntries(error.issues.map((issue) => [issue.path.join(".") || "body", issue.message]));
+    res.status(422).json(toApiError(new HttpError(422, "VALIDATION_ERROR", "Request validation failed", fields), requestId));
     return;
   }
 

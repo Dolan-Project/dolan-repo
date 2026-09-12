@@ -3,3 +3,7 @@ export type UserStatus = "ACTIVE" | "RESTRICTED" | "SUSPENDED";
 export type TripMemberRole = "HOST" | "PARTICIPANT";
 export type MembershipStatus = "ACTIVE" | "LEFT" | "REMOVED";
 export type JoinRequestStatus = "PENDING" | "ACCEPTED" | "REJECTED" | "WITHDRAWN";
+export type GenerationJobStatus = "QUEUED" | "PROCESSING" | "SUCCEEDED" | "FAILED";
+export type GenerationJobType = "GENERATE_ITINERARY" | "REGENERATE_ITINERARY";
+export type ItinerarySource = "MANUAL" | "AI" | "TEMPLATE" | "REGENERATED";
+export type BudgetBasis = "PER_PERSON" | "GROUP";

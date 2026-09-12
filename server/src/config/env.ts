@@ -17,6 +17,9 @@ export const env = {
   supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY ?? "",
   supabaseCookiePrefix: process.env.SUPABASE_COOKIE_PREFIX ?? "sb-",
   logLevel: process.env.LOG_LEVEL ?? "info",
+  workerId: process.env.WORKER_ID ?? "worker-1",
+  jobPollIntervalMs: Number(process.env.JOB_POLL_INTERVAL_MS ?? 2000),
+  jobLockTimeoutMs: Number(process.env.JOB_LOCK_TIMEOUT_MS ?? 300000),
 };
 
 export function isProduction(): boolean {

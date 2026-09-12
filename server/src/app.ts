@@ -8,10 +8,14 @@ import { errorHandler, notFoundHandler } from "./middleware/error-handler.ts";
 import { requestContext } from "./middleware/request-context.ts";
 import { createAuthRouter } from "./modules/auth/auth-routes.ts";
 import type { AuthService } from "./modules/auth/auth-service.ts";
+import { createJobService } from "./container.ts";
+import { createJobRouter } from "./modules/jobs/job-routes.ts";
+import type { GenerationJobService } from "./modules/jobs/job-service.ts";
 
 export function createApp(
   authService: AuthService,
   disconnectUser: (userId: string) => number = () => 0,
+  jobService: GenerationJobService = createJobService(),
 ) {
   const app = express();
   app.disable("x-powered-by");
@@ -33,6 +37,7 @@ export function createApp(
   });
 
   app.use("/api/v1/auth", createAuthRouter(authService, disconnectUser));
+  app.use("/api/v1", createJobRouter(jobService));
 
   app.get("/api/v1/public/ping", requireCapability("read_public"), (_req, res) => {
     res.json(apiSuccess({ ok: true }));

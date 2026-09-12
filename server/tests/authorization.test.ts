@@ -62,6 +62,12 @@ describe("authorization rules", () => {
     if (!decision.allowed) expect(decision.code).toBe("PENDING_MEMBER");
   });
 
+  it("blocks suspended accounts from draft creation", () => {
+    const decision = authorize(userActor({ status: "SUSPENDED" }), "create_draft");
+    expect(decision.allowed).toBe(false);
+    if (!decision.allowed) expect(decision.code).toBe("ACCOUNT_SUSPENDED");
+  });
+
   it("allows active participants to read chat", () => {
     const actor = userActor({}, {
       tripId: "trip-1",

@@ -23,6 +23,10 @@ Guards:
 
 `role` dan `status` tidak diterima dari client. Token tidak dikembalikan di body dan tidak ditulis ke log.
 
+Token mock development: `mock-verified-complete`, `mock-unverified`, `mock-incomplete-profile`, `mock-admin`.
+
+Generate itinerary: lihat `docs/jobs-contract.md`.
+
 ## Socket.IO
 
 - Path: `/socket.io`
