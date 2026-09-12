@@ -38,6 +38,12 @@ export { fieldErrorsFromZod } from "./schemas/zod-fields.ts";
 export type { JoinRequest, JoinReviewDecision } from "./types/join.ts";
 export type { TripComment, ChatMessage } from "./types/chat.ts";
 export {
+  sendMessageSchema,
+  listMessagesQuerySchema,
+  markReadSchema,
+} from "./schemas/chat.ts";
+export type { SendMessageInput } from "./schemas/chat.ts";
+export {
   API_V1_PREFIX,
   EXPRESS_PATHS,
   userByUsernamePath,

@@ -4,6 +4,7 @@ import { env } from "./config/env.ts";
 import { createApp } from "./app.ts";
 import {
   createAuthAdapter,
+  createChatService,
   createJobService,
   createProductionJobService,
   createProductionSearchService,
@@ -29,13 +30,15 @@ async function main() {
 
   const authService = new AuthService(createAuthAdapter(), createUserRepository(databaseReady));
   const jobService = databaseReady ? createProductionJobService() : createJobService();
+  const chatService = createChatService(databaseReady);
   const httpServer = createServer();
-  const sockets = createSocketServer(httpServer, authService);
+  const sockets = createSocketServer(httpServer, authService, chatService);
   const app = createApp(
     authService,
     sockets.disconnectUser,
     databaseReady ? createProductionSearchService() : undefined,
     jobService,
+    chatService,
   );
 
   httpServer.on("request", app);
