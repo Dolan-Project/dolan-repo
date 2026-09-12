@@ -5,7 +5,10 @@ import type { GenerationJobService } from "./job-service.ts";
 export function startGenerationWorker(jobs: GenerationJobService, workerId = env.workerId) {
   const interval = setInterval(() => {
     void jobs.processNext(workerId).catch((error) => {
-      logger.error("Worker tick failed", { name: error instanceof Error ? error.name : "UnknownError" });
+      logger.error("Worker tick failed", {
+        name: error instanceof Error ? error.name : "UnknownError",
+        message: error instanceof Error ? error.message : "Unknown error",
+      });
     });
   }, env.jobPollIntervalMs);
 

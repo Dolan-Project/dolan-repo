@@ -52,7 +52,7 @@ export class SequelizeJobRepository implements JobRepository {
          WHERE status = 'QUEUED'
            AND (
              attempt_count = 0
-             OR updated_at <= :now - ((:backoffMs / 1000.0) * POWER(2, GREATEST(attempt_count - 1, 0))) * INTERVAL '1 second'
+             OR updated_at <= NOW() - ((:backoffMs / 1000.0) * POWER(2, GREATEST(attempt_count - 1, 0))) * INTERVAL '1 second'
            )
          ORDER BY created_at ASC
          LIMIT 1
@@ -60,7 +60,7 @@ export class SequelizeJobRepository implements JobRepository {
         {
           transaction,
           type: QueryTypes.SELECT,
-          replacements: { now, backoffMs: env.jobRetryBackoffMs },
+          replacements: { backoffMs: env.jobRetryBackoffMs },
         },
       );
       const id = rows[0]?.id;
