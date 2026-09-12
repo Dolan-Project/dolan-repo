@@ -2,16 +2,20 @@ import cors from "cors";
 import express from "express";
 import { apiSuccess } from "@dolan/shared";
 import { env } from "./config/env.ts";
+import { createMemorySearchService } from "./container.ts";
 import { createAuthenticate, requireLogin } from "./middleware/authenticate.ts";
 import { requireCapability, withTripContext } from "./middleware/authorize.ts";
 import { errorHandler, notFoundHandler } from "./middleware/error-handler.ts";
 import { requestContext } from "./middleware/request-context.ts";
 import { createAuthRouter } from "./modules/auth/auth-routes.ts";
 import type { AuthService } from "./modules/auth/auth-service.ts";
+import { createSearchRouter } from "./modules/search/search-routes.ts";
+import type { SearchService } from "./modules/search/search-service.ts";
 
 export function createApp(
   authService: AuthService,
   disconnectUser: (userId: string) => number = () => 0,
+  search: SearchService = createMemorySearchService(),
 ) {
   const app = express();
   app.disable("x-powered-by");
@@ -33,6 +37,7 @@ export function createApp(
   });
 
   app.use("/api/v1/auth", createAuthRouter(authService, disconnectUser));
+  app.use("/api/v1", createSearchRouter(search));
 
   app.get("/api/v1/public/ping", requireCapability("read_public"), (_req, res) => {
     res.json(apiSuccess({ ok: true }));
