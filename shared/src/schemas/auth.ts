@@ -5,9 +5,7 @@ const emailField = z
   .trim()
   .email("Format email belum tepat (contoh: nama@domain.com)");
 
-const passwordField = z
-  .string()
-  .min(8, "Kata sandi minimal 8 karakter");
+const passwordField = z.string().min(8, "Kata sandi minimal 8 karakter");
 
 export const loginSchema = z.object({
   email: emailField,
@@ -42,7 +40,21 @@ export const resetPasswordSchema = z
     path: ["confirmPassword"],
   });
 
+export const sessionResponseSchema = z.object({
+  id: z.string().uuid(),
+  authReference: z.string(),
+  email: z.string().email(),
+  role: z.enum(["USER", "ADMIN"]),
+  status: z.enum(["ACTIVE", "RESTRICTED", "SUSPENDED"]),
+  emailVerified: z.boolean(),
+  profileComplete: z.boolean(),
+  username: z.string().nullable(),
+  displayName: z.string().nullable(),
+  domicile: z.string().nullable(),
+});
+
 export type LoginInput = z.infer<typeof loginSchema>;
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
+export type SessionResponse = z.infer<typeof sessionResponseSchema>;

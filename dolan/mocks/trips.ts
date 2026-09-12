@@ -2,12 +2,12 @@ import type {
   ApiError,
   ApiSuccess,
   MyTripRole,
-  TripSummary,
+  MyTripSummary,
 } from "@/lib/contracts";
 import { samplePublicUser } from "./fixtures";
 import { createApiError, type MockScenario } from "./scenarios";
 
-const sampleTrip: TripSummary = {
+const sampleTrip: MyTripSummary = {
   id: "trip_1",
   title: "Jelajah Yogyakarta",
   visibility: "PUBLIC",
@@ -23,7 +23,7 @@ const sampleTrip: TripSummary = {
 export function mockListMyTrips(
   scenario: MockScenario,
   role: MyTripRole,
-): ApiSuccess<TripSummary[]> | ApiError {
+): ApiSuccess<MyTripSummary[]> | ApiError {
   if (scenario === "unauthorized") {
     return createApiError("UNAUTHORIZED", "Tidak sah");
   }
@@ -38,7 +38,7 @@ export function mockListMyTrips(
 
 export function mockGetTrip(
   scenario: MockScenario,
-): ApiSuccess<TripSummary> | ApiError {
+): ApiSuccess<MyTripSummary> | ApiError {
   if (scenario === "empty") {
     return createApiError("NOT_FOUND", "Trip tidak ditemukan");
   }
@@ -50,7 +50,7 @@ export function mockGetTrip(
 
 export function mockCreateTrip(
   scenario: MockScenario,
-): ApiSuccess<TripSummary> | ApiError {
+): ApiSuccess<MyTripSummary> | ApiError {
   if (scenario === "validationError") {
     return createApiError("INVALID_DATE", "Tanggal tidak valid");
   }
@@ -59,7 +59,7 @@ export function mockCreateTrip(
 
 export function mockPublishTrip(
   scenario: MockScenario,
-): ApiSuccess<TripSummary> | ApiError {
+): ApiSuccess<MyTripSummary> | ApiError {
   if (scenario === "validationError") {
     return createApiError("PROFILE_INCOMPLETE", "Lengkapi profil dulu");
   }

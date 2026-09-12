@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { TripSummary } from "./trip.js";
+import type { MyTripSummary } from "./trip.js";
 import type { PublicUser } from "./kickoff.js";
 
 const host: PublicUser = {
@@ -22,9 +22,9 @@ const host: PublicUser = {
   },
 };
 
-describe("TripSummary", () => {
+describe("MyTripSummary", () => {
   it("can be constructed without payment fields", () => {
-    const trip: TripSummary = {
+    const trip: MyTripSummary = {
       id: "t1",
       title: "Bali 3H2M",
       visibility: "PUBLIC",
