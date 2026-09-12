@@ -1,4 +1,6 @@
 import type { GenerationJob, GenerationJobStatus, GenerationJobType } from "@dolan/shared";
+import { env } from "../../config/env.ts";
+import { isJobReadyForClaim } from "./backoff.ts";
 
 export type JobRecord = GenerationJob & {
   idempotencyKey: string;
@@ -75,7 +77,9 @@ export class MemoryJobRepository implements JobRepository {
   }
 
   async claimNextQueued(workerId: string, now = new Date()): Promise<JobRecord | null> {
-    const next = [...this.jobs.values()].find((job) => job.status === "QUEUED");
+    const next = [...this.jobs.values()]
+      .filter((job) => job.status === "QUEUED" && isJobReadyForClaim(job, now, env.jobRetryBackoffMs))
+      .sort((left, right) => left.createdAt.localeCompare(right.createdAt))[0];
     if (!next) return null;
     const claimed: JobRecord = {
       ...next,

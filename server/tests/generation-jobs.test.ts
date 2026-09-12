@@ -98,6 +98,20 @@ describe("generation job skeleton", () => {
     expect(jobs.getVersions("trip-draft")).toHaveLength(0);
   });
 
+  it("rejects a placeholder trip id with 404 when the database trip is required", async () => {
+    const auth = new AuthService(new MockAuthAdapter(), new MemoryUserRepository());
+    const jobs = new GenerationJobService(new MemoryJobRepository(), new MockGeminiAdapter(), {
+      requireDatabaseTrip: true,
+    });
+    const response = await request(createApp(auth, () => 0, undefined, jobs))
+      .post("/api/v1/trips/<trip-uuid>/generate")
+      .set("Authorization", "Bearer mock-verified-complete")
+      .set("Idempotency-Key", keyA)
+      .send({ type: "GENERATE_ITINERARY" });
+    expect(response.status).toBe(404);
+    expect(response.body.error.code).toBe("NOT_FOUND");
+  });
+
   it("requeues a stale processing job", async () => {
     const repo = new MemoryJobRepository();
     const jobs = new GenerationJobService(repo, new MockGeminiAdapter());
@@ -117,5 +131,56 @@ describe("generation job skeleton", () => {
     expect(job?.status).toBe("QUEUED");
     expect(job?.selectedVersionId).toBe("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
     expect(jobs.getVersions("trip-draft")).toHaveLength(0);
+  });
+
+  it("does not persist another version when the job already has a result", async () => {
+    const repo = new MemoryJobRepository();
+    let persists = 0;
+    const jobs = new GenerationJobService(repo, new MockGeminiAdapter(), {
+      persistVersion: async () => {
+        persists += 1;
+        return "should-not-run";
+      },
+    });
+    const created = await repo.createOrGetIdempotent({
+      tripId: "trip-draft",
+      requestedBy: "11111111-1111-4111-8111-111111111111",
+      type: "GENERATE_ITINERARY",
+      idempotencyKey: keyA,
+      selectedVersionId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+    });
+    const planted = await repo.getById(created.job.id);
+    planted!.resultVersionId = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+
+    const processed = await jobs.processNext("worker-test");
+    expect(persists).toBe(0);
+    expect(processed?.status).toBe("SUCCEEDED");
+    expect(processed?.resultVersionId).toBe("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb");
+    expect(processed?.selectedVersionId).toBe("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
+  });
+
+  it("waits for backoff before retrying a provider failure", async () => {
+    const repo = new MemoryJobRepository();
+    const jobs = new GenerationJobService(repo, {
+      generate: async () => {
+        throw new Error("PROVIDER_UNAVAILABLE");
+      },
+    });
+    await repo.createOrGetIdempotent({
+      tripId: "trip-draft",
+      requestedBy: "11111111-1111-4111-8111-111111111111",
+      type: "GENERATE_ITINERARY",
+      idempotencyKey: keyA,
+      selectedVersionId: null,
+    });
+
+    const first = await jobs.processNext("worker-test");
+    expect(first?.status).toBe("QUEUED");
+    expect(await jobs.processNext("worker-test")).toBeNull();
+
+    const retried = await jobs.processNext("worker-test", new Date(Date.now() + 3_000));
+    expect(retried?.status).toBe("FAILED");
+    expect(retried?.errorCode).toBe("PROVIDER_UNAVAILABLE");
+    expect(retried?.draftPreserved).toBe(true);
   });
 });

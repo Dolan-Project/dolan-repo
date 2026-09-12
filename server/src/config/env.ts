@@ -24,6 +24,9 @@ export const env = {
   workerId: process.env.WORKER_ID ?? "worker-1",
   jobPollIntervalMs: Number(process.env.JOB_POLL_INTERVAL_MS ?? 2000),
   jobLockTimeoutMs: Number(process.env.JOB_LOCK_TIMEOUT_MS ?? 300000),
+  jobRetryBackoffMs: Number(process.env.JOB_RETRY_BACKOFF_MS ?? 2000),
+  geminiApiKey: process.env.GEMINI_API_KEY ?? "",
+  geminiModel: process.env.GEMINI_MODEL ?? "gemini-2.0-flash",
 };
 
 export function isProduction(): boolean {

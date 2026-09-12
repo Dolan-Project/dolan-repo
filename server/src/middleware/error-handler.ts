@@ -21,6 +21,7 @@ export function errorHandler(error: unknown, req: Request, res: Response, _next:
   logger.error("Unhandled error", {
     requestId,
     name: error instanceof Error ? error.name : "UnknownError",
+    message: error instanceof Error ? error.message : "Unknown error",
   });
 
   res.status(500).json(

@@ -5,6 +5,7 @@ import { createApp } from "./app.ts";
 import {
   createAuthAdapter,
   createJobService,
+  createProductionJobService,
   createProductionSearchService,
   createUserRepository,
 } from "./container.ts";
@@ -27,7 +28,7 @@ async function main() {
   }
 
   const authService = new AuthService(createAuthAdapter(), createUserRepository(databaseReady));
-  const jobService = createJobService();
+  const jobService = databaseReady ? createProductionJobService() : createJobService();
   const httpServer = createServer();
   const sockets = createSocketServer(httpServer, authService);
   const app = createApp(

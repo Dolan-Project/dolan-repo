@@ -8,6 +8,7 @@
     "start": "tsx src/worker.ts"
   },
   "dependencies": {
+    "@dolan/database": "0.1.0",
     "@dolan/shared": "0.1.0"
   },
   "devDependencies": {

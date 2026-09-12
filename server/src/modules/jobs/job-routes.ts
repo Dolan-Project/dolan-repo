@@ -10,12 +10,7 @@ export function createJobRouter(jobs: GenerationJobService) {
   router.post("/trips/:tripId/generate", requireLogin, requireCapability("create_draft"), async (req, res, next) => {
     try {
       const result = await jobs.enqueue({
-        trip: {
-          id: String(req.params.tripId),
-          hostUserId: req.authUser!.id,
-          selectedVersionId: null,
-          exists: true,
-        },
+        tripId: String(req.params.tripId),
         actorId: req.authUser!.id,
         body: req.body,
         idempotencyKey: req.header("idempotency-key") ?? undefined,

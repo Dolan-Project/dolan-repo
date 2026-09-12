@@ -1,21 +1,22 @@
-# Generation job contract (skeleton, ALYA-D2 siap)
+# Generation job contract (ALYA-D2)
 
-Job disimpan di memory sampai Wira menyediakan tabel `generation_jobs`. `dev:server` menjalankan worker in-process agar enqueue dan process memakai store yang sama.
+Saat Postgres tersedia, job memakai tabel `generation_jobs` dan menyimpan version baru di `itinerary_versions`. `trips.current_itinerary_version_id` tidak diubah sampai user memilih version (Rusdi). Snapshot version terkunci disimpan di `generation_jobs.selected_itinerary_version_id`. Persist version dan `SUCCEEDED` satu transaksi. Tanpa DB, worker memakai memory + mock Gemini. Process `worker/` memakai tabel yang sama jika Postgres naik.
 
 ## REST
 
 - `POST /api/v1/trips/:tripId/generate`
-  - Actor: login, pemilik draft
-  - Header: `Idempotency-Key` UUID wajib
+  - Actor: host draft
+  - Header: `Idempotency-Key` UUID
   - Body: `{ "type": "GENERATE_ITINERARY" | "REGENERATE_ITINERARY" }`
-  - 202 job baru, 200 replay key yang sama, 409 `JOB_ALREADY_ACTIVE`
-- `GET /api/v1/generation-jobs/:jobId` — job tetap bisa dibaca setelah refresh
+  - 202 / 200 replay / 409 `JOB_ALREADY_ACTIVE` / 404 trip
+- `GET /api/v1/generation-jobs/:jobId`
 
 ## Aturan
 
-- AI output divalidasi Zod (`geminiItinerarySchema`)
-- Tempat tanpa `googlePlaceId` ditolak
-- Total budget dihitung server; angka total dari model diabaikan
-- Version baru tidak menimpa `selectedVersionId`
-- Gagal generate tidak menghapus draft
-- Retry max 2 untuk error sementara; job `PROCESSING` stale dikembalikan ke queue
+- Output Gemini divalidasi Zod
+- Place ID harus `ChIJ…`
+- Stop terkunci dari selected version dipertahankan
+- Routes mengisi `travelDurationMinutes`; gagal = catatan, bukan garis lurus
+- Total budget dihitung server
+- Retry max 2 untuk error sementara dengan backoff; stale PROCESSING dikembalikan ke queue
+- Gagal generate tidak menghapus draft/version aktif
