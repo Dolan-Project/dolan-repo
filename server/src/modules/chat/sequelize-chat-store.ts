@@ -137,6 +137,32 @@ export class SequelizeChatStore implements ChatStore {
     await row.save();
     return toNotification(row);
   }
+
+  async evictMember(tripId: string, userId: string, status: "LEFT" | "REMOVED" = "LEFT"): Promise<void> {
+    const { TripMember } = getModels();
+    const member = await TripMember.findOne({ where: { tripId, userId } });
+    if (!member) return;
+    member.membershipStatus = status;
+    member.leftAt = new Date();
+    await member.save();
+  }
+
+  async resolveSender(userId: string) {
+    return resolveProfile(userId);
+  }
+}
+
+async function resolveProfile(userId: string) {
+  const { UserProfile } = getModels();
+  const profile = await UserProfile.findOne({ where: { userId } });
+  return {
+    ...publicUserStub(userId, profile?.username ?? ""),
+    displayName: profile?.displayName ?? profile?.username ?? "",
+    avatarUrl: profile?.avatarUrl ?? null,
+    coverUrl: profile?.coverUrl ?? null,
+    bio: profile?.bio ?? null,
+    domicile: profile?.domicile ?? null,
+  };
 }
 
 async function toMessage(
@@ -147,7 +173,7 @@ async function toMessage(
   return {
     id: row.id,
     tripId,
-    sender: sender ?? publicUserStub(row.senderUserId),
+    sender: sender ?? (await resolveProfile(row.senderUserId)),
     clientMessageId: row.clientMessageId,
     body: row.body,
     sentAt: row.sentAt.toISOString(),

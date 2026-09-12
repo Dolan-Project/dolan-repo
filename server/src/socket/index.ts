@@ -58,6 +58,17 @@ export function createSocketServer(httpServer: HttpServer, authService: AuthServ
       }
     });
 
+    socket.on("message.read", async (payload: { tripId?: string; lastReadMessageId?: string }, ack?: (result: unknown) => void) => {
+      try {
+        if (!chat) throw new HttpError(403, AuthErrorCode.FORBIDDEN, "Chat is unavailable");
+        const result = await chat.markRead(String(payload?.tripId ?? ""), String(socket.data.userId), payload);
+        ack?.({ ok: true, ...result });
+      } catch (error) {
+        const code = error instanceof HttpError ? error.code : "VALIDATION_ERROR";
+        ack?.({ ok: false, code });
+      }
+    });
+
     socket.on("message.send", async (payload: { tripId?: string; clientMessageId?: string; body?: string }, ack?: (result: unknown) => void) => {
       try {
         if (!chat) throw new Error(AuthErrorCode.FORBIDDEN);

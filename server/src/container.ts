@@ -13,7 +13,7 @@ import { SequelizeUserRepository } from "./modules/auth/sequelize-user-repositor
 import { MemoryUserRepository, type UserRepository } from "./modules/auth/user-repository.ts";
 import { GeminiAdapter, MockGeminiAdapter } from "./modules/jobs/gemini-adapter.ts";
 import { MemoryJobRepository } from "./modules/jobs/job-repository.ts";
-import { GenerationJobService } from "./modules/jobs/job-service.ts";
+import { GenerationJobService, type JobServiceOptions } from "./modules/jobs/job-service.ts";
 import { createPlaceLookup } from "./modules/jobs/place-lookup.ts";
 import { loadDraftTrip, loadLockedStops, persistGeneratedVersion } from "./modules/jobs/persist-itinerary.ts";
 import { GoogleRoutesClient, MockRoutesClient } from "./modules/jobs/routes-adapter.ts";
@@ -43,13 +43,14 @@ export function createChatService(useDatabase: boolean) {
   return new ChatService(useDatabase ? new SequelizeChatStore() : new MemoryChatStore());
 }
 
-export function createJobService() {
+export function createJobService(onJobUpdated?: JobServiceOptions["onJobUpdated"]) {
   return new GenerationJobService(new MemoryJobRepository(), new MockGeminiAdapter(), {
     routes: new MockRoutesClient(),
+    onJobUpdated,
   });
 }
 
-export function createProductionJobService() {
+export function createProductionJobService(onJobUpdated?: JobServiceOptions["onJobUpdated"]) {
   initModels();
   const places = env.googleMapsServerKey
     ? new GooglePlacesClient(env.googleMapsServerKey)
@@ -66,6 +67,7 @@ export function createProductionJobService() {
       resolveCoords: lookup.resolveCoords,
       verifyPlaces: lookup.verifyPlaces,
       requireDatabaseTrip: true,
+      onJobUpdated,
     },
   );
 }

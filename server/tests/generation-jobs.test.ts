@@ -183,4 +183,23 @@ describe("generation job skeleton", () => {
     expect(retried?.errorCode).toBe("PROVIDER_UNAVAILABLE");
     expect(retried?.draftPreserved).toBe(true);
   });
+
+  it("notifies listeners when a job finishes", async () => {
+    const updates: string[] = [];
+    const repo = new MemoryJobRepository();
+    const jobs = new GenerationJobService(repo, new MockGeminiAdapter(), {
+      onJobUpdated: (job) => {
+        updates.push(job.status);
+      },
+    });
+    await repo.createOrGetIdempotent({
+      tripId: "trip-draft",
+      requestedBy: "11111111-1111-4111-8111-111111111111",
+      type: "GENERATE_ITINERARY",
+      idempotencyKey: keyB,
+      selectedVersionId: null,
+    });
+    await jobs.processNext("worker-test");
+    expect(updates).toEqual(["SUCCEEDED"]);
+  });
 });

@@ -53,7 +53,7 @@ export class MemoryChatStore implements ChatStore {
     const trip = this.trips.get(tripId);
     if (trip) {
       trip.readOnly = readOnly;
-      trip.status = "CANCELLED";
+      trip.status = readOnly ? "CANCELLED" : "OPEN";
     }
   }
 
@@ -151,6 +151,14 @@ export class MemoryChatStore implements ChatStore {
       .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
     const start = (page - 1) * limit;
     return { items: items.slice(start, start + limit), total: items.length };
+  }
+
+  async evictMember(tripId: string, userId: string, status: "LEFT" | "REMOVED" = "LEFT"): Promise<void> {
+    this.evict(tripId, userId, status);
+  }
+
+  async resolveSender(userId: string): Promise<PublicUser> {
+    return senderFromId(userId);
   }
 
   async markNotificationRead(userId: string, id: string): Promise<StoredNotification | null> {

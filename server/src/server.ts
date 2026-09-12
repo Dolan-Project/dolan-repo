@@ -29,8 +29,11 @@ async function main() {
   }
 
   const authService = new AuthService(createAuthAdapter(), createUserRepository(databaseReady));
-  const jobService = databaseReady ? createProductionJobService() : createJobService();
   const chatService = createChatService(databaseReady);
+  const onJobUpdated = (job: { id: string; tripId: string; status: string; resultVersionId: string | null; errorCode: string | null }) => {
+    void chatService.emitGenerationUpdated(job);
+  };
+  const jobService = databaseReady ? createProductionJobService(onJobUpdated) : createJobService(onJobUpdated);
   const httpServer = createServer();
   const sockets = createSocketServer(httpServer, authService, chatService);
   const app = createApp(
