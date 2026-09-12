@@ -12,6 +12,9 @@ const completeUser: AuthIdentity = {
   username: "alya",
   displayName: "Alya",
   domicile: "Jakarta",
+  avatarUrl: null,
+  coverUrl: null,
+  bio: null,
 };
 
 function userActor(overrides: Partial<AuthIdentity> = {}, trip?: TripAccessContext): SessionActor {

@@ -14,7 +14,7 @@ const keyB = "22222222-2222-4222-8222-222222222222";
 function setup(model: MockGeminiAdapter = new MockGeminiAdapter()) {
   const auth = new AuthService(new MockAuthAdapter(), new MemoryUserRepository());
   const jobs = new GenerationJobService(new MemoryJobRepository(), model);
-  return { app: createApp(auth, () => 0, jobs), jobs };
+  return { app: createApp(auth, () => 0, undefined, jobs), jobs };
 }
 
 describe("generation job skeleton", () => {

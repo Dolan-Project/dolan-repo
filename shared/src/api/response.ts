@@ -25,3 +25,18 @@ export type ApiErrorBody = {
 export function apiSuccess<T>(data: T): ApiSuccess<T> {
   return { success: true, data };
 }
+
+export function apiPage<T>(data: T[], page: number, limit: number, totalItems: number): ApiPage<T> {
+  const totalPages = limit > 0 ? Math.ceil(totalItems / limit) : 0;
+  return {
+    success: true,
+    data,
+    pagination: {
+      page,
+      limit,
+      totalItems,
+      totalPages,
+      hasNextPage: page < totalPages,
+    },
+  };
+}

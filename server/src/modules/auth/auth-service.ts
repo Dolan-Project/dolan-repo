@@ -32,4 +32,30 @@ export class AuthService {
       domicile: user.domicile,
     };
   }
+
+  toMeSession(user: AuthIdentity) {
+    return {
+      emailVerified: isEmailVerified(user),
+      profileComplete: isProfileComplete(user),
+      user: {
+        id: user.id,
+        username: user.username ?? "",
+        displayName: user.displayName ?? "",
+        avatarUrl: user.avatarUrl,
+        coverUrl: user.coverUrl,
+        bio: user.bio,
+        domicile: user.domicile,
+        followersCount: 0,
+        followingCount: 0,
+        hostTripCount: 0,
+        participantTripCount: 0,
+        rating: {
+          overall: null,
+          communication: null,
+          attitude: null,
+          reviewCount: 0,
+        },
+      },
+    };
+  }
 }

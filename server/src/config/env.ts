@@ -1,3 +1,5 @@
+import "./load-env.ts";
+
 function readList(value: string | undefined, fallback: string[]): string[] {
   if (!value) return fallback;
   return value
@@ -16,6 +18,8 @@ export const env = {
   supabaseUrl: process.env.SUPABASE_URL ?? "",
   supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY ?? "",
   supabaseCookiePrefix: process.env.SUPABASE_COOKIE_PREFIX ?? "sb-",
+  googleMapsServerKey: process.env.GOOGLE_MAPS_SERVER_KEY ?? "",
+  placesMaxRequestsPerUserPerDay: Number(process.env.PLACES_MAX_REQUESTS_PER_USER_PER_DAY ?? 50),
   logLevel: process.env.LOG_LEVEL ?? "info",
   workerId: process.env.WORKER_ID ?? "worker-1",
   jobPollIntervalMs: Number(process.env.JOB_POLL_INTERVAL_MS ?? 2000),

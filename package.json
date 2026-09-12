@@ -5,13 +5,21 @@
     "dolan",
     "shared",
     "server",
-    "worker"
+    "worker",
+    "database"
   ],
   "scripts": {
     "dev:server": "npm run dev -w server",
     "dev:worker": "npm run dev -w worker",
     "test:server": "npm run test -w server",
-    "typecheck:server": "npm run typecheck -w server"
+    "typecheck:server": "npm run typecheck -w server",
+    "typecheck:database": "npm run typecheck -w database",
+    "db:migrate": "npm run migrate -w database",
+    "db:migrate:undo": "npm run migrate:undo -w database",
+    "db:migrate:undo:all": "npm run migrate:undo:all -w database",
+    "db:seed": "npm run seed -w database",
+    "db:seed:undo": "npm run seed:undo -w database",
+    "db:verify": "npm run verify -w database"
   },
   "engines": {
     "node": ">=20"

@@ -23,6 +23,9 @@ export function createSeededMemoryUsers(): AuthIdentity[] {
       username: "alya",
       displayName: "Alya",
       domicile: "Jakarta",
+      avatarUrl: null,
+      coverUrl: null,
+      bio: null,
     },
     {
       id: "22222222-2222-4222-8222-222222222222",
@@ -34,6 +37,9 @@ export function createSeededMemoryUsers(): AuthIdentity[] {
       username: "baru",
       displayName: "User Baru",
       domicile: "Bandung",
+      avatarUrl: null,
+      coverUrl: null,
+      bio: null,
     },
     {
       id: "33333333-3333-4333-8333-333333333333",
@@ -45,6 +51,9 @@ export function createSeededMemoryUsers(): AuthIdentity[] {
       username: null,
       displayName: null,
       domicile: null,
+      avatarUrl: null,
+      coverUrl: null,
+      bio: null,
     },
     {
       id: "44444444-4444-4444-8444-444444444444",
@@ -56,6 +65,9 @@ export function createSeededMemoryUsers(): AuthIdentity[] {
       username: "admin",
       displayName: "Admin Dolan",
       domicile: "Jakarta",
+      avatarUrl: null,
+      coverUrl: null,
+      bio: null,
     },
   ];
 }
@@ -95,6 +107,9 @@ export class MemoryUserRepository implements UserRepository {
       username: null,
       displayName: null,
       domicile: null,
+      avatarUrl: null,
+      coverUrl: null,
+      bio: null,
     };
     this.users.set(input.authReference, created);
     return created;

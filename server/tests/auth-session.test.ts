@@ -25,6 +25,14 @@ describe("auth session and guards", () => {
     expect(response.body.data.email).toBe("verified@dolan.test");
     expect(response.body.data.profileComplete).toBe(true);
     expect(JSON.stringify(response.body)).not.toMatch(/Bearer|eyJ|mock-verified-complete|refresh/i);
+
+    const me = await request(app())
+      .get("/api/v1/users/me")
+      .set("Authorization", "Bearer mock-verified-complete");
+    expect(me.status).toBe(200);
+    expect(me.body.data.user.username).toBe("alya");
+    expect(me.body.data.emailVerified).toBe(true);
+    expect(JSON.stringify(me.body)).not.toMatch(/verified@dolan\.test/);
   });
 
   it("rejects draft creation for guests and allows it for logged-in users", async () => {

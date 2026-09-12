@@ -15,3 +15,16 @@ export const AuthErrorCode = {
 } as const;
 
 export type AuthErrorCode = (typeof AuthErrorCode)[keyof typeof AuthErrorCode];
+
+export const SearchErrorCode = {
+  PROVIDER_UNAVAILABLE: "PROVIDER_UNAVAILABLE",
+  QUOTA_EXCEEDED: "QUOTA_EXCEEDED",
+  INVALID_FILTER: "INVALID_FILTER",
+  INVALID_CITY: "INVALID_CITY",
+  TEMPLATE_UNAVAILABLE: "TEMPLATE_UNAVAILABLE",
+  INVALID_PLAN_INPUT: "INVALID_PLAN_INPUT",
+  PLACE_NOT_FOUND: "PLACE_NOT_FOUND",
+  IDEMPOTENCY_CONFLICT: "IDEMPOTENCY_CONFLICT",
+} as const;
+
+export type SearchErrorCode = (typeof SearchErrorCode)[keyof typeof SearchErrorCode];
