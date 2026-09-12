@@ -7,7 +7,11 @@ const SENSITIVE_KEYS = [
   "refreshToken",
   "token",
   "apikey",
+  "api_key",
+  "server_key",
+  "serverkey",
   "service_role",
+  "x-goog-api-key",
 ];
 
 export function redactValue(value: unknown): unknown {
@@ -29,7 +33,12 @@ export function redactValue(value: unknown): unknown {
 }
 
 function looksLikeSecret(value: string): boolean {
-  return value.startsWith("eyJ") || value.startsWith("sbp_") || value.includes("Bearer ");
+  return (
+    value.startsWith("eyJ") ||
+    value.startsWith("sbp_") ||
+    value.startsWith("AIza") ||
+    value.includes("Bearer ")
+  );
 }
 
 export function redactAuthorizationHeader(header: string | undefined): string | undefined {

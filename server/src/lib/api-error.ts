@@ -32,3 +32,23 @@ export function unauthorized(code = AuthErrorCode.UNAUTHENTICATED, message = "Au
 export function forbidden(code = AuthErrorCode.FORBIDDEN, message = "You cannot perform this action") {
   return new HttpError(403, code, message);
 }
+
+export function badRequest(code: string, message: string, fields?: Record<string, string>) {
+  return new HttpError(400, code, message, fields);
+}
+
+export function notFound(code: string, message: string) {
+  return new HttpError(404, code, message);
+}
+
+export function conflict(code: string, message: string, fields?: Record<string, string>) {
+  return new HttpError(409, code, message, fields);
+}
+
+export function tooManyRequests(code: string, message: string) {
+  return new HttpError(429, code, message);
+}
+
+export function providerUnavailable(code: string, message: string, status = 502) {
+  return new HttpError(status, code, message);
+}
