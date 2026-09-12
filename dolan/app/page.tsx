@@ -1,41 +1,29 @@
 import Link from "next/link";
+import { EarthGlobe } from "@/components/home/EarthGlobe";
 import { AppShell } from "@/components/layout/AppShell";
 import { Icon } from "@/components/ui/Icon";
+import { getSession } from "@/lib/auth/get-session";
 import { ASSETS } from "@/lib/assets";
 import { ROUTES } from "@/lib/routes";
 
 const features = [
   {
-    title: "Cari wisata",
-    desc: "Ratusan hidden gems dan spot otentik kurasi komunitas lokal.",
-    icon: "explore",
-    tone: "bg-primary-fixed/30 hover:bg-primary-fixed/60",
-    iconTone: "bg-primary-container text-on-primary",
-    href: ROUTES.jelajah,
+    n: "1",
+    title: "Temukan Tujuan",
+    desc: "Jelajahi destinasi autentik dengan rute, foto traveler, dan trip publik di sekitarnya.",
+    tone: "bg-surface-container-high text-primary",
   },
   {
-    title: "Buat itinerary",
-    desc: "Susun rute perjalanan santai tanpa ribet hitungan tiket.",
-    icon: "alt_route",
-    tone: "bg-secondary-fixed/40 hover:bg-secondary-fixed/70",
-    iconTone: "bg-secondary text-on-secondary",
-    href: ROUTES.itineraryBali,
+    n: "2",
+    title: "Susun Rencana & Budget",
+    desc: "Hitung biaya mandiri tanpa fee perantara. Join trip tetap gratis.",
+    tone: "bg-secondary-fixed text-on-secondary-container",
   },
   {
-    title: "Temukan teman trip",
-    desc: "Cocokkan vibe, tujuan, serta tanggal jalan favoritmu.",
-    icon: "group_add",
-    tone: "bg-tertiary-fixed/40 hover:bg-tertiary-fixed/70",
-    iconTone: "bg-tertiary text-on-tertiary",
-    href: ROUTES.jelajah,
-  },
-  {
-    title: "Chat & berangkat bareng",
-    desc: "Grup chat instan, koordinasi titik kumpul, dan gas bareng.",
-    icon: "forum",
-    tone: "bg-surface-container-high hover:bg-surface-container-highest",
-    iconTone: "bg-on-surface text-surface-container-lowest",
-    href: ROUTES.tripSaya,
+    n: "3",
+    title: "Berangkat Bersama",
+    desc: "Lihat reputasi rekan, koordinasi titik kumpul, lalu gas bareng.",
+    tone: "bg-tertiary-fixed text-tertiary",
   },
 ] as const;
 
@@ -66,204 +54,241 @@ const trips = [
   },
 ] as const;
 
-export default function BerandaPage() {
+const chips = ["🌿 Alam", "🏖️ Pantai", "🌋 Gunung", "🤿 Snorkeling"] as const;
+
+function firstName(displayName: string | undefined) {
+  const name = displayName?.trim();
+  if (!name) return "Traveler";
+  return name.split(/\s+/)[0] ?? "Traveler";
+}
+
+export default async function BerandaPage() {
+  const session = await getSession();
+  const hello = firstName(
+    session?.user.displayName || session?.user.username,
+  );
+
   return (
     <AppShell>
-      <section className="relative -mt-16 overflow-hidden bg-gradient-to-b from-[#E0F7FE] via-[#7DD3FC]/80 to-surface pb-10 pt-20 text-on-surface md:-mt-20 md:pb-16 md:pt-24">
-        <div className="pointer-events-none absolute -left-16 -top-10 h-64 w-64 rounded-full bg-white/50 blur-3xl md:h-96 md:w-96" />
-        <div className="pointer-events-none absolute right-0 top-1/4 h-72 w-72 rounded-full bg-secondary-fixed/40 blur-3xl md:h-[420px] md:w-[420px]" />
-
-        <div className="relative z-10 mx-auto w-full max-w-[1200px] px-margin md:px-margin-desktop">
-          {/* Mobile hero */}
-          <div className="flex items-center gap-3 md:hidden">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              alt="Globe"
-              className="-ml-6 h-28 w-28 shrink-0 object-contain drop-shadow-xl"
-              src={ASSETS.globe}
-            />
-            <div className="min-w-0 flex-1">
-              <h1 className="type-display text-on-background">
-                Yuk, dolan bareng!
-              </h1>
-              <p className="type-body mt-1 text-on-surface-variant">
-                Cari destinasi &amp; teman trip seru
-              </p>
-            </div>
-          </div>
-
-          <div className="mt-5 md:hidden">
-            <Link
-              href={ROUTES.jelajah}
-              className="flex items-center gap-3 rounded-full bg-surface-container-lowest px-4 py-3 shadow-sm"
-            >
-              <Icon name="search" className="text-[20px] text-secondary" />
-              <span className="type-body truncate text-outline">
-                Cari destinasi, kota, atau teman jalan...
-              </span>
-            </Link>
-            <Link href={ROUTES.jelajah} className="btn-primary mt-3 w-full">
-              Mulai jelajah
-            </Link>
-            <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
-              {["Wisata Alam", "Cafe Hopping", "Pantai"].map((chip) => (
-                <span
-                  key={chip}
-                  className="chip shrink-0 bg-surface-container-lowest/95 text-on-surface shadow-sm"
-                >
-                  {chip}
-                </span>
-              ))}
-            </div>
-            <p className="type-caption mt-3 text-center font-medium text-on-surface-variant">
-              100% Join trip gratis · Tanpa biaya perantara
+      <section className="lg:hidden">
+        <div className="flex items-center justify-between gap-2 px-margin pt-3">
+          <span className="chip bg-surface-container-low text-on-surface">
+            <Icon name="location_on" className="mr-1 text-[14px] text-primary" />
+            Malang, Jawa Timur
+          </span>
+          <span className="chip bg-tertiary-fixed text-tertiary">
+            Cerah · 24°C
+          </span>
+        </div>
+        <div className="px-margin pt-3">
+          <h1 className="type-title text-on-surface">Halo {hello}! 👋</h1>
+          <p className="type-body mt-1 text-on-surface-variant">
+            Mau dolan ke mana akhir pekan ini?
+          </p>
+        </div>
+        <div className="px-margin py-3">
+          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary via-primary-container to-tertiary p-5 text-on-primary shadow-md">
+            <p className="chip bg-on-primary/15 text-primary-fixed">
+              Komunitas Open-Trip Independen
+            </p>
+            <h2 className="type-subtitle mt-2 text-on-primary">
+              Jelajahi Nusantara Bersama Teman Baru
+            </h2>
+            <p className="type-caption mt-1.5 text-on-primary-container">
+              Bebas biaya agensi. Patungan transparan, kumpul di titik temu,
+              explore bareng tanpa beban.
             </p>
           </div>
-
-          {/* Desktop hero */}
-          <div className="hidden items-center gap-8 md:grid md:grid-cols-12 md:min-h-[420px]">
-            <div className="relative col-span-5 flex items-center justify-start">
-              <div className="group relative">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  alt="Globe Bumi Indonesia"
-                  className="-ml-16 h-[380px] w-[380px] max-w-none object-contain drop-shadow-2xl transition-transform duration-700 ease-out group-hover:scale-[1.03] lg:-ml-20 lg:h-[440px] lg:w-[440px]"
-                  src={ASSETS.globe}
+        </div>
+        <form action={ROUTES.jelajah} className="px-margin pb-2">
+          <div className="card-surface flex flex-col gap-2.5 p-3">
+            <div className="flex items-center gap-2.5 rounded-xl bg-surface-container-low px-3 py-2.5">
+              <Icon name="search" className="text-[20px] text-primary" />
+              <div className="min-w-0 flex-1">
+                <label className="type-micro text-on-surface-variant">
+                  Mau Jelajah Mana?
+                </label>
+                <input
+                  name="q"
+                  className="type-label w-full bg-transparent text-on-surface placeholder:text-outline focus:outline-none"
+                  placeholder="Ketik pulau, gunung, atau pantai..."
                 />
-                <div className="absolute left-16 top-24 flex items-center gap-1.5 rounded-full bg-surface-container-lowest/95 px-3 py-1.5 shadow-md backdrop-blur-md">
-                  <span className="h-2 w-2 rounded-full bg-primary-container" />
-                  <span className="type-micro text-on-surface">
-                    Bali · Kumpul Sunset
-                  </span>
-                </div>
-                <div className="absolute bottom-28 left-36 flex items-center gap-1.5 rounded-full bg-surface-container-lowest/95 px-3 py-1.5 shadow-md backdrop-blur-md">
-                  <span className="h-2 w-2 rounded-full bg-secondary" />
-                  <span className="type-micro text-on-surface">
-                    Labuan Bajo · Liveaboard
-                  </span>
-                </div>
               </div>
             </div>
+            <button type="submit" className="btn-primary w-full">
+              <Icon name="explore" className="text-[18px]" />
+              Cari Rombongan Dolan
+            </button>
+          </div>
+        </form>
+        <div className="flex gap-2 overflow-x-auto px-margin pb-2">
+          {["Open-Trip Aktif", "Solo Friendly", "Backpacker Hemat"].map(
+            (chip) => (
+              <span
+                key={chip}
+                className="chip shrink-0 bg-surface-container-high text-on-surface"
+              >
+                {chip}
+              </span>
+            ),
+          )}
+        </div>
+      </section>
 
-            <div className="col-span-7 flex flex-col justify-center">
-              <div className="mb-4 inline-flex items-center gap-2 self-start rounded-full bg-surface-container-lowest/90 px-3.5 py-1.5 shadow-sm backdrop-blur-md">
-                <span className="text-sm" aria-hidden>
-                  ✈
-                </span>
-                <span className="type-micro uppercase tracking-[0.06em] text-secondary">
-                  Jelajah Nusantara Bareng Teman Baru
-                </span>
-              </div>
-              <h1 className="type-display max-w-[18ch] text-on-background">
-                Temukan destinasi &amp; teman perjalanan
-              </h1>
-              <p className="type-body-lg mt-3 max-w-xl text-on-surface-variant">
-                Rencanakan trip sesuai budget, lalu ajukan join trip publik —
-                gratis.
-              </p>
+      <section className="relative hidden overflow-hidden bg-gradient-to-b from-surface via-surface-container-low to-surface pb-16 pt-10 lg:block lg:min-h-[760px]">
+        <div className="pointer-events-none absolute -left-16 -top-10 h-96 w-96 rounded-full bg-tertiary-fixed/35 blur-3xl" />
+        <div className="pointer-events-none absolute right-0 top-1/4 h-[420px] w-[420px] rounded-full bg-secondary-fixed/40 blur-3xl" />
+        <EarthGlobe />
 
-              <div className="mt-6 rounded-[24px] bg-surface-container-lowest/95 p-4 shadow-[0_12px_32px_rgba(2,132,199,0.1)] backdrop-blur-xl">
-                <form
-                  action={ROUTES.jelajah}
-                  className="grid grid-cols-12 items-center gap-3"
-                >
-                  <div className="col-span-5 flex items-center gap-2.5 rounded-full bg-surface px-3.5 py-2.5">
+        <div className="relative z-20 mx-auto flex min-h-[560px] w-full max-w-[1240px] items-center justify-between gap-8 px-margin-desktop pt-8">
+          <div className="w-5/12 shrink-0" />
+          <div className="flex w-7/12 flex-col">
+            <div className="mb-4 inline-flex items-center gap-2 self-start rounded-full bg-surface-container-high px-3.5 py-1.5 text-primary shadow-sm">
+              <Icon name="explore" className="text-[18px]" />
+              <span className="type-label">
+                Social Travel Terbuka untuk Indonesia
+              </span>
+            </div>
+            <h1 className="type-display max-w-[16ch] text-on-background">
+              Tujuannya sama.{" "}
+              <span className="bg-gradient-to-r from-primary via-tertiary-container to-secondary-container bg-clip-text text-transparent">
+                Ceritanya bisa bersama.
+              </span>
+            </h1>
+            <p className="type-body-lg mt-3 max-w-xl text-on-surface-variant">
+              Temukan destinasi tersembunyi, budget transparan, dan teman
+              seperjalanan tanpa calo. Join trip publik gratis.
+            </p>
+
+            <form
+              action={ROUTES.jelajah}
+              className="mt-6 rounded-2xl bg-surface-container-lowest/95 p-4 shadow-[0_8px_30px_-4px_rgba(16,36,58,0.08)] backdrop-blur-xl"
+            >
+              <div className="grid grid-cols-12 items-end gap-2">
+                <div className="col-span-4 rounded-xl bg-surface-container-low/80 px-3.5 py-2.5">
+                  <label className="type-micro flex items-center gap-1 text-on-surface-variant">
                     <Icon
                       name="location_on"
-                      className="text-[20px] text-secondary"
+                      className="text-[14px] text-secondary"
                     />
-                    <div className="flex min-w-0 flex-1 flex-col">
-                      <label className="type-micro text-on-surface-variant">
-                        Tujuan
-                      </label>
-                      <input
-                        name="q"
-                        defaultValue="Bali"
-                        className="type-label w-full truncate bg-transparent text-on-surface placeholder:text-outline-variant focus:outline-none"
-                        placeholder="Bali, Labuan Bajo, Jogja"
-                      />
-                    </div>
-                  </div>
-                  <div className="col-span-4 flex items-center gap-2.5 rounded-full bg-surface px-3.5 py-2.5">
+                    Tujuan / Kota
+                  </label>
+                  <input
+                    name="q"
+                    defaultValue="Labuan Bajo, NTT"
+                    className="type-label mt-0.5 w-full truncate bg-transparent text-on-surface placeholder:text-outline focus:outline-none"
+                    placeholder="Mau ke mana?"
+                  />
+                </div>
+                <div className="col-span-3 rounded-xl bg-surface-container-low/80 px-3.5 py-2.5">
+                  <label className="type-micro flex items-center gap-1 text-on-surface-variant">
                     <Icon
                       name="calendar_month"
-                      className="text-[20px] text-secondary"
+                      className="text-[14px] text-primary"
                     />
-                    <div className="flex min-w-0 flex-1 flex-col">
-                      <label className="type-micro text-on-surface-variant">
-                        Tanggal Liburan
-                      </label>
-                      <input
-                        name="date"
-                        className="type-label w-full truncate bg-transparent text-on-surface placeholder:text-outline-variant focus:outline-none"
-                        placeholder="Pilih tanggal"
-                        readOnly
-                      />
-                    </div>
-                  </div>
-                  <div className="col-span-3">
-                    <button type="submit" className="btn-primary w-full">
-                      <Icon name="search" className="text-[18px]" />
-                      Cari
-                    </button>
-                  </div>
-                </form>
+                    Tanggal Trip
+                  </label>
+                  <input
+                    name="date"
+                    defaultValue="25 – 28 Okt"
+                    className="type-label mt-0.5 w-full truncate bg-transparent text-on-surface focus:outline-none"
+                    readOnly
+                  />
+                </div>
+                <div className="col-span-3 rounded-xl bg-surface-container-low/80 px-3.5 py-2.5">
+                  <label className="type-micro flex items-center gap-1 text-on-surface-variant">
+                    <Icon
+                      name="payments"
+                      className="text-[14px] text-tertiary"
+                    />
+                    Budget Maksimal
+                  </label>
+                  <select
+                    name="budget"
+                    defaultValue="standar"
+                    className="type-label mt-0.5 w-full bg-transparent text-on-surface focus:outline-none"
+                  >
+                    <option value="hemat">Hemat (&lt; Rp1 Juta)</option>
+                    <option value="standar">Sedang (Rp1–3 Juta)</option>
+                    <option value="ekspedisi">Ekspedisi (&gt; Rp3 Juta)</option>
+                  </select>
+                </div>
+                <div className="col-span-2">
+                  <button
+                    type="submit"
+                    className="btn-primary h-14 w-full !rounded-xl"
+                  >
+                    <Icon name="explore" className="text-[20px]" />
+                    Cari
+                  </button>
+                </div>
               </div>
-
-              <div className="type-caption mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 px-1 text-on-surface-variant">
-                <span className="inline-flex items-center gap-1.5">
-                  <span className="font-bold text-secondary">✓</span> Data wisata
-                  nyata
+              <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                <span className="type-micro text-on-surface-variant">
+                  Filter cepat:
                 </span>
-                <span className="inline-flex items-center gap-1.5">
-                  <span className="font-bold text-secondary">✓</span> Join trip
-                  gratis
-                </span>
+                {chips.map((chip) => (
+                  <span
+                    key={chip}
+                    className="chip bg-surface-container-high text-primary"
+                  >
+                    {chip}
+                  </span>
+                ))}
               </div>
-            </div>
+            </form>
+            <p className="type-caption mt-3 text-on-surface-variant">
+              ✓ Data wisata nyata · ✓ Join trip gratis · ✓ Tanpa biaya perantara
+            </p>
           </div>
         </div>
       </section>
 
-      <section className="hidden bg-surface-container-lowest py-12 md:block">
-        <div className="mx-auto grid max-w-[1200px] grid-cols-4 gap-4 px-margin-desktop lg:gap-5">
-          {features.map((f) => (
-            <Link
-              key={f.title}
-              href={f.href}
-              className={`flex flex-col gap-3 rounded-2xl p-5 transition-colors ${f.tone}`}
-            >
-              <div
-                className={`flex h-10 w-10 items-center justify-center rounded-xl ${f.iconTone}`}
-              >
-                <Icon name={f.icon} className="text-[22px]" />
+      <section className="hidden bg-surface py-14 lg:block">
+        <div className="mx-auto max-w-[1240px] px-margin-desktop">
+          <div className="mx-auto mb-8 max-w-2xl text-center">
+            <p className="type-micro uppercase tracking-wider text-primary">
+              Simpel, terbuka &amp; aman
+            </p>
+            <h2 className="type-title mt-1 text-on-surface">
+              Cara Kerja Platform DOLAN
+            </h2>
+            <p className="type-body mt-2 text-on-surface-variant">
+              Mempertemukan traveler dengan rute yang sama. Semua biaya dibayar
+              langsung ke penyedia lokal.
+            </p>
+          </div>
+          <div className="grid gap-4 md:grid-cols-3">
+            {features.map((f) => (
+              <div key={f.n} className="card-surface p-6">
+                <div
+                  className={`mb-4 flex h-12 w-12 items-center justify-center rounded-xl text-2xl font-extrabold ${f.tone}`}
+                >
+                  {f.n}
+                </div>
+                <h3 className="type-subtitle text-on-surface">{f.title}</h3>
+                <p className="type-body mt-2 text-on-surface-variant">{f.desc}</p>
               </div>
-              <div>
-                <h2 className="type-subtitle text-on-surface">{f.title}</h2>
-                <p className="type-caption mt-1 text-on-surface-variant">
-                  {f.desc}
-                </p>
-              </div>
-            </Link>
-          ))}
+            ))}
+          </div>
         </div>
       </section>
 
-      <section className="bg-surface py-8 md:py-12">
-        <div className="mx-auto max-w-[1200px] px-margin md:px-margin-desktop">
+      <section className="bg-surface py-8 lg:pb-14 lg:pt-0">
+        <div className="mx-auto max-w-[1240px] px-margin md:px-margin-desktop">
           <div className="mb-5 flex items-end justify-between gap-4">
             <div>
-              <p className="type-micro mb-1 hidden uppercase tracking-[0.08em] text-secondary md:block">
-                Eksplorasi Bersama Pekan Ini
+              <p className="type-micro mb-1 uppercase tracking-[0.08em] text-primary">
+                Eksplorasi bersama pekan ini
               </p>
               <h2 className="type-title text-on-surface">
-                <span className="md:hidden">Trip Terdekat</span>
-                <span className="hidden md:inline">Trip publik populer</span>
+                <span className="lg:hidden">Open-Trip Komunitas</span>
+                <span className="hidden lg:inline">Trip publik populer</span>
               </h2>
             </div>
             <Link
               href={ROUTES.jelajah}
-              className="type-label shrink-0 text-secondary hover:underline"
+              className="type-label shrink-0 text-primary hover:underline"
             >
               Lihat semua
             </Link>
@@ -274,7 +299,7 @@ export default function BerandaPage() {
               <Link
                 key={trip.title}
                 href={trip.href}
-                className="card-surface group overflow-hidden transition-shadow hover:shadow-[0_8px_24px_rgba(255,90,61,0.08)]"
+                className="card-surface group overflow-hidden transition-shadow hover:shadow-[0_8px_24px_rgba(37,99,235,0.08)]"
               >
                 <div className="aspect-[16/10] overflow-hidden">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -307,19 +332,18 @@ export default function BerandaPage() {
         </div>
       </section>
 
-      <section className="hidden bg-gradient-to-r from-secondary to-[#0284C7] py-10 text-white md:block">
-        <div className="mx-auto flex max-w-[1200px] items-center justify-between gap-8 px-margin-desktop">
+      <section className="hidden bg-primary py-12 text-on-primary lg:block">
+        <div className="mx-auto flex max-w-[1240px] items-center justify-between gap-6 px-margin-desktop">
           <div className="max-w-xl">
-            <h2 className="type-title text-white">Punya rencana trip sendiri?</h2>
-            <p className="type-body mt-2 text-white/90">
+            <h2 className="type-title text-on-primary">
+              Punya rencana trip sendiri?
+            </h2>
+            <p className="type-body mt-2 text-on-primary-container">
               Bikin dolan, undang teman baru, dan koordinasi titik kumpul — tanpa
               biaya join.
             </p>
           </div>
-          <Link
-            href={ROUTES.buatTrip}
-            className="btn-primary shrink-0 !shadow-[0_8px_24px_rgba(255,90,61,0.35)]"
-          >
+          <Link href={ROUTES.buatTrip} className="btn-primary shrink-0">
             Bikin Dolan Sekarang
           </Link>
         </div>

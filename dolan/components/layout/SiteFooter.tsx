@@ -1,35 +1,41 @@
 import Link from "next/link";
-import { ASSETS } from "@/lib/assets";
 import { ROUTES } from "@/lib/routes";
+import { Icon } from "@/components/ui/Icon";
 
 export function SiteFooter() {
   return (
-    <footer className="hidden border-t border-outline-variant/40 bg-surface-container-low md:block">
-      <div className="mx-auto flex max-w-[1200px] flex-col gap-4 px-margin-desktop py-8 md:flex-row md:items-center md:justify-between">
-        <div className="flex items-center gap-2.5">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            alt="Dolan Logo"
-            className="h-6 w-auto object-contain"
-            src={ASSETS.logo}
-          />
-          <div>
-            <p className="type-label text-on-surface">Dolan</p>
-            <p className="type-caption text-on-surface-variant">
-              Join gratis — biaya perjalanan ditanggung masing-masing.
-            </p>
+    <footer className="hidden border-t border-outline-variant/40 bg-surface-container-lowest pt-10 pb-8 md:block">
+      <div className="mx-auto grid max-w-[1240px] gap-8 px-margin-desktop md:grid-cols-2 lg:grid-cols-4">
+        <div className="lg:col-span-2">
+          <div className="flex items-center gap-2">
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-on-primary">
+              <Icon name="explore" className="text-[20px]" />
+            </span>
+            <p className="type-subtitle text-on-surface">DOLAN</p>
           </div>
+          <p className="type-body mt-3 max-w-sm text-on-surface-variant">
+            Platform open-trip dan social travel. Temukan teman seperjalanan,
+            rencanakan ekspedisi bersama, tanpa calo.
+          </p>
+          <p className="chip mt-3 bg-surface-container-low text-primary">
+            Join gratis — biaya perjalanan mandiri
+          </p>
         </div>
-        <div className="flex flex-wrap gap-4 type-label text-on-surface-variant">
-          <Link href={ROUTES.jelajah} className="hover:text-on-surface">
+        <div className="flex flex-col gap-2 type-label text-on-surface-variant">
+          <Link href={ROUTES.jelajah} className="hover:text-primary">
             Jelajah
           </Link>
-          <Link href={ROUTES.buatTrip} className="hover:text-on-surface">
+          <Link href={ROUTES.buatTrip} className="hover:text-primary">
             Buat Trip
           </Link>
-          <span className="cursor-default">Tentang</span>
-          <span className="cursor-default">Bantuan</span>
-          <span className="cursor-default">Privasi</span>
+          <Link href={ROUTES.tripSaya} className="hover:text-primary">
+            Trip Saya
+          </Link>
+        </div>
+        <div className="flex flex-col gap-2 type-label text-on-surface-variant">
+          <span>Bantuan</span>
+          <span>Privasi</span>
+          <span>Tentang</span>
         </div>
       </div>
     </footer>

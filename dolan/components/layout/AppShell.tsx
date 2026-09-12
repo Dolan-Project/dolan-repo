@@ -1,6 +1,7 @@
 import { BottomNav } from "@/components/layout/BottomNav";
 import { SiteFooter } from "@/components/layout/SiteFooter";
 import { SiteHeader } from "@/components/layout/SiteHeader";
+import { getSession } from "@/lib/auth/get-session";
 
 type AppShellProps = {
   children: React.ReactNode;
@@ -8,16 +9,18 @@ type AppShellProps = {
   showFooter?: boolean;
 };
 
-export function AppShell({
+export async function AppShell({
   children,
   withBottomNavPad = true,
   showFooter = true,
 }: AppShellProps) {
+  const session = await getSession();
+
   return (
     <div className="flex min-h-full flex-col bg-surface text-on-surface">
-      <SiteHeader />
+      <SiteHeader session={session} />
       <main
-        className={`flex-1 pt-14 md:pt-16 ${withBottomNavPad ? "pb-20 md:pb-0" : ""}`}
+        className={`flex-1 pt-16 md:pt-20 ${withBottomNavPad ? "pb-20 md:pb-0" : ""}`}
       >
         {children}
       </main>

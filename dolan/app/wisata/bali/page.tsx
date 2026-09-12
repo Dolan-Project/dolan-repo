@@ -52,7 +52,7 @@ const days = [
 export default function DetailWisataBaliPage() {
   return (
     <AppShell>
-      <div className="sticky top-14 z-40 flex items-center justify-between gap-2 border-b border-outline-variant/30 bg-surface/90 px-margin py-2.5 backdrop-blur-md md:hidden">
+      <div className="sticky top-16 z-40 flex items-center justify-between gap-2 border-b border-outline-variant/30 bg-surface/90 px-margin py-2.5 backdrop-blur-md md:hidden">
         <Link
           href={ROUTES.jelajah}
           className="flex h-9 w-9 items-center justify-center rounded-full bg-surface-container"

@@ -5,7 +5,7 @@ export type {
   TripVisibility,
   TripStatus,
   JoinRequestStatus,
-} from "./types/kickoff.js";
+} from "./types/kickoff";
 
 export {
   LOGIN_PAGE_PATH,
@@ -14,16 +14,37 @@ export {
   SAFE_DRAFT_STORAGE_KEY,
   isAllowedNextPath,
   resolvePostAuthPath,
-} from "./api/return-to-action.js";
+} from "./api/return-to-action";
 
-export type { AuthSession, AuthErrorCode } from "./types/auth.js";
-export { AUTH_ERROR_CODES, isProfileComplete } from "./types/auth.js";
-export { AUTH_PATHS } from "./api/auth-paths.js";
+export type { AuthSession, AuthErrorCode } from "./types/auth";
+export { AUTH_ERROR_CODES, isProfileComplete } from "./types/auth";
+export { AUTH_PATHS } from "./api/auth-paths";
 
-export type { ProfileUpdate } from "./types/profile.js";
-export type { TripSummary, MyTripRole } from "./types/trip.js";
-export type { JoinRequest, JoinReviewDecision } from "./types/join.js";
-export type { TripComment, ChatMessage } from "./types/chat.js";
+export type { ProfileUpdate } from "./types/profile";
+export {
+  loginSchema,
+  registerSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
+} from "./schemas/auth";
+export type {
+  LoginInput,
+  RegisterInput,
+  ForgotPasswordInput,
+  ResetPasswordInput,
+} from "./schemas/auth";
+export { profileUpdateSchema } from "./schemas/profile";
+export type { ProfileUpdateInput } from "./schemas/profile";
+export {
+  MAX_UPLOAD_BYTES,
+  ALLOWED_UPLOAD_TYPES,
+  validateUploadMeta,
+} from "./schemas/upload";
+export type { UploadMeta, UploadValidation } from "./schemas/upload";
+export { fieldErrorsFromZod } from "./schemas/zod-fields";
+export type { TripSummary, MyTripRole } from "./types/trip";
+export type { JoinRequest, JoinReviewDecision } from "./types/join";
+export type { TripComment, ChatMessage } from "./types/chat";
 export {
   API_V1_PREFIX,
   EXPRESS_PATHS,
@@ -35,5 +56,4 @@ export {
   joinRequestWithdrawPath,
   tripCommentsPath,
   tripMessagesPath,
-} from "./api/express-paths.js";
-
+} from "./api/express-paths";

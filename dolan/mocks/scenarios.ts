@@ -1,4 +1,4 @@
-import type { ApiError } from "@dolan/shared";
+import type { ApiError } from "@/lib/contracts";
 
 export const MOCK_SCENARIOS = [
   "success",

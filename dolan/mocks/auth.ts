@@ -3,7 +3,7 @@ import {
   type ApiError,
   type ApiSuccess,
   type AuthSession,
-} from "@dolan/shared";
+} from "@/lib/contracts";
 import { sampleAuthSession } from "./fixtures";
 import { createApiError, type MockScenario } from "./scenarios";
 

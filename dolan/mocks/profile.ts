@@ -5,7 +5,7 @@ import {
   type ApiSuccess,
   type AuthSession,
   type PublicUser,
-} from "@dolan/shared";
+} from "@/lib/contracts";
 import { sampleAuthSession, samplePublicUser } from "./fixtures";
 import { createApiError, type MockScenario } from "./scenarios";
 

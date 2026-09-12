@@ -1,4 +1,4 @@
-import type { ApiError, ApiSuccess, ChatMessage } from "@dolan/shared";
+import type { ApiError, ApiSuccess, ChatMessage } from "@/lib/contracts";
 import { samplePublicUser } from "./fixtures";
 import { createApiError, type MockScenario } from "./scenarios";
 

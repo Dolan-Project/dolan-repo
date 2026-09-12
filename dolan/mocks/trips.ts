@@ -3,7 +3,7 @@ import type {
   ApiSuccess,
   MyTripRole,
   TripSummary,
-} from "@dolan/shared";
+} from "@/lib/contracts";
 import { samplePublicUser } from "./fixtures";
 import { createApiError, type MockScenario } from "./scenarios";
 

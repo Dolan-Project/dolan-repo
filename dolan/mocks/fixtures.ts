@@ -2,7 +2,7 @@ import {
   isProfileComplete,
   type AuthSession,
   type PublicUser,
-} from "@dolan/shared";
+} from "@/lib/contracts";
 
 export const samplePublicUser: PublicUser = {
   id: "user_salsa",
@@ -22,6 +22,15 @@ export const samplePublicUser: PublicUser = {
     attitude: null,
     reviewCount: 0,
   },
+};
+
+export const sampleOtherUser: PublicUser = {
+  ...samplePublicUser,
+  id: "user_wayan",
+  username: "wayan",
+  displayName: "Wayan",
+  domicile: "Bali",
+  bio: "Host sailing Komodo",
 };
 
 export const sampleAuthSession: AuthSession = {
