@@ -50,6 +50,12 @@ export function statusForCode(code: string): number {
       return 503;
     case "NOT_FOUND":
       return 404;
+    case "NOT_MEMBER":
+      return 403;
+    case "CAPACITY_BELOW_MEMBERS":
+    case "LEAVE_CONFIRM_REQUIRED":
+    case "INVALID_TRANSITION":
+      return 400;
     default:
       return 400;
   }

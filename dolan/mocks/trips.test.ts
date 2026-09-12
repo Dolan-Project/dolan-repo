@@ -12,9 +12,12 @@ describe("trip mocks", () => {
 
   it("keeps pending lists separate from joined", () => {
     const pending = mockListMyTrips("success", "pending");
-    expect(pending.success).toBe(true);
-    if (pending.success) {
-      expect(pending.data).toHaveLength(0);
+    const joined = mockListMyTrips("success", "joined");
+    expect(pending.success && joined.success).toBe(true);
+    if (pending.success && joined.success) {
+      const joinedIds = new Set(joined.data.map((trip) => trip.id));
+      expect(pending.data.length).toBeGreaterThan(0);
+      expect(pending.data.every((trip) => !joinedIds.has(trip.id))).toBe(true);
     }
   });
 

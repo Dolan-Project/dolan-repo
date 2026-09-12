@@ -42,7 +42,23 @@ export {
 } from "./schemas/upload";
 export type { UploadMeta, UploadValidation } from "./schemas/upload";
 export { fieldErrorsFromZod } from "./schemas/zod-fields";
-export type { TripSummary, MyTripRole } from "./types/trip";
+export type {
+  TripSummary,
+  TripDetail,
+  TripViewerRole,
+  MyTripRole,
+  BudgetBasis,
+} from "./types/trip";
+export {
+  createTripSchema,
+  publishTripSchema,
+  updateTripSchema,
+} from "./schemas/trip";
+export type {
+  CreateTripInput,
+  PublishTripInput,
+  UpdateTripInput,
+} from "./schemas/trip";
 export type { JoinRequest, JoinReviewDecision } from "./types/join";
 export type { TripComment, ChatMessage } from "./types/chat";
 export {
@@ -51,6 +67,7 @@ export {
   userByUsernamePath,
   tripPath,
   tripPublishPath,
+  tripLeavePath,
   tripJoinRequestsPath,
   joinRequestReviewPath,
   joinRequestWithdrawPath,

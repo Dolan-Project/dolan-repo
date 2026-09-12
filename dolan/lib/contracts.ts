@@ -6,7 +6,10 @@ export type {
   AuthErrorCode,
   ProfileUpdate,
   TripSummary,
+  TripDetail,
+  TripViewerRole,
   MyTripRole,
+  BudgetBasis,
   JoinRequest,
   TripComment,
   ChatMessage,
@@ -32,4 +35,12 @@ export {
   ALLOWED_UPLOAD_TYPES,
   validateUploadMeta,
   fieldErrorsFromZod,
+  createTripSchema,
+  publishTripSchema,
+  updateTripSchema,
+} from "../../shared/src/index";
+export type {
+  CreateTripInput,
+  PublishTripInput,
+  UpdateTripInput,
 } from "../../shared/src/index";

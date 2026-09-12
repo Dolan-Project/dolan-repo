@@ -12,6 +12,15 @@ import {
   handlePatchMeRequest,
   handleUploadRequest,
 } from "@/lib/auth/handle-profile";
+import {
+  handleCreateTripRequest,
+  handleGetTripRequest,
+  handleLeaveTripRequest,
+  handleListMyTripsRequest,
+  handlePublishTripRequest,
+  handleTransitionTripRequest,
+  handleUpdateTripRequest,
+} from "@/lib/auth/handle-trip";
 import { jsonResult, statusForCode } from "@/lib/auth/api-response";
 import { useMockApi } from "@/lib/auth/use-mock";
 import { createApiError } from "@/mocks/scenarios";
@@ -66,4 +75,23 @@ export const profileRouteHandlers = {
     withMockOrUnavailable(request, (req) => handleUploadRequest(req, "cover")),
   byUsername: (request: Request, username: string) =>
     withMockOrUnavailable(request, () => handleGetPublicProfileRequest(username)),
+};
+
+export const tripRouteHandlers = {
+  create: (request: Request) =>
+    withMockOrUnavailable(request, handleCreateTripRequest),
+  listMine: (request: Request) =>
+    withMockOrUnavailable(request, handleListMyTripsRequest),
+  get: (request: Request, tripId: string) =>
+    withMockOrUnavailable(request, (req) => handleGetTripRequest(req, tripId)),
+  update: (request: Request, tripId: string) =>
+    withMockOrUnavailable(request, (req) => handleUpdateTripRequest(req, tripId)),
+  publish: (request: Request, tripId: string) =>
+    withMockOrUnavailable(request, (req) => handlePublishTripRequest(req, tripId)),
+  leave: (request: Request, tripId: string) =>
+    withMockOrUnavailable(request, (req) => handleLeaveTripRequest(req, tripId)),
+  transition: (request: Request, tripId: string) =>
+    withMockOrUnavailable(request, (req) =>
+      handleTransitionTripRequest(req, tripId),
+    ),
 };

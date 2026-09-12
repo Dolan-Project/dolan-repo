@@ -14,4 +14,12 @@ export const ROUTES = {
   itineraryBali: "/itinerary/bali-3h2m",
 } as const;
 
+export function tripDetailHref(tripId: string) {
+  return `/trip/${tripId}`;
+}
+
+export function tripEditHref(tripId: string) {
+  return `/trip/${tripId}/edit`;
+}
+
 export type NavKey = "beranda" | "jelajah" | "trip-saya" | "buat-trip" | "profil";
