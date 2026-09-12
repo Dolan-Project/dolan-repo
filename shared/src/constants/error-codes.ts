@@ -12,6 +12,7 @@ export const AuthErrorCode = {
   JOB_ALREADY_ACTIVE: "JOB_ALREADY_ACTIVE",
   QUOTA_EXCEEDED: "QUOTA_EXCEEDED",
   INVALID_GENERATION: "INVALID_GENERATION",
+  ROOM_READ_ONLY: "ROOM_READ_ONLY",
 } as const;
 
 export type AuthErrorCode = (typeof AuthErrorCode)[keyof typeof AuthErrorCode];
