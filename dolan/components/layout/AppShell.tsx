@@ -7,12 +7,14 @@ type AppShellProps = {
   children: React.ReactNode;
   withBottomNavPad?: boolean;
   showFooter?: boolean;
+  flushHeader?: boolean;
 };
 
 export async function AppShell({
   children,
   withBottomNavPad = true,
   showFooter = true,
+  flushHeader = false,
 }: AppShellProps) {
   const session = await getSession();
 
@@ -20,7 +22,7 @@ export async function AppShell({
     <div className="flex min-h-full flex-col bg-surface text-on-surface">
       <SiteHeader session={session} />
       <main
-        className={`flex-1 pt-16 md:pt-20 ${withBottomNavPad ? "pb-20 md:pb-0" : ""}`}
+        className={`flex-1 ${flushHeader ? "pt-0" : "pt-14 md:pt-16"} ${withBottomNavPad ? "pb-20 md:pb-0" : ""}`}
       >
         {children}
       </main>
