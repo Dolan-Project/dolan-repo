@@ -6,6 +6,9 @@ import type { AuthAdapter } from "./integrations/supabase/auth-adapter.ts";
 import { MockAuthAdapter } from "./integrations/supabase/mock-auth-adapter.ts";
 import { SupabaseAuthAdapter } from "./integrations/supabase/supabase-auth-adapter.ts";
 import { AuthService } from "./modules/auth/auth-service.ts";
+import { ChatService } from "./modules/chat/chat-service.ts";
+import { MemoryChatStore } from "./modules/chat/memory-chat-store.ts";
+import { SequelizeChatStore } from "./modules/chat/sequelize-chat-store.ts";
 import { SequelizeUserRepository } from "./modules/auth/sequelize-user-repository.ts";
 import { MemoryUserRepository, type UserRepository } from "./modules/auth/user-repository.ts";
 import { GeminiAdapter, MockGeminiAdapter } from "./modules/jobs/gemini-adapter.ts";
@@ -37,6 +40,10 @@ export function createUserRepository(useDatabase: boolean): UserRepository {
 
 export function createAuthService(users?: UserRepository) {
   return new AuthService(createAuthAdapter(), users ?? new MemoryUserRepository());
+}
+
+export function createChatService(useDatabase: boolean) {
+  return new ChatService(useDatabase ? new SequelizeChatStore() : new MemoryChatStore());
 }
 
 export function createJobService() {
