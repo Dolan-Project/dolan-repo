@@ -12,7 +12,8 @@ import type {
 } from "@dolan/shared";
 import { SearchErrorCode } from "@dolan/shared";
 import { notFound } from "../../lib/api-error.ts";
-import { addUtcDays, slicePage, templatePopularityLabel, templateSourceLabel } from "./labels.ts";
+import { addUtcDays, slicePage, templatePopularityLabel, templateSourceLabel, uniqueById } from "./labels.ts";
+import { sortTrips, tripSortOrigin } from "./trip-rank.ts";
 import type { SearchStore, StoredIdempotency, UseTemplateCommand } from "./types.ts";
 
 export const MEMORY_TEMPLATE_ID = "44444444-4444-4444-8444-444444444401";
@@ -147,6 +148,9 @@ export class MemorySearchStore implements SearchStore {
       participantCount: 3,
       pendingRequestCount: 1,
       coverPlace: cachedPlaceSummary(malioboro),
+      publicMeetingPointLabel: "Malioboro",
+      publicMeetingPointLatitude: -7.7928,
+      publicMeetingPointLongitude: 110.3658,
       hostUserId: "host-1",
       visitingGooglePlaceIds: [malioboro.googlePlaceId],
     });
@@ -161,6 +165,9 @@ export class MemorySearchStore implements SearchStore {
       participantCount: 8,
       pendingRequestCount: 9,
       coverPlace: cachedPlaceSummary(malioboro),
+      publicMeetingPointLabel: null,
+      publicMeetingPointLatitude: null,
+      publicMeetingPointLongitude: null,
       hostUserId: "host-2",
       visitingGooglePlaceIds: [malioboro.googlePlaceId],
     });
@@ -207,7 +214,7 @@ export class MemorySearchStore implements SearchStore {
       if (query.dateTo && trip.endDate && trip.endDate > query.dateTo) return false;
       return true;
     });
-    items = sortTrips(items, query.sort);
+    items = sortTrips(items, query.sort, tripSortOrigin(query));
     return slicePage(items, query.page, query.limit);
   }
 
@@ -253,7 +260,7 @@ export class MemorySearchStore implements SearchStore {
           trip.visitingGooglePlaceIds.includes(googlePlaceId),
       )
       .map(toTripSummary);
-    return slicePage(sortTrips(items, "popular"), page, limit);
+    return slicePage(sortTrips(uniqueById(items), "popular"), page, limit);
   }
 
   async listPlaceTemplates(googlePlaceId: string, page: number, limit: number) {
@@ -262,7 +269,7 @@ export class MemorySearchStore implements SearchStore {
       .filter((template) => template.publicationStatus === "PUBLISHED")
       .filter((template) => template.days.some((day) => day.stops.some((stop) => stop.placeId === place?.id)))
       .map((template) => this.toSummary(template));
-    return slicePage(sortTemplates(items, "popular"), page, limit);
+    return slicePage(sortTemplates(uniqueById(items), "popular"), page, limit);
   }
 
   async useTemplate(command: UseTemplateCommand): Promise<UseTemplateResult> {
@@ -291,6 +298,9 @@ export class MemorySearchStore implements SearchStore {
       participantCount: 0,
       pendingRequestCount: 0,
       coverPlace: cover,
+      publicMeetingPointLabel: null,
+      publicMeetingPointLatitude: null,
+      publicMeetingPointLongitude: null,
       hostUserId: command.userId,
       visitingGooglePlaceIds,
     };
@@ -369,17 +379,10 @@ function toTripSummary(trip: MemoryTrip): TripSummary {
     participantCount: trip.participantCount,
     pendingRequestCount: trip.pendingRequestCount,
     coverPlace: trip.coverPlace,
+    publicMeetingPointLabel: trip.publicMeetingPointLabel,
+    publicMeetingPointLatitude: trip.publicMeetingPointLatitude,
+    publicMeetingPointLongitude: trip.publicMeetingPointLongitude,
   };
-}
-
-function sortTrips(items: TripSummary[], sort: "recent" | "popular") {
-  return [...items].sort((a, b) => {
-    if (sort === "popular") {
-      if (b.participantCount !== a.participantCount) return b.participantCount - a.participantCount;
-      return b.pendingRequestCount - a.pendingRequestCount;
-    }
-    return (b.startDate ?? "").localeCompare(a.startDate ?? "");
-  });
 }
 
 function sortTemplates(items: ItineraryTemplateSummary[], sort: "recent" | "popular") {

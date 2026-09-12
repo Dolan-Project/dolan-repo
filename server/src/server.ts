@@ -6,11 +6,15 @@ import {
   createAuthAdapter,
   createChatService,
   createJobService,
+  createMemorySocialStore,
+  createMemoryTripService,
   createProductionJobService,
   createProductionSearchService,
+  createProductionSocialStore,
   createProductionTripService,
   createUserRepository,
 } from "./container.ts";
+import { envRateLimit } from "./middleware/rate-limit.ts";
 import { logger } from "./lib/logger.ts";
 import { AuthService } from "./modules/auth/auth-service.ts";
 import { startGenerationWorker } from "./modules/jobs/run-worker.ts";
@@ -32,6 +36,7 @@ async function main() {
   const authService = new AuthService(createAuthAdapter(), createUserRepository(databaseReady));
   const jobService = databaseReady ? createProductionJobService() : createJobService();
   const chatService = createChatService(databaseReady);
+  const trips = databaseReady ? createProductionTripService(chatService) : createMemoryTripService(undefined, chatService);
   const httpServer = createServer();
   const sockets = createSocketServer(httpServer, authService, chatService);
   const app = createApp(
@@ -39,8 +44,10 @@ async function main() {
     sockets.disconnectUser,
     databaseReady ? createProductionSearchService() : undefined,
     jobService,
-    databaseReady ? createProductionTripService() : undefined,
+    trips,
     chatService,
+    envRateLimit(),
+    databaseReady ? createProductionSocialStore() : createMemorySocialStore(),
   );
 
   httpServer.on("request", app);

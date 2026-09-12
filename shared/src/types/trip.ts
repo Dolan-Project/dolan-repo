@@ -18,6 +18,9 @@ export type TripSummary = {
   participantCount: number;
   pendingRequestCount: number;
   coverPlace: PlaceSummary | null;
+  publicMeetingPointLabel: string | null;
+  publicMeetingPointLatitude: number | null;
+  publicMeetingPointLongitude: number | null;
 };
 
 export type MyTripSummary = TripSummary & {

@@ -164,4 +164,141 @@ describe("Sequelize trip store", () => {
     expect(await Trip.findByPk(trip.id)).toBeNull();
     expect(template.usageCount).toBe(0);
   }, 30_000);
+
+  it("serializes last-seat approvals and records Places quota", async () => {
+    if (skipReason) throw new Error(`Postgres test helper unavailable: ${skipReason}`);
+
+    const { User } = await import("@dolan/database");
+    const { SequelizeTripStore } = await import("../src/modules/trips/sequelize-store.ts");
+    const { TripService } = await import("../src/modules/trips/trip-service.ts");
+    const { SequelizeQuotaStore } = await import("../src/modules/search/sequelize-quota.ts");
+
+    const store = new SequelizeTripStore();
+
+    const budiId = "55555555-5555-4555-8555-555555555555";
+    const citraId = "44444444-4444-4444-8444-444444444444";
+    await User.findOrCreate({
+      where: { id: hostUserId },
+      defaults: { id: hostUserId, authReference: "auth-verified-complete", email: "verified@dolan.test" },
+    });
+    await User.findOrCreate({
+      where: { id: budiId },
+      defaults: { id: budiId, authReference: "auth-verified-budi", email: "budi@dolan.test" },
+    });
+    await User.findOrCreate({
+      where: { id: citraId },
+      defaults: { id: citraId, authReference: "auth-admin", email: "admin@dolan.test" },
+    });
+
+    const trips = new TripService(store);
+    const trip = await store.createTrip({
+      hostUserId,
+      title: "Last seat",
+      description: null,
+      visibility: "PUBLIC",
+      status: "OPEN",
+      startDate: "2026-10-01",
+      endDate: "2026-10-03",
+      timezone: "Asia/Jakarta",
+      privateOriginLabel: null,
+      privateOriginLatitude: null,
+      privateOriginLongitude: null,
+      destinationCity: "Yogyakarta",
+      publicMeetingPointLabel: "Tugu",
+      publicMeetingPointLatitude: null,
+      publicMeetingPointLongitude: null,
+      transportMode: null,
+      budgetAmount: null,
+      budgetBasis: "PER_PERSON",
+      currency: "IDR",
+      planningPartySize: 1,
+      maxParticipants: 2,
+      currentItineraryVersionId: null,
+      preferences: null,
+    });
+    await store.ensureHostMembership(trip.id, hostUserId);
+    const first = await store.createJoin({
+      tripId: trip.id,
+      userId: budiId,
+      message: null,
+      status: "PENDING",
+      reviewedByUserId: null,
+      reviewedAt: null,
+    });
+    const second = await store.createJoin({
+      tripId: trip.id,
+      userId: citraId,
+      message: null,
+      status: "PENDING",
+      reviewedByUserId: null,
+      reviewedAt: null,
+    });
+
+    const hostActor = {
+      kind: "user" as const,
+      user: {
+        id: hostUserId,
+        authReference: "auth-verified-complete",
+        email: "verified@dolan.test",
+        role: "USER" as const,
+        status: "ACTIVE" as const,
+        emailVerifiedAt: "2026-01-01T00:00:00.000Z",
+        username: "alya",
+        displayName: "Alya",
+        domicile: "Jakarta",
+        avatarUrl: null,
+        coverUrl: null,
+        bio: null,
+      },
+    };
+
+    const results = await Promise.allSettled([
+      trips.reviewJoin(hostActor, first.id, "accept", "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"),
+      trips.reviewJoin(hostActor, second.id, "accept", "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"),
+    ]);
+    const accepted = results.filter((row) => row.status === "fulfilled").length;
+    const rejected = results.filter(
+      (row) =>
+        row.status === "rejected" &&
+        row.reason &&
+        typeof row.reason === "object" &&
+        "code" in row.reason &&
+        row.reason.code === "TRIP_FULL",
+    ).length;
+    expect(accepted).toBe(1);
+    expect(rejected).toBe(1);
+
+    const quota = new SequelizeQuotaStore();
+    const counted = await quota.countAndIncrement({
+      provider: "google_places",
+      operation: "searchText",
+      period: "2026-09-13",
+      userId: hostUserId,
+      limit: 1,
+      estimatedCost: 0.01,
+    });
+    expect(counted).toBe(1);
+    const { ApiUsageCounter } = await import("@dolan/database");
+    const usage = await ApiUsageCounter.findOne({
+      where: { provider: "google_places", operation: "searchText", period: "2026-09-13", userId: hostUserId },
+    });
+    expect(Number(usage?.estimatedCost)).toBeGreaterThan(0);
+
+    const { SequelizeSocialStore } = await import("../src/modules/social/social-queries.ts");
+    const social = new SequelizeSocialStore();
+    await social.follow(hostUserId, budiId);
+    expect(await social.countFollowers(budiId)).toBe(1);
+    await social.block(budiId, hostUserId);
+    expect(await social.countFollowers(budiId)).toBe(0);
+    await expect(social.follow(hostUserId, hostUserId)).rejects.toMatchObject({ code: "SELF_FOLLOW" });
+    await expect(
+      quota.countAndIncrement({
+        provider: "google_places",
+        operation: "searchText",
+        period: "2026-09-13",
+        userId: hostUserId,
+        limit: 1,
+      }),
+    ).rejects.toMatchObject({ status: 429, code: "QUOTA_EXCEEDED" });
+  }, 30_000);
 });

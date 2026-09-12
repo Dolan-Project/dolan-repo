@@ -127,11 +127,21 @@ Quota Places: `PLACES_MAX_REQUESTS_PER_USER_PER_DAY` (default 50), dicatat di `a
 ## `GET /search/trips`
 
 **Actor:** public  
-**Schema:** `tripSearchQuerySchema` — `q?`, `city?`, `sort=recent\|popular`, `dateFrom?`, `dateTo?`, `page`, `limit`  
+**Schema:** `tripSearchQuerySchema`
+
+| Query | Keterangan |
+|---|---|
+| `q` | Opsional, judul |
+| `city` | Opsional |
+| `sort` | `soonest` (default, tanggal berangkat terdekat), `popular`, `nearest` (titik mulai publik terdekat). `recent` alias `soonest`. |
+| `lat`, `lng` | Opsional; **wajib** jika `sort=nearest` |
+| `dateFrom`, `dateTo` | Filter tanggal rencana |
+| `page`, `limit` | Pagination |
+
 **Response:** `ApiPage<TripSummary>`  
 **Idempotency:** tidak perlu
 
-Hanya trip `PUBLIC` yang bukan `DRAFT`/`CANCELLED`. Private tidak pernah muncul.
+Hanya trip `PUBLIC` yang bukan `DRAFT`/`CANCELLED`. Private tidak pernah muncul. `soonest` mengurutkan keberangkatan mendatang dulu (hari ini di `Asia/Jakarta`), lalu trip yang sudah lewat, lalu yang tanpa tanggal. `nearest` memakai koordinat meeting point publik, bukan asal pribadi host. Penolakan izin lokasi: jangan kirim `sort=nearest`; default `soonest` tetap jalan.
 
 **Error:** `INVALID_FILTER` (400)
 
@@ -166,7 +176,7 @@ Field mask Google: nama, alamat, koordinat, rating, jumlah penilaian, foto (`pho
 
 **Actor:** public  
 **Schema:** `paginationQuerySchema`  
-**Response:** `ApiPage<TripSummary>` — trip publik yang itinerary aktifnya mengunjungi place  
+**Response:** `ApiPage<TripSummary>` — trip publik yang itinerary aktifnya mengunjungi place. Satu trip muncul sekali meski tempat itu ada di beberapa hari/stop.  
 **Error:** `INVALID_FILTER` (400)
 
 ---
@@ -246,7 +256,7 @@ Sumber: `@dolan/shared`.
 
 `PlaceDetails`: `PlaceSummary` + `types`, `editorialSummary`, `weekdayDescriptions`, `attributions`, `visitCount`
 
-`TripSummary`: `id`, `title`, `destinationCity`, `visibility`, `status`, `startDate`, `endDate`, `participantCount`, `pendingRequestCount`, `coverPlace`
+`TripSummary`: `id`, `title`, `destinationCity`, `visibility`, `status`, `startDate`, `endDate`, `participantCount`, `pendingRequestCount`, `coverPlace`, `publicMeetingPointLabel`, `publicMeetingPointLatitude`, `publicMeetingPointLongitude`
 
 `ItineraryTemplateSummary`: `id`, `title`, `city`, `durationDays`, `source`, `sourceLabel`, `usageCount`, `popularityLabel`, `coverPlace`
 
@@ -256,7 +266,7 @@ Sumber: `@dolan/shared`.
 
 - Tampilkan atribusi Google di detail/foto.
 - Jangan pakai `NEXT_PUBLIC_` untuk server key; photo lewat backend `/photo`.
-- Map sort UI: wisata `relevance | popular | nearest`; trip `recent | popular`; template `recent | popular`.
+- Map sort UI: wisata `relevance | popular | nearest`; trip `popular | nearest | soonest` (`recent` = alias `soonest`); template `recent | popular`. Label trip: Populer, Titik mulai terdekat, Berangkat terdekat. `nearest` butuh `lat`/`lng`; jika izin lokasi ditolak, pakai `soonest` atau `popular`.
 - Label popularitas hanya teks Dolan, bukan klaim “populer di Indonesia”.
 - Race: request search baru harus mengabaikan response lama (PRD F01).
 
@@ -413,11 +423,25 @@ Membership `LEFT`, riwayat tetap ada, chat hilang, share lokasi trip dicabut, ho
 
 `TripDetail`: field trip + `host`, `viewerRole`, `activeParticipantCount`, `pendingRequestCount`, `joinFree: true`, `myJoinRequest`, origin pribadi dan `preferences` (host only). Tidak ada `joinFee`.
 
-`MyTripSummary`: `TripSummary` (`destinationCity`/`startDate`/`endDate` nullable, `participantCount`, `pendingRequestCount`, `coverPlace`) plus `host` dan `maxParticipants`.
+`MyTripSummary`: `TripSummary` (`destinationCity`/`startDate`/`endDate` nullable, `participantCount`, `pendingRequestCount`, `coverPlace`, titik mulai publik) plus `host` dan `maxParticipants`.
 
 `JoinRequest`: `id`, `tripId`, `applicant`, `message`, `status`
 
 `TripComment`: `id`, `tripId`, `author`, `parentId`, `body`, `createdAt`
 
 Notifikasi tersimpan (bukan milik sendiri): `join_request.created`, `join_request.reviewed`, `trip.updated`, `comment.created`, `member.left`. Event Socket.IO tetap Alya.
+
+---
+
+# Database security and release (WIRA-D4)
+
+Owner: **Wira**. Reviewer: **Alya**. Rincian operasi: `docs/release.md`.
+
+- IDOR: private/draft asing → `404 TRIP_NOT_FOUND`; known tetapi bukan host/member → `403`. Query chat `membership`/`role` diabaikan.
+- Concurrent approve sisa 1 kursi → satu `200`, satu `409 TRIP_FULL`.
+- Rate limit IP: `429 RATE_LIMITED` plus `Retry-After` (`RATE_LIMIT_MAX` / `RATE_LIMIT_SEARCH_MAX`).
+- Quota Places `429 QUOTA_EXCEEDED` via `api_usage_counters.estimated_cost` (`PLACES_ESTIMATED_COST_PER_REQUEST`, placeholder).
+- Leave participant memanggil evict socket room. Publish memory mengisi chat store yang sama.
+- `POST /users/:userId/follow` menolak self-follow; server production memakai `SequelizeSocialStore` jika DB siap. REST sosial lengkap tetap SALSA-D4.
+
 

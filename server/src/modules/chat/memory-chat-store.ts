@@ -47,6 +47,22 @@ export class MemoryChatStore implements ChatStore {
     const trip = this.trips.get(tripId);
     const member = trip?.members.get(userId);
     if (member) member.status = status;
+    trip?.pending.delete(userId);
+  }
+
+  addPending(tripId: string, userId: string) {
+    this.trips.get(tripId)?.pending.add(userId);
+  }
+
+  addParticipant(tripId: string, userId: string) {
+    const trip = this.trips.get(tripId);
+    if (!trip) return;
+    trip.pending.delete(userId);
+    trip.members.set(userId, { role: "PARTICIPANT", status: "ACTIVE" });
+  }
+
+  clearPending(tripId: string, userId: string) {
+    this.trips.get(tripId)?.pending.delete(userId);
   }
 
   setReadOnly(tripId: string, readOnly = true) {

@@ -35,6 +35,9 @@ describe("MyTripSummary", () => {
       participantCount: 2,
       pendingRequestCount: 0,
       coverPlace: null,
+      publicMeetingPointLabel: "Tugu Yogyakarta",
+      publicMeetingPointLatitude: -7.7828,
+      publicMeetingPointLongitude: 110.3671,
       host,
       maxParticipants: 4,
     };

@@ -52,7 +52,9 @@ Scripts:
 - Unique: `auth_reference`, `email`, `username`, `google_place_id`, membership trip+user, join trip+user, review trip+reviewer+reviewee, message sender+client_message_id, chat room per trip, template usage template+created_trip
 - Check: role/status enums, rating 1–5, biaya nonnegatif, `unit_cost_high >= unit_cost_low`, no self-follow/self-block/self-review
 - Trigger: `current_itinerary_version_id` harus milik trip yang sama; reply komentar maksimal satu tingkat dan sama trip
-- Index: public trip search, template search, chat pagination, notification inbox, generation job polling
+- Index: public trip search, template search, chat pagination, notification inbox, generation job polling, My Trip `updated_at` (D4), job per user (D4)
+
+Koreksi index: `database/migrations/20260913000100-add-d4-query-indexes.js`. Prosedur backup/rollback: `docs/release.md`.
 
 ## Seeder
 

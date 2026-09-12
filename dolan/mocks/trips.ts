@@ -18,6 +18,9 @@ const sampleTrip: MyTripSummary = {
   participantCount: 1,
   pendingRequestCount: 0,
   coverPlace: null,
+  publicMeetingPointLabel: "Tugu Yogyakarta",
+  publicMeetingPointLatitude: -7.7828,
+  publicMeetingPointLongitude: 110.3671,
   host: samplePublicUser,
   maxParticipants: 6,
 };
