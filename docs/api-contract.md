@@ -1,8 +1,53 @@
-# API contract — search, places, templates (WIRA-D2)
+# API contract
+
+Tipe dan Zod hidup di `@dolan/shared`.
+
+## Auth & profile (SALSA-D1)
+
+Owner: **Salsa**. Kontrak session Express ada di `docs/auth-contract.md` (Alya).
+
+### Next.js auth
+
+| Method | Path |
+| ------ | --------------------------- |
+| POST | `/api/auth/register` |
+| POST | `/api/auth/login` |
+| POST | `/api/auth/logout` |
+| GET | `/api/auth/callback` |
+| POST | `/api/auth/forgot-password` |
+| POST | `/api/auth/reset-password` |
+
+Response login/register: `ApiSuccess<AuthSession>`. `AuthSession` = `{ user: PublicUser, emailVerified, profileComplete }`. Password/token tidak dikembalikan.
+
+Return-to-action: query/body `next`; invalid → `/`. Tidak auto-submit join/publish/komentar.
+
+### Express `/api/v1` (Salsa domain)
+
+| Method | Path |
+| --------- | ----------------------------- |
+| GET/PATCH | `/users/me` |
+| GET | `/users/:username` |
+| POST | `/users/me/avatar` |
+| POST | `/users/me/cover` |
+| POST | `/trips` |
+| GET | `/trips/me` |
+| GET | `/trips/:id` |
+| POST | `/trips/:id/publish` |
+| POST | `/trips/:id/join-requests` |
+| POST | `/join-requests/:id/review` |
+| POST | `/join-requests/:id/withdraw` |
+| GET/POST | `/trips/:id/comments` |
+| GET/POST | `/trips/:id/messages` |
+
+Pending bukan member chat. Join tanpa pembayaran.
+
+---
+
+# Search, places, templates (WIRA-D2)
 
 Acuan: `PRD.md` F01–F03/F08, `DOLAN_TECHNICAL_KICKOFF_FINAL.md` §10–§11, `task-assignment.md` (WIRA-D2).
 
-Tipe dan Zod hidup di `@dolan/shared`. Dokumen ini untuk Rusdi (Explore/detail) dan reviewer Alya.
+Dokumen ini untuk Rusdi (Explore/detail) dan reviewer Alya.
 
 Owner endpoint: **Wira**. Reviewer: **Rusdi**, **Alya**.
 

@@ -1,3 +1,4 @@
+import type { PublicUser } from "./kickoff.js";
 import type {
   JoinRequestStatus,
   MembershipStatus,
@@ -5,6 +6,24 @@ import type {
   UserRole,
   UserStatus,
 } from "./enums.ts";
+
+export type AuthSession = {
+  user: PublicUser;
+  emailVerified: boolean;
+  profileComplete: boolean;
+};
+
+export const AUTH_ERROR_CODES = {
+  VALIDATION_ERROR: "VALIDATION_ERROR",
+  EMAIL_TAKEN: "EMAIL_TAKEN",
+  INVALID_CREDENTIALS: "INVALID_CREDENTIALS",
+  UNAUTHORIZED: "UNAUTHORIZED",
+  RATE_LIMITED: "RATE_LIMITED",
+} as const;
+
+export function isProfileComplete(user: PublicUser): boolean {
+  return Boolean(user.username && user.displayName && user.domicile);
+}
 
 export type AuthIdentity = {
   id: string;

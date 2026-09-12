@@ -19,7 +19,8 @@
       }
     ],
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./*"],
+      "@dolan/shared": ["../shared/src/index.ts"]
     }
   },
   "include": [

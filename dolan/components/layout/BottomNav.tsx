@@ -59,7 +59,7 @@ export function BottomNav() {
                 href={tab.href}
                 className="-mt-5 flex flex-col items-center gap-0.5"
               >
-                <span className="flex h-12 w-12 items-center justify-center rounded-full bg-primary-container text-on-primary shadow-[0_10px_24px_rgba(255,90,61,0.32)]">
+                <span className="flex h-12 w-12 items-center justify-center rounded-full bg-secondary-container text-on-secondary shadow-[0_10px_24px_rgba(255,138,61,0.35)]">
                   <Icon name={tab.icon} className="text-[24px]" />
                 </span>
                 <span className="type-micro text-on-surface-variant">

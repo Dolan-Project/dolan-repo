@@ -4,6 +4,12 @@ export const ROUTES = {
   tripSaya: "/trip-saya",
   buatTrip: "/buat-trip",
   profil: "/profil",
+  profilEdit: "/profil/edit",
+  masuk: "/masuk",
+  daftar: "/daftar",
+  lupaPassword: "/lupa-password",
+  resetPassword: "/reset-password",
+  cekEmail: "/cek-email",
   wisataBali: "/wisata/bali",
   itineraryBali: "/itinerary/bali-3h2m",
 } as const;
