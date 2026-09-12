@@ -18,6 +18,7 @@ export class GenerationJob extends Model<
   declare status: CreationOptional<"QUEUED" | "PROCESSING" | "SUCCEEDED" | "FAILED">;
   declare idempotencyKey: string;
   declare resultVersionId: CreationOptional<string | null>;
+  declare selectedItineraryVersionId: CreationOptional<string | null>;
   declare attemptCount: CreationOptional<number>;
   declare lockedBy: CreationOptional<string | null>;
   declare lockedAt: CreationOptional<Date | null>;
@@ -95,6 +96,11 @@ export function initSupportModels(sequelize: Sequelize) {
         type: DataTypes.UUID,
         allowNull: true,
         field: "result_version_id",
+      },
+      selectedItineraryVersionId: {
+        type: DataTypes.UUID,
+        allowNull: true,
+        field: "selected_itinerary_version_id",
       },
       attemptCount: {
         type: DataTypes.INTEGER,

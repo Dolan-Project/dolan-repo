@@ -7,6 +7,8 @@ export * from "./types/place.ts";
 export * from "./types/trip.ts";
 export * from "./types/template.ts";
 export * from "./schemas/auth.ts";
+export * from "./schemas/budget.ts";
+export * from "./schemas/generation.ts";
 export * from "./schemas/search.ts";
 export * from "./schemas/template.ts";
 

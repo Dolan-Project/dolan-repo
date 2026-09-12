@@ -15,6 +15,10 @@ export function createAuthRouter(
     res.json(apiSuccess(authService.toSessionResponse(req.authUser!)));
   });
 
+  router.get("/me", requireLogin, (req, res) => {
+    res.json(apiSuccess(authService.toMeSession(req.authUser!)));
+  });
+
   router.post("/disconnect-sockets", requireLogin, (req, res) => {
     const closed = disconnectUser(req.authUser!.id);
     res.json(apiSuccess({ closed }));

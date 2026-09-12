@@ -35,6 +35,9 @@ export type AuthIdentity = {
   username: string | null;
   displayName: string | null;
   domicile: string | null;
+  avatarUrl: string | null;
+  coverUrl: string | null;
+  bio: string | null;
 };
 
 export type TripAccessContext = {

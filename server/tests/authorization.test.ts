@@ -12,6 +12,9 @@ const completeUser: AuthIdentity = {
   username: "alya",
   displayName: "Alya",
   domicile: "Jakarta",
+  avatarUrl: null,
+  coverUrl: null,
+  bio: null,
 };
 
 function userActor(overrides: Partial<AuthIdentity> = {}, trip?: TripAccessContext): SessionActor {
@@ -60,6 +63,12 @@ describe("authorization rules", () => {
     const decision = authorize(actor, "read_chat");
     expect(decision.allowed).toBe(false);
     if (!decision.allowed) expect(decision.code).toBe("PENDING_MEMBER");
+  });
+
+  it("blocks suspended accounts from draft creation", () => {
+    const decision = authorize(userActor({ status: "SUSPENDED" }), "create_draft");
+    expect(decision.allowed).toBe(false);
+    if (!decision.allowed) expect(decision.code).toBe("ACCOUNT_SUSPENDED");
   });
 
   it("allows active participants to read chat", () => {

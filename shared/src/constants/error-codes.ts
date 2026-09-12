@@ -9,6 +9,9 @@ export const AuthErrorCode = {
   NOT_HOST: "NOT_HOST",
   PENDING_MEMBER: "PENDING_MEMBER",
   INVALID_TOKEN: "INVALID_TOKEN",
+  JOB_ALREADY_ACTIVE: "JOB_ALREADY_ACTIVE",
+  QUOTA_EXCEEDED: "QUOTA_EXCEEDED",
+  INVALID_GENERATION: "INVALID_GENERATION",
 } as const;
 
 export type AuthErrorCode = (typeof AuthErrorCode)[keyof typeof AuthErrorCode];

@@ -6,9 +6,12 @@ Express tidak punya login/password. Next.js (Salsa) memanggil Supabase Auth, lal
 
 Base: `/api/v1`
 
-- `GET /auth/session` — Bearer wajib. Response `ApiSuccess<SessionResponse>`.
+- `GET /auth/session` — Bearer wajib. Response `ApiSuccess<SessionResponse>` (termasuk email untuk BFF, bukan halaman publik).
+- `GET /users/me` — Bearer wajib. Response `{ user: PublicUser, emailVerified, profileComplete }` agar Salsa bisa ganti mock. Email tidak dikirim.
 - `POST /auth/disconnect-sockets` — Bearer wajib. Memutus seluruh socket user itu.
 - `POST /auth/uploads/profile` — Bearer wajib. Body: `{ ownerUserId, mimeType, byteSize, kind: "avatar" | "cover" }`.
+
+User store: `MemoryUserRepository` untuk tes/mock. Saat API start dan Postgres Wira tersambung, Express memakai `SequelizeUserRepository` (upsert `users.auth_reference`, baca `user_profiles`). `role`/`status` tidak di-update dari token.
 
 Guards:
 
@@ -22,6 +25,10 @@ Guards:
 | Upload avatar/cover | Login dan `ownerUserId` = actor |
 
 `role` dan `status` tidak diterima dari client. Token tidak dikembalikan di body dan tidak ditulis ke log.
+
+Token mock development: `mock-verified-complete`, `mock-unverified`, `mock-incomplete-profile`, `mock-admin`.
+
+Generate itinerary: lihat `docs/jobs-contract.md`.
 
 ## Socket.IO
 

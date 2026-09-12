@@ -5,10 +5,12 @@
     "dolan",
     "shared",
     "server",
+    "worker",
     "database"
   ],
   "scripts": {
     "dev:server": "npm run dev -w server",
+    "dev:worker": "npm run dev -w worker",
     "test:server": "npm run test -w server",
     "typecheck:server": "npm run typecheck -w server",
     "typecheck:database": "npm run typecheck -w database",
