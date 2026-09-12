@@ -3,7 +3,7 @@ import { HomeExperience } from "@/features/home/components/HomeExperience";
 
 export default function BerandaPage() {
   return (
-    <AppShell>
+    <AppShell flushHeader>
       <HomeExperience />
     </AppShell>
   );

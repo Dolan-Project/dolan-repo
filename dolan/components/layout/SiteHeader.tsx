@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import { ASSETS } from "@/lib/assets";
 import { ROUTES, type NavKey } from "@/lib/routes";
-import { Icon } from "@/components/ui/Icon";
 
 const desktopLinks: { key: NavKey; href: string; label: string }[] = [
   { key: "beranda", href: ROUTES.beranda, label: "Beranda" },
@@ -28,9 +28,17 @@ function isActive(pathname: string, key: NavKey) {
 
 export function SiteHeader() {
   const pathname = usePathname();
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const update = () => setScrolled(window.scrollY > 20);
+    update();
+    window.addEventListener("scroll", update, { passive: true });
+    return () => window.removeEventListener("scroll", update);
+  }, []);
+  const transparent = pathname === "/" && !scrolled;
 
   return (
-    <header className="fixed top-0 z-50 w-full border-b border-outline-variant/30 bg-surface-container-lowest/85 shadow-[0_1px_8px_rgba(0,0,0,0.04)] backdrop-blur-xl">
+    <header className={`fixed top-0 z-50 w-full transition-all duration-500 ${transparent ? "border-transparent bg-transparent shadow-none" : "border-b border-white/60 bg-white/82 shadow-[0_8px_30px_rgba(15,59,94,.08)] backdrop-blur-xl"}`}>
       <div className="mx-auto flex h-14 max-w-[1200px] items-center justify-between gap-3 px-margin md:h-16 md:px-margin-desktop">
         <Link href={ROUTES.beranda} className="flex items-center gap-2">
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -65,27 +73,8 @@ export function SiteHeader() {
         </nav>
 
         <div className="flex items-center gap-2 md:gap-3">
-          <button
-            type="button"
-            aria-label="Notifikasi"
-            className="flex h-9 w-9 items-center justify-center rounded-full text-on-surface-variant transition-colors hover:bg-surface-container hover:text-on-surface"
-          >
-            <Icon name="notifications" className="text-[20px]" />
-          </button>
-          <Link href={ROUTES.profil} aria-label="Profil">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              alt="Profile"
-              className="h-8 w-8 rounded-full object-cover"
-              src={ASSETS.profile}
-            />
-          </Link>
-          <Link
-            href={ROUTES.buatTrip}
-            className="btn-primary !hidden !min-h-9 !px-4 !py-1.5 !text-[0.8125rem] md:!inline-flex"
-          >
-            Buat Trip
-          </Link>
+          <Link href="/masuk" className="type-label rounded-full px-3 py-2 text-on-surface transition-colors hover:bg-surface-container">Masuk</Link>
+          <Link href="/daftar" className="inline-flex min-h-9 items-center rounded-full bg-primary-container px-4 text-[0.8125rem] font-bold text-on-primary shadow-[0_8px_22px_rgba(255,90,61,.22)] transition-transform hover:-translate-y-0.5">Daftar</Link>
         </div>
       </div>
     </header>
