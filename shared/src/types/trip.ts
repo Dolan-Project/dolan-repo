@@ -1,5 +1,21 @@
+import type { PublicUser } from "./kickoff.js";
 import type { PlaceSummary } from "./place.ts";
 import type { TripStatus, TripVisibility } from "./enums.ts";
+
+export type MyTripRole = "hosted" | "joined" | "pending";
+
+export type MyTripSummary = {
+  id: string;
+  title: string;
+  visibility: TripVisibility;
+  status: TripStatus;
+  startDate: string;
+  endDate: string;
+  host: PublicUser;
+  destinationCity: string;
+  activeParticipantCount: number;
+  maxParticipants: number | null;
+};
 
 export type TripSummary = {
   id: string;

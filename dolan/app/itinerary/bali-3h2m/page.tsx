@@ -74,7 +74,7 @@ export default function ItineraryBaliPage() {
         </div>
 
         <div className="grid gap-5 lg:grid-cols-12">
-          <div className="lg:col-span-6 lg:sticky lg:top-20 lg:self-start">
+            <div className="lg:col-span-6 lg:sticky lg:top-24 lg:self-start">
             <div className="card-surface overflow-hidden">
               <div
                 className="relative h-[240px] bg-cover bg-center md:h-[520px]"
@@ -207,7 +207,7 @@ export default function ItineraryBaliPage() {
           </div>
         </div>
 
-        <section className="mt-8 rounded-[24px] bg-gradient-to-r from-secondary to-[#0284C7] p-5 text-white md:p-8">
+        <section className="mt-8 rounded-[24px] bg-primary p-5 text-on-primary md:p-8">
           <p className="type-micro uppercase tracking-[0.1em] text-white/80">
             Kolaborasi Komunitas
           </p>
