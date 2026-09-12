@@ -27,16 +27,19 @@ describe("MyTripSummary", () => {
     const trip: MyTripSummary = {
       id: "t1",
       title: "Bali 3H2M",
+      destinationCity: "Bali",
       visibility: "PUBLIC",
       status: "OPEN",
       startDate: "2026-10-01",
       endDate: "2026-10-03",
+      participantCount: 2,
+      pendingRequestCount: 0,
+      coverPlace: null,
       host,
-      destinationCity: "Bali",
-      activeParticipantCount: 2,
       maxParticipants: 4,
     };
     expect("joinFee" in trip).toBe(false);
     expect(trip.maxParticipants).toBe(4);
+    expect(trip.participantCount).toBe(2);
   });
 });

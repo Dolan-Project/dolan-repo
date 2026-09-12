@@ -29,7 +29,7 @@ export function unauthorized(code = AuthErrorCode.UNAUTHENTICATED, message = "Au
   return new HttpError(401, code, message);
 }
 
-export function forbidden(code = AuthErrorCode.FORBIDDEN, message = "You cannot perform this action") {
+export function forbidden(code: string = AuthErrorCode.FORBIDDEN, message = "You cannot perform this action") {
   return new HttpError(403, code, message);
 }
 

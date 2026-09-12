@@ -8,6 +8,7 @@ import {
   createJobService,
   createProductionJobService,
   createProductionSearchService,
+  createProductionTripService,
   createUserRepository,
 } from "./container.ts";
 import { logger } from "./lib/logger.ts";
@@ -38,6 +39,7 @@ async function main() {
     sockets.disconnectUser,
     databaseReady ? createProductionSearchService() : undefined,
     jobService,
+    databaseReady ? createProductionTripService() : undefined,
     chatService,
   );
 

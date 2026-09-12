@@ -2,7 +2,7 @@ import cors from "cors";
 import express from "express";
 import { apiSuccess } from "@dolan/shared";
 import { env } from "./config/env.ts";
-import { createJobService, createMemorySearchService } from "./container.ts";
+import { createJobService, createMemorySearchService, createMemoryTripService } from "./container.ts";
 import { createAuthenticate, requireLogin } from "./middleware/authenticate.ts";
 import { requireCapability } from "./middleware/authorize.ts";
 import { errorHandler, notFoundHandler } from "./middleware/error-handler.ts";
@@ -16,12 +16,15 @@ import { createJobRouter } from "./modules/jobs/job-routes.ts";
 import type { GenerationJobService } from "./modules/jobs/job-service.ts";
 import { createSearchRouter } from "./modules/search/search-routes.ts";
 import type { SearchService } from "./modules/search/search-service.ts";
+import { createTripRouter } from "./modules/trips/trip-routes.ts";
+import type { TripService } from "./modules/trips/trip-service.ts";
 
 export function createApp(
   authService: AuthService,
   disconnectUser: (userId: string) => number = () => 0,
   search: SearchService = createMemorySearchService(),
   jobService: GenerationJobService = createJobService(),
+  trips: TripService = createMemoryTripService(),
   chatService: ChatService = new ChatService(new MemoryChatStore()),
 ) {
   const app = express();
@@ -49,26 +52,11 @@ export function createApp(
   });
   app.use("/api/v1", createSearchRouter(search));
   app.use("/api/v1", createJobRouter(jobService));
+  app.use("/api/v1", createTripRouter(trips));
   app.use("/api/v1", createChatRouter(chatService));
 
   app.get("/api/v1/public/ping", requireCapability("read_public"), (_req, res) => {
     res.json(apiSuccess({ ok: true }));
-  });
-
-  app.post("/api/v1/trips/drafts", requireCapability("create_draft"), (_req, res) => {
-    res.status(201).json(apiSuccess({ created: true }));
-  });
-
-  app.post("/api/v1/trips/:tripId/publish", requireCapability("publish_trip"), (_req, res) => {
-    res.json(apiSuccess({ published: true }));
-  });
-
-  app.post("/api/v1/trips/:tripId/join", requireCapability("join_trip"), (_req, res) => {
-    res.status(201).json(apiSuccess({ requested: true }));
-  });
-
-  app.post("/api/v1/trips/:tripId/comments", requireCapability("comment"), (_req, res) => {
-    res.status(201).json(apiSuccess({ commented: true }));
   });
 
   app.post("/api/v1/users/:userId/follow", requireCapability("follow"), (_req, res) => {

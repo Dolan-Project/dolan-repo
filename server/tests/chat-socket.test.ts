@@ -2,7 +2,7 @@ import { createServer } from "node:http";
 import { io as ioc, type Socket as ClientSocket } from "socket.io-client";
 import { afterEach, describe, expect, it } from "vitest";
 import { createApp } from "../src/app.ts";
-import { createJobService, createMemorySearchService } from "../src/container.ts";
+import { createJobService, createMemorySearchService, createMemoryTripService } from "../src/container.ts";
 import { MockAuthAdapter } from "../src/integrations/supabase/mock-auth-adapter.ts";
 import { AuthService } from "../src/modules/auth/auth-service.ts";
 import { ChatService } from "../src/modules/chat/chat-service.ts";
@@ -36,7 +36,17 @@ describe("chat socket rooms", () => {
     const auth = new AuthService(new MockAuthAdapter(), new MemoryUserRepository());
     const httpServer = createServer();
     const sockets = createSocketServer(httpServer, auth, chat);
-    httpServer.on("request", createApp(auth, sockets.disconnectUser, createMemorySearchService(), createJobService(), chat));
+    httpServer.on(
+      "request",
+      createApp(
+        auth,
+        sockets.disconnectUser,
+        createMemorySearchService(),
+        createJobService(),
+        createMemoryTripService(),
+        chat,
+      ),
+    );
     await new Promise<void>((resolve) => httpServer.listen(0, resolve));
     const address = httpServer.address();
     if (!address || typeof address === "string") throw new Error("no port");

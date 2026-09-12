@@ -52,3 +52,7 @@ stitch-html/
 
 # Cursor local config (may contain secrets)
 .cursor/
+
+# embedded postgres used by store tests
+**/.tmp-pg*/
+

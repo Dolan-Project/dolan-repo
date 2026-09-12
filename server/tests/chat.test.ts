@@ -6,7 +6,7 @@ import { AuthService } from "../src/modules/auth/auth-service.ts";
 import { ChatService } from "../src/modules/chat/chat-service.ts";
 import { MemoryChatStore } from "../src/modules/chat/memory-chat-store.ts";
 import { MemoryUserRepository } from "../src/modules/auth/user-repository.ts";
-import { createJobService, createMemorySearchService } from "../src/container.ts";
+import { createJobService, createMemorySearchService, createMemoryTripService } from "../src/container.ts";
 
 const HOST = "11111111-1111-4111-8111-111111111111";
 const MEMBER = "44444444-4444-4444-8444-444444444444";
@@ -25,7 +25,7 @@ function setup() {
   });
   const chat = new ChatService(store);
   const auth = new AuthService(new MockAuthAdapter(), new MemoryUserRepository());
-  const app = createApp(auth, () => 0, createMemorySearchService(), createJobService(), chat);
+  const app = createApp(auth, () => 0, createMemorySearchService(), createJobService(), createMemoryTripService(), chat);
   return { app, store, chat };
 }
 
