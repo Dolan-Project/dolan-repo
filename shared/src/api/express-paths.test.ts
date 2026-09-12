@@ -4,6 +4,7 @@ import {
   EXPRESS_PATHS,
   joinRequestReviewPath,
   joinRequestWithdrawPath,
+  tripCommentPath,
   tripCommentsPath,
   tripJoinRequestsPath,
   tripMessagesPath,
@@ -28,6 +29,7 @@ describe("EXPRESS_PATHS", () => {
     expect(joinRequestReviewPath("j1")).toBe("/join-requests/j1/review");
     expect(joinRequestWithdrawPath("j1")).toBe("/join-requests/j1/withdraw");
     expect(tripCommentsPath("t1")).toBe("/trips/t1/comments");
+    expect(tripCommentPath("t1", "c1")).toBe("/trips/t1/comments/c1");
     expect(tripMessagesPath("t1")).toBe("/trips/t1/messages");
   });
 });

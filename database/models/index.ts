@@ -234,6 +234,10 @@ export function initModels(sequelize: Sequelize = getSequelize()) {
   return getModels();
 }
 
+export function resetInitModelsForTests() {
+  initialized = false;
+}
+
 export function getModels() {
   return {
     User,

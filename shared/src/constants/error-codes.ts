@@ -28,3 +28,20 @@ export const SearchErrorCode = {
 } as const;
 
 export type SearchErrorCode = (typeof SearchErrorCode)[keyof typeof SearchErrorCode];
+
+export const TripErrorCode = {
+  INVALID_DATE: "INVALID_DATE",
+  INVALID_BUDGET: "INVALID_BUDGET",
+  INVALID_TRANSITION: "INVALID_TRANSITION",
+  TRIP_FULL: "TRIP_FULL",
+  DUPLICATE_REQUEST: "DUPLICATE_REQUEST",
+  BLOCKED_RELATION: "BLOCKED_RELATION",
+  INVALID_PARENT: "INVALID_PARENT",
+  TRIP_NOT_PUBLIC: "TRIP_NOT_PUBLIC",
+  TRIP_NOT_FOUND: "TRIP_NOT_FOUND",
+  INVALID_FILTER: "INVALID_FILTER",
+  IDEMPOTENCY_CONFLICT: "IDEMPOTENCY_CONFLICT",
+  INVALID_PLAN_INPUT: "INVALID_PLAN_INPUT",
+} as const;
+
+export type TripErrorCode = (typeof TripErrorCode)[keyof typeof TripErrorCode];

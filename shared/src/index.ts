@@ -11,6 +11,7 @@ export * from "./schemas/budget.ts";
 export * from "./schemas/generation.ts";
 export * from "./schemas/search.ts";
 export * from "./schemas/template.ts";
+export * from "./schemas/trip.ts";
 
 export type { PublicUser } from "./types/kickoff.ts";
 
@@ -48,4 +49,12 @@ export {
   joinRequestWithdrawPath,
   tripCommentsPath,
   tripMessagesPath,
+  tripClosePath,
+  tripReopenPath,
+  tripStartPath,
+  tripCompletePath,
+  tripCancelPath,
+  tripVisibilityPath,
+  tripLeavePath,
+  tripCommentPath,
 } from "./api/express-paths.ts";

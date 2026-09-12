@@ -69,6 +69,20 @@ export function createSeededMemoryUsers(): AuthIdentity[] {
       coverUrl: null,
       bio: null,
     },
+    {
+      id: "55555555-5555-4555-8555-555555555555",
+      authReference: "auth-verified-budi",
+      email: "budi@dolan.test",
+      role: "USER",
+      status: "ACTIVE",
+      emailVerifiedAt: "2026-01-01T00:00:00.000Z",
+      username: "budi",
+      displayName: "Budi",
+      domicile: "Yogyakarta",
+      avatarUrl: null,
+      coverUrl: null,
+      bio: null,
+    },
   ];
 }
 

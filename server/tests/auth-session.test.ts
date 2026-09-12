@@ -4,6 +4,7 @@ import { createApp } from "../src/app.ts";
 import { MockAuthAdapter } from "../src/integrations/supabase/mock-auth-adapter.ts";
 import { AuthService } from "../src/modules/auth/auth-service.ts";
 import { MemoryUserRepository } from "../src/modules/auth/user-repository.ts";
+import { idempotencyKey as k } from "./idempotency-key.ts";
 
 function app() {
   return createApp(new AuthService(new MockAuthAdapter(), new MemoryUserRepository()));
@@ -41,7 +42,9 @@ describe("auth session and guards", () => {
 
     const user = await request(app())
       .post("/api/v1/trips/drafts")
-      .set("Authorization", "Bearer mock-unverified");
+      .set("Authorization", "Bearer mock-unverified")
+      .set("Idempotency-Key", k("auth-draft-1"))
+      .send({ title: "Trip baru" });
     expect(user.status).toBe(201);
   });
 

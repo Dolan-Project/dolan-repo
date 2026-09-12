@@ -20,6 +20,9 @@ import { MemoryQuotaStore, QuotaService } from "./modules/search/quota.ts";
 import { SearchService } from "./modules/search/search-service.ts";
 import { SequelizeQuotaStore } from "./modules/search/sequelize-quota.ts";
 import { SequelizeSearchStore } from "./modules/search/sequelize-store.ts";
+import { MemoryTripStore } from "./modules/trips/memory-store.ts";
+import { SequelizeTripStore } from "./modules/trips/sequelize-store.ts";
+import { TripService } from "./modules/trips/trip-service.ts";
 
 export function createAuthAdapter(): AuthAdapter {
   if (env.authAdapter === "supabase" && env.supabaseUrl && env.supabaseServiceRoleKey) {
@@ -82,4 +85,13 @@ export function createProductionSearchService() {
     new SequelizeSearchStore(),
     new QuotaService(new SequelizeQuotaStore(), env.placesMaxRequestsPerUserPerDay),
   );
+}
+
+export function createMemoryTripService(store = new MemoryTripStore()) {
+  return new TripService(store);
+}
+
+export function createProductionTripService() {
+  initModels();
+  return new TripService(new SequelizeTripStore());
 }
