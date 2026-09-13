@@ -16,6 +16,11 @@ import { createChatRouter } from "./modules/chat/chat-routes.ts";
 import { ChatService } from "./modules/chat/chat-service.ts";
 import { MemoryChatStore } from "./modules/chat/memory-chat-store.ts";
 import { tripChatBridge } from "./modules/chat/trip-bridge.ts";
+import { ItineraryExportService } from "./modules/location/itinerary-export.ts";
+import { createLocationRouter } from "./modules/location/location-routes.ts";
+import { LocationService } from "./modules/location/location-service.ts";
+import { MemoryLocationStore } from "./modules/location/memory-location-store.ts";
+import { MemoryShareLinkStore, ShareLinkService } from "./modules/location/share-link-service.ts";
 import { createJobRouter } from "./modules/jobs/job-routes.ts";
 import type { GenerationJobService } from "./modules/jobs/job-service.ts";
 import { createSearchRouter } from "./modules/search/search-routes.ts";
@@ -33,10 +38,22 @@ export function createApp(
   chatService?: ChatService,
   rateLimit: RateLimitConfig | false = env.nodeEnv === "test" ? false : envRateLimit(),
   social: SocialQueryStore = new MemorySocialStore(),
+  locationService?: LocationService,
+  shareLinkService?: ShareLinkService,
+  itineraryExport?: ItineraryExportService,
 ) {
   const memoryChat = new MemoryChatStore();
   const chat = chatService ?? new ChatService(memoryChat);
   const tripService = trips ?? createMemoryTripService(undefined, tripChatBridge(memoryChat, chat));
+  const location = locationService ?? new LocationService(new MemoryLocationStore(), chat);
+  const shareLinks = shareLinkService ?? new ShareLinkService(new MemoryShareLinkStore(), chat, async (tripId) => ({
+    title: `Trip ${tripId}`,
+    destinationCity: "Yogyakarta",
+    startDate: "2026-10-01",
+    endDate: "2026-10-03",
+    summary: "Ringkasan publik",
+  }));
+  const exports = itineraryExport ?? new ItineraryExportService(chat, async () => null);
   const app = express();
   app.disable("x-powered-by");
   if (env.nodeEnv === "production") {
@@ -91,6 +108,7 @@ export function createApp(
   app.use("/api/v1", createJobRouter(jobService));
   app.use("/api/v1", createTripRouter(tripService));
   app.use("/api/v1", createChatRouter(chat));
+  app.use("/api/v1", createLocationRouter(location, shareLinks, exports));
 
   app.get("/api/v1/public/ping", requireCapability("read_public"), (_req, res) => {
     res.json(apiSuccess({ ok: true }));

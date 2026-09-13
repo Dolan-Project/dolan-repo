@@ -14,8 +14,9 @@ Pending join **tidak** membaca chat (REST atau Socket.IO). Hanya member `ACTIVE`
 ## Socket.IO (cookie handshake)
 
 - `room.join` `{ tripId }` → join `trip:{tripId}`
-- `message.send` persist dulu, lalu `message.created`
-- `message.read` update read state
-- Server: `notification.created` ke penerima, bukan actor
+- `message.send` persist dulu, lalu `message.created` hanya ke member aktif
+- `message.read` `{ tripId, lastReadMessageId }`
+- Server ke member aktif: `notification.created`, `trip.updated`, `join_request.created`, `join_request.reviewed`, `generation.updated`
+- `POST /trips/:id/chat/leave` menandai membership LEFT dan evict socket
 
 Reconnect: `GET messages?after=<lastId>`. Duplikat dicegah unique `(sender, clientMessageId)`.

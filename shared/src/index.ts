@@ -46,6 +46,8 @@ export {
   markReadSchema,
 } from "./schemas/chat.ts";
 export type { SendMessageInput } from "./schemas/chat.ts";
+export { startLocationShareSchema, pingLocationSchema } from "./schemas/location.ts";
+export type { StartLocationShareInput } from "./schemas/location.ts";
 export {
   API_V1_PREFIX,
   EXPRESS_PATHS,

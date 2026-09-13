@@ -105,17 +105,20 @@ describe("chat and notifications", () => {
     expect(blocked.body.error.code).toBe("ROOM_READ_ONLY");
 
     store.setReadOnly(TRIP, false);
-    store.evict(TRIP, MEMBER, "LEFT");
+    await chat.evictFromRoom(TRIP, MEMBER, "LEFT");
     const left = await request(app)
       .get(`/api/v1/trips/${TRIP}/messages`)
       .set("Authorization", "Bearer mock-admin");
     expect(left.status).toBe(403);
     expect(left.body.error.code).toBe("NOT_MEMBER");
 
-    const evicted = await request(app)
-      .post(`/api/v1/trips/${TRIP}/chat/leave`)
+    await request(app)
+      .post(`/api/v1/trips/${TRIP}/messages`)
+      .set("Authorization", "Bearer mock-verified-complete")
+      .send({ clientMessageId: keyB, body: "after leave" });
+    const inbox = await request(app)
+      .get("/api/v1/notifications")
       .set("Authorization", "Bearer mock-admin");
-    expect(evicted.body.data.left).toBe(true);
-    expect(chat).toBeTruthy();
+    expect(inbox.body.data).toHaveLength(0);
   });
 });

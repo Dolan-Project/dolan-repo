@@ -73,13 +73,13 @@ export class ChatService {
     const message = await this.store.createMessage({
       roomId: access.roomId,
       tripId,
-      sender: this.toSender(userId),
+      sender: await this.store.resolveSender(userId).catch(() => this.toSender(userId)),
       clientMessageId: parsed.clientMessageId,
       body: parsed.body,
     });
-    this.realtime.emitToRoom(tripId, "message.created", message);
     const members = await this.store.listActiveMemberIds(tripId);
     for (const memberId of members) {
+      this.realtime.emitToUser(memberId, "message.created", message);
       if (memberId === userId) continue;
       const notification = await this.store.createNotification({
         recipientUserId: memberId,
@@ -101,9 +101,53 @@ export class ChatService {
     return { ok: true };
   }
 
-  async evictFromRoom(tripId: string, userId: string) {
+  async evictFromRoom(tripId: string, userId: string, status: "LEFT" | "REMOVED" = "LEFT") {
+    await this.store.evictMember(tripId, userId, status);
     this.realtime.leaveRoom(userId, tripId);
+    await this.emitToActiveMembers(tripId, "trip.updated", { tripId, userId, membershipStatus: status });
     return { left: true };
+  }
+
+  async emitGenerationUpdated(job: {
+    id: string;
+    tripId: string;
+    status: string;
+    resultVersionId: string | null;
+    errorCode: string | null;
+  }) {
+    await this.emitToActiveMembers(job.tripId, "generation.updated", {
+      jobId: job.id,
+      tripId: job.tripId,
+      status: job.status,
+      resultVersionId: job.resultVersionId,
+      errorCode: job.errorCode,
+    });
+  }
+
+  async emitTripEvent(tripId: string, event: string, payload: unknown, skipUserId?: string) {
+    await this.emitToActiveMembers(tripId, event, payload, skipUserId);
+  }
+
+  async emitJoinEvent(
+    tripId: string,
+    event: "join_request.created" | "join_request.reviewed",
+    payload: Record<string, unknown>,
+    actorUserId?: string,
+  ) {
+    await this.emitToActiveMembers(tripId, event, { tripId, ...payload }, actorUserId);
+  }
+
+  private async emitToActiveMembers(
+    tripId: string,
+    event: string,
+    payload: unknown,
+    skipUserId?: string,
+  ) {
+    const members = await this.store.listActiveMemberIds(tripId);
+    for (const memberId of members) {
+      if (memberId === skipUserId) continue;
+      this.realtime.emitToUser(memberId, event, payload);
+    }
   }
 
   async listNotifications(userId: string, page = 1, limit = 20) {

@@ -13,7 +13,7 @@ import { SequelizeUserRepository } from "./modules/auth/sequelize-user-repositor
 import { MemoryUserRepository, type UserRepository } from "./modules/auth/user-repository.ts";
 import { GeminiAdapter, MockGeminiAdapter } from "./modules/jobs/gemini-adapter.ts";
 import { MemoryJobRepository } from "./modules/jobs/job-repository.ts";
-import { GenerationJobService } from "./modules/jobs/job-service.ts";
+import { GenerationJobService, type JobServiceOptions } from "./modules/jobs/job-service.ts";
 import { createPlaceLookup } from "./modules/jobs/place-lookup.ts";
 import { loadDraftTrip, loadLockedStops, persistGeneratedVersion } from "./modules/jobs/persist-itinerary.ts";
 import { GoogleRoutesClient, MockRoutesClient } from "./modules/jobs/routes-adapter.ts";
@@ -27,6 +27,14 @@ import { MemoryTripStore } from "./modules/trips/memory-store.ts";
 import { SequelizeTripStore } from "./modules/trips/sequelize-store.ts";
 import { TripService, type TripRealtime } from "./modules/trips/trip-service.ts";
 import { MemorySocialStore, SequelizeSocialStore } from "./modules/social/social-queries.ts";
+import { ItineraryExportService } from "./modules/location/itinerary-export.ts";
+import { loadExportItinerary } from "./modules/location/load-export-itinerary.ts";
+import { loadTripPreview } from "./modules/location/load-trip-preview.ts";
+import { LocationService } from "./modules/location/location-service.ts";
+import { MemoryLocationStore } from "./modules/location/memory-location-store.ts";
+import { SequelizeLocationStore } from "./modules/location/sequelize-location-store.ts";
+import { SequelizeShareLinkStore } from "./modules/location/sequelize-share-link-store.ts";
+import { MemoryShareLinkStore, ShareLinkService } from "./modules/location/share-link-service.ts";
 
 export function createAuthAdapter(): AuthAdapter {
   if (env.authAdapter === "supabase" && env.supabaseUrl && env.supabaseServiceRoleKey) {
@@ -47,13 +55,14 @@ export function createChatService(useDatabase: boolean) {
   return new ChatService(useDatabase ? new SequelizeChatStore() : new MemoryChatStore());
 }
 
-export function createJobService() {
+export function createJobService(onJobUpdated?: JobServiceOptions["onJobUpdated"]) {
   return new GenerationJobService(new MemoryJobRepository(), new MockGeminiAdapter(), {
     routes: new MockRoutesClient(),
+    onJobUpdated,
   });
 }
 
-export function createProductionJobService() {
+export function createProductionJobService(onJobUpdated?: JobServiceOptions["onJobUpdated"]) {
   initModels();
   const places = env.googleMapsServerKey
     ? new GooglePlacesClient(env.googleMapsServerKey)
@@ -70,8 +79,33 @@ export function createProductionJobService() {
       resolveCoords: lookup.resolveCoords,
       verifyPlaces: lookup.verifyPlaces,
       requireDatabaseTrip: true,
+      onJobUpdated,
     },
   );
+}
+
+export function createLocationService(chat: ChatService, useDatabase: boolean) {
+  return new LocationService(useDatabase ? new SequelizeLocationStore() : new MemoryLocationStore(), chat);
+}
+
+export function createShareLinkService(chat: ChatService, useDatabase: boolean) {
+  return new ShareLinkService(
+    useDatabase ? new SequelizeShareLinkStore() : new MemoryShareLinkStore(),
+    chat,
+    useDatabase
+      ? loadTripPreview
+      : async (tripId) => ({
+          title: `Trip ${tripId}`,
+          destinationCity: "Yogyakarta",
+          startDate: "2026-10-01",
+          endDate: "2026-10-03",
+          summary: "Ringkasan publik",
+        }),
+  );
+}
+
+export function createItineraryExportService(chat: ChatService, useDatabase: boolean) {
+  return new ItineraryExportService(chat, useDatabase ? loadExportItinerary : async () => null);
 }
 
 export function createMemorySearchService(options?: {
