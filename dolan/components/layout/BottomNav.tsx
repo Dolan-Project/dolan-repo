@@ -36,7 +36,8 @@ function isActive(pathname: string, key: NavKey) {
     return (
       pathname.startsWith("/jelajah") ||
       pathname.startsWith("/wisata") ||
-      pathname.startsWith("/itinerary")
+      pathname.startsWith("/itinerary") ||
+      pathname.startsWith("/trip")
     );
   if (key === "trip-saya") return pathname.startsWith("/trip-saya");
   if (key === "buat-trip") return pathname.startsWith("/buat-trip");
