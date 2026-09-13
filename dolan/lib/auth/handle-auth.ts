@@ -1,4 +1,5 @@
 import {
+  AUTH_ERROR_CODES,
   forgotPasswordSchema,
   isProfileComplete,
   loginSchema,
@@ -16,10 +17,11 @@ import {
 } from "@/mocks/auth";
 import { samplePublicUser } from "@/mocks/fixtures";
 import { createApiError } from "@/mocks/scenarios";
+import { clearOfflineForSessionId } from "@/mocks/community-store";
 import { jsonResult, statusForCode, validationError } from "./api-response";
 import { proxyToExpress } from "./express-proxy";
 import { resolveAfterAuth } from "./post-auth-path";
-import { sessionCookieHeader } from "./session-cookie";
+import { readSessionId, sessionCookieHeader } from "./session-cookie";
 import { getSupabaseAnon } from "./supabase-anon";
 import { useMockApi } from "./use-mock";
 
@@ -219,7 +221,7 @@ export async function handleLogoutRequest(request: Request): Promise<Response> {
   }
   const mock = mockLogout("success");
   if (!mock.success) return jsonResult(mock, statusForCode(mock.error.code));
-  void request;
+  clearOfflineForSessionId(readSessionId(request.headers.get("cookie")));
   return jsonResult(mock, 200, null);
 }
 

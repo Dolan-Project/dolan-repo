@@ -2,6 +2,7 @@
 import type { PublicUser } from "@/lib/contracts";
 import Link from "next/link";
 import { FollowButton } from "@/components/profile/FollowButton";
+import { BlockReportActions } from "@/components/profile/BlockReportActions";
 import { LogoutButton } from "@/components/profile/LogoutButton";
 import { Icon } from "@/components/ui/Icon";
 import { ASSETS } from "@/lib/assets";
@@ -30,16 +31,18 @@ export function ProfileView({ user, action }: ProfileViewProps) {
             <div className="-mt-16 shrink-0 sm:-mt-24"><div className="h-28 w-28 overflow-hidden rounded-2xl border-4 border-white bg-white shadow-xl sm:h-36 sm:w-36"><img alt={`Foto profil ${user.displayName}`} className="h-full w-full object-cover" src={avatar} /></div><span className="-mt-3 ml-2 inline-flex items-center gap-1.5 rounded-full bg-[#087f8c] px-3 py-1 type-micro font-bold text-white shadow-md"><Icon name="verified" className="text-[12px]" />Traveler Terverifikasi</span></div>
             <div className="pb-1"><h1 className="text-2xl font-black tracking-tight text-on-surface sm:text-3xl">{user.displayName || "Traveler Dolan"}</h1><div className="mt-1.5 flex flex-wrap items-center gap-2.5"><span className="rounded-full bg-primary-fixed px-2.5 py-0.5 type-micro font-bold text-primary">{user.username ? `@${user.username}` : "Username belum diatur"}</span><span className="flex items-center gap-1 type-caption font-medium text-on-surface-variant"><Icon name="location_on" className="text-[15px] text-primary" />{user.domicile || "Domisili belum diisi"}</span></div></div>
           </div>
-          <div className="flex flex-wrap items-center gap-2.5 pb-1">{action === "edit" ? <><Link href={ROUTES.profilEdit} className="btn-primary !min-h-11"><Icon name="edit" className="text-[16px]" />Edit Profil</Link><LogoutButton /></> : <FollowButton />}</div>
+          <div className="flex flex-wrap items-center gap-2.5 pb-1">{action === "edit" ? <><Link href={ROUTES.profilEdit} className="btn-primary !min-h-11"><Icon name="edit" className="text-[16px]" />Edit Profil</Link><LogoutButton /></> : user.username ? <FollowButton username={user.username} /> : null}</div>
         </div>
 
         <p className="mt-5 max-w-4xl type-body-lg text-on-surface-variant">{user.bio || "Bagikan gaya traveling, daerah favorit, dan tipe teman perjalanan yang kamu cari."}</p>
         <div className="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
           <StatTile icon="hiking" iconClass="bg-secondary-fixed text-secondary" title={`${tripTotal} Trip`} subtitle={`${user.hostTripCount} Host · ${user.participantTripCount} Peserta`} />
-          <StatTile icon="groups" iconClass="bg-primary-fixed text-primary" title={`${user.followersCount + user.followingCount} Teman`} subtitle={`${user.followersCount} Pengikut · ${user.followingCount} Mengikuti`} />
-          <StatTile icon="star" iconClass="bg-amber-100 text-amber-600" title={`${rating} Rating`} subtitle={`${user.rating.reviewCount} ulasan rekan trip`} />
+          <StatTile href={user.username ? ROUTES.profilPengikut(user.username) : undefined} icon="groups" iconClass="bg-primary-fixed text-primary" title={`${user.followersCount + user.followingCount} Teman`} subtitle={`${user.followersCount} Pengikut · ${user.followingCount} Mengikuti`} />
+          <StatTile href={user.username ? ROUTES.profilUlasan(user.username) : undefined} icon="star" iconClass="bg-amber-100 text-amber-600" title={`${rating} Rating`} subtitle={`${user.rating.reviewCount} ulasan rekan trip`} />
           <StatTile icon="verified_user" iconClass="bg-emerald-100 text-emerald-700" title="Identitas" subtitle="Status verifikasi akun" />
         </div>
+        {user.username ? <div className="mt-4 flex flex-wrap gap-2"><Link href={ROUTES.profilPengikut(user.username)} className="btn-ghost !min-h-11">Pengikut</Link><Link href={ROUTES.profilMengikuti(user.username)} className="btn-ghost !min-h-11">Mengikuti</Link><Link href={ROUTES.profilUlasan(user.username)} className="btn-ghost !min-h-11">Ulasan</Link><Link href={ROUTES.profilRiwayat(user.username)} className="btn-ghost !min-h-11">Riwayat</Link>{action === "edit" ? <Link href={ROUTES.adminLaporan} className="btn-ghost !min-h-11">Moderasi laporan</Link> : null}</div> : null}
+        {action === "follow" && user.username ? <div className="mt-5 rounded-2xl border border-primary/10 bg-surface-container-low p-4"><p className="type-label font-extrabold text-on-surface">Keamanan komunitas</p><p className="mt-1 type-caption text-on-surface-variant">Blokir menghapus follow dan mencegah follow atau join. Laporan masuk ke antrian admin.</p><div className="mt-3"><BlockReportActions username={user.username} targetUserId={user.id} /></div></div> : null}
       </div>
     </section>
 
@@ -52,7 +55,7 @@ export function ProfileView({ user, action }: ProfileViewProps) {
   </main>;
 }
 
-function StatTile({ icon, iconClass, title, subtitle }: { icon: string; iconClass: string; title: string; subtitle: string }) { return <div className="flex min-h-24 items-center gap-3 rounded-2xl bg-surface-container-low p-3 sm:p-4"><div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${iconClass}`}><Icon name={icon} className="text-[21px]" /></div><div><p className="type-label font-extrabold text-on-surface">{title}</p><p className="mt-0.5 type-caption text-on-surface-variant">{subtitle}</p></div></div>; }
+function StatTile({ icon, iconClass, title, subtitle, href }: { icon: string; iconClass: string; title: string; subtitle: string; href?: string }) { const content = <div className="flex min-h-24 items-center gap-3 rounded-2xl bg-surface-container-low p-3 sm:p-4"><div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${iconClass}`}><Icon name={icon} className="text-[21px]" /></div><div><p className="type-label font-extrabold text-on-surface">{title}</p><p className="mt-0.5 type-caption text-on-surface-variant">{subtitle}</p></div></div>; return href ? <Link href={href} className="block rounded-2xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">{content}</Link> : content; }
 function TrustLine({ text }: { text: string }) { return <p className="flex items-start gap-2 type-caption text-on-surface-variant"><Icon name="check_circle" className="mt-0.5 text-emerald-600" />{text}</p>; }
 function RatingBar({ icon, label, value }: { icon: string; label: string; value: number | null }) { const score = value ?? 0; return <div><div className="flex items-center justify-between gap-3"><span className="type-label text-on-surface"><Icon name={icon} className="mr-2 text-primary" />{label}</span><strong className="type-label">{value == null ? "—" : value.toFixed(1)} <span className="font-normal text-on-surface-variant">/ 5.0</span></strong></div><div className="mt-2 h-2.5 overflow-hidden rounded-full bg-surface-container-high"><div className="h-full rounded-full bg-gradient-to-r from-amber-400 to-secondary transition-all" style={{ width: `${Math.min(100, Math.max(0, score * 20))}%` }} /></div></div>; }
 function HistoryCard({ image, place, role }: { image: string; place: string; role: string }) { return <article className="flex gap-3 rounded-2xl bg-white p-3 shadow-sm ring-1 ring-outline-variant/50"><img src={image} alt={place} className="h-24 w-32 rounded-xl object-cover" /><div className="min-w-0 py-1"><span className="chip bg-emerald-50 text-emerald-800">Trip selesai</span><h3 className="mt-2 type-label font-extrabold">{place}</h3><p className="mt-1 type-caption text-on-surface-variant">{role}</p></div></article>; }

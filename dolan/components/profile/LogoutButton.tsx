@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Icon } from "@/components/ui/Icon";
 import { ROUTES } from "@/lib/routes";
+import { clearPrivateOffline } from "@/lib/offline/private-cache";
 
 export function LogoutButton() {
   const router = useRouter();
@@ -13,6 +14,7 @@ export function LogoutButton() {
   async function onClick() {
     setPending(true);
     await fetch(AUTH_PATHS.logout, { method: "POST", credentials: "include" });
+    await clearPrivateOffline();
     router.push(ROUTES.beranda);
     router.refresh();
   }

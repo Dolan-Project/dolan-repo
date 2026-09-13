@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
+import { ServiceWorkerRegister } from "@/components/pwa/ServiceWorkerRegister";
 import "./globals.css";
 
 const plusJakarta = Plus_Jakarta_Sans({
@@ -12,6 +13,13 @@ export const metadata: Metadata = {
   title: "Dolan — Temukan destinasi & teman perjalanan",
   description:
     "Rencanakan trip sesuai budget, lalu ajukan join trip publik — gratis. Biaya perjalanan ditanggung masing-masing.",
+  manifest: "/manifest.webmanifest",
+  themeColor: "#004ac6",
+  appleWebApp: {
+    capable: true,
+    title: "Dolan",
+    statusBarStyle: "default",
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -21,7 +29,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       data-scroll-behavior="smooth"
       className={`${plusJakarta.variable} h-full antialiased`}
     >
-      <body className="min-h-full font-sans">{children}</body>
+      <body className="min-h-full font-sans">
+        <ServiceWorkerRegister />
+        {children}
+      </body>
     </html>
   );
 }

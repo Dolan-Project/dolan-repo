@@ -62,6 +62,13 @@ export function statusForCode(code: string): number {
     case "CAPACITY_BELOW_MEMBERS":
     case "LEAVE_CONFIRM_REQUIRED":
     case "INVALID_TRANSITION":
+    case "SELF_FOLLOW":
+    case "SELF_REVIEW":
+    case "SELF_BLOCK":
+    case "DUPLICATE_REVIEW":
+    case "ALREADY_FOLLOWING":
+    case "NOT_ELIGIBLE":
+    case "BLOCKED_RELATION":
       return 400;
     default:
       return 400;
