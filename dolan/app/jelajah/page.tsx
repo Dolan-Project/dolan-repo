@@ -158,7 +158,10 @@ export function ExploreView() {
             <div className="absolute inset-0 bg-linear-to-b from-surface/20 via-transparent to-surface/40" />
             <div className="absolute left-[28%] top-[26%] hidden md:block">
               <span className="absolute inset-0 animate-ping rounded-full bg-primary-container/30" />
-              <div className="relative flex max-w-44 items-center gap-1.5 rounded-full bg-surface-container-lowest p-1 pr-2.5 shadow-lg">
+              <Link
+                href={ROUTES.profilUser("wayan")}
+                className="relative flex max-w-44 items-center gap-1.5 rounded-full bg-surface-container-lowest p-1 pr-2.5 shadow-lg"
+              >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   alt=""
@@ -168,7 +171,7 @@ export function ExploreView() {
                 <span className="type-micro truncate text-on-surface">
                   @wayan · Padar
                 </span>
-              </div>
+              </Link>
             </div>
           </div>
 

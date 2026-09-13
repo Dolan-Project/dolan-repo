@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Icon } from "@/components/ui/Icon";
 import { ASSETS } from "@/lib/assets";
 import { ROUTES } from "@/lib/routes";
+import { AttendanceConfirm } from "@/components/trips/AttendanceConfirm";
 
 const created = [
   {
@@ -124,6 +125,7 @@ export default function TripSayaPage() {
             </article>
           ))}
         </div>
+        <AttendanceConfirm />
       </div>
   );
 }

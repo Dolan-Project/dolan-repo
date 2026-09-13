@@ -1,0 +1,19 @@
+{
+  "name": "Dolan",
+  "short_name": "Dolan",
+  "description": "Temukan destinasi dan teman perjalanan. Join trip publik gratis.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f8f9ff",
+  "theme_color": "#004ac6",
+  "lang": "id",
+  "icons": [
+    {
+      "src": "/globe.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

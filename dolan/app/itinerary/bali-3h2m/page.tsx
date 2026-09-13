@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AppShell } from "@/components/layout/AppShell";
 import { Icon } from "@/components/ui/Icon";
+import { SaveOfflineItineraryButton } from "@/components/offline/SaveOfflineItineraryButton";
 import { ASSETS } from "@/lib/assets";
 import { ROUTES } from "@/lib/routes";
 
@@ -66,10 +67,7 @@ export default function ItineraryBaliPage() {
               <Icon name="share" className="text-[16px]" />
               Bagikan Rute
             </button>
-            <button type="button" className="btn-ghost">
-              <Icon name="bookmark" className="text-[16px]" />
-              Simpan Trip
-            </button>
+            <SaveOfflineItineraryButton />
           </div>
         </div>
 

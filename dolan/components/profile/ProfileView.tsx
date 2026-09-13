@@ -1,6 +1,7 @@
 import type { PublicUser } from "@/lib/contracts";
 import Link from "next/link";
 import { FollowButton } from "@/components/profile/FollowButton";
+import { BlockReportActions } from "@/components/profile/BlockReportActions";
 import { LogoutButton } from "@/components/profile/LogoutButton";
 import { Icon } from "@/components/ui/Icon";
 import { ASSETS } from "@/lib/assets";
@@ -82,7 +83,7 @@ export function ProfileView({ user, action }: ProfileViewProps) {
                   <LogoutButton />
                 </>
               ) : (
-                <FollowButton />
+                <FollowButton username={user.username} />
               )}
             </div>
           </div>
@@ -101,28 +102,63 @@ export function ProfileView({ user, action }: ProfileViewProps) {
               subtitle={`${user.hostTripCount} Inisiator • ${user.participantTripCount} Peserta`}
             />
             <StatTile
+              href={ROUTES.profilPengikut(user.username)}
               icon="groups"
               iconClass="bg-primary-fixed text-primary"
-              title={`${user.followersCount + user.followingCount} Rekan`}
-              subtitle={`${user.followersCount} Pengikut • ${user.followingCount} Mengikuti`}
+              title={`${user.followersCount} Pengikut`}
+              subtitle={`${user.followingCount} mengikuti · lihat daftar`}
             />
             <StatTile
+              href={ROUTES.profilUlasan(user.username)}
               icon="star"
               iconClass="bg-secondary-fixed text-secondary"
               title={`${rating} Rating Rekan`}
               subtitle={`Dari ${user.rating.reviewCount} ulasan selesai trip`}
             />
             <StatTile
+              href={ROUTES.profilRiwayat(user.username)}
               icon="forum"
               iconClass="bg-tertiary-fixed text-tertiary"
-              title="Komunikasi"
+              title="Riwayat publik"
               subtitle={
                 user.rating.communication != null
-                  ? `${user.rating.communication.toFixed(1)} dari rekan trip`
-                  : "Belum ada penilaian"
+                  ? `${user.rating.communication.toFixed(1)} komunikasi rekan`
+                  : "Trip publik yang diizinkan tampil"
               }
             />
           </div>
+          {user.username ? (
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Link href={ROUTES.profilPengikut(user.username)} className="btn-ghost !min-h-11">
+                Pengikut
+              </Link>
+              <Link href={ROUTES.profilMengikuti(user.username)} className="btn-ghost !min-h-11">
+                Mengikuti
+              </Link>
+              <Link href={ROUTES.profilUlasan(user.username)} className="btn-ghost !min-h-11">
+                Ulasan
+              </Link>
+              <Link href={ROUTES.profilRiwayat(user.username)} className="btn-ghost !min-h-11">
+                Riwayat
+              </Link>
+              {action === "edit" ? (
+                <Link href={ROUTES.adminLaporan} className="btn-ghost !min-h-11">
+                  Moderasi laporan
+                </Link>
+              ) : null}
+            </div>
+          ) : null}
+          {action === "follow" && user.username ? (
+            <div className="mt-5 rounded-2xl border border-primary/10 bg-surface-container-low p-4">
+              <p className="type-label font-extrabold text-on-surface">Keamanan komunitas</p>
+              <p className="type-caption mt-1 text-on-surface-variant">
+                Blokir menghapus follow dan mencegah follow atau join. Laporan masuk ke antrian admin.
+              </p>
+              <div className="mt-3">
+                <BlockReportActions username={user.username} targetUserId={user.id} />
+              </div>
+            </div>
+          ) : null}
           <p className="mt-2.5 flex items-center gap-1.5 type-micro italic text-on-surface-variant">
             <Icon name="info" className="text-[12px] text-primary" />
             Statistik di atas hanya menghitung trip publik. Trip private dan draft
@@ -139,13 +175,15 @@ function StatTile({
   iconClass,
   title,
   subtitle,
+  href,
 }: {
   icon: string;
   iconClass: string;
   title: string;
   subtitle: string;
+  href?: string;
 }) {
-  return (
+  const content = (
     <div className="flex items-center gap-3.5 rounded-2xl border border-primary/10 bg-surface-container-low p-4">
       <div
         className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-lg ${iconClass}`}
@@ -157,5 +195,11 @@ function StatTile({
         <p className="mt-0.5 type-caption text-on-surface-variant">{subtitle}</p>
       </div>
     </div>
+  );
+  if (!href) return content;
+  return (
+    <Link href={href} className="block rounded-2xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
+      {content}
+    </Link>
   );
 }
