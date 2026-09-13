@@ -1,7 +1,8 @@
-export { assertDatabaseConnection, getSequelize } from "./src/connection.ts";
+export { assertDatabaseConnection, getSequelize, replaceSequelizeForTests } from "./src/connection.ts";
 export * from "./src/enums.ts";
 export {
   initModels,
+  resetInitModelsForTests,
   getModels,
   User,
   UserProfile,

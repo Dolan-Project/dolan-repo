@@ -12,6 +12,8 @@ export const ROUTES = {
   cekEmail: "/cek-email",
   wisataBali: "/wisata/bali",
   itineraryBali: "/itinerary/bali-3h2m",
+  notifikasi: "/notifikasi",
+  trip: (tripId: string) => `/trip/${tripId}`,
 } as const;
 
 export type NavKey = "beranda" | "jelajah" | "trip-saya" | "buat-trip" | "profil";

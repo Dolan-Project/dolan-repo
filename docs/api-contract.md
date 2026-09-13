@@ -39,7 +39,7 @@ Return-to-action: query/body `next`; invalid → `/`. Tidak auto-submit join/pub
 | GET/POST | `/trips/:id/comments` |
 | GET/POST | `/trips/:id/messages` |
 
-Pending bukan member chat. Join tanpa pembayaran.
+Pending bukan member chat. Join tanpa pembayaran. Endpoint trip Express (lifecycle, join, komentar) dimiliki **Wira** — lihat bagian WIRA-D3 di bawah. Salsa memakai path yang sama untuk UI.
 
 ---
 
@@ -127,11 +127,21 @@ Quota Places: `PLACES_MAX_REQUESTS_PER_USER_PER_DAY` (default 50), dicatat di `a
 ## `GET /search/trips`
 
 **Actor:** public  
-**Schema:** `tripSearchQuerySchema` — `q?`, `city?`, `sort=recent\|popular`, `dateFrom?`, `dateTo?`, `page`, `limit`  
+**Schema:** `tripSearchQuerySchema`
+
+| Query | Keterangan |
+|---|---|
+| `q` | Opsional, judul |
+| `city` | Opsional |
+| `sort` | `soonest` (default, tanggal berangkat terdekat), `popular`, `nearest` (titik mulai publik terdekat). `recent` alias `soonest`. |
+| `lat`, `lng` | Opsional; **wajib** jika `sort=nearest` |
+| `dateFrom`, `dateTo` | Filter tanggal rencana |
+| `page`, `limit` | Pagination |
+
 **Response:** `ApiPage<TripSummary>`  
 **Idempotency:** tidak perlu
 
-Hanya trip `PUBLIC` yang bukan `DRAFT`/`CANCELLED`. Private tidak pernah muncul.
+Hanya trip `PUBLIC` yang bukan `DRAFT`/`CANCELLED`. Private tidak pernah muncul. `soonest` mengurutkan keberangkatan mendatang dulu (hari ini di `Asia/Jakarta`), lalu trip yang sudah lewat, lalu yang tanpa tanggal. `nearest` memakai koordinat meeting point publik, bukan asal pribadi host. Penolakan izin lokasi: jangan kirim `sort=nearest`; default `soonest` tetap jalan.
 
 **Error:** `INVALID_FILTER` (400)
 
@@ -166,7 +176,7 @@ Field mask Google: nama, alamat, koordinat, rating, jumlah penilaian, foto (`pho
 
 **Actor:** public  
 **Schema:** `paginationQuerySchema`  
-**Response:** `ApiPage<TripSummary>` — trip publik yang itinerary aktifnya mengunjungi place  
+**Response:** `ApiPage<TripSummary>` — trip publik yang itinerary aktifnya mengunjungi place. Satu trip muncul sekali meski tempat itu ada di beberapa hari/stop.  
 **Error:** `INVALID_FILTER` (400)
 
 ---
@@ -246,7 +256,7 @@ Sumber: `@dolan/shared`.
 
 `PlaceDetails`: `PlaceSummary` + `types`, `editorialSummary`, `weekdayDescriptions`, `attributions`, `visitCount`
 
-`TripSummary`: `id`, `title`, `destinationCity`, `visibility`, `status`, `startDate`, `endDate`, `participantCount`, `pendingRequestCount`, `coverPlace`
+`TripSummary`: `id`, `title`, `destinationCity`, `visibility`, `status`, `startDate`, `endDate`, `participantCount`, `pendingRequestCount`, `coverPlace`, `publicMeetingPointLabel`, `publicMeetingPointLatitude`, `publicMeetingPointLongitude`
 
 `ItineraryTemplateSummary`: `id`, `title`, `city`, `durationDays`, `source`, `sourceLabel`, `usageCount`, `popularityLabel`, `coverPlace`
 
@@ -256,6 +266,182 @@ Sumber: `@dolan/shared`.
 
 - Tampilkan atribusi Google di detail/foto.
 - Jangan pakai `NEXT_PUBLIC_` untuk server key; photo lewat backend `/photo`.
-- Map sort UI: wisata `relevance | popular | nearest`; trip `recent | popular`; template `recent | popular`.
+- Map sort UI: wisata `relevance | popular | nearest`; trip `popular | nearest | soonest` (`recent` = alias `soonest`); template `recent | popular`. Label trip: Populer, Titik mulai terdekat, Berangkat terdekat. `nearest` butuh `lat`/`lng`; jika izin lokasi ditolak, pakai `soonest` atau `popular`.
 - Label popularitas hanya teks Dolan, bukan klaim “populer di Indonesia”.
 - Race: request search baru harus mengabaikan response lama (PRD F01).
+
+---
+
+# Trip lifecycle, join, comments (WIRA-D3)
+
+Acuan: `PRD.md` F05/F09/F10/F11, `DOLAN_TECHNICAL_KICKOFF_FINAL.md` §11, `task-assignment.md` (WIRA-D3).
+
+Owner endpoint: **Wira**. Reviewer: **Alya**, **Salsa**. Chat REST/Socket tetap milik Alya/Salsa; D3 hanya membuat room + membership host saat publish, dan mencabut akses saat leave/cancel.
+
+Base: `/api/v1`. Envelope sama dengan D2. Pagination default `page=1`, `limit=10`, maksimum 20.
+
+Join **gratis**. Tidak ada field pembayaran, deposit, atau checkout.
+
+`Idempotency-Key` wajib UUID (24 jam) pada: create, publish, join, review, comment. Retry key+body sama mengembalikan hasil semula. Key sama body beda → `IDEMPOTENCY_CONFLICT` (409). Key bukan UUID → `INVALID_PLAN_INPUT` (400).
+
+Private yang bukan milik actor → `TRIP_NOT_FOUND` (404). Actor yang tahu resource tetapi tidak berhak → 403.
+
+## Status
+
+`DRAFT → OPEN | CLOSED | CANCELLED`. Public publish → `OPEN`. Private publish → `CLOSED` (tersimpan, tidak menerima join). `OPEN → CLOSED | ONGOING | CANCELLED`. `CLOSED → OPEN` (hanya public) `| ONGOING | CANCELLED`. `ONGOING → COMPLETED | CANCELLED`. Cancel tidak menghapus history; chat jadi hanya baca.
+
+Kapasitas termasuk host. Approval memakai row lock. Pending bukan participant dan bukan member chat.
+
+Public → private ditolak jika ada participant aktif non-host atau join pending.
+
+## `POST /trips` (alias `POST /trips/drafts`)
+
+**Actor:** login (`create_draft`)  
+**Schema:** `createTripBodySchema`  
+**Response:** `201 ApiSuccess<TripDetail>`  
+**Error:** `UNAUTHENTICATED` (401), `INVALID_PLAN_INPUT` (400), `INVALID_DATE` (400), `INVALID_BUDGET` (400)
+
+Pilihan `visibility=PUBLIC` tidak memublikasikan; status tetap `DRAFT`.
+
+## `GET /trips/me`
+
+**Actor:** login  
+**Schema:** `myTripsQuerySchema` — `role=hosted|joined|pending` (default `hosted`), `page`, `limit`  
+**Response:** `ApiPage<MyTripSummary>` (`TripSummary` + `host`, `maxParticipants`)  
+Tanggal dan `destinationCity` nullable. Pending tidak masuk `joined`.  
+**Error:** `INVALID_FILTER` (400)
+
+## `GET /trips/:id`
+
+**Actor:** public untuk trip `PUBLIC` non-draft; host/participant aktif untuk private/draft  
+**Response:** `ApiSuccess<TripDetail>`  
+**Error:** `TRIP_NOT_FOUND` (404)
+
+`privateOriginLabel`, `privateOriginLatitude`, `privateOriginLongitude`, dan `preferences` hanya untuk host. `joinFree` selalu `true`. `viewerRole`: `host | participant | pending | none`.
+
+## `PATCH /trips/:id`
+
+**Actor:** host  
+**Schema:** `updateTripBodySchema`  
+Kapasitas tidak boleh turun di bawah jumlah anggota aktif. `COMPLETED`/`CANCELLED` tidak bisa diedit.  
+Non-host yang bisa melihat trip → `NOT_HOST` (403). Private yang tidak diketahui → `TRIP_NOT_FOUND` (404).
+
+## `DELETE /trips/:id`
+
+**Actor:** host  
+Hanya `DRAFT`.
+
+## `POST /trips/:id/publish`
+
+**Actor:** verified + profil lengkap (`publish_trip`)  
+**Schema:** `publishTripBodySchema`  
+**Response:** `ApiSuccess<TripDetail>`
+
+Atomik: membership host `ACTIVE` + satu `chat_rooms`. Public wajib `destinationCity`, `maxParticipants`, dan `publicMeetingPointLabel`.
+
+**Error:** `PROFILE_INCOMPLETE` (403), `EMAIL_UNVERIFIED` (403), `INVALID_TRANSITION` (400), `INVALID_PLAN_INPUT` (400)
+
+## Transisi host
+
+| Path | Dari | Ke |
+|---|---|---|
+| `POST /trips/:id/close` | OPEN | CLOSED |
+| `POST /trips/:id/reopen` | CLOSED + PUBLIC | OPEN |
+| `POST /trips/:id/start` | OPEN/CLOSED | ONGOING |
+| `POST /trips/:id/complete` | ONGOING | COMPLETED |
+| `POST /trips/:id/cancel` | DRAFT/OPEN/CLOSED/ONGOING | CANCELLED |
+
+**Actor:** host + `publish_trip`. **Error:** `INVALID_TRANSITION` (400), `NOT_HOST` (403), `TRIP_NOT_FOUND` (404)
+
+Close/reopen/start/complete/cancel menyimpan notifikasi `trip.updated` (bukan ke diri sendiri).
+
+## `POST /trips/:id/visibility`
+
+**Actor:** host + `publish_trip`  
+**Schema:** `visibilityBodySchema`  
+Private→public memakai syarat publish public. Public→private ditolak jika ada peserta/pending. Perubahan visibility menyimpan notifikasi `trip.updated` (bukan ke diri sendiri).
+
+## `POST /trips/:id/join-requests` (alias `POST /trips/:id/join`)
+
+**Actor:** verified + profil lengkap (`join_trip`), bukan host  
+**Schema:** `joinRequestBodySchema` — `message?`  
+**Response:** `201 ApiSuccess<JoinRequest>`  
+Hanya trip `PUBLIC` + `OPEN`. Setelah `REJECTED`/`ACCEPTED` tidak bisa ajukan ulang. `WITHDRAWN` boleh ajukan lagi pada baris yang sama.
+
+**Error:** `TRIP_FULL` (409), `DUPLICATE_REQUEST` (409), `BLOCKED_RELATION` (403), `FORBIDDEN` (403, host), `INVALID_TRANSITION` (400)
+
+## `GET /trips/:id/join-requests`
+
+**Actor:** host (`approve_join`); host dicek di service  
+**Schema:** `paginationQuerySchema`  
+**Response:** `ApiPage<JoinRequest>`  
+**Error:** `NOT_HOST` (403) jika trip diketahui, `TRIP_NOT_FOUND` (404) jika private/tidak ada
+
+## `POST /join-requests/:id/review`
+
+**Actor:** host (`approve_join`); host dicek di service  
+**Schema:** `joinReviewBodySchema` — `{ decision: "accept" | "reject" }`  
+Accept membuat membership `PARTICIPANT` `ACTIVE` tanpa pembayaran.  
+**Error:** `TRIP_FULL` (409), `INVALID_TRANSITION` (400), `NOT_HOST` (403), `TRIP_NOT_FOUND` (404)
+
+## `POST /join-requests/:id/withdraw`
+
+**Actor:** pemohon (`join_trip`)  
+Hanya status `PENDING`.
+
+## `GET /trips/:id/comments`
+
+**Actor:** public pada trip `PUBLIC`  
+**Schema:** `paginationQuerySchema`  
+**Response:** `ApiPage<TripComment>`  
+**Error:** `TRIP_NOT_PUBLIC` (403) untuk private yang terlihat host
+
+## `POST /trips/:id/comments`
+
+**Actor:** verified (`comment`) — boleh sebelum join dan saat pending  
+**Schema:** `createCommentBodySchema` — `body`, `parentId?`  
+Reply satu tingkat. Parent harus trip yang sama.
+
+**Error:** `INVALID_PARENT` (400), `TRIP_NOT_PUBLIC` (403), `EMAIL_UNVERIFIED` (403)
+
+## `PATCH /trips/:id/comments/:commentId`
+
+**Actor:** verified (`comment`), penulis  
+**Schema:** `updateCommentBodySchema`
+
+## `DELETE /trips/:id/comments/:commentId`
+
+**Actor:** verified (`comment`), penulis atau host  
+Soft delete. Komentar terhapus tidak muncul di list.
+
+## `POST /trips/:id/leave`
+
+**Actor:** login, participant aktif (bukan host)  
+Membership `LEFT`, riwayat tetap ada, chat hilang, share lokasi trip dicabut, host dinotifikasi. Host harus `cancel`.
+
+## Tipe (ringkas)
+
+`TripDetail`: field trip + `host`, `viewerRole`, `activeParticipantCount`, `pendingRequestCount`, `joinFree: true`, `myJoinRequest`, origin pribadi dan `preferences` (host only). Tidak ada `joinFee`.
+
+`MyTripSummary`: `TripSummary` (`destinationCity`/`startDate`/`endDate` nullable, `participantCount`, `pendingRequestCount`, `coverPlace`, titik mulai publik) plus `host` dan `maxParticipants`.
+
+`JoinRequest`: `id`, `tripId`, `applicant`, `message`, `status`
+
+`TripComment`: `id`, `tripId`, `author`, `parentId`, `body`, `createdAt`
+
+Notifikasi tersimpan (bukan milik sendiri): `join_request.created`, `join_request.reviewed`, `trip.updated`, `comment.created`, `member.left`. Event Socket.IO tetap Alya.
+
+---
+
+# Database security and release (WIRA-D4)
+
+Owner: **Wira**. Reviewer: **Alya**. Rincian operasi: `docs/release.md`.
+
+- IDOR: private/draft asing → `404 TRIP_NOT_FOUND`; known tetapi bukan host/member → `403`. Query chat `membership`/`role` diabaikan.
+- Concurrent approve sisa 1 kursi → satu `200`, satu `409 TRIP_FULL`.
+- Rate limit IP: `429 RATE_LIMITED` plus `Retry-After` (`RATE_LIMIT_MAX` / `RATE_LIMIT_SEARCH_MAX`).
+- Quota Places `429 QUOTA_EXCEEDED` via `api_usage_counters.estimated_cost` (`PLACES_ESTIMATED_COST_PER_REQUEST`, placeholder).
+- Leave participant memanggil evict socket room. Publish memory mengisi chat store yang sama.
+- `POST /users/:userId/follow` menolak self-follow; server production memakai `SequelizeSocialStore` jika DB siap. REST sosial lengkap tetap SALSA-D4.
+
+

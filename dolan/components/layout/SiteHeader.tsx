@@ -20,7 +20,8 @@ function isActive(pathname: string, key: NavKey) {
     return (
       pathname.startsWith("/jelajah") ||
       pathname.startsWith("/wisata") ||
-      pathname.startsWith("/itinerary")
+      pathname.startsWith("/itinerary") ||
+      pathname.startsWith("/trip")
     );
   if (key === "trip-saya") return pathname.startsWith("/trip-saya");
   if (key === "buat-trip") return pathname.startsWith("/buat-trip");
@@ -28,7 +29,13 @@ function isActive(pathname: string, key: NavKey) {
   return false;
 }
 
-export function SiteHeader({ session }: { session: AuthSession | null }) {
+export function SiteHeader({
+  session,
+  unreadCount = 0,
+}: {
+  session: AuthSession | null;
+  unreadCount?: number;
+}) {
   const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
@@ -79,14 +86,16 @@ export function SiteHeader({ session }: { session: AuthSession | null }) {
         </nav>
 
         <div className="flex items-center justify-end gap-2 md:gap-3">
-          <button
-            type="button"
-            aria-label="Notifikasi"
+          <Link
+            href={ROUTES.notifikasi}
+            aria-label={unreadCount > 0 ? `Notifikasi, ${unreadCount} belum dibaca` : "Notifikasi"}
             className="relative flex h-10 w-10 items-center justify-center rounded-full text-on-surface-variant transition-colors hover:bg-surface-container hover:text-on-surface"
           >
             <Icon name="notifications" className="text-[22px]" />
-            <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-secondary-container" />
-          </button>
+            {unreadCount > 0 ? (
+              <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-secondary-container" />
+            ) : null}
+          </Link>
           {session ? (
             <Link href={ROUTES.profil} aria-label="Profil">
               {/* eslint-disable-next-line @next/next/no-img-element */}

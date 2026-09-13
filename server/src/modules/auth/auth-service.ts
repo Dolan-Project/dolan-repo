@@ -1,4 +1,5 @@
-import type { AuthIdentity, SessionResponse } from "@dolan/shared";
+import type { AuthIdentity, ProfileUpdateInput, SessionResponse } from "@dolan/shared";
+import { conflict, notFound } from "../../lib/api-error.ts";
 import type { AuthAdapter } from "../../integrations/supabase/auth-adapter.ts";
 import { isEmailVerified, isProfileComplete } from "./authorization.ts";
 import type { UserRepository } from "./user-repository.ts";
@@ -57,5 +58,30 @@ export class AuthService {
         },
       },
     };
+  }
+
+  toPublicUser(user: AuthIdentity) {
+    return this.toMeSession(user).user;
+  }
+
+  async updateProfile(userId: string, input: ProfileUpdateInput) {
+    try {
+      const user = await this.users.updateProfile(userId, input);
+      return this.toMeSession(user);
+    } catch (error) {
+      if (error instanceof Error && error.message === "USERNAME_TAKEN") {
+        throw conflict("USERNAME_TAKEN", "Username sudah dipakai");
+      }
+      if (error instanceof Error && error.message === "USER_NOT_FOUND") {
+        throw notFound("NOT_FOUND", "Pengguna tidak ditemukan");
+      }
+      throw error;
+    }
+  }
+
+  async publicProfileByUsername(username: string) {
+    const user = await this.users.findByUsername(username);
+    if (!user) throw notFound("NOT_FOUND", "Pengguna tidak ditemukan");
+    return this.toPublicUser(user);
   }
 }

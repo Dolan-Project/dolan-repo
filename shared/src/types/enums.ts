@@ -12,5 +12,5 @@ export type GenerationJobType = "GENERATE_ITINERARY" | "REGENERATE_ITINERARY";
 export type ItinerarySource = "MANUAL" | "AI" | "TEMPLATE" | "REGENERATED";
 export type BudgetBasis = "PER_PERSON" | "GROUP";
 export type PlaceSort = "relevance" | "popular" | "nearest";
-export type TripSort = "recent" | "popular";
+export type TripSort = "popular" | "nearest" | "soonest" | "recent";
 export type TemplateSort = "recent" | "popular";

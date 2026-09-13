@@ -22,7 +22,8 @@
     "db:migrate:undo:all": "npm run migrate:undo:all -w database",
     "db:seed": "npm run seed -w database",
     "db:seed:undo": "npm run seed:undo -w database",
-    "db:verify": "npm run verify -w database"
+    "db:verify": "npm run verify -w database",
+    "db:backup": "npm run backup -w database"
   },
   "engines": {
     "node": ">=20"

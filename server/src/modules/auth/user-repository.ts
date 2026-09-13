@@ -1,4 +1,4 @@
-import type { AuthIdentity, UserRole, UserStatus } from "@dolan/shared";
+import type { AuthIdentity, ProfileUpdateInput, UserRole, UserStatus } from "@dolan/shared";
 
 export type UpsertUserInput = {
   authReference: string;
@@ -9,6 +9,9 @@ export type UpsertUserInput = {
 export interface UserRepository {
   upsertFromAuth(input: UpsertUserInput): Promise<AuthIdentity>;
   findByAuthReference(authReference: string): Promise<AuthIdentity | null>;
+  findById(userId: string): Promise<AuthIdentity | null>;
+  findByUsername(username: string): Promise<AuthIdentity | null>;
+  updateProfile(userId: string, input: ProfileUpdateInput): Promise<AuthIdentity>;
 }
 
 export function createSeededMemoryUsers(): AuthIdentity[] {
@@ -69,6 +72,20 @@ export function createSeededMemoryUsers(): AuthIdentity[] {
       coverUrl: null,
       bio: null,
     },
+    {
+      id: "55555555-5555-4555-8555-555555555555",
+      authReference: "auth-verified-budi",
+      email: "budi@dolan.test",
+      role: "USER",
+      status: "ACTIVE",
+      emailVerifiedAt: "2026-01-01T00:00:00.000Z",
+      username: "budi",
+      displayName: "Budi",
+      domicile: "Yogyakarta",
+      avatarUrl: null,
+      coverUrl: null,
+      bio: null,
+    },
   ];
 }
 
@@ -83,6 +100,36 @@ export class MemoryUserRepository implements UserRepository {
 
   async findByAuthReference(authReference: string): Promise<AuthIdentity | null> {
     return this.users.get(authReference) ?? null;
+  }
+
+  async findById(userId: string): Promise<AuthIdentity | null> {
+    return [...this.users.values()].find((user) => user.id === userId) ?? null;
+  }
+
+  async findByUsername(username: string): Promise<AuthIdentity | null> {
+    return [...this.users.values()].find((user) => user.username === username) ?? null;
+  }
+
+  async updateProfile(userId: string, input: ProfileUpdateInput): Promise<AuthIdentity> {
+    const existing = await this.findById(userId);
+    if (!existing) {
+      throw new Error("USER_NOT_FOUND");
+    }
+    const taken = [...this.users.values()].some(
+      (user) => user.username === input.username && user.id !== userId,
+    );
+    if (taken) {
+      throw new Error("USERNAME_TAKEN");
+    }
+    const next: AuthIdentity = {
+      ...existing,
+      username: input.username,
+      displayName: input.displayName,
+      domicile: input.domicile,
+      bio: input.bio ?? null,
+    };
+    this.users.set(existing.authReference, next);
+    return next;
   }
 
   async upsertFromAuth(input: UpsertUserInput): Promise<AuthIdentity> {
