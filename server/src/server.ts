@@ -6,7 +6,7 @@ import {
   createAuthAdapter,
   createJobService,
   createProductionJobService,
-  createProductionSearchService,
+  createRuntimeSearchService,
   createUserRepository,
 } from "./container.ts";
 import { logger } from "./lib/logger.ts";
@@ -34,7 +34,7 @@ async function main() {
   const app = createApp(
     authService,
     sockets.disconnectUser,
-    databaseReady ? createProductionSearchService() : undefined,
+    createRuntimeSearchService(databaseReady),
     jobService,
   );
 
@@ -45,6 +45,7 @@ async function main() {
       port: env.port,
       authAdapter: env.authAdapter,
       userRepository: databaseReady ? "sequelize" : "memory",
+      searchRepository: databaseReady ? "sequelize" : "memory",
       googlePlacesConfigured: Boolean(env.googleMapsServerKey),
     });
     logSocketReady();

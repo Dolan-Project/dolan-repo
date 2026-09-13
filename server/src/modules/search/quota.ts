@@ -11,14 +11,18 @@ export class QuotaService {
 
   async consumePlaces(userId: string | null, operation: string) {
     const period = this.now().toISOString().slice(0, 10);
+    // A single Places search renders several result photos. Giving photo media
+    // the same allowance as searches made the Explore cards lose their images
+    // after only a few searches, especially because guests share one bucket.
+    const operationLimit = operation === "getPhotoMedia" ? this.dailyLimit * 10 : this.dailyLimit;
     const count = await this.store.countAndIncrement({
       provider: "google_places",
       operation,
       period,
       userId,
-      limit: this.dailyLimit,
+      limit: operationLimit,
     });
-    if (count > this.dailyLimit) {
+    if (count > operationLimit) {
       throw tooManyRequests(SearchErrorCode.QUOTA_EXCEEDED, "Daily Places quota exceeded");
     }
   }

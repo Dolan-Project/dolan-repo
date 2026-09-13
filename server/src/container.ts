@@ -83,3 +83,12 @@ export function createProductionSearchService() {
     new QuotaService(new SequelizeQuotaStore(), env.placesMaxRequestsPerUserPerDay),
   );
 }
+
+export function createRuntimeSearchService(databaseReady: boolean) {
+  if (databaseReady) return createProductionSearchService();
+  return createMemorySearchService({
+    placesProvider: env.googleMapsServerKey
+      ? new GooglePlacesClient(env.googleMapsServerKey)
+      : undefined,
+  });
+}

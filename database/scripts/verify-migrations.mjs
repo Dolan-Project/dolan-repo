@@ -17,6 +17,17 @@ const sequelizeCli = path.join(
   "sequelize",
 );
 
+// macOS does not provide the Linux-specific C.UTF-8 locale. The embedded
+// Postgres package inherits LC_ALL, which overrides its own LC_MESSAGES
+// fallback and makes initdb fail before migrations can run.
+if (process.platform === "darwin") {
+  for (const name of ["LANG", "LC_ALL", "LC_CTYPE"]) {
+    if (process.env[name]?.toUpperCase() === "C.UTF-8") {
+      process.env[name] = "C";
+    }
+  }
+}
+
 async function run(args, env) {
   const { stdout, stderr } = await execFileAsync(process.execPath, [sequelizeCli, ...args], {
     cwd: root,

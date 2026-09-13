@@ -13,14 +13,14 @@ import {
   handleUploadRequest,
 } from "@/lib/auth/handle-profile";
 import { jsonResult, statusForCode } from "@/lib/auth/api-response";
-import { useMockApi } from "@/lib/auth/use-mock";
+import { shouldUseMockApi } from "@/lib/auth/use-mock";
 import { createApiError } from "@/mocks/scenarios";
 
 export async function withMockOrUnavailable(
   request: Request,
   handle: (request: Request) => Promise<Response> | Response,
 ): Promise<Response> {
-  if (!useMockApi()) {
+  if (!shouldUseMockApi()) {
     return jsonResult(
       createApiError(
         "PROVIDER_UNAVAILABLE",
@@ -44,7 +44,7 @@ export const authRouteHandlers = {
   resetPassword: (request: Request) =>
     withMockOrUnavailable(request, handleResetPasswordRequest),
   callback: (request: Request) => {
-    if (!useMockApi()) {
+    if (!shouldUseMockApi()) {
       return jsonResult(
         createApiError("PROVIDER_UNAVAILABLE", "Layanan auth tidak tersedia"),
         503,
