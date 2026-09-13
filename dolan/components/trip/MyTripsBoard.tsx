@@ -1,12 +1,11 @@
-/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Icon } from "@/components/ui/Icon";
-import { TripBoardMap } from "@/components/trip/TripBoardMap";
+import { GoogleMap, type MapPoint } from "@/features/explore/GoogleMap";
 import { PlacePhoto } from "@/features/explore/PlacePhoto";
-import type { ApiError, MyTripRole, TripSummary } from "@/lib/contracts";
+import type { ApiError, MyTripRole, MyTripSummary, TripSummary } from "@/lib/contracts";
 import { ASSETS } from "@/lib/assets";
 import { ROUTES, tripDetailHref, tripItineraryPath } from "@/lib/routes";
 import { meetingPointFor } from "@/mocks/geo";
@@ -16,8 +15,9 @@ const tabs: { id: MyTripRole; label: string }[] = [
   { id: "joined", label: "Diikuti" },
   { id: "pending", label: "Pengajuan" },
 ];
-
 type SheetPos = "collapsed" | "half" | "expanded";
+type MapType = "roadmap" | "satellite";
+const noop = () => undefined;
 
 function coverFor(city: string) {
   const key = city.toLowerCase();
@@ -35,13 +35,98 @@ function nextSheet(pos: SheetPos): SheetPos {
   return "collapsed";
 }
 
+function tripPoints(trip: TripSummary | null): MapPoint[] {
+  if (!trip) return [];
+  const points: MapPoint[] = [];
+  const fallback = meetingPointFor(trip.publicMeetingPointLabel, trip.destinationCity);
+  const meetingLat = trip.publicMeetingPointLatitude ?? fallback?.latitude;
+  const meetingLng = trip.publicMeetingPointLongitude ?? fallback?.longitude;
+  if (meetingLat != null && meetingLng != null) {
+    points.push({
+      id: `${trip.id}-meeting`,
+      label: trip.publicMeetingPointLabel ?? "Titik kumpul",
+      lat: meetingLat,
+      lng: meetingLng,
+    });
+  }
+  if (
+    trip.coverPlace &&
+    !points.some(
+      (point) =>
+        Math.abs(point.lat - trip.coverPlace!.latitude) < 0.00001 &&
+        Math.abs(point.lng - trip.coverPlace!.longitude) < 0.00001,
+    )
+  ) {
+    points.push({
+      id: `${trip.id}-destination`,
+      label: trip.coverPlace.name,
+      lat: trip.coverPlace.latitude,
+      lng: trip.coverPlace.longitude,
+    });
+  }
+  return points;
+}
+
+function mapsRouteUrl(points: MapPoint[]) {
+  if (points.length === 0) return "https://www.google.com/maps";
+  if (points.length === 1) {
+    return `https://www.google.com/maps/search/?api=1&query=${points[0]!.lat},${points[0]!.lng}`;
+  }
+  const origin = points[0]!;
+  const destination = points.at(-1)!;
+  const params = new URLSearchParams({
+    api: "1",
+    origin: `${origin.lat},${origin.lng}`,
+    destination: `${destination.lat},${destination.lng}`,
+    travelmode: "driving",
+  });
+  const waypoints = points.slice(1, -1).map((point) => `${point.lat},${point.lng}`).join("|");
+  if (waypoints) params.set("waypoints", waypoints);
+  return `https://www.google.com/maps/dir/?${params.toString()}`;
+}
+
+function statusLabel(status: TripSummary["status"]) {
+  return {
+    DRAFT: "Draf",
+    OPEN: "Mendatang",
+    CLOSED: "Slot ditutup",
+    ONGOING: "Berlangsung",
+    COMPLETED: "Selesai",
+    CANCELLED: "Dibatalkan",
+  }[status] ?? status;
+}
+
+function dateLabel(start: string | null, end: string | null) {
+  if (!start && !end) return "Tanggal fleksibel";
+  const formatter = new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short", year: "numeric" });
+  const format = (value: string) => formatter.format(new Date(`${value}T00:00:00`));
+  if (!start) return format(end!);
+  if (!end || start === end) return format(start);
+  return `${format(start)} – ${format(end)}`;
+}
+
+function durationLabel(start: string | null, end: string | null) {
+  if (!start || !end) return null;
+  const startMs = new Date(`${start}T00:00:00`).getTime();
+  const endMs = new Date(`${end}T00:00:00`).getTime();
+  const days = Math.max(1, Math.round((endMs - startMs) / 86_400_000) + 1);
+  return `${days}H${Math.max(0, days - 1)}M`;
+}
+
 export function MyTripsBoard() {
   const [tab, setTab] = useState<MyTripRole>("hosted");
-  const [rows, setRows] = useState<TripSummary[]>([]);
+  const [rows, setRows] = useState<MyTripSummary[]>([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [sheet, setSheet] = useState<SheetPos>("collapsed");
+  const [sheet, setSheet] = useState<SheetPos>("half");
+  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [visibilityFilter, setVisibilityFilter] = useState("ALL");
+  const [mapType, setMapType] = useState<MapType>("roadmap");
+  const [focusCenter, setFocusCenter] = useState<{ lat: number; lng: number } | null>(null);
+  const [zoomCommand, setZoomCommand] = useState<{ id: number; delta: 1 | -1 } | null>(null);
+  const [notice, setNotice] = useState("");
+  const dragStart = useRef<number | null>(null);
 
   useEffect(() => {
     const ac = new AbortController();
@@ -51,17 +136,10 @@ export function MyTripsBoard() {
       setRows([]);
       setSelectedId(null);
       try {
-        const response = await fetch(`/api/v1/trips/me?role=${tab}`, {
-          credentials: "include",
-          signal: ac.signal,
-        });
-        const json = (await response.json()) as
-          | { success: true; data: TripSummary[] }
-          | ApiError;
+        const response = await fetch(`/api/v1/trips/me?role=${tab}`, { credentials: "include", signal: ac.signal });
+        const json = (await response.json()) as { success: true; data: MyTripSummary[] } | ApiError;
         if (ac.signal.aborted) return;
         if (!json.success) {
-          setRows([]);
-          setSelectedId(null);
           setError(json.error.message);
           setLoading(false);
           return;
@@ -71,8 +149,6 @@ export function MyTripsBoard() {
         setLoading(false);
       } catch (err) {
         if (ac.signal.aborted) return;
-        setRows([]);
-        setSelectedId(null);
         setError(err instanceof Error ? err.message : "Gagal memuat trip");
         setLoading(false);
       }
@@ -81,253 +157,146 @@ export function MyTripsBoard() {
     return () => ac.abort();
   }, [tab]);
 
+  const visibleRows = useMemo(
+    () => rows.filter((trip) => (statusFilter === "ALL" || trip.status === statusFilter) && (visibilityFilter === "ALL" || trip.visibility === visibilityFilter)),
+    [rows, statusFilter, visibilityFilter],
+  );
   const selected = useMemo(
-    () => rows.find((trip) => trip.id === selectedId) ?? rows[0] ?? null,
-    [rows, selectedId],
+    () => visibleRows.find((trip) => trip.id === selectedId) ?? visibleRows[0] ?? null,
+    [visibleRows, selectedId],
   );
+  const points = useMemo(() => tripPoints(selected), [selected]);
 
-  const mapMarkers = useMemo(
-    () =>
-      rows.flatMap((trip) => {
-        const point = meetingPointFor(
-          trip.publicMeetingPointLabel,
-          trip.destinationCity,
-        );
-        if (
-          trip.publicMeetingPointLatitude == null ||
-          trip.publicMeetingPointLongitude == null
-        ) {
-          if (trip.coverPlace) {
-            return [{ id: trip.id, label: trip.coverPlace.name, latitude: trip.coverPlace.latitude, longitude: trip.coverPlace.longitude, selected: trip.id === selected?.id, tone: "meeting" as const }];
-          }
-          if (!point) return [];
-          return [
-            {
-              id: trip.id,
-              label: trip.publicMeetingPointLabel || trip.destinationCity || trip.title,
-              latitude: point.latitude,
-              longitude: point.longitude,
-              selected: trip.id === selected?.id,
-              tone: "meeting" as const,
-            },
-          ];
-        }
-        return [
-          {
-            id: trip.id,
-            label: trip.publicMeetingPointLabel || trip.destinationCity || trip.title,
-            latitude: trip.publicMeetingPointLatitude,
-            longitude: trip.publicMeetingPointLongitude,
-            selected: trip.id === selected?.id,
-            tone: "meeting" as const,
-          },
-        ];
-      }),
-    [rows, selected?.id],
-  );
-
+  function changeTab(next: MyTripRole) {
+    setTab(next);
+    setStatusFilter("ALL");
+    setVisibilityFilter("ALL");
+    setNotice("");
+  }
   function selectTrip(id: string) {
     setSelectedId(id);
     setSheet((current) => (current === "expanded" ? "half" : current));
   }
+  function locateMe() {
+    if (!navigator.geolocation) {
+      setNotice("Browser ini belum mendukung lokasi perangkat.");
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => setFocusCenter({ lat: coords.latitude, lng: coords.longitude }),
+      () => setNotice("Lokasi tidak dapat diakses. Periksa izin lokasi browser."),
+      { enableHighAccuracy: true, timeout: 8000 },
+    );
+  }
+  function endDrag(clientY: number) {
+    if (dragStart.current == null) return;
+    const delta = clientY - dragStart.current;
+    if (delta < -35) setSheet("expanded");
+    if (delta > 35) setSheet("collapsed");
+    dragStart.current = null;
+  }
 
   return (
-    <div className="flex min-h-[calc(100dvh-4rem)] flex-col md:min-h-[calc(100dvh-5rem)]">
-      <div className="z-20 border-b border-outline-variant/40 bg-surface-container-lowest px-margin py-3 md:px-margin-desktop">
-        <div className="mx-auto flex max-w-[1440px] flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <p className="type-micro uppercase tracking-wider text-primary">
-              Manajemen perjalanan
-            </p>
-            <h1 className="type-title text-on-surface">Trip Saya</h1>
-            <p className="type-caption text-on-surface-variant">
-              Pilih trip untuk menyorot titik temu publik di peta. Pending ada di Pengajuan, belum peserta.
+    <div className="relative mx-auto w-full max-w-[1440px] px-3 pb-3 pt-3 md:px-6 md:pb-5 md:pt-5">
+      <div className="relative h-[calc(100dvh-6.25rem)] min-h-[580px] overflow-hidden rounded-[1.75rem] border border-outline-variant/60 bg-white shadow-[0_18px_50px_rgba(22,48,80,.12)] lg:grid lg:h-[calc(100vh-7rem)] lg:min-h-[650px] lg:grid-cols-[minmax(420px,.88fr)_minmax(560px,1.12fr)]">
+        <section className="relative h-full min-h-[440px] overflow-hidden border-r border-outline-variant/50">
+          <GoogleMap key={selected?.id ?? tab} points={points} selectedId={points[0]?.id ?? null} onSelect={noop} showRoute={points.length > 1} mapType={mapType} focusCenter={focusCenter} zoomCommand={zoomCommand} className="absolute inset-0 h-full w-full" />
+          <div className="pointer-events-none absolute left-3 right-3 top-3 rounded-2xl border border-white/70 bg-white/90 p-3 shadow-lg backdrop-blur-md md:left-4 md:right-20 md:top-4 md:p-4">
+            <p className="type-micro uppercase tracking-wider text-secondary">Rute trip aktif</p>
+            <h2 className="type-subtitle mt-1">{selected?.destinationCity ?? "Pilih trip untuk melihat lokasi"}</h2>
+            <p className="type-caption mt-1 text-on-surface-variant">
+              {points.length > 1 ? `${points.length} titik perjalanan · card yang dipilih mengubah rute` : points.length === 1 ? "Lokasi trip aktif · itinerary lengkap akan menambah garis rute" : "Koordinat trip ini belum tersedia"}
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="inline-flex rounded-xl bg-surface-container p-1">
-              {tabs.map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => setTab(item.id)}
-                  className={`type-label rounded-lg px-3.5 py-1.5 ${
-                    tab === item.id
-                      ? "bg-surface-container-lowest text-primary shadow-sm"
-                      : "text-on-surface-variant"
-                  }`}
-                >
-                  {item.label}
-                </button>
-              ))}
+          <div className="absolute bottom-5 right-4 z-10 flex flex-col gap-2">
+            <MapControl label={mapType === "roadmap" ? "Tampilkan satelit" : "Tampilkan peta"} icon={mapType === "roadmap" ? "satellite_alt" : "map"} onClick={() => setMapType((value) => (value === "roadmap" ? "satellite" : "roadmap"))} />
+            <MapControl label="Lokasi saya" icon="my_location" onClick={locateMe} />
+            <div className="overflow-hidden rounded-xl bg-white shadow-lg ring-1 ring-black/5">
+              <MapControl label="Perbesar" icon="add" squared onClick={() => setZoomCommand({ id: Date.now(), delta: 1 })} />
+              <div className="mx-2 h-px bg-outline-variant/60" />
+              <MapControl label="Perkecil" icon="remove" squared onClick={() => setZoomCommand({ id: Date.now(), delta: -1 })} />
             </div>
-            <Link href={ROUTES.buatTrip} className="btn-primary !min-h-10">
-              <Icon name="add" className="text-[18px]" />
-              Buat Trip
-            </Link>
           </div>
-        </div>
-        {error ? (
-          <p className="mx-auto mt-2 max-w-[1440px] type-body text-error" role="alert">
-            {error}
-          </p>
-        ) : null}
-      </div>
-
-      <div className="relative flex min-h-0 flex-1">
-        <div className="absolute inset-0">
-          <TripBoardMap markers={mapMarkers} onSelect={selectTrip} />
-        </div>
-
-        <div className="relative z-10 flex-1 pointer-events-none" />
-
-        <section className="relative z-10 hidden w-[440px] shrink-0 flex-col border-l border-outline-variant/40 bg-surface-container-lowest/95 shadow-sm backdrop-blur-xl lg:flex xl:w-[520px]">
-          <div className="border-b border-outline-variant/30 bg-surface-container-low/50 px-5 py-3">
-            <p className="type-label text-on-surface">
-              {rows.length} trip di tab {tabs.find((item) => item.id === tab)?.label}
-            </p>
-            <p className="type-caption text-on-surface-variant">
-              Peta kiri · daftar kanan · titik temu publik
-            </p>
-          </div>
-          <div className="flex-1 space-y-2.5 overflow-y-auto p-4">
-            {loading ? (
-              <p className="type-body text-on-surface-variant">Memuat trip…</p>
-            ) : null}
-            {rows.length === 0 && !error && !loading ? (
-              <p className="type-body text-on-surface-variant">Belum ada trip di tab ini.</p>
-            ) : null}
-            {rows.map((trip) => (
-              <TripCard
-                key={trip.id}
-                trip={trip}
-                tab={tab}
-                selected={trip.id === selected?.id}
-                onSelect={() => selectTrip(trip.id)}
-              />
-            ))}
-          </div>
+          {selected && points.length > 0 ? (
+            <a href={mapsRouteUrl(points)} target="_blank" rel="noreferrer" className="absolute bottom-5 left-4 inline-flex items-center gap-2 rounded-full bg-[#071c32] px-4 py-2.5 type-label text-white shadow-xl">
+              <Icon name="alt_route" /> Buka di Google Maps
+            </a>
+          ) : null}
         </section>
 
-        <div
-          className={`absolute inset-x-0 bottom-0 z-20 lg:hidden ${
-            sheet === "expanded" ? "top-4" : ""
-          }`}
-        >
-          <div
-            className={`rounded-t-3xl bg-surface-container-lowest shadow-[0_-12px_40px_rgba(17,24,39,0.12)] transition-all ${
-              sheet === "expanded"
-                ? "h-full overflow-y-auto pb-20"
-                : sheet === "half"
-                  ? "h-[48vh] overflow-y-auto pb-16"
-                  : "pb-16"
-            }`}
-          >
-            <button
-              type="button"
-              onClick={() => setSheet((current) => nextSheet(current))}
-              className="flex w-full flex-col items-center pt-2.5"
-              aria-label="Ubah tinggi daftar trip"
-            >
-              <span className="mb-1.5 h-1 w-10 rounded-full bg-outline-variant" />
-              <span className="type-micro text-on-surface-variant">
-                {sheet === "collapsed"
-                  ? "Tarik ke atas untuk daftar"
-                  : sheet === "half"
-                    ? "Perbesar daftar"
-                    : "Tutup daftar"}
-              </span>
-            </button>
-
-            {sheet === "collapsed" ? (
-              selected ? (
-                <div className="mx-margin mt-2.5 mb-3">
-                  <TripCard
-                    trip={selected}
-                    tab={tab}
-                    selected
-                    onSelect={() => selectTrip(selected.id)}
-                  />
-                </div>
-              ) : (
-                <p className="mx-margin mb-3 type-body text-on-surface-variant">
-                  {loading ? "Memuat trip…" : "Belum ada trip di tab ini."}
-                </p>
-              )
-            ) : (
-              <div className="px-margin pb-3 pt-2">
-                <h2 className="type-subtitle text-on-surface">
-                  {tabs.find((item) => item.id === tab)?.label}
-                </h2>
-                <div className="mt-3 space-y-2.5">
-                  {rows.length === 0 && !error && !loading ? (
-                    <p className="type-body text-on-surface-variant">
-                      Belum ada trip di tab ini.
-                    </p>
-                  ) : null}
-                  {rows.map((trip) => (
-                    <TripCard
-                      key={trip.id}
-                      trip={trip}
-                      tab={tab}
-                      selected={trip.id === selected?.id}
-                      onSelect={() => selectTrip(trip.id)}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
+        <section className={`absolute inset-x-0 bottom-0 z-20 flex min-h-0 flex-col overflow-hidden rounded-t-[1.75rem] border-t border-outline-variant/60 bg-[#f8faff]/96 shadow-[0_-18px_45px_rgba(7,28,50,.18)] backdrop-blur-xl transition-[height] duration-300 lg:static lg:h-full lg:rounded-none lg:border-0 lg:bg-surface-container-low/70 lg:shadow-none ${sheet === "collapsed" ? "h-[31%]" : sheet === "half" ? "h-[59%]" : "h-[89%]"}`}>
+          <button type="button" onClick={() => setSheet((current) => nextSheet(current))} onPointerDown={(event) => { dragStart.current = event.clientY; }} onPointerUp={(event) => endDrag(event.clientY)} className="flex w-full touch-none flex-col items-center py-2 lg:hidden" aria-label="Ubah tinggi daftar trip">
+            <span className="h-1.5 w-11 rounded-full bg-outline-variant" />
+          </button>
+          <div className="border-b border-outline-variant/40 px-4 pb-3 lg:px-5 lg:pb-4 lg:pt-4">
+            <div className="flex items-center justify-between gap-3">
+              <div><h1 className="type-title text-[1.35rem] md:text-[1.55rem]">Trip Saya</h1><p className="type-caption text-on-surface-variant">Pilih card untuk melihat rutenya</p></div>
+              <Link href={ROUTES.buatTrip} className="btn-brand !min-h-10 !px-4 !text-xs"><Icon name="add" /> Buat Trip</Link>
+            </div>
+            <div className="mt-3 flex items-center gap-2 overflow-x-auto pb-1">
+              {tabs.map((item) => (
+                <button key={item.id} type="button" onClick={() => changeTab(item.id)} className={`min-w-max rounded-full px-3 py-2 type-label transition ${tab === item.id ? "bg-primary text-white shadow-sm" : "border border-outline-variant/60 bg-white text-on-surface-variant hover:border-primary/35 hover:text-primary"}`}>{item.label}</button>
+              ))}
+              <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} aria-label="Filter status trip" className="min-w-max rounded-full border border-outline-variant/60 bg-white px-3 py-2 type-label text-on-surface-variant">
+                <option value="ALL">Semua status</option><option value="OPEN">Mendatang</option><option value="DRAFT">Draf</option><option value="ONGOING">Berlangsung</option><option value="COMPLETED">Selesai</option>
+              </select>
+              <select value={visibilityFilter} onChange={(event) => setVisibilityFilter(event.target.value)} aria-label="Filter visibilitas trip" className="min-w-max rounded-full border border-outline-variant/60 bg-white px-3 py-2 type-label text-on-surface-variant">
+                <option value="ALL">Publik & private</option><option value="PUBLIC">Publik</option><option value="PRIVATE">Private</option>
+              </select>
+            </div>
+            {notice ? <p className="mt-2 rounded-xl bg-primary-fixed px-3 py-2 type-caption text-on-primary-fixed" role="status">{notice}</p> : null}
+            {error ? <p className="mt-2 type-body text-error" role="alert">{error}</p> : null}
           </div>
-        </div>
+          <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-3 pb-28 pt-3 [scrollbar-gutter:stable] md:px-4 md:pb-12 md:pt-3 lg:pb-10">
+            {loading ? <p className="type-body text-on-surface-variant">Memuat trip…</p> : null}
+            {!loading && !error && visibleRows.length === 0 ? <div className="rounded-2xl bg-white p-8 text-center type-body text-on-surface-variant">Belum ada trip yang cocok dengan filter ini.</div> : null}
+            {visibleRows.map((trip) => <TripCard key={trip.id} trip={trip} tab={tab} selected={trip.id === selected?.id} onSelect={() => selectTrip(trip.id)} />)}
+          </div>
+        </section>
       </div>
     </div>
   );
 }
 
-function TripCard({
-  trip,
-  tab,
-  selected,
-  onSelect,
-}: {
-  trip: TripSummary;
-  tab: MyTripRole;
-  selected: boolean;
-  onSelect: () => void;
-}) {
+function MapControl({ label, icon, onClick, squared = false }: { label: string; icon: string; onClick: () => void; squared?: boolean }) {
+  return <button type="button" onClick={onClick} title={label} aria-label={label} className={`flex h-11 w-11 items-center justify-center bg-white text-[#17324d] shadow-lg transition hover:bg-primary-fixed hover:text-primary ${squared ? "rounded-none shadow-none" : "rounded-xl"}`}><Icon name={icon} className="text-[21px]" /></button>;
+}
+
+function TripCard({ trip, tab, selected, onSelect }: { trip: MyTripSummary; tab: MyTripRole; selected: boolean; onSelect: () => void }) {
+  const roleLabel = tab === "hosted" ? "PERAN: HOST (INISIATOR)" : tab === "joined" ? "PERAN: PESERTA" : "PENGAJUAN TERKIRIM";
+  const duration = durationLabel(trip.startDate, trip.endDate);
+  const meeting = trip.publicMeetingPointLabel ?? trip.destinationCity ?? "Titik kumpul belum ditentukan";
+  const memberLimit = trip.maxParticipants ? `${trip.participantCount}/${trip.maxParticipants}` : `${trip.participantCount}`;
   return (
-    <article
-      className={`rounded-2xl border p-2.5 transition-colors ${
-        selected
-          ? "border-primary bg-primary-fixed/30"
-          : "border-outline-variant/40 bg-surface-container-lowest hover:bg-surface-container-low"
-      }`}
-    >
-      <button type="button" className="flex w-full gap-2.5 text-left" onClick={onSelect}>
-        {trip.coverPlace ? <PlacePhoto googlePlaceId={trip.coverPlace.googlePlaceId} photoName={trip.coverPlace.photoName} alt={trip.title} className="h-16 w-16 shrink-0 rounded-xl" /> : <img alt="" className="h-16 w-16 shrink-0 rounded-xl object-cover" src={coverFor(trip.destinationCity ?? "")} />}
+    <article className={`group relative overflow-hidden rounded-[1.35rem] bg-white shadow-sm transition-all duration-200 ${selected ? "ring-2 ring-primary shadow-[0_14px_35px_rgba(37,99,235,.16)]" : "ring-1 ring-outline-variant/60 hover:-translate-y-0.5 hover:ring-2 hover:ring-primary/70 hover:shadow-[0_14px_32px_rgba(37,99,235,.12)]"}`} onMouseEnter={onSelect}>
+      <span className={`absolute right-0 top-0 z-10 rounded-bl-2xl px-3 py-1.5 text-[9px] font-extrabold tracking-wide text-white md:px-4 md:py-2 md:text-[10px] ${tab === "hosted" ? "bg-primary" : tab === "joined" ? "bg-teal-600" : "bg-amber-500"}`}>{roleLabel}</span>
+      <button type="button" aria-pressed={selected} onClick={onSelect} className="flex w-full cursor-pointer items-start gap-3 px-3 pb-4 pt-7 text-left md:gap-4 md:px-4" aria-label={`Tampilkan lokasi ${trip.title}`}>
+        <div className="relative h-24 w-28 shrink-0 overflow-hidden rounded-2xl bg-surface-container md:h-28 md:w-36">
+          {trip.coverPlace ? <PlacePhoto googlePlaceId={trip.coverPlace.googlePlaceId} photoName={trip.coverPlace.photoName} alt={trip.title} className="h-full w-full transition duration-300 group-hover:scale-105" /> : <img src={coverFor(trip.destinationCity ?? "")} alt={trip.destinationCity ?? trip.title} className="h-full w-full object-cover transition duration-300 group-hover:scale-105" />}
+          <span className={`absolute bottom-2 left-2 rounded-lg px-2 py-1 text-[10px] font-bold text-white backdrop-blur ${trip.visibility === "PUBLIC" ? "bg-primary/90" : "bg-[#071c32]/85"}`}>{trip.visibility === "PUBLIC" ? "Publik" : "Private"}</span>
+        </div>
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap gap-1">
-            <span className="chip bg-surface-container-high text-primary">{trip.status}</span>
-            <span className="chip bg-surface-container text-on-surface-variant">
-              {trip.visibility}
-            </span>
-            {tab === "pending" ? (
-              <span className="chip bg-secondary-fixed text-on-secondary-container">
-                Belum peserta
-              </span>
-            ) : null}
+          <div className="flex flex-wrap items-center gap-2 pr-10 md:pr-20">
+            <span className={`chip ${trip.status === "OPEN" ? "bg-emerald-100 text-emerald-800" : trip.status === "CANCELLED" ? "bg-red-100 text-red-700" : "bg-primary-fixed text-primary"}`}>{statusLabel(trip.status)}</span>
+            <span className="type-caption text-on-surface-variant">{dateLabel(trip.startDate, trip.endDate)}{duration ? ` (${duration})` : ""}</span>
           </div>
-          <h2 className="type-label mt-1 truncate text-on-surface">{trip.title}</h2>
-          <p className="type-caption truncate text-on-surface-variant">
-            {trip.destinationCity ?? "Tujuan belum dipilih"} · {trip.startDate} –{" "}
-            {trip.endDate}
-          </p>
+          <h2 className="mt-2 line-clamp-2 text-base font-extrabold leading-snug text-on-surface md:text-lg">{trip.title}</h2>
+          <p className="mt-1 line-clamp-2 type-caption text-on-surface-variant">Titik kumpul: {meeting} · Kuota {memberLimit} peserta terkonfirmasi</p>
+          <div className="mt-3 flex items-center justify-between gap-3 border-t border-outline-variant/35 pt-3">
+            <div className="flex min-w-0 items-center">
+              <span className="flex -space-x-2" aria-hidden="true">{["DA", "AG", "CL", "BS"].slice(0, Math.min(4, Math.max(1, trip.participantCount))).map((initials, index) => <span key={`${initials}-${index}`} className={`flex h-7 w-7 items-center justify-center rounded-full border-2 border-white text-[9px] font-bold text-white ${["bg-primary", "bg-emerald-600", "bg-violet-500", "bg-amber-500"][index]}`}>{initials}</span>)}</span>
+              <span className="ml-3 truncate type-label text-on-surface-variant">{memberLimit} Traveler</span>
+            </div>
+            {trip.pendingRequestCount > 0 ? <span className="min-w-max rounded-xl border border-secondary/25 px-2.5 py-2 type-label text-secondary"><Icon name="notifications" /> {trip.pendingRequestCount} Pengajuan</span> : null}
+          </div>
         </div>
       </button>
-      <div className="mt-2 flex flex-wrap gap-2">
-        <Link href={tripDetailHref(trip.id)} className="btn-brand !min-h-9 !px-4 !text-[0.8125rem]">Buka detail</Link>
-        {tab === "hosted" ? <Link href={tripItineraryPath(trip.id)} className="btn-secondary !min-h-9 !px-4 !text-[0.8125rem]"><Icon name="edit" className="text-[16px]" /> Edit itinerary</Link> : null}
-        {trip.visibility === "PUBLIC" && tab !== "pending" ? <Link href={`${tripDetailHref(trip.id)}#chat`} className="btn-ghost !min-h-9 !px-3 !text-[0.8125rem]"><Icon name="forum" className="text-[16px]" /> Grup chat</Link> : null}
+      <div className="flex flex-wrap items-center gap-2 border-t border-outline-variant/45 px-3 py-3.5 md:px-4">
+        {tab === "hosted" && trip.visibility === "PUBLIC" ? <Link href={`${tripDetailHref(trip.id)}#join-requests`} className="btn-primary !min-h-9 !px-3 !text-xs">Kelola Pengajuan {trip.pendingRequestCount ? `(${trip.pendingRequestCount})` : ""}</Link> : null}
+        {trip.visibility === "PUBLIC" && tab !== "pending" ? <Link href={`${tripDetailHref(trip.id)}#chat`} className="rounded-full bg-surface-container px-3 py-2 type-label"><Icon name="forum" /> Grup Chat</Link> : null}
+        {tab === "hosted" ? <Link href={tripItineraryPath(trip.id)} className="rounded-full bg-surface-container px-3 py-2 type-label"><Icon name="edit" /> Edit itinerary</Link> : null}
+        {tab === "pending" ? <Link href={tripDetailHref(trip.id)} className="btn-brand !min-h-9 !px-3 !text-xs"><Icon name="forum" /> Buka diskusi publik</Link> : null}
+        <Link href={tripDetailHref(trip.id)} className="rounded-full px-3 py-2 type-label text-primary hover:bg-primary-fixed">Lihat detail</Link>
       </div>
     </article>
   );
