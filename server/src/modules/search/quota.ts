@@ -1,4 +1,5 @@
 import { SearchErrorCode } from "@dolan/shared";
+import { env } from "../../config/env.ts";
 import { tooManyRequests } from "../../lib/api-error.ts";
 import type { QuotaStore } from "./types.ts";
 
@@ -17,6 +18,7 @@ export class QuotaService {
       period,
       userId,
       limit: this.dailyLimit,
+      estimatedCost: env.placesEstimatedCostPerRequest,
     });
     if (count > this.dailyLimit) {
       throw tooManyRequests(SearchErrorCode.QUOTA_EXCEEDED, "Daily Places quota exceeded");

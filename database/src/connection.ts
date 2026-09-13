@@ -51,6 +51,10 @@ export function getSequelize(): Sequelize {
   return sequelizeSingleton;
 }
 
+export function replaceSequelizeForTests(instance: Sequelize | null) {
+  sequelizeSingleton = instance;
+}
+
 export async function assertDatabaseConnection(): Promise<void> {
   await getSequelize().authenticate();
 }

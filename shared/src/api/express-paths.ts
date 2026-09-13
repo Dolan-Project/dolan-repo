@@ -38,4 +38,36 @@ export function tripCommentsPath(tripId: string): string {
 
 export function tripMessagesPath(tripId: string): string {
   return `/trips/${tripId}/messages`;
-};
+}
+
+export function tripClosePath(tripId: string): string {
+  return `/trips/${tripId}/close`;
+}
+
+export function tripReopenPath(tripId: string): string {
+  return `/trips/${tripId}/reopen`;
+}
+
+export function tripStartPath(tripId: string): string {
+  return `/trips/${tripId}/start`;
+}
+
+export function tripCompletePath(tripId: string): string {
+  return `/trips/${tripId}/complete`;
+}
+
+export function tripCancelPath(tripId: string): string {
+  return `/trips/${tripId}/cancel`;
+}
+
+export function tripVisibilityPath(tripId: string): string {
+  return `/trips/${tripId}/visibility`;
+}
+
+export function tripLeavePath(tripId: string): string {
+  return `/trips/${tripId}/leave`;
+}
+
+export function tripCommentPath(tripId: string, commentId: string): string {
+  return `/trips/${tripId}/comments/${commentId}`;
+}

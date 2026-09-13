@@ -10,13 +10,18 @@ import { createApiError, type MockScenario } from "./scenarios";
 const sampleTrip: MyTripSummary = {
   id: "trip_1",
   title: "Jelajah Yogyakarta",
+  destinationCity: "Yogyakarta",
   visibility: "PUBLIC",
   status: "OPEN",
   startDate: "2026-10-01",
   endDate: "2026-10-03",
+  participantCount: 1,
+  pendingRequestCount: 0,
+  coverPlace: null,
+  publicMeetingPointLabel: "Tugu Yogyakarta",
+  publicMeetingPointLatitude: -7.7828,
+  publicMeetingPointLongitude: 110.3671,
   host: samplePublicUser,
-  destinationCity: "Yogyakarta",
-  activeParticipantCount: 1,
   maxParticipants: 6,
 };
 

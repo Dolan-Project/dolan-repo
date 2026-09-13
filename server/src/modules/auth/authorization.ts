@@ -36,7 +36,11 @@ export function authorize(actor: SessionActor, capability: AuthCapability): Auth
     return deny(403, AuthErrorCode.ACCOUNT_RESTRICTED, "Account is restricted");
   }
 
-  if (capability === "create_draft" || capability === "upload_own_profile_asset") {
+  if (
+    capability === "create_draft" ||
+    capability === "upload_own_profile_asset" ||
+    capability === "approve_join"
+  ) {
     return { allowed: true };
   }
 
@@ -91,7 +95,7 @@ export function authorize(actor: SessionActor, capability: AuthCapability): Auth
     return { allowed: true };
   }
 
-  if (capability === "approve_join" || capability === "edit_itinerary") {
+  if (capability === "edit_itinerary") {
     if (trip?.memberRole !== "HOST" || trip.membershipStatus !== "ACTIVE") {
       return deny(403, AuthErrorCode.NOT_HOST, "Only the host can perform this action");
     }

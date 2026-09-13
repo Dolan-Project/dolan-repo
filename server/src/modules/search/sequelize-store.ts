@@ -26,8 +26,9 @@ import type {
 } from "@dolan/shared";
 import { SearchErrorCode } from "@dolan/shared";
 import { notFound } from "../../lib/api-error.ts";
-import { addUtcDays, slicePage, templatePopularityLabel, templateSourceLabel } from "./labels.ts";
+import { addUtcDays, slicePage, templatePopularityLabel, templateSourceLabel, uniqueById } from "./labels.ts";
 import { normalizeCityName } from "./city-catalog.ts";
+import { sortTrips, tripSortOrigin } from "./trip-rank.ts";
 import type { SearchStore, StoredIdempotency, UseTemplateCommand } from "./types.ts";
 
 export class SequelizeSearchStore implements SearchStore {
@@ -115,7 +116,7 @@ export class SequelizeSearchStore implements SearchStore {
       dateFrom: query.dateFrom,
       dateTo: query.dateTo,
     });
-    const sorted = sortTrips(items, query.sort);
+    const sorted = sortTrips(items, query.sort, tripSortOrigin(query));
     return slicePage(sorted, query.page, query.limit);
   }
 
@@ -170,7 +171,7 @@ export class SequelizeSearchStore implements SearchStore {
   }
 
   async listPlaceTrips(googlePlaceId: string, page: number, limit: number) {
-    const withVisit = await tripsVisiting(googlePlaceId);
+    const withVisit = uniqueById(await tripsVisiting(googlePlaceId));
     return slicePage(sortTrips(withVisit, "popular"), page, limit);
   }
 
@@ -189,7 +190,7 @@ export class SequelizeSearchStore implements SearchStore {
         },
       ],
     });
-    return slicePage(templates.map(toTemplateSummary), page, limit);
+    return slicePage(uniqueById(templates.map(toTemplateSummary)), page, limit);
   }
 
   async useTemplate(command: UseTemplateCommand): Promise<UseTemplateResult> {
@@ -319,6 +320,9 @@ export class SequelizeSearchStore implements SearchStore {
         participantCount: 0,
         pendingRequestCount: 0,
         coverPlace,
+        publicMeetingPointLabel: trip.publicMeetingPointLabel,
+        publicMeetingPointLatitude: trip.publicMeetingPointLatitude,
+        publicMeetingPointLongitude: trip.publicMeetingPointLongitude,
       };
 
       return {
@@ -412,6 +416,9 @@ function toTripSummary(trip: Trip): TripSummary {
     participantCount: members.length,
     pendingRequestCount: pending.length,
     coverPlace: fromCachedPlace(coverStop?.place ?? null),
+    publicMeetingPointLabel: trip.publicMeetingPointLabel,
+    publicMeetingPointLatitude: trip.publicMeetingPointLatitude,
+    publicMeetingPointLongitude: trip.publicMeetingPointLongitude,
   };
 }
 
@@ -478,14 +485,4 @@ async function tripsVisiting(googlePlaceId: string) {
     ],
   });
   return trips.map(toTripSummary);
-}
-
-function sortTrips(items: TripSummary[], sort: "recent" | "popular") {
-  return [...items].sort((a, b) => {
-    if (sort === "popular") {
-      if (b.participantCount !== a.participantCount) return b.participantCount - a.participantCount;
-      return b.pendingRequestCount - a.pendingRequestCount;
-    }
-    return (b.startDate ?? "").localeCompare(a.startDate ?? "");
-  });
 }

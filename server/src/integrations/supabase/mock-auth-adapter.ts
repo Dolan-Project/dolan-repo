@@ -23,6 +23,11 @@ export const MOCK_TOKENS: Record<string, SupabaseAuthUser> = {
     email: "admin@dolan.test",
     emailVerifiedAt: "2026-01-01T00:00:00.000Z",
   },
+  "mock-verified-budi": {
+    authReference: "auth-verified-budi",
+    email: "budi@dolan.test",
+    emailVerifiedAt: "2026-01-01T00:00:00.000Z",
+  },
 };
 
 export class MockAuthAdapter implements AuthAdapter {

@@ -1,0 +1,87 @@
+# Release, backup, and security — WIRA-D4
+
+Acuan: `PRD.md` §9, `task-assignment.md` (WIRA-D4). Reviewer: **Alya**.
+
+## Staging migration
+
+Migration yang sudah di-share **tidak diedit**. Koreksi lewat file baru di `database/migrations/`.
+
+```bash
+npm run db:migrate
+```
+
+Staging memakai `DATABASE_URL` direct connection, bukan transaction pooler. Verifikasi round-trip:
+
+```bash
+npm run db:verify
+```
+
+Undo satu langkah jika deploy gagal sebelum data baru masuk:
+
+```bash
+npm run db:migrate:undo
+```
+
+## Backup
+
+Sebelum migrate staging/production, jalankan dari root repo (Node, jalan di Windows dan Unix):
+
+```powershell
+npm run db:backup
+```
+
+Butuh `DATABASE_URL` atau `MIGRATION_DATABASE_URL` dan `pg_dump` di PATH. File masuk `backups/dolan-YYYYMMDD.dump` (folder ini di-gitignore).
+
+PowerShell manual:
+
+```powershell
+$stamp = Get-Date -Format yyyyMMdd
+pg_dump $env:DATABASE_URL --format=custom --file="backups/dolan-$stamp.dump"
+```
+
+Jangan jadikan `location_latest` arsip jangka panjang. Restore:
+
+```powershell
+pg_restore --clean --if-exists --dbname=$env:DATABASE_URL backups/dolan-YYYYMMDD.dump
+```
+
+Rollback aplikasi: deploy commit sebelumnya, lalu `npm run db:migrate:undo` **hanya** jika migration baru itu yang bermasalah dan belum ada data dependan.
+
+Verifikasi migration D4:
+
+```powershell
+npm run db:verify
+```
+
+## Rate limit
+
+| Env | Default | Scope |
+|---|---|---|
+| `RATE_LIMIT_WINDOW_MS` | 60000 | Jendela |
+| `RATE_LIMIT_MAX` | 120 | `/api/v1` umum per IP |
+| `RATE_LIMIT_SEARCH_MAX` | 40 | `/search` dan `/places` per IP |
+
+Melebihi batas → `429 RATE_LIMITED` plus header `Retry-After`. `/health` dan `/ready` tidak dihitung. Tes menonaktifkan limiter kecuali tes D4.
+
+## Quota Places
+
+`PLACES_MAX_REQUESTS_PER_USER_PER_DAY` (default 50) ditulis ke `api_usage_counters` bersama `estimated_cost`. Biaya per request di `PLACES_ESTIMATED_COST_PER_REQUEST` (default 0.01, placeholder sampai SKU Google diukur). Increment memakai `WHERE request_count < limit`. Saat penuh → `429 QUOTA_EXCEEDED`.
+
+## Index (audit + koreksi D4)
+
+Sudah ada dari D1: public trip search, template city, chat pagination, notification inbox, job polling, membership trip+status.
+
+Koreksi D4 (`20260913000100-add-d4-query-indexes.js`):
+
+- `trips_updated_at_idx` — My Trip diurut `updated_at`
+- `generation_jobs_requested_by_created_idx` — job milik user
+
+Query sosial Salsa: unique `(follower, following)` + index `following_user_id`; unique block pair + `blocked_user_id`. Helper: `server/src/modules/social/social-queries.ts` (REST lengkap tetap milik Salsa). Server production meng-inject `SequelizeSocialStore` ke stub `POST /users/:userId/follow` jika database siap; tanpa DB memakai memory store.
+
+## IDOR dan kapasitas
+
+- Private/draft yang tidak diketahui actor → `404 TRIP_NOT_FOUND`
+- Resource diketahui tetapi bukan host/member → `403`
+- Query `?membership=` / `?role=` tidak boleh mengubah akses chat
+- Dua accept pada sisa 1 kursi: satu berhasil, satu `409 TRIP_FULL` (row lock `FOR UPDATE`)
+- Leave member memanggil `chat.evictFromRoom` agar socket tidak menerima event baru
