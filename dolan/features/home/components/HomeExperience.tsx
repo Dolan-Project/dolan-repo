@@ -1,0 +1,104 @@
+"use client";
+import { FormEvent,useEffect,useRef,useState } from "react";
+import Image from "next/image";
+import Link from "next/link";
+import { Icon } from "@/components/ui/Icon";
+import { ASSETS } from "@/lib/assets";
+import { ROUTES } from "@/lib/routes";
+import { searchClient,SearchError } from "../search-client";
+import { searchQuerySchema } from "../search-schema";
+import type { SearchResponse } from "../types";
+import { GlobeCanvas } from "./GlobeCanvas";
+import { PlaceCard,TripCard } from "./ResultCards";
+import styles from "./home.module.css";
+
+const filters=["Open Trip Aktif","Solo Traveler","Camping & Sunrise"];
+const travelerMessages=["Ada yang ke Labuan Bajo?","Cari teman sunrise-an ☀️","Yuk susun trip bareng!"];
+const demoSteps=[
+ {icon:"search",title:"Temukan tujuan",copy:"Cari kota, destinasi, atau trip publik yang waktunya cocok.",label:"Cari petualangan"},
+ {icon:"route",title:"Susun itinerary",copy:"Atur budget dan biarkan AI menyusun urutan perjalanan yang efisien.",label:"Dolan AI bekerja"},
+ {icon:"groups",title:"Kenalan & berangkat",copy:"Cek profil, berdiskusi, lalu ajukan join ke trip yang kamu percaya.",label:"Teman ditemukan"},
+] as const;
+const faqs=[
+ ["Apakah join trip di Dolan berbayar?","Tidak. Setiap peserta membayar kebutuhan perjalanannya sendiri dan tidak membayar biaya join kepada host."],
+ ["Bagaimana memastikan teman perjalanan dapat dipercaya?","Lihat profil, riwayat trip, koneksi, dan rating dari peserta trip sebelumnya. Kamu juga bisa berdiskusi sebelum mengajukan join."],
+ ["Apakah itinerary dari AI bisa diedit?","Bisa. Destinasi, urutan rute, jadwal, dan estimasi budget dapat disesuaikan sebelum disimpan ke Trip Saya."],
+ ["Dari mana data destinasi dan rute berasal?","Data tempat, foto, dan rute nantinya berasal dari layanan peta dan Places API. Dolan menyimpan rencana pengguna, bukan seluruh katalog wisata."],
+ ["Bisakah trip dibuat private?","Bisa. Trip private hanya terlihat oleh pemilik dan anggota yang diundang. Trip public dapat ditemukan dan dikomentari traveler lain."],
+] as const;
+const unsplash={
+ bromo:"https://images.unsplash.com/photo-1588668214407-6ea9a6d8c272?auto=format&fit=crop&w=1600&q=88",
+ bali:"https://images.unsplash.com/photo-1537996194471-e657df975ab4?auto=format&fit=crop&w=1600&q=88",
+ ijen:"https://images.unsplash.com/photo-1596402184320-417e7178b2cd?auto=format&fit=crop&w=1600&q=88",
+ komodo:"https://images.unsplash.com/photo-1573790387438-4da905039392?auto=format&fit=crop&w=1600&q=88",
+} as const;
+const destinations=[
+ {name:"Bromo & Semeru",meta:"Jawa Timur · Jeep & Sunrise",image:unsplash.bromo,size:"large"},
+ {name:"Nusa Penida",meta:"Bali · Tebing & Snorkeling",image:unsplash.bali,size:"tall"},
+ {name:"Kawah Ijen",meta:"Banyuwangi · Blue Fire",image:unsplash.ijen,size:"small"},
+ {name:"Kepulauan Komodo",meta:"NTT · Sailing & Island Hopping",image:unsplash.komodo,size:"small"},
+] as const;
+const publicTrips=[
+ {title:"Pendakian Rinjani 3H2M via Sembalun",place:"Lombok, NTB",date:"18–20 Oktober",seats:3,host:"Wayan",image:unsplash.bromo,avatar:ASSETS.hostWayan},
+ {title:"Roadtrip Pesisir Jogja & Pacitan",place:"Yogyakarta",date:"25–27 Oktober",seats:2,host:"Sinta",image:unsplash.ijen,avatar:ASSETS.hostSinta},
+ {title:"Sailing Komodo 3H2M",place:"Labuan Bajo, NTT",date:"1–3 November",seats:4,host:"Dimas",image:unsplash.komodo,avatar:ASSETS.profile},
+] as const;
+
+export function HomeExperience(){
+ const[city,setCity]=useState(""),[date,setDate]=useState("");
+ const[budget,setBudget]=useState<"hemat"|"nyaman"|"premium">("premium");
+ const[activeFilters,setActiveFilters]=useState<string[]>([]);
+ const[phase,setPhase]=useState<"idle"|"searching"|"reveal">("idle");
+ const[messageIndex,setMessageIndex]=useState(0);
+ const[messagesVisible,setMessagesVisible]=useState(true);
+ const[resultFilter,setResultFilter]=useState<"places"|"trips">("places");
+ const[demoStep,setDemoStep]=useState(0);
+ const[result,setResult]=useState<SearchResponse|null>(null),[error,setError]=useState("");
+ const controller=useRef<AbortController|null>(null),sequence=useRef(0),dialogRef=useRef<HTMLDivElement>(null),searchButtonRef=useRef<HTMLButtonElement>(null);
+ useEffect(()=>()=>controller.current?.abort(),[]);
+ useEffect(()=>{let hideTimer=0,nextTimer=0;const cycle=()=>{setMessagesVisible(true);hideTimer=window.setTimeout(()=>setMessagesVisible(false),5500);nextTimer=window.setTimeout(()=>{setMessageIndex(i=>(i+1)%travelerMessages.length);cycle()},11500)};cycle();return()=>{window.clearTimeout(hideTimer);window.clearTimeout(nextTimer)}},[]);
+ useEffect(()=>{const timer=window.setInterval(()=>setDemoStep(i=>(i+1)%demoSteps.length),4200);return()=>window.clearInterval(timer)},[]);
+ useEffect(()=>{if(!result&&!error)return;document.body.style.overflow="hidden";dialogRef.current?.focus();const key=(e:KeyboardEvent)=>{if(e.key==="Escape")closeResults();};window.addEventListener("keydown",key);return()=>{document.body.style.overflow="";window.removeEventListener("keydown",key);};},[result,error]);
+ function closeResults(){setResult(null);setError("");setPhase("idle");requestAnimationFrame(()=>searchButtonRef.current?.focus());}
+ function toggleFilter(f:string){setActiveFilters(list=>list.includes(f)?list.filter(x=>x!==f):[...list,f]);}
+ async function submitSearch(e:FormEvent){e.preventDefault();const parsed=searchQuerySchema.safeParse({city,startDate:date||undefined,budget,filters:activeFilters});if(!parsed.success){setError(parsed.error.issues[0]?.message??"Periksa pencarianmu.");return;}controller.current?.abort();const c=new AbortController();controller.current=c;const id=++sequence.current;setError("");setResult(null);setPhase("searching");try{const response=await searchClient.search(parsed.data,c.signal);if(id!==sequence.current)return;setPhase("reveal");setResultFilter(response.places.length?"places":"trips");setResult(response);}catch(caught){if(c.signal.aborted||id!==sequence.current)return;setPhase("idle");setError(caught instanceof SearchError?caught.message:"Pencarian gagal. Coba lagi.");}}
+ const hasResults=result&&result.places.length+result.publicTrips.length+result.templates.length>0;
+ return <>
+ <section className={styles.hero}><div className={styles.ambient}/><div className={styles.clouds} aria-hidden="true"><i/><i/><i/><i/></div><svg className={styles.flightScene} viewBox="0 0 1440 720" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="planeColor" x1="0" x2="1"><stop stopColor="#ff9d58"/><stop offset="1" stopColor="#ff6f1d"/></linearGradient></defs><path className={styles.flightPath} d="M1380 485 C1160 280 920 245 690 335 S470 505 315 430"/><g className={styles.routeDestination} transform="translate(315 430)"><path d="M0-22a16 16 0 0 0-16 16C-16 7 0 25 0 25S16 7 16-6A16 16 0 0 0 0-22Z"/><circle cy="-6" r="6"/></g><g className={styles.flightPlane}><image href="/images/dolan-plane-realistic.png" x="-62" y="-42" width="124" height="84" transform="rotate(180)" preserveAspectRatio="xMidYMid meet"/><animateMotion dur="12s" repeatCount="indefinite" rotate="auto" path="M1380 485 C1160 280 920 245 690 335 S470 505 315 430"/></g></svg><div className={styles.globeStage} aria-hidden="true"><div className={`${styles.globeWrap} ${styles[phase]}`}><GlobeCanvas fast={phase==="searching"}/></div></div><div className={`${styles.heroPost} ${styles.postOne}`} style={{position:"absolute"}}><Image src={unsplash.bali} alt="Nusa Penida" fill unoptimized sizes="180px"/><span>Bali</span></div><div className={`${styles.heroPost} ${styles.postTwo}`} style={{position:"absolute"}}><Image src={unsplash.komodo} alt="Labuan Bajo" fill unoptimized sizes="180px"/><span>Labuan Bajo</span></div><div className={`${styles.socialBubble} ${styles.socialOne}`}><span style={{position:"relative"}}><Image src={ASSETS.hostWayan} alt="Wayan, traveler Dolan" fill sizes="58px"/></span>{messagesVisible&&<p key={`one-${messageIndex}`}>{travelerMessages[messageIndex]}</p>}</div><div className={`${styles.socialBubble} ${styles.socialTwo}`}><span style={{position:"relative"}}><Image src={ASSETS.hostSinta} alt="Sinta, traveler Dolan" fill sizes="58px"/></span>{messagesVisible&&<p key={`two-${messageIndex}`}>{travelerMessages[(messageIndex+1)%travelerMessages.length]}</p>}</div>
+  <div className={styles.heroInner}><div className={styles.heroCopy}><span className={styles.kicker}>Dolan bareng, cerita bareng</span><h1>Tujuannya sama.<br/><em>Ceritanya bisa bersama.</em></h1>
+  <p>Temukan destinasi, susun itinerary sesuai budget, lalu berangkat bersama traveler yang punya rencana serupa.</p>
+  <form onSubmit={submitSearch} className={styles.searchPanel} aria-label="Cari petualangan"><label className={styles.field}><span><Icon name="location_on"/> Tujuan / Kota</span><input value={city} onChange={e=>setCity(e.target.value)} placeholder="Mau dolan ke mana?"/></label><label className={styles.field}><span><Icon name="calendar_month"/> Tanggal Trip</span><input type="date" value={date} onChange={e=>setDate(e.target.value)}/></label><label className={styles.field}><span><Icon name="payments"/> Budget Maksimal</span><select value={budget} onChange={e=>setBudget(e.target.value as typeof budget)}><option value="hemat">Hemat (≤ Rp1 juta)</option><option value="nyaman">Nyaman (≤ Rp3 juta)</option><option value="premium">Fleksibel</option></select></label><button ref={searchButtonRef} className={styles.searchButton} aria-busy={phase==="searching"}><Icon name={phase==="searching"?"progress_activity":"explore"}/><span>{phase==="searching"?"Mencari…":"Cari"}</span></button><div className={styles.quickFilters}><span>Filter:</span>{filters.map(f=><button type="button" aria-pressed={activeFilters.includes(f)} onClick={()=>toggleFilter(f)} key={f}>{f}</button>)}</div></form>
+  </div></div>
+ </section>
+
+ <section className={`${styles.section} ${styles.destinations}`}><SectionHeading eyebrow="Pilihan minggu ini" title="Destinasi yang bikin ingin segera berangkat" copy="Tempat favorit dengan traveler yang sedang merencanakan perjalanan ke sana." action="Lihat semua destinasi"/><div className={styles.bento}>{destinations.map(item=><Link href={ROUTES.jelajah} className={`${styles.destinationCard} ${styles[item.size]}`} key={item.name}><Image src={item.image} alt={item.name} fill unoptimized sizes="(min-width:900px) 45vw,100vw"/><div><span>Destinasi populer</span><h3>{item.name}</h3><p>{item.meta}</p></div></Link>)}</div></section>
+
+ <section className={`${styles.section} ${styles.tripSection}`}><SectionHeading eyebrow="Temukan teman seperjalanan" title="Trip publik yang sedang membuka slot" copy="Baca rencananya, cek profil host, lalu kenalan di diskusi sebelum mengajukan join." action="Jelajahi semua trip"/><div className={styles.tripGrid}>{publicTrips.map(trip=><article className={styles.tripCard} key={trip.title}><div className={styles.tripCover}><Image src={trip.image} alt={trip.title} fill unoptimized sizes="400px"/><span>Join gratis</span></div><div className={styles.tripBody}><div className={styles.host}><Image src={trip.avatar} alt={trip.host} width={38} height={38}/><span>Rencana oleh <b>{trip.host}</b><small><Icon name="verified" filled/> Profil terverifikasi</small></span></div><h3>{trip.title}</h3><p><Icon name="location_on"/> {trip.place}</p><p><Icon name="calendar_month"/> {trip.date} · Sisa {trip.seats} slot</p><div className={styles.tripActions}><Link href={ROUTES.jelajah}>Lihat rencana</Link><button type="button">Ikut diskusi</button></div></div></article>)}</div></section>
+
+ <section className={`${styles.section} ${styles.howSection}`}><div className={styles.centerHeading}><span>Cara kerja Dolan</span><h2>Lihat perjalananmu terbentuk</h2><p>Tiga langkah sederhana, didemonstrasikan langsung seperti saat kamu memakai Dolan.</p></div><div className={styles.howShowcase}><div className={styles.demoSteps}>{demoSteps.map((step,index)=><button type="button" key={step.title} className={index===demoStep?styles.demoStepActive:""} onClick={()=>setDemoStep(index)}><span>{index+1}</span><div><b>{step.title}</b><p>{step.copy}</p></div><i><u/></i></button>)}</div><div className={styles.demoDevice}><div className={styles.deviceTop}><b>Dolan</b><span/><span/></div><div key={demoStep} className={styles.demoScreen}><HowDemo step={demoStep}/></div><div className={styles.deviceNav}><Icon name="home" filled/><Icon name="explore"/><span><Icon name="add"/></span><Icon name="luggage"/><Icon name="person"/></div></div></div></section>
+
+ <section className={`${styles.section} ${styles.planner}`}><div className={styles.plannerIntro}><span>AI itinerary & budgeting</span><h2>Rute lebih efisien, budget lebih terkendali</h2><p>Dolan AI menyusun urutan kunjungan berdasarkan lokasi, durasi, gaya perjalanan, dan batas budgetmu. Semua hasil tetap bisa diedit.</p><div className={styles.timeline}>{[["Hari 1","Bandara Komodo → Pulau Kelor","Tiba, bertemu peserta, lalu trekking ringan saat sunset."],["Hari 2","Padar → Pink Beach → Manta Point","Rute disusun berurutan agar waktu lebih efisien."],["Hari 3","Kanawa → Labuan Bajo","Snorkeling pagi dan kembali sebelum jadwal kepulangan."]].map(([day,title,copy])=><article key={day}><b>{day}</b><div><h3>{title}</h3><p>{copy}</p></div></article>)}</div></div><aside className={styles.budgetCard}><div className={styles.aiBadge}><Icon name="auto_awesome"/> Rekomendasi Dolan AI</div><h3>Estimasi budget perjalananmu</h3><p>Menyesuaikan kota asal, tanggal, durasi, transportasi, penginapan, makan, dan aktivitas.</p>{[["Transportasi",42],["Penginapan",24],["Makan",18],["Aktivitas",16]].map(([label,value])=><div className={styles.budgetRow} key={label}><span>{label}<b>{value}%</b></span><i><u style={{width:`${value}%`}}/></i></div>)}<small>Estimasi merupakan panduan dan mengikuti harga aktual penyedia.</small><Link href={ROUTES.buatTrip}>Buat itinerary versiku <Icon name="arrow_forward"/></Link></aside></section>
+
+ <section className={`${styles.section} ${styles.trustSection}`}><div className={styles.trustProfile}><div className={styles.profileImage}><Image src={ASSETS.profile} alt="Dimas, traveler Dolan" fill unoptimized sizes="420px"/><span><Icon name="verified" filled/> Verified traveler</span></div><div><span>Traveler pilihan komunitas</span><h2>Kenali orangnya sebelum berangkat bersama</h2><p>Setiap anggota punya profil, riwayat trip, koneksi, serta rating dari rekan satu perjalanan.</p><div className={styles.profileStats}><b>16<small>Trip selesai</small></b><b>42<small>Koneksi</small></b><b>4.98<small>DolanScore</small></b></div><Link href={ROUTES.profil}>Lihat contoh profil</Link></div></div><div className={styles.ratingPanel}>{[["Komunikasi & koordinasi","5.0 / 5","100%"],["Sikap & kebersamaan","4.92 / 5","98%"],["Ketepatan waktu","4.85 / 5","97%"]].map(([label,rating,width])=><div className={styles.ratingItem} key={label}><div><span>{label}</span><b>{rating}</b></div><i><u style={{width}}/></i></div>)}<p><Icon name="shield" filled/> Rating hanya diberikan oleh anggota trip yang sudah selesai.</p></div></section>
+
+ <section className={styles.finalCta}><div><span>Petualangan berikutnya menunggumu</span><h2>Siap menjejakkan langkah di bawah langit Indonesia?</h2><p>Buat rencana perjalananmu atau temukan traveler dengan tujuan yang sama.</p><div><Link href={ROUTES.buatTrip}>Buat trip pertamaku <Icon name="arrow_forward"/></Link><Link href={ROUTES.jelajah}>Jelajahi trip publik</Link></div></div></section>
+
+ <section id="faq" className={`${styles.section} ${styles.faqSection}`}><div className={styles.centerHeading}><span>Pertanyaan umum</span><h2>Sebelum mulai dolan</h2><p>Hal penting tentang trip bersama, keamanan, dan itinerary di Dolan.</p></div><div className={styles.faqList}>{faqs.map(([question,answer],index)=><details key={question} open={index===0}><summary><span>{question}</span><Icon name="add"/></summary><p>{answer}</p></details>)}</div></section>
+
+ {(result||error)&&<div className={styles.modalBackdrop} onMouseDown={e=>e.target===e.currentTarget&&closeResults()}>
+  <div className={styles.modal} role="dialog" aria-modal="true" aria-labelledby="result-title" tabIndex={-1} ref={dialogRef}>
+   <div className={styles.modalHeader}><div><span>Hasil petualangan</span><h2 id="result-title">{result?`${result.city.name}, ${result.city.province}`:"Pencarian belum berhasil"}</h2></div><button onClick={closeResults} aria-label="Tutup hasil"><Icon name="close"/></button></div>
+   {result&&<><div className={styles.searchContext}><span><Icon name="location_on"/>{result.city.name}</span><span><Icon name="calendar_month"/>{date||"Tanggal fleksibel"}</span><span><Icon name="payments"/>{budget==="hemat"?"Budget hemat":budget==="nyaman"?"Budget nyaman":"Budget fleksibel"}</span></div><div className={styles.resultFilters} role="tablist" aria-label="Jenis hasil pencarian"><button type="button" role="tab" aria-selected={resultFilter==="places"} onClick={()=>setResultFilter("places")}><Icon name="landscape"/>Wisata <b>{result.places.length}</b></button><button type="button" role="tab" aria-selected={resultFilter==="trips"} onClick={()=>setResultFilter("trips")}><Icon name="groups"/>Trip publik <b>{result.publicTrips.length}</b></button></div></>}
+   {error?<StateBox title="Ups, belum bisa menjelajah." copy={error} action="Ubah pencarian" onClick={()=>setError("")}/>:!hasResults?<StateBox title="Belum ada hasil di kota ini." copy="Coba kota terdekat atau ubah filter pencarianmu." action="Cari kota lain" onClick={closeResults}/>:<div className={styles.results}>{resultFilter==="places"?(result.places.length?<ResultSection title="Rekomendasi tempat wisata" count={result.places.length}>{result.places.map(x=><PlaceCard key={x.id} place={x}/>)}</ResultSection>:<StateBox title="Belum ada wisata yang cocok." copy="Coba lihat trip publik untuk kota ini." action="Lihat trip publik" onClick={()=>setResultFilter("trips")}/>):(result.publicTrips.length?<ResultSection title="Trip publik yang bisa diikuti" count={result.publicTrips.length}>{result.publicTrips.map(x=><TripCard key={x.id} trip={x}/>)}</ResultSection>:<StateBox title="Belum ada trip publik." copy="Kamu tetap bisa menjelajahi tempat wisata di kota ini." action="Lihat tempat wisata" onClick={()=>setResultFilter("places")}/>)}</div>}
+  </div>
+ </div>}
+ </>;
+}
+function SectionHeading({eyebrow,title,copy,action}:{eyebrow:string;title:string;copy:string;action:string}){return <div className={styles.sectionHeading}><div><span>{eyebrow}</span><h2>{title}</h2><p>{copy}</p></div><Link href={ROUTES.jelajah}>{action} <Icon name="arrow_forward"/></Link></div>}
+function ResultSection({title,count,children}:{title:string;count:number;children:React.ReactNode}){if(!count)return null;return <section><div className={styles.resultTitle}><h3>{title}</h3><span>{count} hasil</span></div><div className={styles.resultGrid}>{children}</div></section>}
+function StateBox({title,copy,action,onClick}:{title:string;copy:string;action:string;onClick:()=>void}){return <div className={styles.stateBox}><b>{title}</b><p>{copy}</p><button onClick={onClick}>{action}</button></div>}
+function HowDemo({step}:{step:number}){
+ if(step===0)return <><span className={styles.demoLabel}>Cari petualangan</span><h3>Mau dolan ke mana?</h3><div className={styles.demoSearch}><Icon name="search"/> Cari kota atau destinasi <b><Icon name="arrow_forward"/></b></div><div className={styles.demoCards}><article style={{position:"relative"}}><Image src={unsplash.bali} alt="Nusa Penida" fill unoptimized sizes="220px"/><span>Nusa Penida<small>12 trip tersedia</small></span></article><article style={{position:"relative"}}><Image src={unsplash.komodo} alt="Labuan Bajo" fill unoptimized sizes="220px"/><span>Labuan Bajo<small>8 trip tersedia</small></span></article></div></>;
+ if(step===1)return <><span className={styles.demoLabel}>Dolan AI bekerja</span><h3>Itinerary sesuai budget</h3><div className={styles.demoBudget}><span>Budget perjalanan <b>Rp2.500.000</b></span><i><u/></i></div><div className={styles.demoTimeline}>{["Sunrise di Pulau Padar","Pink Beach & Manta Point","Sunset di Pulau Kelor"].map((item,index)=><article key={item}><b>{index+1}</b><span>{item}<small>{index===0?"05.00–08.30":"Rute telah dioptimalkan"}</small></span></article>)}</div></>;
+ return <><span className={styles.demoLabel}>Teman ditemukan</span><h3>Kenalan sebelum berangkat</h3><div className={styles.demoMatch}><div style={{position:"relative"}}><Image src={ASSETS.hostSinta} alt="Sinta" fill sizes="60px"/></div><span><b>Sinta</b><small>4.92 · 8 trip selesai</small></span><i><Icon name="verified" filled/></i></div><div className={styles.demoChat}><p>Hai! Aku juga berangkat dari Jogja 👋</p><p>Yuk diskusi rutenya di grup Dolan.</p></div><button type="button" className={styles.demoJoin}>Lihat trip & kenalan</button></>;
+}

@@ -3,8 +3,8 @@ import type {
   ApiSuccess,
   CreateTripInput,
   MyTripRole,
+  MyTripSummary,
   TripDetail,
-  TripSummary,
   TripViewerRole,
 } from "@/lib/contracts";
 import { sampleOtherUser, samplePublicUser } from "./fixtures";
@@ -14,27 +14,87 @@ const idempotentCreates = new Map<string, string>();
 const trips = new Map<string, TripDetail>();
 const roles = new Map<string, TripViewerRole>();
 
-function summaryOf(detail: TripDetail): TripSummary {
-  const {
-    description: _d,
-    origin: _o,
-    meetingPoint: _m,
-    transport: _t,
-    planningPartySize: _p,
-    budgetAmount: _b,
-    budgetBasis: _bb,
-    activityPrefs: _a,
-    lodgingPref: _l,
-    companionNote: _c,
-    viewerRole: _v,
-    ...summary
-  } = detail;
-  return summary;
+function moneyString(value: number | string | null | undefined): string | null {
+  if (value == null || value === "") return null;
+  if (typeof value === "number") return String(value);
+  return value;
+}
+
+type SeedInput = Omit<Partial<TripDetail>, "budgetAmount" | "joinFree"> & {
+  id: string;
+  title: string;
+  host: TripDetail["host"];
+  viewerRole: TripViewerRole;
+  budgetAmount?: string | number | null;
+};
+
+function buildDetail(input: SeedInput): TripDetail {
+  const origin = input.origin ?? input.privateOriginLabel ?? "Jakarta";
+  const meetingPoint =
+    input.meetingPoint ?? input.publicMeetingPointLabel ?? null;
+  const transport = input.transport ?? input.transportMode ?? "Darat";
+  return {
+    id: input.id,
+    title: input.title,
+    description: input.description ?? null,
+    visibility: input.visibility ?? "PUBLIC",
+    status: input.status ?? "OPEN",
+    startDate: input.startDate ?? null,
+    endDate: input.endDate ?? null,
+    timezone: input.timezone ?? "Asia/Jakarta",
+    destinationCity: input.destinationCity ?? null,
+    transportMode: transport,
+    budgetAmount: moneyString(input.budgetAmount) ?? "0",
+    budgetBasis: input.budgetBasis ?? "PER_PERSON",
+    currency: input.currency ?? "IDR",
+    planningPartySize: input.planningPartySize ?? 1,
+    maxParticipants: input.maxParticipants ?? null,
+    publicMeetingPointLabel: meetingPoint,
+    publicMeetingPointLatitude: input.publicMeetingPointLatitude ?? null,
+    publicMeetingPointLongitude: input.publicMeetingPointLongitude ?? null,
+    privateOriginLabel: origin,
+    privateOriginLatitude: input.privateOriginLatitude ?? null,
+    privateOriginLongitude: input.privateOriginLongitude ?? null,
+    preferences: input.preferences ?? null,
+    host: input.host,
+    viewerRole: input.viewerRole,
+    activeParticipantCount: input.activeParticipantCount ?? 1,
+    pendingRequestCount: input.pendingRequestCount ?? 0,
+    joinFree: true,
+    currentItineraryVersionId: input.currentItineraryVersionId ?? null,
+    myJoinRequest: input.myJoinRequest ?? null,
+    origin,
+    meetingPoint,
+    transport,
+    activityPrefs: input.activityPrefs ?? [],
+    lodgingPref: input.lodgingPref ?? "",
+    companionNote: input.companionNote ?? "",
+  };
+}
+
+function detailToSummary(detail: TripDetail): MyTripSummary {
+  return {
+    id: detail.id,
+    title: detail.title,
+    destinationCity: detail.destinationCity,
+    visibility: detail.visibility,
+    status: detail.status,
+    startDate: detail.startDate,
+    endDate: detail.endDate,
+    participantCount: detail.activeParticipantCount,
+    pendingRequestCount: detail.pendingRequestCount,
+    coverPlace: null,
+    publicMeetingPointLabel: detail.publicMeetingPointLabel,
+    publicMeetingPointLatitude: detail.publicMeetingPointLatitude,
+    publicMeetingPointLongitude: detail.publicMeetingPointLongitude,
+    host: detail.host,
+    maxParticipants: detail.maxParticipants,
+  };
 }
 
 function seed() {
   if (trips.has("trip_1")) return;
-  const hosted: TripDetail = {
+  const hosted = buildDetail({
     id: "trip_1",
     title: "Jelajah Yogyakarta",
     visibility: "PUBLIC",
@@ -56,8 +116,8 @@ function seed() {
     lodgingPref: "Homestay",
     companionNote: "Join gratis, biaya mandiri.",
     viewerRole: "host",
-  };
-  const joined: TripDetail = {
+  });
+  const joined = buildDetail({
     ...hosted,
     id: "trip_joined",
     title: "Ekspedisi Rinjani Sembalun",
@@ -68,8 +128,8 @@ function seed() {
     meetingPoint: "Sembalun Lawang",
     viewerRole: "participant",
     activeParticipantCount: 3,
-  };
-  const pending: TripDetail = {
+  });
+  const pending = buildDetail({
     ...hosted,
     id: "trip_pending",
     title: "Open Trip Karimunjawa",
@@ -81,8 +141,8 @@ function seed() {
     viewerRole: "pending",
     activeParticipantCount: 5,
     maxParticipants: 8,
-  };
-  const ongoing: TripDetail = {
+  });
+  const ongoing = buildDetail({
     ...joined,
     id: "trip_ongoing",
     title: "Camp Bromo Weekend",
@@ -93,8 +153,8 @@ function seed() {
     meetingPoint: "Cemoro Lawang",
     viewerRole: "participant",
     activeParticipantCount: 4,
-  };
-  const closed: TripDetail = {
+  });
+  const closed = buildDetail({
     ...hosted,
     id: "trip_closed",
     title: "Weekend Dieng",
@@ -106,7 +166,7 @@ function seed() {
     viewerRole: "host",
     activeParticipantCount: 3,
     maxParticipants: 6,
-  };
+  });
   trips.set(hosted.id, { ...hosted, activeParticipantCount: 6 });
   trips.set(joined.id, joined);
   trips.set(pending.id, pending);
@@ -119,14 +179,10 @@ function seed() {
   roles.set(closed.id, "host");
 }
 
-function detailToSummary(detail: TripDetail): TripSummary {
-  return summaryOf({ ...detail, viewerRole: roles.get(detail.id) ?? "visitor" });
-}
-
 export function mockListMyTrips(
   scenario: MockScenario,
   role: MyTripRole,
-): ApiSuccess<TripSummary[]> | ApiError {
+): ApiSuccess<MyTripSummary[]> | ApiError {
   seed();
   if (scenario === "unauthorized") {
     return createApiError("UNAUTHORIZED", "Tidak sah");
@@ -175,7 +231,7 @@ export function mockCreateTrip(
     if (existing) return { success: true, data: existing };
   }
   const id = `trip_${trips.size + 1}`;
-  const detail: TripDetail = {
+  const detail = buildDetail({
     id,
     title: input?.title ?? "Jelajah Yogyakarta",
     visibility: input?.visibility ?? "PRIVATE",
@@ -197,7 +253,7 @@ export function mockCreateTrip(
     lodgingPref: input?.lodgingPref ?? "",
     companionNote: input?.companionNote ?? "",
     viewerRole: "host",
-  };
+  });
   trips.set(id, detail);
   roles.set(id, "host");
   if (idempotencyKey) idempotentCreates.set(idempotencyKey, id);
@@ -237,16 +293,13 @@ export function mockUpdateTrip(
     return createApiError("UNAUTHORIZED", "Hanya host yang dapat mengedit");
   }
   const nextCapacity = input.maxParticipants ?? trip.maxParticipants;
-  if (
-    nextCapacity != null &&
-    nextCapacity < trip.activeParticipantCount
-  ) {
+  if (nextCapacity != null && nextCapacity < trip.activeParticipantCount) {
     return createApiError(
       "CAPACITY_BELOW_MEMBERS",
       "Kapasitas tidak boleh di bawah anggota aktif",
     );
   }
-  const updated: TripDetail = {
+  const updated = buildDetail({
     ...trip,
     title: input.title,
     description: input.description ?? trip.description,
@@ -264,9 +317,10 @@ export function mockUpdateTrip(
     maxParticipants: nextCapacity,
     meetingPoint: input.meetingPoint || trip.meetingPoint,
     companionNote: input.companionNote ?? trip.companionNote,
-  };
+    viewerRole: "host",
+  });
   trips.set(tripId, updated);
-  return { success: true, data: { ...updated, viewerRole: "host" } };
+  return { success: true, data: updated };
 }
 
 export function mockLeaveTrip(
@@ -305,7 +359,10 @@ export function mockTransitionTrip(
   }
   if (action === "reopen") {
     if (trip.status !== "CLOSED") {
-      return createApiError("INVALID_TRANSITION", "Hanya trip tertutup yang bisa dibuka lagi");
+      return createApiError(
+        "INVALID_TRANSITION",
+        "Hanya trip tertutup yang bisa dibuka lagi",
+      );
     }
     const updated = { ...trip, status: "OPEN" as const };
     trips.set(tripId, updated);

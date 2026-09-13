@@ -1,6 +1,8 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies
+/node_modules
+node_modules
 node_modules/
 /.pnp
 .pnp.*
@@ -9,6 +11,8 @@ node_modules/
 !.yarn/plugins
 !.yarn/releases
 !.yarn/versions
+.claude
+.playwright
 
 # testing
 /coverage
@@ -48,3 +52,10 @@ stitch-html/
 
 # Cursor local config (may contain secrets)
 .cursor/
+
+# embedded postgres used by store tests
+**/.tmp-pg*/
+
+# local database dumps
+/backups/
+

@@ -324,7 +324,7 @@ function TripCard({
         <img
           alt=""
           className="h-16 w-16 shrink-0 rounded-xl object-cover"
-          src={coverFor(trip.destinationCity)}
+          src={coverFor(trip.destinationCity ?? "")}
         />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap gap-1">
@@ -340,7 +340,8 @@ function TripCard({
           </div>
           <h2 className="type-label mt-1 truncate text-on-surface">{trip.title}</h2>
           <p className="type-caption truncate text-on-surface-variant">
-            {trip.destinationCity} · {trip.startDate} – {trip.endDate}
+            {trip.destinationCity ?? "Tujuan belum dipilih"} · {trip.startDate} –{" "}
+            {trip.endDate}
           </p>
         </div>
       </button>

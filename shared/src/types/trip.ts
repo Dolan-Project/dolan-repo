@@ -1,36 +1,66 @@
-import type {
-  PublicUser,
-  TripStatus,
-  TripVisibility,
-} from "./kickoff.js";
+import type { JoinRequest } from "./join.ts";
+import type { PublicUser } from "./kickoff.js";
+import type { PlaceSummary } from "./place.ts";
+import type { BudgetBasis, TripStatus, TripVisibility } from "./enums.ts";
 
 export type MyTripRole = "hosted" | "joined" | "pending";
-export type TripViewerRole = "host" | "participant" | "pending" | "visitor";
-export type BudgetBasis = "PER_PERSON" | "GROUP";
+export type TripViewerRole = "host" | "participant" | "pending" | "none" | "visitor";
 
 export type TripSummary = {
   id: string;
   title: string;
+  destinationCity: string | null;
   visibility: TripVisibility;
   status: TripStatus;
-  startDate: string;
-  endDate: string;
+  startDate: string | null;
+  endDate: string | null;
+  participantCount: number;
+  pendingRequestCount: number;
+  coverPlace: PlaceSummary | null;
+  publicMeetingPointLabel: string | null;
+  publicMeetingPointLatitude: number | null;
+  publicMeetingPointLongitude: number | null;
+};
+
+export type MyTripSummary = TripSummary & {
   host: PublicUser;
-  destinationCity: string;
-  activeParticipantCount: number;
   maxParticipants: number | null;
 };
 
-export type TripDetail = TripSummary & {
-  description: string;
-  origin: string;
-  meetingPoint: string | null;
-  transport: string;
-  planningPartySize: number;
-  budgetAmount: number;
+export type TripDetail = {
+  id: string;
+  title: string;
+  description: string | null;
+  visibility: TripVisibility;
+  status: TripStatus;
+  startDate: string | null;
+  endDate: string | null;
+  timezone: string;
+  destinationCity: string | null;
+  transportMode: string | null;
+  budgetAmount: string | null;
   budgetBasis: BudgetBasis;
-  activityPrefs: string[];
-  lodgingPref: string;
-  companionNote: string;
+  currency: string;
+  planningPartySize: number;
+  maxParticipants: number | null;
+  publicMeetingPointLabel: string | null;
+  publicMeetingPointLatitude: number | null;
+  publicMeetingPointLongitude: number | null;
+  privateOriginLabel: string | null;
+  privateOriginLatitude: number | null;
+  privateOriginLongitude: number | null;
+  preferences: Record<string, unknown> | null;
+  host: PublicUser;
   viewerRole: TripViewerRole;
+  activeParticipantCount: number;
+  pendingRequestCount: number;
+  joinFree: true;
+  currentItineraryVersionId: string | null;
+  myJoinRequest: JoinRequest | null;
+  origin?: string;
+  meetingPoint?: string | null;
+  transport?: string;
+  activityPrefs?: string[];
+  lodgingPref?: string;
+  companionNote?: string;
 };

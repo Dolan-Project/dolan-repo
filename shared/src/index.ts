@@ -1,11 +1,19 @@
-export type {
-  ApiSuccess,
-  ApiError,
-  PublicUser,
-  TripVisibility,
-  TripStatus,
-  JoinRequestStatus,
-} from "./types/kickoff";
+export * from "./api/response.ts";
+export type { ApiErrorBody as ApiError } from "./api/response.ts";
+export * from "./constants/error-codes.ts";
+export * from "./types/enums.ts";
+export * from "./types/auth.ts";
+export * from "./types/place.ts";
+export * from "./types/trip.ts";
+export * from "./types/template.ts";
+export * from "./schemas/auth.ts";
+export * from "./schemas/budget.ts";
+export * from "./schemas/generation.ts";
+export * from "./schemas/search.ts";
+export * from "./schemas/template.ts";
+export * from "./schemas/trip.ts";
+
+export type { PublicUser } from "./types/kickoff.ts";
 
 export {
   LOGIN_PAGE_PATH,
@@ -14,53 +22,28 @@ export {
   SAFE_DRAFT_STORAGE_KEY,
   isAllowedNextPath,
   resolvePostAuthPath,
-} from "./api/return-to-action";
+} from "./api/return-to-action.ts";
 
-export type { AuthSession, AuthErrorCode } from "./types/auth";
-export { AUTH_ERROR_CODES, isProfileComplete } from "./types/auth";
-export { AUTH_PATHS } from "./api/auth-paths";
+export { AUTH_PATHS } from "./api/auth-paths.ts";
 
-export type { ProfileUpdate } from "./types/profile";
-export {
-  loginSchema,
-  registerSchema,
-  forgotPasswordSchema,
-  resetPasswordSchema,
-} from "./schemas/auth";
-export type {
-  LoginInput,
-  RegisterInput,
-  ForgotPasswordInput,
-  ResetPasswordInput,
-} from "./schemas/auth";
-export { profileUpdateSchema } from "./schemas/profile";
-export type { ProfileUpdateInput } from "./schemas/profile";
+export type { ProfileUpdate } from "./types/profile.ts";
+export { profileUpdateSchema } from "./schemas/profile.ts";
+export type { ProfileUpdateInput } from "./schemas/profile.ts";
 export {
   MAX_UPLOAD_BYTES,
   ALLOWED_UPLOAD_TYPES,
   validateUploadMeta,
-} from "./schemas/upload";
-export type { UploadMeta, UploadValidation } from "./schemas/upload";
-export { fieldErrorsFromZod } from "./schemas/zod-fields";
-export type {
-  TripSummary,
-  TripDetail,
-  TripViewerRole,
-  MyTripRole,
-  BudgetBasis,
-} from "./types/trip";
+} from "./schemas/upload.ts";
+export type { UploadMeta, UploadValidation } from "./schemas/upload.ts";
+export { fieldErrorsFromZod } from "./schemas/zod-fields.ts";
+export type { JoinRequest, JoinReviewDecision } from "./types/join.ts";
+export type { TripComment, ChatMessage } from "./types/chat.ts";
 export {
-  createTripSchema,
-  publishTripSchema,
-  updateTripSchema,
-} from "./schemas/trip";
-export type {
-  CreateTripInput,
-  PublishTripInput,
-  UpdateTripInput,
-} from "./schemas/trip";
-export type { JoinRequest, JoinReviewDecision } from "./types/join";
-export type { TripComment, ChatMessage } from "./types/chat";
+  sendMessageSchema,
+  listMessagesQuerySchema,
+  markReadSchema,
+} from "./schemas/chat.ts";
+export type { SendMessageInput } from "./schemas/chat.ts";
 export {
   API_V1_PREFIX,
   EXPRESS_PATHS,
@@ -73,4 +56,11 @@ export {
   joinRequestWithdrawPath,
   tripCommentsPath,
   tripMessagesPath,
-} from "./api/express-paths";
+  tripClosePath,
+  tripReopenPath,
+  tripStartPath,
+  tripCompletePath,
+  tripCancelPath,
+  tripVisibilityPath,
+  tripCommentPath,
+} from "./api/express-paths.ts";

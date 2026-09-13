@@ -1,0 +1,9 @@
+const path = require("path");
+
+/** Root entry so `npx sequelize-cli` from repo root also works. */
+module.exports = {
+  config: path.resolve(__dirname, "database", "config", "database.cjs"),
+  "models-path": path.resolve(__dirname, "database", "models"),
+  "seeders-path": path.resolve(__dirname, "database", "seeders"),
+  "migrations-path": path.resolve(__dirname, "database", "migrations"),
+};

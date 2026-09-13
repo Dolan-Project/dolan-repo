@@ -69,10 +69,11 @@ export function TripDetailView({ tripId }: { tripId: string }) {
     );
   }
 
+  const budget = Number(trip.budgetAmount ?? 0);
   const perPerson =
     trip.budgetBasis === "PER_PERSON"
-      ? trip.budgetAmount
-      : Math.round(trip.budgetAmount / Math.max(trip.planningPartySize, 1));
+      ? budget
+      : Math.round(budget / Math.max(trip.planningPartySize, 1));
 
   return (
     <div className="mx-auto max-w-3xl px-margin py-8 md:px-margin-desktop">
@@ -90,12 +91,12 @@ export function TripDetailView({ tripId }: { tripId: string }) {
         ) : null}
       </div>
       <p className="type-body mt-3 text-on-surface-variant">
-        {trip.origin} → {trip.destinationCity || "Tujuan belum dipilih"} · {trip.startDate}{" "}
-        – {trip.endDate}
+        {trip.origin ?? trip.privateOriginLabel} →{" "}
+        {trip.destinationCity || "Tujuan belum dipilih"} · {trip.startDate} – {trip.endDate}
       </p>
-      {trip.meetingPoint ? (
+      {trip.meetingPoint ?? trip.publicMeetingPointLabel ? (
         <p className="type-caption mt-1 text-on-surface-variant">
-          Titik temu: {trip.meetingPoint}
+          Titik temu: {trip.meetingPoint ?? trip.publicMeetingPointLabel}
         </p>
       ) : null}
       <p className="type-body mt-3 text-on-surface">{trip.description}</p>

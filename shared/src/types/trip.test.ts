@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { TripSummary } from "./trip.js";
+import type { MyTripSummary } from "./trip.js";
 import type { PublicUser } from "./kickoff.js";
 
 const host: PublicUser = {
@@ -22,21 +22,27 @@ const host: PublicUser = {
   },
 };
 
-describe("TripSummary", () => {
+describe("MyTripSummary", () => {
   it("can be constructed without payment fields", () => {
-    const trip: TripSummary = {
+    const trip: MyTripSummary = {
       id: "t1",
       title: "Bali 3H2M",
+      destinationCity: "Bali",
       visibility: "PUBLIC",
       status: "OPEN",
       startDate: "2026-10-01",
       endDate: "2026-10-03",
+      participantCount: 2,
+      pendingRequestCount: 0,
+      coverPlace: null,
+      publicMeetingPointLabel: "Tugu Yogyakarta",
+      publicMeetingPointLatitude: -7.7828,
+      publicMeetingPointLongitude: 110.3671,
       host,
-      destinationCity: "Bali",
-      activeParticipantCount: 2,
       maxParticipants: 4,
     };
     expect("joinFee" in trip).toBe(false);
     expect(trip.maxParticipants).toBe(4);
+    expect(trip.participantCount).toBe(2);
   });
 });

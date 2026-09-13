@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import type { AuthSession } from "@/lib/contracts";
 import { ASSETS } from "@/lib/assets";
 import { ROUTES, type NavKey } from "@/lib/routes";
@@ -29,23 +30,35 @@ function isActive(pathname: string, key: NavKey) {
 
 export function SiteHeader({ session }: { session: AuthSession | null }) {
   const pathname = usePathname();
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const update = () => setScrolled(window.scrollY > 20);
+    update();
+    window.addEventListener("scroll", update, { passive: true });
+    return () => window.removeEventListener("scroll", update);
+  }, []);
+  const transparent = pathname === "/" && !scrolled;
   const avatar = session?.user.avatarUrl ?? ASSETS.profile;
 
   return (
-    <header className="fixed top-0 z-50 w-full bg-surface-container-lowest/85 shadow-[0_4px_20px_-2px_rgba(16,36,58,0.04)] backdrop-blur-md">
-      <div className="mx-auto flex h-16 max-w-[1240px] items-center justify-between gap-3 px-margin md:h-20 md:px-margin-desktop">
+    <header
+      className={`fixed top-0 z-50 w-full transition-all duration-500 ${
+        transparent
+          ? "border-transparent bg-transparent shadow-none"
+          : "border-b border-white/60 bg-white/82 shadow-[0_8px_30px_rgba(15,59,94,.08)] backdrop-blur-xl"
+      }`}
+    >
+      <div className="mx-auto flex h-14 max-w-[1200px] items-center justify-between gap-3 px-margin md:h-16 md:px-margin-desktop">
         <div className="flex min-w-0 items-center gap-6">
           <Link href={ROUTES.beranda} className="flex items-center gap-2">
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-on-primary shadow-sm md:h-10 md:w-10">
-              <Icon name="explore" className="text-[22px]" />
-            </span>
-            <span className="flex flex-col">
-              <span className="type-subtitle leading-none tracking-tight text-on-surface">
-                DOLAN
-              </span>
-              <span className="type-micro mt-0.5 hidden text-on-surface-variant sm:block">
-                Social Travel untuk Indonesia
-              </span>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              alt="Dolan Logo"
+              className="h-7 w-auto object-contain"
+              src={ASSETS.logo}
+            />
+            <span className="type-subtitle tracking-tight text-on-surface">
+              Dolan
             </span>
           </Link>
 
