@@ -174,16 +174,29 @@ function seed() {
     activeParticipantCount: 3,
     maxParticipants: 6,
   });
+  const privateTrip = buildDetail({
+    ...hosted,
+    id: "trip_private",
+    title: "Liburan Keluarga Bandung",
+    visibility: "PRIVATE",
+    status: "OPEN",
+    destinationCity: "Bandung",
+    meetingPoint: "Stasiun Bandung",
+    viewerRole: "host",
+    maxParticipants: null,
+  });
   trips.set(hosted.id, { ...hosted, activeParticipantCount: 6 });
   trips.set(joined.id, joined);
   trips.set(pending.id, pending);
   trips.set(ongoing.id, ongoing);
   trips.set(closed.id, closed);
+  trips.set(privateTrip.id, privateTrip);
   roles.set(hosted.id, "host");
   roles.set(joined.id, "participant");
   roles.set(pending.id, "pending");
   roles.set(ongoing.id, "participant");
   roles.set(closed.id, "host");
+  roles.set(privateTrip.id, "host");
 }
 
 export function mockListMyTrips(
@@ -208,9 +221,30 @@ export function mockListMyTrips(
   return { success: true, data };
 }
 
+function presentTrip(trip: TripDetail, viewerRole: TripViewerRole): TripDetail {
+  const isHost = viewerRole === "host";
+  return {
+    ...trip,
+    viewerRole,
+    origin: isHost ? trip.origin : undefined,
+    privateOriginLabel: isHost ? trip.privateOriginLabel : null,
+    privateOriginLatitude: isHost ? trip.privateOriginLatitude : null,
+    privateOriginLongitude: isHost ? trip.privateOriginLongitude : null,
+    preferences: isHost ? trip.preferences : null,
+    activityPrefs: isHost ? trip.activityPrefs : undefined,
+    lodgingPref: isHost ? trip.lodgingPref : undefined,
+    companionNote: isHost ? trip.companionNote : undefined,
+  };
+}
+
+function canGuestView(trip: TripDetail) {
+  return trip.visibility === "PUBLIC" && trip.status !== "DRAFT";
+}
+
 export function mockGetTrip(
   scenario: MockScenario,
   tripId = "trip_1",
+  options?: { guest?: boolean },
 ): ApiSuccess<TripDetail> | ApiError {
   seed();
   if (scenario === "empty" || scenario === "unauthorized") {
@@ -218,10 +252,20 @@ export function mockGetTrip(
   }
   const trip = trips.get(tripId);
   if (!trip) return createApiError("NOT_FOUND", "Trip tidak ditemukan");
-  return {
-    success: true,
-    data: { ...trip, viewerRole: roles.get(trip.id) ?? "visitor" },
-  };
+  if (options?.guest) {
+    if (!canGuestView(trip)) {
+      return createApiError("NOT_FOUND", "Trip tidak ditemukan");
+    }
+    return { success: true, data: presentTrip(trip, "none") };
+  }
+  const storedRole = roles.get(trip.id);
+  if (storedRole) {
+    return { success: true, data: presentTrip(trip, storedRole) };
+  }
+  if (!canGuestView(trip)) {
+    return createApiError("NOT_FOUND", "Trip tidak ditemukan");
+  }
+  return { success: true, data: presentTrip(trip, "none") };
 }
 
 export function mockCreateTrip(

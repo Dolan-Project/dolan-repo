@@ -65,7 +65,7 @@ export async function handleGetTripRequest(
   tripId: string,
 ): Promise<Response> {
   const sessionId = requireSession(request);
-  const mock = mockGetTrip(sessionId ? "success" : "unauthorized", tripId);
+  const mock = mockGetTrip("success", tripId, { guest: !sessionId });
   if (!mock.success) return jsonResult(mock, statusForCode(mock.error.code));
   return jsonResult(mock, 200);
 }

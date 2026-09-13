@@ -5,6 +5,48 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { ApiError, TripDetail } from "@/lib/contracts";
 import { ROUTES, tripEditHref } from "@/lib/routes";
+import { TripBoardMap, type TripMapMarker } from "./TripBoardMap";
+
+function isVisitorRole(role: TripDetail["viewerRole"]) {
+  return role === "none" || role === "visitor";
+}
+
+function roleLabel(role: TripDetail["viewerRole"]) {
+  if (role === "host") return "Host";
+  if (role === "participant") return "Peserta";
+  if (role === "pending") return "Pengajuan";
+  return "Trip publik";
+}
+
+function detailMarkers(trip: TripDetail): TripMapMarker[] {
+  const markers: TripMapMarker[] = [];
+  if (
+    trip.publicMeetingPointLatitude != null &&
+    trip.publicMeetingPointLongitude != null
+  ) {
+    markers.push({
+      id: "meeting",
+      label: trip.meetingPoint ?? trip.publicMeetingPointLabel ?? "Titik temu",
+      latitude: trip.publicMeetingPointLatitude,
+      longitude: trip.publicMeetingPointLongitude,
+      selected: true,
+    });
+  }
+  if (
+    trip.viewerRole === "host" &&
+    trip.privateOriginLatitude != null &&
+    trip.privateOriginLongitude != null
+  ) {
+    markers.push({
+      id: "origin",
+      label: trip.origin ?? trip.privateOriginLabel ?? "Asal",
+      latitude: trip.privateOriginLatitude,
+      longitude: trip.privateOriginLongitude,
+      tone: "origin",
+    });
+  }
+  return markers;
+}
 
 export function TripDetailView({ tripId }: { tripId: string }) {
   const router = useRouter();
@@ -69,16 +111,26 @@ export function TripDetailView({ tripId }: { tripId: string }) {
     );
   }
 
+  const visitor = isVisitorRole(trip.viewerRole);
   const budget = Number(trip.budgetAmount ?? 0);
   const perPerson =
     trip.budgetBasis === "PER_PERSON"
       ? budget
       : Math.round(budget / Math.max(trip.planningPartySize, 1));
+  const originLabel =
+    trip.viewerRole === "host"
+      ? (trip.origin ?? trip.privateOriginLabel)
+      : null;
+  const meetingLabel = trip.meetingPoint ?? trip.publicMeetingPointLabel;
+  const markers = detailMarkers(trip);
 
   return (
     <div className="mx-auto max-w-3xl px-margin py-8 md:px-margin-desktop">
-      <p className="type-micro uppercase text-primary">{trip.viewerRole}</p>
+      <p className="type-micro uppercase text-primary">{roleLabel(trip.viewerRole)}</p>
       <h1 className="type-title mt-1 text-on-surface">{trip.title}</h1>
+      <p className="type-caption mt-1 text-on-surface-variant">
+        Host {trip.host.displayName}
+      </p>
       <div className="mt-2 flex flex-wrap gap-1.5">
         <span className="chip bg-surface-container-high text-primary">{trip.status}</span>
         <span className="chip bg-surface-container text-on-surface-variant">
@@ -91,13 +143,18 @@ export function TripDetailView({ tripId }: { tripId: string }) {
         ) : null}
       </div>
       <p className="type-body mt-3 text-on-surface-variant">
-        {trip.origin ?? trip.privateOriginLabel} →{" "}
+        {originLabel ? `${originLabel} → ` : ""}
         {trip.destinationCity || "Tujuan belum dipilih"} · {trip.startDate} – {trip.endDate}
       </p>
-      {trip.meetingPoint ?? trip.publicMeetingPointLabel ? (
+      {meetingLabel ? (
         <p className="type-caption mt-1 text-on-surface-variant">
-          Titik temu: {trip.meetingPoint ?? trip.publicMeetingPointLabel}
+          Titik temu: {meetingLabel}
         </p>
+      ) : null}
+      {markers.length ? (
+        <div className="mt-4 overflow-hidden rounded-2xl">
+          <TripBoardMap markers={markers} compact />
+        </div>
       ) : null}
       <p className="type-body mt-3 text-on-surface">{trip.description}</p>
       <p className="type-caption mt-3 text-on-surface-variant">
@@ -254,9 +311,17 @@ export function TripDetailView({ tripId }: { tripId: string }) {
             keluar sebagai anggota.
           </p>
         ) : null}
+        {visitor ? (
+          <p className="type-caption text-on-surface-variant">
+            Join gratis. Kamu bisa baca detail trip ini tanpa masuk.
+          </p>
+        ) : null}
       </div>
-      <Link href={ROUTES.tripSaya} className="type-label mt-8 inline-block text-primary">
-        Kembali ke Trip Saya
+      <Link
+        href={visitor ? ROUTES.beranda : ROUTES.tripSaya}
+        className="type-label mt-8 inline-block text-primary"
+      >
+        {visitor ? "Kembali ke beranda" : "Kembali ke Trip Saya"}
       </Link>
     </div>
   );

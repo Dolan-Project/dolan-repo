@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mockCreateTrip, mockListMyTrips } from "./trips";
+import { mockCreateTrip, mockGetTrip, mockListMyTrips } from "./trips";
 
 describe("trip mocks", () => {
   it("does not include joinFee on trip summaries", () => {
@@ -74,5 +74,34 @@ describe("trip mocks", () => {
     expect(dieng?.publicMeetingPointLabel).toBe("Alun-alun Wonosobo");
     expect(dieng?.publicMeetingPointLatitude).toBeCloseTo(-7.36, 2);
     expect(dieng?.publicMeetingPointLongitude).toBeCloseTo(109.9, 1);
+  });
+
+  it("lets a guest read a public non-draft trip without the host origin", () => {
+    const result = mockGetTrip("success", "trip_1", { guest: true });
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.viewerRole).toBe("none");
+    expect(result.data.privateOriginLabel).toBeNull();
+    expect(result.data.origin).toBeUndefined();
+    expect(result.data.preferences).toBeNull();
+    expect(result.data.activityPrefs).toBeUndefined();
+    expect(result.data.publicMeetingPointLabel).toBe("Stasiun Tugu");
+    expect(result.data.host.displayName).toBe("Salsa");
+  });
+
+  it("hides a private trip from a guest", () => {
+    const result = mockGetTrip("success", "trip_private", { guest: true });
+    expect(result.success).toBe(false);
+    if (result.success) return;
+    expect(result.error.code).toBe("NOT_FOUND");
+  });
+
+  it("lets the host read their private trip with origin", () => {
+    const result = mockGetTrip("success", "trip_private");
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.viewerRole).toBe("host");
+    expect(result.data.visibility).toBe("PRIVATE");
+    expect(result.data.privateOriginLabel).toBe("Jakarta");
   });
 });

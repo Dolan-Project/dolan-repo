@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   handleCreateTripRequest,
+  handleGetTripRequest,
   handleLeaveTripRequest,
   handleListMyTripsRequest,
   handlePublishTripRequest,
@@ -218,6 +219,40 @@ describe("handleUpdateTripRequest", () => {
     };
     expect(json.success).toBe(true);
     expect(json.data.title).toBe("Jelajah Malioboro");
+  });
+});
+
+describe("handleGetTripRequest", () => {
+  it("returns a public trip to visitors without a session", async () => {
+    const response = await handleGetTripRequest(
+      new Request("http://localhost/api/v1/trips/trip_1"),
+      "trip_1",
+    );
+    const json = (await response.json()) as {
+      success: true;
+      data: {
+        viewerRole: string;
+        privateOriginLabel: string | null;
+      };
+    };
+    expect(response.status).toBe(200);
+    expect(json.success).toBe(true);
+    expect(json.data.viewerRole).toBe("none");
+    expect(json.data.privateOriginLabel).toBeNull();
+  });
+
+  it("does not leak a private trip to visitors", async () => {
+    const response = await handleGetTripRequest(
+      new Request("http://localhost/api/v1/trips/trip_private"),
+      "trip_private",
+    );
+    const json = (await response.json()) as {
+      success: false;
+      error: { code: string };
+    };
+    expect(response.status).toBe(404);
+    expect(json.success).toBe(false);
+    expect(json.error.code).toBe("NOT_FOUND");
   });
 });
 
