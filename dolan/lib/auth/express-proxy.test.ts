@@ -17,11 +17,11 @@ describe("extractAccessToken", () => {
     expect(extractAccessToken(request)).toBe("mock-verified-complete");
   });
 
-  it("reads dolan_session when no Bearer header is present", () => {
-    const request = new Request("http://localhost/api/v1/users/me", {
-      headers: { cookie: "dolan_session=mock-verified-complete" },
+  it("falls back to the dolan_session cookie", () => {
+    const request = new Request("http://localhost/api/v1/trips", {
+      headers: { cookie: "dolan_session=complete" },
     });
-    expect(extractAccessToken(request)).toBe("mock-verified-complete");
+    expect(extractAccessToken(request)).toBe("complete");
   });
 });
 

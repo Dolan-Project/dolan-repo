@@ -1,8 +1,13 @@
-import { socialRouteHandlers } from "@/lib/social/adapter";
+import { tripRouteHandlers } from "@/lib/auth/adapter";
 
-type RouteContext = { params: Promise<{ tripId: string }> };
+type Ctx = { params: Promise<{ tripId: string }> };
 
-export async function GET(request: Request, context: RouteContext) {
-  const { tripId } = await context.params;
-  return socialRouteHandlers.trip.GET(request, tripId);
+export async function GET(request: Request, { params }: Ctx) {
+  const { tripId } = await params;
+  return tripRouteHandlers.get(request, tripId);
+}
+
+export async function PATCH(request: Request, { params }: Ctx) {
+  const { tripId } = await params;
+  return tripRouteHandlers.update(request, tripId);
 }

@@ -20,6 +20,10 @@ export function tripPublishPath(tripId: string): string {
   return `/trips/${tripId}/publish`;
 }
 
+export function tripLeavePath(tripId: string): string {
+  return `/trips/${tripId}/leave`;
+}
+
 export function tripJoinRequestsPath(tripId: string): string {
   return `/trips/${tripId}/join-requests`;
 }
@@ -62,10 +66,6 @@ export function tripCancelPath(tripId: string): string {
 
 export function tripVisibilityPath(tripId: string): string {
   return `/trips/${tripId}/visibility`;
-}
-
-export function tripLeavePath(tripId: string): string {
-  return `/trips/${tripId}/leave`;
 }
 
 export function tripCommentPath(tripId: string, commentId: string): string {

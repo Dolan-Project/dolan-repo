@@ -18,11 +18,12 @@ export function extractAccessToken(request: Request): string | null {
 export async function proxyToExpress(
   request: Request,
   path: string,
+  options?: { method?: string; json?: unknown },
 ): Promise<Response> {
   const origin = process.env.EXPRESS_ORIGIN?.trim();
   if (!origin) {
     return jsonResult(
-      createApiError("PROVIDER_UNAVAILABLE", "Layanan auth tidak tersedia"),
+      createApiError("PROVIDER_UNAVAILABLE", "Layanan tidak tersedia"),
       statusForCode("PROVIDER_UNAVAILABLE"),
     );
   }
@@ -32,12 +33,19 @@ export async function proxyToExpress(
   if (token) headers.set("authorization", `Bearer ${token}`);
   const cookie = request.headers.get("cookie");
   if (cookie) headers.set("cookie", cookie);
-  const contentType = request.headers.get("content-type");
-  if (contentType) headers.set("content-type", contentType);
+  const idempotencyKey = request.headers.get("idempotency-key");
+  if (idempotencyKey) headers.set("idempotency-key", idempotencyKey);
 
-  const method = request.method.toUpperCase();
-  const body =
-    method === "GET" || method === "HEAD" ? undefined : await request.arrayBuffer();
+  const method = (options?.method ?? request.method).toUpperCase();
+  let body: BodyInit | undefined;
+  if (options?.json !== undefined) {
+    headers.set("content-type", "application/json");
+    body = JSON.stringify(options.json);
+  } else if (method !== "GET" && method !== "HEAD") {
+    const contentType = request.headers.get("content-type");
+    if (contentType) headers.set("content-type", contentType);
+    body = await request.arrayBuffer();
+  }
 
   const url = new URL(path, `${origin.replace(/\/$/, "")}/`);
   const incoming = new URL(request.url);
@@ -54,7 +62,7 @@ export async function proxyToExpress(
     });
   } catch {
     return jsonResult(
-      createApiError("PROVIDER_UNAVAILABLE", "Layanan auth tidak tersedia"),
+      createApiError("PROVIDER_UNAVAILABLE", "Layanan tidak tersedia"),
       statusForCode("PROVIDER_UNAVAILABLE"),
     );
   }
