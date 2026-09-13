@@ -50,6 +50,16 @@ export function statusForCode(code: string): number {
       return 503;
     case "NOT_FOUND":
       return 404;
+    case "FORBIDDEN":
+      return 403;
+    case "SELF_FOLLOW":
+    case "SELF_REVIEW":
+    case "SELF_BLOCK":
+    case "DUPLICATE_REVIEW":
+    case "ALREADY_FOLLOWING":
+    case "NOT_ELIGIBLE":
+    case "BLOCKED_RELATION":
+      return 400;
     default:
       return 400;
   }

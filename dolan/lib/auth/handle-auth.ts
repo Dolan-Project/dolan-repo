@@ -16,9 +16,10 @@ import {
   mockResetPassword,
 } from "@/mocks/auth";
 import { samplePublicUser } from "@/mocks/fixtures";
+import { clearOfflineForSessionId } from "@/mocks/community-store";
 import { jsonResult, statusForCode, validationError } from "./api-response";
 import { resolveAfterAuth } from "./post-auth-path";
-import { sessionCookieHeader } from "./session-cookie";
+import { readSessionId, sessionCookieHeader } from "./session-cookie";
 
 const TAKEN_EMAIL = "taken@dolan.test";
 const RATE_EMAIL = "rate@dolan.test";
@@ -95,7 +96,7 @@ export async function handleLoginRequest(request: Request): Promise<Response> {
 export async function handleLogoutRequest(request: Request): Promise<Response> {
   const mock = mockLogout("success");
   if (!mock.success) return jsonResult(mock, statusForCode(mock.error.code));
-  void request;
+  clearOfflineForSessionId(readSessionId(request.headers.get("cookie")));
   return jsonResult(mock, 200, null);
 }
 
