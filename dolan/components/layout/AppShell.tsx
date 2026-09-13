@@ -2,6 +2,8 @@ import { BottomNav } from "@/components/layout/BottomNav";
 import { SiteFooter } from "@/components/layout/SiteFooter";
 import { SiteHeader } from "@/components/layout/SiteHeader";
 import { getSession } from "@/lib/auth/get-session";
+import { handleListNotificationsRequest } from "@/lib/social/handle-social";
+import { cookies } from "next/headers";
 
 type AppShellProps = {
   children: React.ReactNode;
@@ -17,10 +19,26 @@ export async function AppShell({
   flushHeader = false,
 }: AppShellProps) {
   const session = await getSession();
+  let unreadCount = 0;
+  if (session) {
+    const cookie = (await cookies())
+      .getAll()
+      .map((item) => `${item.name}=${item.value}`)
+      .join("; ");
+    const response = await handleListNotificationsRequest(
+      new Request("http://localhost/api/v1/notifications", {
+        headers: cookie ? { cookie } : {},
+      }),
+    );
+    const json = (await response.json()) as
+      | { success: true; data: { unreadCount: number } }
+      | { success: false };
+    if (json.success) unreadCount = json.data.unreadCount;
+  }
 
   return (
     <div className="flex min-h-full flex-col bg-surface text-on-surface">
-      <SiteHeader session={session} />
+      <SiteHeader session={session} unreadCount={unreadCount} />
       <main
         className={`flex-1 ${flushHeader ? "pt-0" : "pt-14 md:pt-16"} ${withBottomNavPad ? "pb-20 md:pb-0" : ""}`}
       >

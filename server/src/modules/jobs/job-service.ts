@@ -38,6 +38,7 @@ export type JobServiceOptions = {
   resolveCoords?: (itinerary: GeminiItinerary) => Promise<Array<LatLng | null>>;
   verifyPlaces?: (itinerary: GeminiItinerary) => Promise<void>;
   requireDatabaseTrip?: boolean;
+  onJobUpdated?: (job: GenerationJob) => void | Promise<void>;
 };
 
 export class GenerationJobService {
@@ -101,7 +102,9 @@ export class GenerationJobService {
     const claimed = await this.jobs.claimNextQueued(workerId, now);
     if (!claimed) return null;
     if (claimed.resultVersionId) {
-      return this.jobs.markSucceeded(claimed.id, claimed.resultVersionId);
+      const replayed = await this.jobs.markSucceeded(claimed.id, claimed.resultVersionId);
+      await this.options.onJobUpdated?.(publicJob(replayed));
+      return replayed;
     }
 
     try {
@@ -139,7 +142,9 @@ export class GenerationJobService {
           { id: versionId, tripId: claimed.tripId, source: "AI", budget },
         ]);
       }
-      return this.jobs.markSucceeded(claimed.id, versionId);
+      const succeeded = await this.jobs.markSucceeded(claimed.id, versionId);
+      await this.options.onJobUpdated?.(publicJob(succeeded));
+      return succeeded;
     } catch (error) {
       const message = error instanceof Error ? error.message : "";
       const code =
@@ -149,9 +154,13 @@ export class GenerationJobService {
           ? AuthErrorCode.INVALID_GENERATION
           : "PROVIDER_UNAVAILABLE";
       if (claimed.attemptCount < 2 && code === "PROVIDER_UNAVAILABLE") {
-        return this.jobs.requeue(claimed.id);
+        const requeued = await this.jobs.requeue(claimed.id);
+        await this.options.onJobUpdated?.(publicJob(requeued));
+        return requeued;
       }
-      return this.jobs.markFailed(claimed.id, code);
+      const failed = await this.jobs.markFailed(claimed.id, code);
+      await this.options.onJobUpdated?.(publicJob(failed));
+      return failed;
     }
   }
 

@@ -65,6 +65,19 @@ describe("chat socket rooms", () => {
     expect(denied.ok).toBe(false);
     expect(denied.code).toBe("PENDING_MEMBER");
 
+    const sent = await new Promise<{ ok: boolean; message?: { id: string } }>((resolve) => {
+      member.emit(
+        "message.send",
+        { tripId: TRIP, clientMessageId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", body: "hi" },
+        resolve,
+      );
+    });
+    expect(sent.ok).toBe(true);
+    const read = await new Promise<{ ok: boolean }>((resolve) => {
+      member.emit("message.read", { tripId: TRIP, lastReadMessageId: sent.message?.id }, resolve);
+    });
+    expect(read.ok).toBe(true);
+
     closers.push(async () => {
       member.close();
       pending.close();

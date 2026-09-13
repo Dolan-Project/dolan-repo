@@ -24,7 +24,11 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="id" className={`${plusJakarta.variable} h-full antialiased`}>
+    <html
+      lang="id"
+      data-scroll-behavior="smooth"
+      className={`${plusJakarta.variable} h-full antialiased`}
+    >
       <body className="min-h-full font-sans">
         <ServiceWorkerRegister />
         {children}

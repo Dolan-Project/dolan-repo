@@ -3,9 +3,8 @@ import type { PublicUser } from "./kickoff.js";
 import type { PlaceSummary } from "./place.ts";
 import type { BudgetBasis, TripStatus, TripVisibility } from "./enums.ts";
 
-export type TripViewerRole = "host" | "participant" | "pending" | "none";
-
 export type MyTripRole = "hosted" | "joined" | "pending";
+export type TripViewerRole = "host" | "participant" | "pending" | "none" | "visitor";
 
 export type TripSummary = {
   id: string;
@@ -58,4 +57,10 @@ export type TripDetail = {
   joinFree: true;
   currentItineraryVersionId: string | null;
   myJoinRequest: JoinRequest | null;
+  origin?: string;
+  meetingPoint?: string | null;
+  transport?: string;
+  activityPrefs?: string[];
+  lodgingPref?: string;
+  companionNote?: string;
 };

@@ -5,5 +5,5 @@ export default function TripSayaLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return <AppShell>{children}</AppShell>;
+  return <AppShell showFooter={false}>{children}</AppShell>;
 }
