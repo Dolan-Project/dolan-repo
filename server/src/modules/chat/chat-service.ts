@@ -124,6 +124,10 @@ export class ChatService {
     });
   }
 
+  async emitTripEvent(tripId: string, event: string, payload: unknown, skipUserId?: string) {
+    await this.emitToActiveMembers(tripId, event, payload, skipUserId);
+  }
+
   async emitJoinEvent(
     tripId: string,
     event: "join_request.created" | "join_request.reviewed",

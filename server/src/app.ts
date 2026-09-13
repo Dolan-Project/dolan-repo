@@ -12,6 +12,8 @@ import type { AuthService } from "./modules/auth/auth-service.ts";
 import { createChatRouter } from "./modules/chat/chat-routes.ts";
 import { ChatService } from "./modules/chat/chat-service.ts";
 import { MemoryChatStore } from "./modules/chat/memory-chat-store.ts";
+import { createLocationRouter } from "./modules/location/location-routes.ts";
+import { LocationService, MemoryLocationStore } from "./modules/location/location-service.ts";
 import { createJobRouter } from "./modules/jobs/job-routes.ts";
 import type { GenerationJobService } from "./modules/jobs/job-service.ts";
 import { createSearchRouter } from "./modules/search/search-routes.ts";
@@ -23,6 +25,7 @@ export function createApp(
   search: SearchService = createMemorySearchService(),
   jobService: GenerationJobService = createJobService(),
   chatService: ChatService = new ChatService(new MemoryChatStore()),
+  locationService: LocationService = new LocationService(new MemoryLocationStore(), chatService),
 ) {
   const app = express();
   app.disable("x-powered-by");
@@ -50,6 +53,7 @@ export function createApp(
   app.use("/api/v1", createSearchRouter(search));
   app.use("/api/v1", createJobRouter(jobService));
   app.use("/api/v1", createChatRouter(chatService));
+  app.use("/api/v1", createLocationRouter(locationService));
 
   app.get("/api/v1/public/ping", requireCapability("read_public"), (_req, res) => {
     res.json(apiSuccess({ ok: true }));
