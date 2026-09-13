@@ -19,6 +19,67 @@ type SheetPos = "collapsed" | "half" | "expanded";
 type MapType = "roadmap" | "satellite";
 const noop = () => undefined;
 
+type RouteStop = { label: string; lat: number; lng: number };
+const fallbackRoutes: Array<{ match: string[]; stops: RouteStop[] }> = [
+  {
+    match: ["yogyakarta", "jogja"],
+    stops: [
+      { label: "Keraton Yogyakarta", lat: -7.8053, lng: 110.3642 },
+      { label: "Taman Sari", lat: -7.81, lng: 110.3594 },
+      { label: "Candi Prambanan", lat: -7.752, lng: 110.4915 },
+    ],
+  },
+  {
+    match: ["dieng", "wonosobo"],
+    stops: [
+      { label: "Kawah Sikidang", lat: -7.2201, lng: 109.9054 },
+      { label: "Candi Arjuna", lat: -7.2058, lng: 109.9074 },
+      { label: "Bukit Sikunir", lat: -7.2351, lng: 109.9242 },
+    ],
+  },
+  {
+    match: ["bandung"],
+    stops: [
+      { label: "Stasiun Bandung", lat: -6.9147, lng: 107.602 },
+      { label: "Gedung Sate", lat: -6.9025, lng: 107.6187 },
+      { label: "Tebing Keraton", lat: -6.8352, lng: 107.663 },
+      { label: "Kawah Putih", lat: -7.1662, lng: 107.4021 },
+    ],
+  },
+  {
+    match: ["lombok", "rinjani"],
+    stops: [
+      { label: "Desa Sembalun", lat: -8.3614, lng: 116.5306 },
+      { label: "Plawangan Sembalun", lat: -8.3831, lng: 116.4512 },
+      { label: "Danau Segara Anak", lat: -8.4075, lng: 116.4161 },
+    ],
+  },
+  {
+    match: ["bromo"],
+    stops: [
+      { label: "Penanjakan Bromo", lat: -7.9083, lng: 112.9468 },
+      { label: "Gunung Bromo", lat: -7.9425, lng: 112.953 },
+      { label: "Madakaripura", lat: -7.8538, lng: 113.0064 },
+    ],
+  },
+  {
+    match: ["karimunjawa", "jepara"],
+    stops: [
+      { label: "Pelabuhan Karimunjawa", lat: -5.8841, lng: 110.4419 },
+      { label: "Pantai Tanjung Gelam", lat: -5.8388, lng: 110.3978 },
+      { label: "Bukit Love", lat: -5.8703, lng: 110.4344 },
+    ],
+  },
+  {
+    match: ["komodo", "labuan bajo"],
+    stops: [
+      { label: "Pulau Padar", lat: -8.6486, lng: 119.5892 },
+      { label: "Pink Beach", lat: -8.6031, lng: 119.5196 },
+      { label: "Manta Point", lat: -8.5374, lng: 119.6161 },
+    ],
+  },
+];
+
 function coverFor(city: string) {
   const key = city.toLowerCase();
   if (key.includes("yogya") || key.includes("jogja")) return ASSETS.jogja;
@@ -38,32 +99,49 @@ function nextSheet(pos: SheetPos): SheetPos {
 function tripPoints(trip: TripSummary | null): MapPoint[] {
   if (!trip) return [];
   const points: MapPoint[] = [];
+  const searchable = `${trip.destinationCity ?? ""} ${trip.title}`.toLowerCase();
+  const route = fallbackRoutes.find((candidate) =>
+    candidate.match.some((name) => searchable.includes(name)),
+  );
+  const pushPoint = (point: MapPoint) => {
+    if (
+      !points.some(
+        (current) =>
+          Math.abs(current.lat - point.lat) < 0.00001 &&
+          Math.abs(current.lng - point.lng) < 0.00001,
+      )
+    ) {
+      points.push(point);
+    }
+  };
   const fallback = meetingPointFor(trip.publicMeetingPointLabel, trip.destinationCity);
   const meetingLat = trip.publicMeetingPointLatitude ?? fallback?.latitude;
   const meetingLng = trip.publicMeetingPointLongitude ?? fallback?.longitude;
-  if (meetingLat != null && meetingLng != null) {
-    points.push({
+  const routeAnchor = route?.stops[0];
+  const meetingMatchesRoute =
+    !routeAnchor ||
+    meetingLat == null ||
+    meetingLng == null ||
+    Math.hypot(meetingLat - routeAnchor.lat, meetingLng - routeAnchor.lng) < 1;
+  if (meetingLat != null && meetingLng != null && meetingMatchesRoute) {
+    pushPoint({
       id: `${trip.id}-meeting`,
       label: trip.publicMeetingPointLabel ?? "Titik kumpul",
       lat: meetingLat,
       lng: meetingLng,
     });
   }
-  if (
-    trip.coverPlace &&
-    !points.some(
-      (point) =>
-        Math.abs(point.lat - trip.coverPlace!.latitude) < 0.00001 &&
-        Math.abs(point.lng - trip.coverPlace!.longitude) < 0.00001,
-    )
-  ) {
-    points.push({
+  if (trip.coverPlace) {
+    pushPoint({
       id: `${trip.id}-destination`,
       label: trip.coverPlace.name,
       lat: trip.coverPlace.latitude,
       lng: trip.coverPlace.longitude,
     });
   }
+  route?.stops.forEach((stop, index) =>
+    pushPoint({ id: `${trip.id}-route-${index}`, ...stop }),
+  );
   return points;
 }
 
@@ -198,14 +276,14 @@ export function MyTripsBoard() {
 
   return (
     <div className="relative mx-auto w-full max-w-[1440px] px-3 pb-3 pt-3 md:px-6 md:pb-5 md:pt-5">
-      <div className="relative h-[calc(100dvh-6.25rem)] min-h-[580px] overflow-hidden rounded-[1.75rem] border border-outline-variant/60 bg-white shadow-[0_18px_50px_rgba(22,48,80,.12)] lg:grid lg:h-[calc(100vh-7rem)] lg:min-h-[650px] lg:grid-cols-[minmax(420px,.88fr)_minmax(560px,1.12fr)]">
+      <div className="relative h-[calc(100dvh-6.25rem)] min-h-[580px] overflow-hidden rounded-[1.75rem] border border-outline-variant/60 bg-white shadow-[0_18px_50px_rgba(22,48,80,.12)] lg:grid lg:h-[calc(100vh-7rem)] lg:min-h-[650px] lg:grid-cols-2">
         <section className="relative h-full min-h-[440px] overflow-hidden border-r border-outline-variant/50">
           <GoogleMap key={selected?.id ?? tab} points={points} selectedId={points[0]?.id ?? null} onSelect={noop} showRoute={points.length > 1} mapType={mapType} focusCenter={focusCenter} zoomCommand={zoomCommand} className="absolute inset-0 h-full w-full" />
           <div className="pointer-events-none absolute left-3 right-3 top-3 rounded-2xl border border-white/70 bg-white/90 p-3 shadow-lg backdrop-blur-md md:left-4 md:right-20 md:top-4 md:p-4">
             <p className="type-micro uppercase tracking-wider text-secondary">Rute trip aktif</p>
             <h2 className="type-subtitle mt-1">{selected?.destinationCity ?? "Pilih trip untuk melihat lokasi"}</h2>
             <p className="type-caption mt-1 text-on-surface-variant">
-              {points.length > 1 ? `${points.length} titik perjalanan · card yang dipilih mengubah rute` : points.length === 1 ? "Lokasi trip aktif · itinerary lengkap akan menambah garis rute" : "Koordinat trip ini belum tersedia"}
+              {points.length > 1 ? `${points.length} titik perjalanan · klik card untuk mengganti rute` : points.length === 1 ? "Lokasi trip aktif · itinerary lengkap akan menambah garis rute" : "Koordinat trip ini belum tersedia"}
             </p>
           </div>
           <div className="absolute bottom-5 right-4 z-10 flex flex-col gap-2">
@@ -268,10 +346,10 @@ function TripCard({ trip, tab, selected, onSelect }: { trip: MyTripSummary; tab:
   const meeting = trip.publicMeetingPointLabel ?? trip.destinationCity ?? "Titik kumpul belum ditentukan";
   const memberLimit = trip.maxParticipants ? `${trip.participantCount}/${trip.maxParticipants}` : `${trip.participantCount}`;
   return (
-    <article className={`group relative overflow-hidden rounded-[1.35rem] bg-white shadow-sm transition-all duration-200 ${selected ? "ring-2 ring-primary shadow-[0_14px_35px_rgba(37,99,235,.16)]" : "ring-1 ring-outline-variant/60 hover:-translate-y-0.5 hover:ring-2 hover:ring-primary/70 hover:shadow-[0_14px_32px_rgba(37,99,235,.12)]"}`} onMouseEnter={onSelect}>
-      <span className={`absolute right-0 top-0 z-10 rounded-bl-2xl px-3 py-1.5 text-[9px] font-extrabold tracking-wide text-white md:px-4 md:py-2 md:text-[10px] ${tab === "hosted" ? "bg-primary" : tab === "joined" ? "bg-teal-600" : "bg-amber-500"}`}>{roleLabel}</span>
-      <button type="button" aria-pressed={selected} onClick={onSelect} className="flex w-full cursor-pointer items-start gap-3 px-3 pb-4 pt-7 text-left md:gap-4 md:px-4" aria-label={`Tampilkan lokasi ${trip.title}`}>
-        <div className="relative h-24 w-28 shrink-0 overflow-hidden rounded-2xl bg-surface-container md:h-28 md:w-36">
+    <article className={`group relative overflow-hidden rounded-[1.15rem] bg-white shadow-sm transition-all duration-200 ${selected ? "ring-2 ring-primary shadow-[0_12px_28px_rgba(37,99,235,.14)]" : "ring-1 ring-outline-variant/60 hover:-translate-y-0.5 hover:ring-2 hover:ring-primary/70 hover:shadow-[0_12px_26px_rgba(37,99,235,.1)]"}`}>
+      <span className={`absolute right-0 top-0 z-10 rounded-bl-xl px-2.5 py-1.5 text-[8px] font-extrabold tracking-wide text-white md:text-[9px] ${tab === "hosted" ? "bg-primary" : tab === "joined" ? "bg-teal-600" : "bg-amber-500"}`}>{roleLabel}</span>
+      <button type="button" aria-pressed={selected} onClick={onSelect} className="flex w-full cursor-pointer items-start gap-3 px-3 pb-3 pt-6 text-left" aria-label={`Tampilkan lokasi ${trip.title}`}>
+        <div className="relative h-20 w-24 shrink-0 overflow-hidden rounded-xl bg-surface-container md:h-24 md:w-28">
           {trip.coverPlace ? <PlacePhoto googlePlaceId={trip.coverPlace.googlePlaceId} photoName={trip.coverPlace.photoName} alt={trip.title} className="h-full w-full transition duration-300 group-hover:scale-105" /> : <img src={coverFor(trip.destinationCity ?? "")} alt={trip.destinationCity ?? trip.title} className="h-full w-full object-cover transition duration-300 group-hover:scale-105" />}
           <span className={`absolute bottom-2 left-2 rounded-lg px-2 py-1 text-[10px] font-bold text-white backdrop-blur ${trip.visibility === "PUBLIC" ? "bg-primary/90" : "bg-[#071c32]/85"}`}>{trip.visibility === "PUBLIC" ? "Publik" : "Private"}</span>
         </div>
@@ -280,9 +358,9 @@ function TripCard({ trip, tab, selected, onSelect }: { trip: MyTripSummary; tab:
             <span className={`chip ${trip.status === "OPEN" ? "bg-emerald-100 text-emerald-800" : trip.status === "CANCELLED" ? "bg-red-100 text-red-700" : "bg-primary-fixed text-primary"}`}>{statusLabel(trip.status)}</span>
             <span className="type-caption text-on-surface-variant">{dateLabel(trip.startDate, trip.endDate)}{duration ? ` (${duration})` : ""}</span>
           </div>
-          <h2 className="mt-2 line-clamp-2 text-base font-extrabold leading-snug text-on-surface md:text-lg">{trip.title}</h2>
+          <h2 className="mt-1.5 line-clamp-2 text-sm font-extrabold leading-snug text-on-surface md:text-base">{trip.title}</h2>
           <p className="mt-1 line-clamp-2 type-caption text-on-surface-variant">Titik kumpul: {meeting} · Kuota {memberLimit} peserta terkonfirmasi</p>
-          <div className="mt-3 flex items-center justify-between gap-3 border-t border-outline-variant/35 pt-3">
+          <div className="mt-2.5 flex items-center justify-between gap-3 border-t border-outline-variant/35 pt-2.5">
             <div className="flex min-w-0 items-center">
               <span className="flex -space-x-2" aria-hidden="true">{["DA", "AG", "CL", "BS"].slice(0, Math.min(4, Math.max(1, trip.participantCount))).map((initials, index) => <span key={`${initials}-${index}`} className={`flex h-7 w-7 items-center justify-center rounded-full border-2 border-white text-[9px] font-bold text-white ${["bg-primary", "bg-emerald-600", "bg-violet-500", "bg-amber-500"][index]}`}>{initials}</span>)}</span>
               <span className="ml-3 truncate type-label text-on-surface-variant">{memberLimit} Traveler</span>
@@ -291,11 +369,12 @@ function TripCard({ trip, tab, selected, onSelect }: { trip: MyTripSummary; tab:
           </div>
         </div>
       </button>
-      <div className="flex flex-wrap items-center gap-2 border-t border-outline-variant/45 px-3 py-3.5 md:px-4">
+      <div className="flex flex-wrap items-center gap-1.5 border-t border-outline-variant/45 px-3 py-2.5">
         {tab === "hosted" && trip.visibility === "PUBLIC" ? <Link href={`${tripDetailHref(trip.id)}#join-requests`} className="btn-primary !min-h-9 !px-3 !text-xs">Kelola Pengajuan {trip.pendingRequestCount ? `(${trip.pendingRequestCount})` : ""}</Link> : null}
         {trip.visibility === "PUBLIC" && tab !== "pending" ? <Link href={`${tripDetailHref(trip.id)}#chat`} className="rounded-full bg-surface-container px-3 py-2 type-label"><Icon name="forum" /> Grup Chat</Link> : null}
         {tab === "hosted" ? <Link href={tripItineraryPath(trip.id)} className="rounded-full bg-surface-container px-3 py-2 type-label"><Icon name="edit" /> Edit itinerary</Link> : null}
         {tab === "pending" ? <Link href={tripDetailHref(trip.id)} className="btn-brand !min-h-9 !px-3 !text-xs"><Icon name="forum" /> Buka diskusi publik</Link> : null}
+        {tripPoints(trip).length > 0 ? <a href={mapsRouteUrl(tripPoints(trip))} target="_blank" rel="noreferrer" className="rounded-full px-3 py-2 type-label text-primary hover:bg-primary-fixed"><Icon name="share" /> Bagikan rute</a> : null}
         <Link href={tripDetailHref(trip.id)} className="rounded-full px-3 py-2 type-label text-primary hover:bg-primary-fixed">Lihat detail</Link>
       </div>
     </article>
