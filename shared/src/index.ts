@@ -6,11 +6,13 @@ export * from "./types/auth.ts";
 export * from "./types/place.ts";
 export * from "./types/trip.ts";
 export * from "./types/template.ts";
+export * from "./types/itinerary.ts";
 export * from "./schemas/auth.ts";
 export * from "./schemas/budget.ts";
 export * from "./schemas/generation.ts";
 export * from "./schemas/search.ts";
 export * from "./schemas/template.ts";
+export * from "./schemas/itinerary.ts";
 export * from "./schemas/trip.ts";
 
 export type { PublicUser } from "./types/kickoff.ts";
@@ -44,6 +46,8 @@ export {
   markReadSchema,
 } from "./schemas/chat.ts";
 export type { SendMessageInput } from "./schemas/chat.ts";
+export { startLocationShareSchema, pingLocationSchema } from "./schemas/location.ts";
+export type { StartLocationShareInput } from "./schemas/location.ts";
 export {
   API_V1_PREFIX,
   EXPRESS_PATHS,

@@ -25,3 +25,5 @@ export function tripEditHref(tripId: string) {
 }
 
 export type NavKey = "beranda" | "jelajah" | "trip-saya" | "buat-trip" | "profil";
+
+export const tripItineraryPath = (tripId: string) => `/trip-saya/${encodeURIComponent(tripId)}/itinerary`;

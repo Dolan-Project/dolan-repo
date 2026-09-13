@@ -5,13 +5,16 @@ import { createApp } from "./app.ts";
 import {
   createAuthAdapter,
   createChatService,
+  createItineraryExportService,
   createJobService,
+  createLocationService,
   createMemorySocialStore,
   createMemoryTripService,
   createProductionJobService,
-  createProductionSearchService,
   createProductionSocialStore,
   createProductionTripService,
+  createRuntimeSearchService,
+  createShareLinkService,
   createUserRepository,
 } from "./container.ts";
 import { envRateLimit } from "./middleware/rate-limit.ts";
@@ -34,20 +37,34 @@ async function main() {
   }
 
   const authService = new AuthService(createAuthAdapter(), createUserRepository(databaseReady));
-  const jobService = databaseReady ? createProductionJobService() : createJobService();
   const chatService = createChatService(databaseReady);
-  const trips = databaseReady ? createProductionTripService(chatService) : createMemoryTripService(undefined, chatService);
+  const onJobUpdated = (job: {
+    id: string;
+    tripId: string;
+    status: string;
+    resultVersionId: string | null;
+    errorCode: string | null;
+  }) => {
+    void chatService.emitGenerationUpdated(job);
+  };
+  const jobService = databaseReady ? createProductionJobService(onJobUpdated) : createJobService(onJobUpdated);
+  const trips = databaseReady
+    ? createProductionTripService(chatService)
+    : createMemoryTripService(undefined, chatService);
   const httpServer = createServer();
   const sockets = createSocketServer(httpServer, authService, chatService);
   const app = createApp(
     authService,
     sockets.disconnectUser,
-    databaseReady ? createProductionSearchService() : undefined,
+    createRuntimeSearchService(databaseReady),
     jobService,
     trips,
     chatService,
     envRateLimit(),
     databaseReady ? createProductionSocialStore() : createMemorySocialStore(),
+    createLocationService(chatService, databaseReady),
+    createShareLinkService(chatService, databaseReady),
+    createItineraryExportService(chatService, databaseReady),
   );
 
   httpServer.on("request", app);
@@ -57,6 +74,7 @@ async function main() {
       port: env.port,
       authAdapter: env.authAdapter,
       userRepository: databaseReady ? "sequelize" : "memory",
+      searchRepository: databaseReady ? "sequelize" : "memory",
       googlePlacesConfigured: Boolean(env.googleMapsServerKey),
     });
     logSocketReady();

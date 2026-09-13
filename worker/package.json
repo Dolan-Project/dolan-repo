@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "tsx src/worker.ts",
-    "start": "tsx src/worker.ts"
+    "start": "tsx src/worker.ts",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@dolan/database": "0.1.0",

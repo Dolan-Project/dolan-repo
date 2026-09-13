@@ -37,7 +37,8 @@ Fitur tidak boleh diganti dengan simulasi pada build final. Mock hanya digunakan
 | Model/service | TypeScript |
 | Validasi | Zod shared schema |
 | Auth | Supabase Auth |
-| Storage | Supabase Storage |
+| Storage media | ImageKit untuk avatar, cover, dan gambar unggahan pengguna |
+| Storage dokumen | Object storage tim untuk PDF itinerary bila diperlukan |
 | Realtime | Socket.IO pada Express server |
 | AI | Gemini structured JSON output |
 | Tempat/peta/rute | Google Places New, Maps JavaScript, Routes API, Maps URLs |
@@ -308,7 +309,7 @@ Semua tabel memakai UUID dan timestamp dengan zona waktu. Foreign key memakai `R
 ### Identity dan profile
 
 - `users`: `auth_reference UNIQUE`, `email UNIQUE`, `role`, `status`, `email_verified_at`.
-- `user_profiles`: `user_id UNIQUE`, `username UNIQUE`, `display_name`, `avatar_url`, `cover_url`, `cover_caption`, `bio`, `domicile`.
+- `user_profiles`: `user_id UNIQUE`, `username UNIQUE`, `display_name`, `avatar_url`, `avatar_file_id`, `cover_url`, `cover_file_id`, `cover_caption`, `bio`, `domicile`. `file_id` dari ImageKit diperlukan agar media lama dapat dihapus ketika diganti.
 
 ### Places dan template
 
@@ -479,7 +480,9 @@ SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
-SUPABASE_STORAGE_BUCKET=dolan-assets
+IMAGEKIT_PUBLIC_KEY=
+IMAGEKIT_PRIVATE_KEY=
+IMAGEKIT_URL_ENDPOINT=
 NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_KEY=
 GOOGLE_MAPS_SERVER_KEY=
 GEMINI_API_KEY=
@@ -509,7 +512,8 @@ Google memakai satu server key yang dibatasi untuk Places dan Routes; tidak perl
 
 - Next.js: Vercel.
 - Express + Socket.IO + worker: Railway sebagai dua process dari repository yang sama.
-- PostgreSQL/Auth/Storage: Supabase.
+- PostgreSQL/Auth: Supabase.
+- Media avatar, cover, dan gambar unggahan: ImageKit melalui Express; private key tidak pernah dikirim ke browser.
 - Domain: web di domain utama; API/socket di subdomain API.
 - HTTPS/WSS wajib.
 - Railway health check menggunakan `/health` dan `/ready`.
