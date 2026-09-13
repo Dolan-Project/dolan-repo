@@ -24,8 +24,26 @@ describe("social query helpers for Salsa", () => {
   it("averages visible reviews only", async () => {
     const social = new MemorySocialStore();
     social.reviews.push(
-      { revieweeUserId: BUDI, communicationRating: 4, attitudeRating: 2, moderationStatus: "VISIBLE" },
-      { revieweeUserId: BUDI, communicationRating: 5, attitudeRating: 5, moderationStatus: "HIDDEN" },
+      {
+        id: "r1",
+        tripId: "11111111-1111-4111-8111-111111111111",
+        reviewerUserId: ALYA,
+        revieweeUserId: BUDI,
+        communication: 4,
+        attitude: 2,
+        comment: null,
+        moderationStatus: "VISIBLE",
+      },
+      {
+        id: "r2",
+        tripId: "11111111-1111-4111-8111-111111111111",
+        reviewerUserId: ALYA,
+        revieweeUserId: BUDI,
+        communication: 5,
+        attitude: 5,
+        comment: null,
+        moderationStatus: "HIDDEN",
+      },
     );
     expect(await social.ratingFor(BUDI)).toEqual({
       overall: 3,

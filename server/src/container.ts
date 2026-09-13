@@ -34,7 +34,7 @@ import { MemoryShareLinkStore, ShareLinkService } from "./modules/location/share
 import { MemorySocialStore, SequelizeSocialStore } from "./modules/social/social-queries.ts";
 import { MemoryTripStore } from "./modules/trips/memory-store.ts";
 import { SequelizeTripStore } from "./modules/trips/sequelize-store.ts";
-import { TripService, type TripRealtime } from "./modules/trips/trip-service.ts";
+import { TripService, type TripBlockLookup, type TripRealtime } from "./modules/trips/trip-service.ts";
 
 export function createAuthAdapter(): AuthAdapter {
   if (env.authAdapter === "supabase" && env.supabaseUrl && env.supabaseServiceRoleKey) {
@@ -138,8 +138,12 @@ export function createRuntimeSearchService(databaseReady: boolean) {
   });
 }
 
-export function createMemoryTripService(store = new MemoryTripStore(), realtime?: TripRealtime) {
-  return new TripService(store, realtime);
+export function createMemoryTripService(
+  store = new MemoryTripStore(),
+  realtime?: TripRealtime,
+  social?: TripBlockLookup,
+) {
+  return new TripService(store, realtime, social);
 }
 
 export function createProductionTripService(realtime?: TripRealtime) {

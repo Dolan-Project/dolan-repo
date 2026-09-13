@@ -11,14 +11,19 @@ type ReviewFormProps = {
 export function ReviewForm({ username }: ReviewFormProps) {
   const [communication, setCommunication] = useState(5);
   const [attitude, setAttitude] = useState(5);
+  const [comment, setComment] = useState("");
   const [message, setMessage] = useState<string | null>(null);
-  const [items, setItems] = useState<Array<{ id: string; communication: number; attitude: number }>>([]);
+  const [items, setItems] = useState<
+    Array<{ id: string; communication: number; attitude: number; comment: string | null }>
+  >([]);
 
   async function load() {
     const response = await fetch(`/api/v1/users/${username}/reviews`, { credentials: "include" });
     const json = (await response.json()) as {
       success: boolean;
-      data?: { items: Array<{ id: string; communication: number; attitude: number }> };
+      data?: {
+        items: Array<{ id: string; communication: number; attitude: number; comment: string | null }>;
+      };
     };
     if (json.success) setItems(json.data?.items ?? []);
   }
@@ -39,6 +44,7 @@ export function ReviewForm({ username }: ReviewFormProps) {
         tripId: "trip_completed",
         communication,
         attitude,
+        comment: comment.trim() || null,
       }),
     });
     const json = (await response.json()) as {
@@ -60,7 +66,8 @@ export function ReviewForm({ username }: ReviewFormProps) {
       </Link>
       <h1 className="type-title mt-3 text-on-surface">Ulasan @{username}</h1>
       <p className="type-body mt-2 text-on-surface-variant">
-        Review hanya untuk peserta trip yang sudah selesai. Tidak bisa mereview diri sendiri atau mengirim duplikat.
+        Review hanya untuk peserta trip selesai setelah kedua pihak konfirmasi kehadiran. Tidak bisa mereview
+        diri sendiri atau mengirim duplikat. Komentar opsional.
       </p>
       <form onSubmit={(event) => void onSubmit(event)} className="card-surface mt-5 grid gap-3 p-4">
         <label className="type-label text-on-surface">
@@ -85,6 +92,15 @@ export function ReviewForm({ username }: ReviewFormProps) {
             onChange={(event) => setAttitude(Number(event.target.value))}
           />
         </label>
+        <label className="type-label text-on-surface">
+          Komentar (opsional)
+          <textarea
+            className="mt-2 min-h-20 w-full rounded-xl border border-outline-variant bg-surface-container-lowest p-3 type-body"
+            value={comment}
+            onChange={(event) => setComment(event.target.value)}
+            placeholder="Ceritakan komunikasi dan sikap di trip ini"
+          />
+        </label>
         <button type="submit" className="btn-primary !min-h-11">
           Kirim ulasan trip selesai
         </button>
@@ -94,6 +110,7 @@ export function ReviewForm({ username }: ReviewFormProps) {
         {items.map((row) => (
           <li key={row.id} className="card-surface px-4 py-3 type-body text-on-surface">
             Komunikasi {row.communication} · Sikap {row.attitude}
+            {row.comment ? ` · ${row.comment}` : ""}
           </li>
         ))}
       </ul>

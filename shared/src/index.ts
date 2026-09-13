@@ -49,6 +49,12 @@ export type { SendMessageInput } from "./schemas/chat.ts";
 export { startLocationShareSchema, pingLocationSchema } from "./schemas/location.ts";
 export type { StartLocationShareInput } from "./schemas/location.ts";
 export {
+  attendanceBodySchema,
+  createReviewBodySchema,
+  createReportBodySchema,
+  moderateReportBodySchema,
+} from "./schemas/social.ts";
+export {
   API_V1_PREFIX,
   EXPRESS_PATHS,
   userByUsernamePath,
@@ -71,4 +77,10 @@ export {
   userFollowersPath,
   userFollowingPath,
   userBlockPath,
+  userReviewsPath,
+  userHistoryPath,
+  tripAttendancePath,
+  reportsPath,
+  adminReportsPath,
+  adminModerateReportPath,
 } from "./api/express-paths.ts";

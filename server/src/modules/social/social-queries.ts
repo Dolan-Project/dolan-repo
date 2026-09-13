@@ -1,7 +1,7 @@
 import { Op } from "sequelize";
-import { UserBlock, UserFollow, UserReview } from "@dolan/database";
+import { ModerationAction, Report, UserBlock, UserFollow, UserReview } from "@dolan/database";
 import { TripErrorCode } from "@dolan/shared";
-import { badRequest, conflict } from "../../lib/api-error.ts";
+import { badRequest, conflict, notFound } from "../../lib/api-error.ts";
 
 export type SocialError = "SELF_FOLLOW" | "SELF_BLOCK" | "ALREADY_FOLLOWING" | "BLOCKED_RELATION";
 
@@ -22,6 +22,26 @@ export type ReviewAggregate = {
   reviewCount: number;
 };
 
+export type ReviewRecord = {
+  id: string;
+  tripId: string;
+  reviewerUserId: string;
+  revieweeUserId: string;
+  communication: number;
+  attitude: number;
+  comment: string | null;
+  moderationStatus: "VISIBLE" | "HIDDEN";
+};
+
+export type ReportRecord = {
+  id: string;
+  reporterId: string;
+  targetType: "user" | "trip" | "comment" | "message" | "review";
+  targetId: string;
+  reason: string;
+  status: "OPEN" | "HIDDEN" | "DISMISSED";
+};
+
 export interface SocialQueryStore {
   follow(followerUserId: string, followingUserId: string): Promise<FollowRecord>;
   unfollow(followerUserId: string, followingUserId: string): Promise<boolean>;
@@ -34,6 +54,28 @@ export interface SocialQueryStore {
   unblock(blockerUserId: string, blockedUserId: string): Promise<boolean>;
   removeFollowsBetween(userA: string, userB: string): Promise<number>;
   ratingFor(userId: string): Promise<ReviewAggregate>;
+  createReview(input: {
+    tripId: string;
+    reviewerUserId: string;
+    revieweeUserId: string;
+    communication: number;
+    attitude: number;
+    comment: string | null;
+  }): Promise<ReviewRecord>;
+  listVisibleReviews(revieweeUserId: string): Promise<ReviewRecord[]>;
+  hideReview(reviewId: string): Promise<ReviewRecord | null>;
+  createReport(input: {
+    reporterId: string;
+    targetType: ReportRecord["targetType"];
+    targetId: string;
+    reason: string;
+  }): Promise<ReportRecord>;
+  listReports(): Promise<ReportRecord[]>;
+  moderateReport(
+    reportId: string,
+    adminUserId: string,
+    action: "hide" | "dismiss",
+  ): Promise<ReportRecord>;
 }
 
 function rejectSelf(left: string, right: string, code: SocialError, message: string) {
@@ -43,12 +85,8 @@ function rejectSelf(left: string, right: string, code: SocialError, message: str
 export class MemorySocialStore implements SocialQueryStore {
   readonly follows: FollowRecord[] = [];
   readonly blocks: BlockRecord[] = [];
-  readonly reviews: Array<{
-    revieweeUserId: string;
-    communicationRating: number;
-    attitudeRating: number;
-    moderationStatus: string;
-  }> = [];
+  readonly reviews: ReviewRecord[] = [];
+  readonly reports: ReportRecord[] = [];
 
   async follow(followerUserId: string, followingUserId: string) {
     rejectSelf(followerUserId, followingUserId, "SELF_FOLLOW", "Users cannot follow themselves");
@@ -135,7 +173,85 @@ export class MemorySocialStore implements SocialQueryStore {
 
   async ratingFor(userId: string): Promise<ReviewAggregate> {
     const rows = this.reviews.filter((row) => row.revieweeUserId === userId && row.moderationStatus === "VISIBLE");
-    return averageRatings(rows);
+    return averageRatings(rows.map((row) => ({ communicationRating: row.communication, attitudeRating: row.attitude })));
+  }
+
+  async createReview(input: {
+    tripId: string;
+    reviewerUserId: string;
+    revieweeUserId: string;
+    communication: number;
+    attitude: number;
+    comment: string | null;
+  }) {
+    if (input.reviewerUserId === input.revieweeUserId) {
+      throw badRequest("SELF_REVIEW", "Users cannot review themselves");
+    }
+    if (
+      this.reviews.some(
+        (row) =>
+          row.tripId === input.tripId &&
+          row.reviewerUserId === input.reviewerUserId &&
+          row.revieweeUserId === input.revieweeUserId,
+      )
+    ) {
+      throw conflict("DUPLICATE_REVIEW", "Review already exists for this trip");
+    }
+    const row: ReviewRecord = {
+      id: crypto.randomUUID(),
+      tripId: input.tripId,
+      reviewerUserId: input.reviewerUserId,
+      revieweeUserId: input.revieweeUserId,
+      communication: input.communication,
+      attitude: input.attitude,
+      comment: input.comment,
+      moderationStatus: "VISIBLE",
+    };
+    this.reviews.push(row);
+    return row;
+  }
+
+  async listVisibleReviews(revieweeUserId: string) {
+    return this.reviews.filter((row) => row.revieweeUserId === revieweeUserId && row.moderationStatus === "VISIBLE");
+  }
+
+  async hideReview(reviewId: string) {
+    const row = this.reviews.find((item) => item.id === reviewId);
+    if (!row) return null;
+    row.moderationStatus = "HIDDEN";
+    return row;
+  }
+
+  async createReport(input: {
+    reporterId: string;
+    targetType: ReportRecord["targetType"];
+    targetId: string;
+    reason: string;
+  }) {
+    const row: ReportRecord = {
+      id: crypto.randomUUID(),
+      reporterId: input.reporterId,
+      targetType: input.targetType,
+      targetId: input.targetId,
+      reason: input.reason,
+      status: "OPEN",
+    };
+    this.reports.push(row);
+    return row;
+  }
+
+  async listReports() {
+    return [...this.reports];
+  }
+
+  async moderateReport(reportId: string, _adminUserId: string, action: "hide" | "dismiss") {
+    const report = this.reports.find((row) => row.id === reportId);
+    if (!report) throw notFound("NOT_FOUND", "Report was not found");
+    report.status = action === "hide" ? "HIDDEN" : "DISMISSED";
+    if (action === "hide" && report.targetType === "review") {
+      await this.hideReview(report.targetId);
+    }
+    return report;
   }
 }
 
@@ -215,6 +331,115 @@ export class SequelizeSocialStore implements SocialQueryStore {
     });
     return averageRatings(rows);
   }
+
+  async createReview(input: {
+    tripId: string;
+    reviewerUserId: string;
+    revieweeUserId: string;
+    communication: number;
+    attitude: number;
+    comment: string | null;
+  }) {
+    if (input.reviewerUserId === input.revieweeUserId) {
+      throw badRequest("SELF_REVIEW", "Users cannot review themselves");
+    }
+    try {
+      const row = await UserReview.create({
+        tripId: input.tripId,
+        reviewerUserId: input.reviewerUserId,
+        revieweeUserId: input.revieweeUserId,
+        communicationRating: input.communication,
+        attitudeRating: input.attitude,
+        comment: input.comment,
+        moderationStatus: "VISIBLE",
+      });
+      return toReviewRecord(row);
+    } catch {
+      throw conflict("DUPLICATE_REVIEW", "Review already exists for this trip");
+    }
+  }
+
+  async listVisibleReviews(revieweeUserId: string) {
+    const rows = await UserReview.findAll({
+      where: { revieweeUserId, moderationStatus: "VISIBLE" },
+    });
+    return rows.map(toReviewRecord);
+  }
+
+  async hideReview(reviewId: string) {
+    const row = await UserReview.findByPk(reviewId);
+    if (!row) return null;
+    await row.update({ moderationStatus: "HIDDEN" });
+    return toReviewRecord(row);
+  }
+
+  async createReport(input: {
+    reporterId: string;
+    targetType: ReportRecord["targetType"];
+    targetId: string;
+    reason: string;
+  }) {
+    const row = await Report.create({
+      reporterUserId: input.reporterId,
+      targetType: input.targetType,
+      targetId: input.targetId,
+      reason: input.reason,
+      status: "OPEN",
+    });
+    return toReportRecord(row);
+  }
+
+  async listReports() {
+    const rows = await Report.findAll();
+    return rows.map(toReportRecord);
+  }
+
+  async moderateReport(reportId: string, adminUserId: string, action: "hide" | "dismiss") {
+    const report = await Report.findByPk(reportId);
+    if (!report) throw notFound("NOT_FOUND", "Report was not found");
+    const status = action === "hide" ? "RESOLVED" : "DISMISSED";
+    await report.update({ status });
+    await ModerationAction.create({
+      reportId,
+      adminUserId,
+      action,
+      reason: null,
+      actedAt: new Date(),
+    });
+    if (action === "hide" && report.targetType === "review") {
+      await this.hideReview(report.targetId);
+    }
+    const mapped: ReportRecord = {
+      ...toReportRecord(report),
+      status: action === "hide" ? "HIDDEN" : "DISMISSED",
+    };
+    return mapped;
+  }
+}
+
+function toReviewRecord(row: UserReview): ReviewRecord {
+  return {
+    id: row.id,
+    tripId: row.tripId,
+    reviewerUserId: row.reviewerUserId,
+    revieweeUserId: row.revieweeUserId,
+    communication: row.communicationRating,
+    attitude: row.attitudeRating,
+    comment: row.comment ?? null,
+    moderationStatus: row.moderationStatus === "HIDDEN" ? "HIDDEN" : "VISIBLE",
+  };
+}
+
+function toReportRecord(row: Report): ReportRecord {
+  const status = row.status === "DISMISSED" ? "DISMISSED" : row.status === "OPEN" ? "OPEN" : "HIDDEN";
+  return {
+    id: row.id,
+    reporterId: row.reporterUserId,
+    targetType: row.targetType as ReportRecord["targetType"],
+    targetId: row.targetId,
+    reason: row.reason,
+    status,
+  };
 }
 
 function averageRatings(

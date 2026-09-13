@@ -172,7 +172,9 @@ export function ProfileView({ user, action }: ProfileViewProps) {
               <span className="text-lg font-bold text-on-surface-variant">/ 5.0</span>
             </div>
             <p className="mt-2 type-caption text-on-surface-variant">
-              Berdasarkan {user.rating.reviewCount} ulasan sesama rekan satu perjalanan
+              {user.rating.reviewCount > 0
+                ? `Berdasarkan ${user.rating.reviewCount} ulasan sesama rekan satu perjalanan`
+                : "Belum ada ulasan"}
             </p>
           </div>
           <div className="mt-4 space-y-2.5">

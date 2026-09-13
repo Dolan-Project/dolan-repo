@@ -48,9 +48,10 @@ async function main() {
     void chatService.emitGenerationUpdated(job);
   };
   const jobService = databaseReady ? createProductionJobService(onJobUpdated) : createJobService(onJobUpdated);
+  const social = databaseReady ? createProductionSocialStore() : createMemorySocialStore();
   const trips = databaseReady
     ? createProductionTripService(chatService)
-    : createMemoryTripService(undefined, chatService);
+    : createMemoryTripService(undefined, chatService, social);
   const httpServer = createServer();
   const sockets = createSocketServer(httpServer, authService, chatService);
   const app = createApp(
@@ -61,7 +62,7 @@ async function main() {
     trips,
     chatService,
     envRateLimit(),
-    databaseReady ? createProductionSocialStore() : createMemorySocialStore(),
+    social,
     createLocationService(chatService, databaseReady),
     createShareLinkService(chatService, databaseReady),
     createItineraryExportService(chatService, databaseReady),

@@ -5,14 +5,17 @@ import { notFound } from "../../lib/api-error.ts";
 import { requireLogin } from "../../middleware/authenticate.ts";
 import { requireCapability } from "../../middleware/authorize.ts";
 import type { AuthService } from "../auth/auth-service.ts";
+import type { TripService } from "../trips/trip-service.ts";
+import { SocialService } from "./social-service.ts";
 import type { SocialQueryStore } from "./social-queries.ts";
 
 function param(value: string | string[] | undefined): string {
   return Array.isArray(value) ? String(value[0] ?? "") : String(value ?? "");
 }
 
-export function createSocialRouter(authService: AuthService, social: SocialQueryStore) {
+export function createSocialRouter(authService: AuthService, social: SocialQueryStore, trips: TripService) {
   const router = Router();
+  const service = new SocialService(authService, social, trips);
 
   async function itemsFor(ids: string[]) {
     const items = [];
@@ -100,6 +103,92 @@ export function createSocialRouter(authService: AuthService, social: SocialQuery
         const existed = await social.unblock(req.authUser!.id, target.id);
         if (!existed) throw notFound("NOT_FOUND", "Blokir tidak ditemukan");
         res.json(apiSuccess({ blocked: false }));
+      } catch (error) {
+        next(error);
+      }
+    },
+  );
+
+  router.post(
+    "/trips/:tripId/attendance",
+    requireLogin,
+    async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        res.json(apiSuccess(await service.confirmAttendance(req.actor!, param(req.params.tripId), req.body)));
+      } catch (error) {
+        next(error);
+      }
+    },
+  );
+
+  router.get(
+    "/users/:username/reviews",
+    requireCapability("read_public"),
+    async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        res.json(apiSuccess(await service.listReviews(param(req.params.username))));
+      } catch (error) {
+        next(error);
+      }
+    },
+  );
+
+  router.post(
+    "/users/:username/reviews",
+    requireLogin,
+    async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        res.status(201).json(apiSuccess(await service.createReview(req.actor!, param(req.params.username), req.body)));
+      } catch (error) {
+        next(error);
+      }
+    },
+  );
+
+  router.get(
+    "/users/:username/history",
+    requireCapability("read_public"),
+    async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        res.json(apiSuccess(await service.history(param(req.params.username), req.actor ?? { kind: "guest" })));
+      } catch (error) {
+        next(error);
+      }
+    },
+  );
+
+  router.post(
+    "/reports",
+    requireLogin,
+    async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        res.status(201).json(apiSuccess(await service.createReport(req.actor!, req.body)));
+      } catch (error) {
+        next(error);
+      }
+    },
+  );
+
+  router.get(
+    "/admin/reports",
+    requireCapability("admin_moderate"),
+    async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        res.json(apiSuccess(await service.listReports(req.actor!)));
+      } catch (error) {
+        next(error);
+      }
+    },
+  );
+
+  router.post(
+    "/admin/reports/:reportId/moderate",
+    requireCapability("admin_moderate"),
+    async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        res.json(
+          apiSuccess(await service.moderateReport(req.actor!, param(req.params.reportId), req.body)),
+        );
       } catch (error) {
         next(error);
       }

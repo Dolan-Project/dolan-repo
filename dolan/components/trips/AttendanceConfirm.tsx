@@ -40,7 +40,8 @@ export function AttendanceConfirm({ tripId = "trip_completed" }: AttendanceConfi
     <section className="card-surface mt-6 p-4 md:p-5">
       <h2 className="type-subtitle text-on-surface">Konfirmasi kehadiran</h2>
       <p className="type-body mt-1 text-on-surface-variant">
-        Setelah trip selesai, konfirmasi kehadiran supaya review rekan bisa dibuka.
+        Setelah trip selesai, host dan peserta sama-sama konfirmasi kehadiran. Review rekan baru terbuka
+        setelah keduanya konfirmasi.
       </p>
       <button
         type="button"

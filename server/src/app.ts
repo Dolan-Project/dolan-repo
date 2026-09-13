@@ -45,7 +45,7 @@ export function createApp(
 ) {
   const memoryChat = new MemoryChatStore();
   const chat = chatService ?? new ChatService(memoryChat);
-  const tripService = trips ?? createMemoryTripService(undefined, tripChatBridge(memoryChat, chat));
+  const tripService = trips ?? createMemoryTripService(undefined, tripChatBridge(memoryChat, chat), social);
   const locations = locationService ?? new LocationService(new MemoryLocationStore(), chat);
   const shares =
     shareLinkService ??
@@ -114,7 +114,7 @@ export function createApp(
   app.use("/api/v1", createTripRouter(tripService));
   app.use("/api/v1", createChatRouter(chat));
   app.use("/api/v1", createLocationRouter(locations, shares, itinerary));
-  app.use("/api/v1", createSocialRouter(authService, social));
+  app.use("/api/v1", createSocialRouter(authService, social, tripService));
 
   app.get("/api/v1/public/ping", requireCapability("read_public"), (_req, res) => {
     res.json(apiSuccess({ ok: true }));

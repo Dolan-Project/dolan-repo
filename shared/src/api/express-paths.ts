@@ -87,3 +87,22 @@ export function userFollowingPath(username: string): string {
 export function userBlockPath(username: string): string {
   return `/users/${encodeURIComponent(username)}/block`;
 }
+
+export function userReviewsPath(username: string): string {
+  return `/users/${encodeURIComponent(username)}/reviews`;
+}
+
+export function userHistoryPath(username: string): string {
+  return `/users/${encodeURIComponent(username)}/history`;
+}
+
+export function tripAttendancePath(tripId: string): string {
+  return `/trips/${encodeURIComponent(tripId)}/attendance`;
+}
+
+export const reportsPath = "/reports";
+export const adminReportsPath = "/admin/reports";
+
+export function adminModerateReportPath(reportId: string): string {
+  return `/admin/reports/${encodeURIComponent(reportId)}/moderate`;
+}
