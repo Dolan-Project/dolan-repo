@@ -5,6 +5,26 @@
   --foreground: #071c32;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  html:focus-within {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+:where(a, button, input, select, textarea, summary):focus-visible {
+  outline: 3px solid color-mix(in oklab, var(--color-primary) 70%, white);
+  outline-offset: 3px;
+}
+
 @theme inline {
   --color-background: #f8f9ff;
   --color-foreground: #071c32;

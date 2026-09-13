@@ -278,9 +278,6 @@ export function TripExperience({ tripId, isLoggedIn, emailVerified }: TripExperi
         {joinCta === "ACCEPTED" || joinCta === "member" ? (
           <p className="type-body mt-3">Kamu sudah jadi peserta trip ini.</p>
         ) : null}
-        {joinCta === "WITHDRAWN" ? (
-          <p className="type-body mt-3">Pengajuan sudah ditarik.</p>
-        ) : null}
         {joinCta === "host" ? (
           <p className="type-body mt-3">Kamu host trip ini.</p>
         ) : null}

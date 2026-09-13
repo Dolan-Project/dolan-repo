@@ -32,8 +32,27 @@ export function findScheduleConflicts(days: EditableItineraryDay[]) {
 }
 
 export async function getItineraryEditor(tripId: string) {
-  await wait();
-  return createEditorSnapshot(tripId);
+  const fallback = createEditorSnapshot(tripId);
+  try {
+    const response = await fetch(`/api/v1/trips/${encodeURIComponent(tripId)}`, {
+      credentials: "include",
+      headers: { Accept: "application/json" },
+    });
+    const payload = await response.json() as {
+      success: boolean;
+      data?: { title: string; destinationCity: string | null; startDate: string | null; endDate: string | null };
+    };
+    if (!response.ok || !payload.success || !payload.data) return fallback;
+    return {
+      ...fallback,
+      tripTitle: payload.data.title,
+      destinationCity: payload.data.destinationCity ?? "Tujuan belum ditentukan",
+      startDate: payload.data.startDate ?? fallback.startDate,
+      endDate: payload.data.endDate ?? payload.data.startDate ?? fallback.endDate,
+    };
+  } catch {
+    return fallback;
+  }
 }
 
 export async function saveItineraryVersion(

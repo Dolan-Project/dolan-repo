@@ -1,14 +1,15 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Field } from "@/components/auth/Field";
 import { Icon } from "@/components/ui/Icon";
 import { PlacePicker } from "@/components/trip/PlacePicker";
 import { TripBoardMap } from "@/components/trip/TripBoardMap";
+import type { ItineraryTemplateDetail, UseTemplateResult } from "@dolan/shared";
 import type { ApiError, CreateTripInput, TripDetail } from "@/lib/contracts";
 import { ASSETS } from "@/lib/assets";
-import { tripDetailHref } from "@/lib/routes";
+import { tripDetailHref, tripItineraryPath } from "@/lib/routes";
 import { meetingPointFor, resolveGeoPlace } from "@/mocks/geo";
 
 const steps = [
@@ -43,15 +44,22 @@ function newKey() {
   return `trip-${Date.now()}`;
 }
 
-export function CreateTripWizard() {
+type CreateTripWizardProps = {
+  templateId?: string;
+  initialPlaceId?: string;
+  initialDestination?: string;
+};
+
+export function CreateTripWizard({ templateId, initialPlaceId, initialDestination }: CreateTripWizardProps) {
   const router = useRouter();
   const idempotencyKey = useMemo(newKey, []);
+  const publishIdempotencyKey = useMemo(newKey, []);
   const [step, setStep] = useState(1);
   const [path, setPath] = useState<Path>("known");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [origin, setOrigin] = useState("");
-  const [destinationCity, setDestinationCity] = useState("");
+  const [destinationCity, setDestinationCity] = useState(initialDestination ?? "");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [transport, setTransport] = useState("Kapal Phinisi");
@@ -70,6 +78,36 @@ export function CreateTripWizard() {
   const [pending, setPending] = useState(false);
   const [formError, setFormError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [templateTitle, setTemplateTitle] = useState("");
+  const [templateLoading, setTemplateLoading] = useState(Boolean(templateId));
+
+  useEffect(() => {
+    if (!templateId) return;
+    const controller = new AbortController();
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api/v1";
+    fetch(`${baseUrl}/templates/${encodeURIComponent(templateId)}`, {
+      credentials: "include",
+      headers: { Accept: "application/json" },
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        const payload = await response.json() as { success: boolean; data?: ItineraryTemplateDetail; error?: { message?: string } };
+        if (!response.ok || !payload.success || !payload.data) throw new Error(payload.error?.message ?? "Template tidak tersedia.");
+        setTemplateTitle(payload.data.title);
+        setTitle((current) => current || payload.data!.title);
+        setDestinationCity((current) => current || payload.data!.city);
+        setTransport((current) => payload.data!.transportMode || current);
+        setPath("known");
+      })
+      .catch((error) => {
+        if (controller.signal.aborted) return;
+        setFormError(error instanceof Error ? error.message : "Template tidak dapat dimuat.");
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setTemplateLoading(false);
+      });
+    return () => controller.abort();
+  }, [templateId]);
 
   const visualStep = step === 4 && path === "known" ? 5 : step;
 
@@ -153,20 +191,31 @@ export function CreateTripWizard() {
   }
 
   async function submit(mode: "draft" | "publish") {
+    if (pending || templateLoading) return;
     setPending(true);
     setFormError("");
     setFieldErrors({});
-    const created = await fetch("/api/v1/trips", {
+    const created = await fetch(templateId ? `/api/v1/templates/${encodeURIComponent(templateId)}/use` : "/api/v1/trips", {
       method: "POST",
       credentials: "include",
       headers: {
         "content-type": "application/json",
         "idempotency-key": idempotencyKey,
       },
-      body: JSON.stringify(payload()),
+      body: JSON.stringify(templateId ? {
+        templateTitle: templateTitle || title,
+        destinationCity,
+        originLabel: origin || undefined,
+        startDate,
+        endDate: endDate || undefined,
+        transportMode: transport || undefined,
+        planningPartySize,
+        budgetAmount: String(budgetAmount),
+        budgetBasis,
+      } : payload()),
     });
     const json = (await created.json()) as
-      | { success: true; data: TripDetail }
+      | { success: true; data: TripDetail | UseTemplateResult }
       | ApiError;
     if (!json.success) {
       setPending(false);
@@ -174,11 +223,12 @@ export function CreateTripWizard() {
       setFieldErrors(json.error.fields ?? {});
       return;
     }
+    const createdTripId = "tripId" in json.data ? json.data.tripId : json.data.id;
     if (mode === "publish") {
-      const published = await fetch(`/api/v1/trips/${json.data.id}/publish`, {
+      const published = await fetch(`/api/v1/trips/${createdTripId}/publish`, {
         method: "POST",
         credentials: "include",
-        headers: { "content-type": "application/json" },
+        headers: { "content-type": "application/json", "idempotency-key": publishIdempotencyKey },
         body: JSON.stringify({ confirmPublish: true, visibility }),
       });
       const pubJson = (await published.json()) as
@@ -194,12 +244,13 @@ export function CreateTripWizard() {
       return;
     }
     setPending(false);
-    router.push(tripDetailHref(json.data.id));
+    router.push(tripItineraryPath(createdTripId));
     router.refresh();
   }
 
   return (
     <div className="mx-auto max-w-3xl px-margin py-8 md:px-margin-desktop md:py-12">
+      {templateId ? <div className="mb-5 rounded-2xl border border-primary/15 bg-primary-fixed/45 px-4 py-3" role="status"><p className="type-label font-extrabold text-primary">{templateLoading ? "Memuat template itinerary…" : `Template dipilih: ${templateTitle || "Rute traveler"}`}</p><p className="mt-1 type-caption text-on-surface-variant">Tanggal, titik awal, dan budget tetap bisa kamu sesuaikan. Setelah disimpan, rute akan terbuka di editor.</p></div> : initialPlaceId ? <p className="mb-5 rounded-2xl bg-primary-fixed/45 px-4 py-3 type-caption text-on-surface-variant">Destinasi dari halaman wisata sudah dimasukkan. Lengkapi tanggal dan budget untuk melanjutkan.</p> : null}
       <div className="mb-8 hidden items-center justify-between sm:flex">
         {steps.map((label, i) => {
           const n = i + 1;

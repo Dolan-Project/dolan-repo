@@ -24,6 +24,7 @@ function versionBudgetInputs(snapshot: ItineraryEditorSnapshot, versionId: strin
 }
 
 export function ItineraryEditorExperience({ tripId }: { tripId: string }) {
+  const publishIdempotencyKey = useMemo(() => typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : "00000000-0000-4000-8000-000000000001", [tripId]);
   const [snapshot, setSnapshot] = useState<ItineraryEditorSnapshot | null>(null);
   const [selectedVersionId, setSelectedVersionId] = useState("");
   const [days, setDays] = useState<EditableItineraryDay[]>([]);
@@ -31,6 +32,7 @@ export function ItineraryEditorExperience({ tripId }: { tripId: string }) {
   const [tab, setTab] = useState<Tab>("itinerary");
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [publishing, setPublishing] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [generatedVersionId, setGeneratedVersionId] = useState<string | null>(null);
   const [job, setJob] = useState<EditorGenerationStatus | null>(null);
@@ -127,6 +129,34 @@ export function ItineraryEditorExperience({ tripId }: { tripId: string }) {
     }
   };
 
+  const publish = async () => {
+    if (publishing || saving) return;
+    if (dirty) {
+      setNotice({ tone: "error", text: "Simpan perubahan itinerary sebelum memublikasikan trip." });
+      return;
+    }
+    setPublishing(true);
+    setNotice(null);
+    try {
+      const detailResponse = await fetch(`/api/v1/trips/${encodeURIComponent(tripId)}`, { credentials: "include" });
+      const detail = await detailResponse.json() as { success: boolean; data?: { visibility: "PRIVATE" | "PUBLIC" }; error?: { message?: string } };
+      if (!detailResponse.ok || !detail.success || !detail.data) throw new Error(detail.error?.message ?? "Detail trip tidak dapat dimuat.");
+      const response = await fetch(`/api/v1/trips/${encodeURIComponent(tripId)}/publish`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "content-type": "application/json", "idempotency-key": publishIdempotencyKey },
+        body: JSON.stringify({ confirmPublish: true, visibility: detail.data.visibility }),
+      });
+      const payload = await response.json() as { success: boolean; error?: { message?: string } };
+      if (!response.ok || !payload.success) throw new Error(payload.error?.message ?? "Trip gagal dipublikasikan.");
+      setNotice({ tone: "success", text: detail.data.visibility === "PUBLIC" ? "Trip berhasil dipublikasikan dan dapat ditemukan traveler lain." : "Rencana private berhasil diselesaikan dan tetap hanya terlihat olehmu." });
+    } catch (error) {
+      setNotice({ tone: "error", text: error instanceof Error ? error.message : "Trip gagal dipublikasikan." });
+    } finally {
+      setPublishing(false);
+    }
+  };
+
   const chooseVersion = (versionId: string, activate = false) => {
     if (!snapshot) return;
     const version = snapshot.versions.find((item) => item.id === versionId);
@@ -184,6 +214,7 @@ export function ItineraryEditorExperience({ tripId }: { tripId: string }) {
       <div className="fixed bottom-[74px] left-3 right-3 z-30 flex items-center justify-between gap-3 rounded-2xl border border-outline-variant bg-white/95 p-3 shadow-[0_12px_40px_rgba(7,28,50,.22)] backdrop-blur md:static md:mt-5 md:ml-auto md:w-fit">
         <div className="hidden sm:block"><p className="type-label">{dirty ? "Ada perubahan belum tersimpan" : `Versi aktif: ${activeVersion?.versionNumber}`}</p><p className="type-caption text-on-surface-variant">Penyimpanan membuat versi baru.</p></div>
         <button type="button" onClick={save} disabled={saving || !dirty || Object.keys(conflicts).length > 0} className="btn-brand flex-1 md:flex-none"><Icon name="bookmark_added" /> {saving ? "Menyimpan…" : "Simpan versi baru"}</button>
+        <button type="button" onClick={publish} disabled={publishing || saving || dirty || Object.keys(conflicts).length > 0} className="btn-primary flex-1 md:flex-none"><Icon name="publish" /> {publishing ? "Memublikasikan…" : "Publikasikan trip"}</button>
       </div>
     </main>
   );

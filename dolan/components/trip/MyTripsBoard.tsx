@@ -1,12 +1,14 @@
+/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { Icon } from "@/components/ui/Icon";
 import { TripBoardMap } from "@/components/trip/TripBoardMap";
+import { PlacePhoto } from "@/features/explore/PlacePhoto";
 import type { ApiError, MyTripRole, TripSummary } from "@/lib/contracts";
 import { ASSETS } from "@/lib/assets";
-import { ROUTES, tripDetailHref } from "@/lib/routes";
+import { ROUTES, tripDetailHref, tripItineraryPath } from "@/lib/routes";
 import { meetingPointFor } from "@/mocks/geo";
 
 const tabs: { id: MyTripRole; label: string }[] = [
@@ -95,6 +97,9 @@ export function MyTripsBoard() {
           trip.publicMeetingPointLatitude == null ||
           trip.publicMeetingPointLongitude == null
         ) {
+          if (trip.coverPlace) {
+            return [{ id: trip.id, label: trip.coverPlace.name, latitude: trip.coverPlace.latitude, longitude: trip.coverPlace.longitude, selected: trip.id === selected?.id, tone: "meeting" as const }];
+          }
           if (!point) return [];
           return [
             {
@@ -299,12 +304,7 @@ function TripCard({
       }`}
     >
       <button type="button" className="flex w-full gap-2.5 text-left" onClick={onSelect}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          alt=""
-          className="h-16 w-16 shrink-0 rounded-xl object-cover"
-          src={coverFor(trip.destinationCity ?? "")}
-        />
+        {trip.coverPlace ? <PlacePhoto googlePlaceId={trip.coverPlace.googlePlaceId} photoName={trip.coverPlace.photoName} alt={trip.title} className="h-16 w-16 shrink-0 rounded-xl" /> : <img alt="" className="h-16 w-16 shrink-0 rounded-xl object-cover" src={coverFor(trip.destinationCity ?? "")} />}
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap gap-1">
             <span className="chip bg-surface-container-high text-primary">{trip.status}</span>
@@ -324,12 +324,11 @@ function TripCard({
           </p>
         </div>
       </button>
-      <Link
-        href={tripDetailHref(trip.id)}
-        className="btn-brand mt-2 !min-h-9 !px-4 !text-[0.8125rem]"
-      >
-        Buka detail
-      </Link>
+      <div className="mt-2 flex flex-wrap gap-2">
+        <Link href={tripDetailHref(trip.id)} className="btn-brand !min-h-9 !px-4 !text-[0.8125rem]">Buka detail</Link>
+        {tab === "hosted" ? <Link href={tripItineraryPath(trip.id)} className="btn-secondary !min-h-9 !px-4 !text-[0.8125rem]"><Icon name="edit" className="text-[16px]" /> Edit itinerary</Link> : null}
+        {trip.visibility === "PUBLIC" && tab !== "pending" ? <Link href={`${tripDetailHref(trip.id)}#chat`} className="btn-ghost !min-h-9 !px-3 !text-[0.8125rem]"><Icon name="forum" className="text-[16px]" /> Grup chat</Link> : null}
+      </div>
     </article>
   );
 }
