@@ -1,6 +1,8 @@
 import cors from "cors";
 import express from "express";
-import { apiSuccess } from "@dolan/shared";
+import { apiSuccess, profileUpdateSchema } from "@dolan/shared";
+import { badRequest } from "./lib/api-error.ts";
+import { zodFields } from "./lib/zod-fields.ts";
 import { env } from "./config/env.ts";
 import { createJobService, createMemorySearchService, createMemoryTripService } from "./container.ts";
 import { createAuthenticate, requireLogin } from "./middleware/authenticate.ts";
@@ -63,6 +65,27 @@ export function createApp(
   app.use("/api/v1/auth", createAuthRouter(authService, disconnectUser));
   app.get("/api/v1/users/me", requireLogin, (req, res) => {
     res.json(apiSuccess(authService.toMeSession(req.authUser!)));
+  });
+  app.patch("/api/v1/users/me", requireLogin, async (req, res, next) => {
+    try {
+      const parsed = profileUpdateSchema.safeParse(req.body);
+      if (!parsed.success) {
+        throw badRequest("VALIDATION_ERROR", "Periksa kembali isian form", zodFields(parsed.error));
+      }
+      res.json(apiSuccess(await authService.updateProfile(req.authUser!.id, parsed.data)));
+    } catch (error) {
+      next(error);
+    }
+  });
+  app.get("/api/v1/users/:username", requireCapability("read_public"), async (req, res, next) => {
+    try {
+      const username = Array.isArray(req.params.username)
+        ? String(req.params.username[0])
+        : String(req.params.username);
+      res.json(apiSuccess(await authService.publicProfileByUsername(username)));
+    } catch (error) {
+      next(error);
+    }
   });
   app.use("/api/v1", createSearchRouter(search));
   app.use("/api/v1", createJobRouter(jobService));
