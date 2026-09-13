@@ -51,12 +51,16 @@ export const profileRouteHandlers = {
     GET: (request: Request) =>
       withMockOrUnavailable(request, handleGetMeRequest, "/api/v1/users/me"),
     PATCH: (request: Request) =>
-      withMockOrUnavailable(request, handlePatchMeRequest),
+      withMockOrUnavailable(request, handlePatchMeRequest, "/api/v1/users/me"),
   },
   avatar: (request: Request) =>
     withMockOrUnavailable(request, (req) => handleUploadRequest(req, "avatar")),
   cover: (request: Request) =>
     withMockOrUnavailable(request, (req) => handleUploadRequest(req, "cover")),
   byUsername: (request: Request, username: string) =>
-    withMockOrUnavailable(request, () => handleGetPublicProfileRequest(username)),
+    withMockOrUnavailable(
+      request,
+      () => handleGetPublicProfileRequest(username),
+      `/api/v1/users/${encodeURIComponent(username)}`,
+    ),
 };
