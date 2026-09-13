@@ -95,6 +95,15 @@ export function createProductionSearchService() {
   );
 }
 
+export function createRuntimeSearchService(databaseReady: boolean) {
+  if (databaseReady) return createProductionSearchService();
+  return createMemorySearchService({
+    placesProvider: env.googleMapsServerKey
+      ? new GooglePlacesClient(env.googleMapsServerKey)
+      : undefined,
+  });
+}
+
 export function createMemoryTripService(store = new MemoryTripStore(), realtime?: TripRealtime) {
   return new TripService(store, realtime);
 }

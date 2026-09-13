@@ -9,9 +9,9 @@ import {
   createMemorySocialStore,
   createMemoryTripService,
   createProductionJobService,
-  createProductionSearchService,
   createProductionSocialStore,
   createProductionTripService,
+  createRuntimeSearchService,
   createUserRepository,
 } from "./container.ts";
 import { envRateLimit } from "./middleware/rate-limit.ts";
@@ -42,7 +42,7 @@ async function main() {
   const app = createApp(
     authService,
     sockets.disconnectUser,
-    databaseReady ? createProductionSearchService() : undefined,
+    createRuntimeSearchService(databaseReady),
     jobService,
     trips,
     chatService,
@@ -57,6 +57,7 @@ async function main() {
       port: env.port,
       authAdapter: env.authAdapter,
       userRepository: databaseReady ? "sequelize" : "memory",
+      searchRepository: databaseReady ? "sequelize" : "memory",
       googlePlacesConfigured: Boolean(env.googleMapsServerKey),
     });
     logSocketReady();

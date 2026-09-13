@@ -23,7 +23,7 @@ export async function proxyToExpress(
   const origin = process.env.EXPRESS_ORIGIN?.trim();
   if (!origin) {
     return jsonResult(
-      createApiError("PROVIDER_UNAVAILABLE", "Layanan trip tidak tersedia"),
+      createApiError("PROVIDER_UNAVAILABLE", "Layanan tidak tersedia"),
       statusForCode("PROVIDER_UNAVAILABLE"),
     );
   }
@@ -62,7 +62,7 @@ export async function proxyToExpress(
     });
   } catch {
     return jsonResult(
-      createApiError("PROVIDER_UNAVAILABLE", "Layanan trip tidak tersedia"),
+      createApiError("PROVIDER_UNAVAILABLE", "Layanan tidak tersedia"),
       statusForCode("PROVIDER_UNAVAILABLE"),
     );
   }

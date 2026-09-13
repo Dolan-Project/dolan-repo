@@ -4,6 +4,7 @@ import {
   type ApiError,
   type ApiSuccess,
 } from "@/lib/contracts";
+import type { ZodError } from "zod";
 import { sessionCookieHeader } from "./session-cookie";
 
 export function jsonResult(
@@ -18,17 +19,14 @@ export function jsonResult(
   return new Response(JSON.stringify(payload), { status, headers });
 }
 
-export function validationError(error: {
-  flatten: () => { fieldErrors: Record<string, string[] | undefined> };
-  issues: { path: (string | number)[]; message: string }[];
-}): Response {
+export function validationError(error: ZodError): Response {
   return jsonResult(
     {
       success: false,
       error: {
         code: AUTH_ERROR_CODES.VALIDATION_ERROR,
         message: "Periksa kembali isian form",
-        fields: fieldErrorsFromZod(error as never),
+        fields: fieldErrorsFromZod(error),
         requestId: "req_mock",
       },
     },
@@ -49,9 +47,18 @@ export function statusForCode(code: string): number {
     case "PROVIDER_UNAVAILABLE":
       return 503;
     case "NOT_FOUND":
+    case "TRIP_NOT_FOUND":
       return 404;
+    case "EMAIL_UNVERIFIED":
+    case "PROFILE_INCOMPLETE":
     case "NOT_MEMBER":
+    case "NOT_HOST":
+    case "PENDING_MEMBER":
+    case "FORBIDDEN":
       return 403;
+    case "TRIP_FULL":
+    case "DUPLICATE_REQUEST":
+      return 409;
     case "CAPACITY_BELOW_MEMBERS":
     case "LEAVE_CONFIRM_REQUIRED":
     case "INVALID_TRANSITION":

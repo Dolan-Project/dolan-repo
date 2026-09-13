@@ -20,7 +20,8 @@ function isActive(pathname: string, key: NavKey) {
     return (
       pathname.startsWith("/jelajah") ||
       pathname.startsWith("/wisata") ||
-      pathname.startsWith("/itinerary")
+      pathname.startsWith("/itinerary") ||
+      pathname.startsWith("/trip")
     );
   if (key === "trip-saya") return pathname.startsWith("/trip-saya");
   if (key === "buat-trip") return pathname.startsWith("/buat-trip");
@@ -28,7 +29,13 @@ function isActive(pathname: string, key: NavKey) {
   return false;
 }
 
-export function SiteHeader({ session }: { session: AuthSession | null }) {
+export function SiteHeader({
+  session,
+  unreadCount = 0,
+}: {
+  session: AuthSession | null;
+  unreadCount?: number;
+}) {
   const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
@@ -48,7 +55,7 @@ export function SiteHeader({ session }: { session: AuthSession | null }) {
           : "border-b border-white/60 bg-white/82 shadow-[0_8px_30px_rgba(15,59,94,.08)] backdrop-blur-xl"
       }`}
     >
-      <div className="mx-auto flex h-14 max-w-[1200px] items-center justify-between gap-3 px-margin md:h-16 md:px-margin-desktop">
+      <div className="mx-auto flex h-14 max-w-[1240px] items-center justify-between gap-3 px-margin md:h-16 md:px-margin-desktop lg:grid lg:grid-cols-3">
         <div className="flex min-w-0 items-center gap-6">
           <Link href={ROUTES.beranda} className="flex items-center gap-2">
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -62,36 +69,33 @@ export function SiteHeader({ session }: { session: AuthSession | null }) {
             </span>
           </Link>
 
-          <nav className="hidden items-center gap-1 lg:flex">
-            {desktopLinks.map((link) => {
-              const active = isActive(pathname, link.key);
-              return (
-                <Link
-                  key={link.key}
-                  href={link.href}
-                  aria-current={active ? "page" : undefined}
-                  className={
-                    active
-                      ? "type-label rounded-full bg-surface-container-low px-3.5 py-2 text-primary"
-                      : "type-label rounded-full px-3.5 py-2 text-on-surface-variant transition-colors hover:bg-surface-container-low hover:text-on-surface"
-                  }
-                >
-                  {link.label}
-                </Link>
-              );
-            })}
-          </nav>
         </div>
 
-        <div className="flex items-center gap-2 md:gap-3">
-          <button
-            type="button"
-            aria-label="Notifikasi"
+        <nav className="hidden items-center justify-center gap-1 lg:flex">
+          {desktopLinks.map((link) => {
+            const active = isActive(pathname, link.key);
+            return (
+              <Link
+                key={link.key}
+                href={link.href}
+                aria-current={active ? "page" : undefined}
+                className={active ? "type-label rounded-full bg-surface-container-low px-3.5 py-2 text-primary" : "type-label rounded-full px-3.5 py-2 text-on-surface-variant transition-colors hover:bg-surface-container-low hover:text-on-surface"}
+              >{link.label}</Link>
+            );
+          })}
+        </nav>
+
+        <div className="flex items-center justify-end gap-2 md:gap-3">
+          <Link
+            href={ROUTES.notifikasi}
+            aria-label={unreadCount > 0 ? `Notifikasi, ${unreadCount} belum dibaca` : "Notifikasi"}
             className="relative flex h-10 w-10 items-center justify-center rounded-full text-on-surface-variant transition-colors hover:bg-surface-container hover:text-on-surface"
           >
             <Icon name="notifications" className="text-[22px]" />
-            <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-secondary-container" />
-          </button>
+            {unreadCount > 0 ? (
+              <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-secondary-container" />
+            ) : null}
+          </Link>
           {session ? (
             <Link href={ROUTES.profil} aria-label="Profil">
               {/* eslint-disable-next-line @next/next/no-img-element */}

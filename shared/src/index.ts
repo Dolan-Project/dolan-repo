@@ -6,11 +6,13 @@ export * from "./types/auth.ts";
 export * from "./types/place.ts";
 export * from "./types/trip.ts";
 export * from "./types/template.ts";
+export * from "./types/itinerary.ts";
 export * from "./schemas/auth.ts";
 export * from "./schemas/budget.ts";
 export * from "./schemas/generation.ts";
 export * from "./schemas/search.ts";
 export * from "./schemas/template.ts";
+export * from "./schemas/itinerary.ts";
 export * from "./schemas/trip.ts";
 
 export type { PublicUser } from "./types/kickoff.ts";

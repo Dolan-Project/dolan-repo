@@ -80,4 +80,38 @@ describe("auth session and guards", () => {
     expect(response.status).toBe(403);
     expect(response.body.error.code).toBe("PENDING_MEMBER");
   });
+
+  it("updates an incomplete profile and hides email on public profiles", async () => {
+    const api = app();
+    const patched = await request(api)
+      .patch("/api/v1/users/me")
+      .set("Authorization", "Bearer mock-incomplete-profile")
+      .send({
+        username: "dimas_baru",
+        displayName: "Dimas",
+        domicile: "Bali",
+        bio: "Siap dolan",
+      });
+    expect(patched.status).toBe(200);
+    expect(patched.body.data.user.username).toBe("dimas_baru");
+    expect(patched.body.data.profileComplete).toBe(true);
+    expect(JSON.stringify(patched.body)).not.toMatch(/incomplete@dolan\.test/);
+
+    const taken = await request(api)
+      .patch("/api/v1/users/me")
+      .set("Authorization", "Bearer mock-verified-complete")
+      .send({
+        username: "dimas_baru",
+        displayName: "Alya",
+        domicile: "Jakarta",
+      });
+    expect(taken.status).toBe(409);
+    expect(taken.body.error.code).toBe("USERNAME_TAKEN");
+
+    const pub = await request(api).get("/api/v1/users/dimas_baru");
+    expect(pub.status).toBe(200);
+    expect(pub.body.data.username).toBe("dimas_baru");
+    expect(pub.body.data.email).toBeUndefined();
+    expect(JSON.stringify(pub.body)).not.toMatch(/incomplete@dolan\.test/);
+  });
 });
