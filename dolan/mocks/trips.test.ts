@@ -104,4 +104,14 @@ describe("trip mocks", () => {
     expect(result.data.visibility).toBe("PRIVATE");
     expect(result.data.privateOriginLabel).toBe("Jakarta");
   });
+
+  it("lets a logged-in user see a public trip they do not host as a visitor", () => {
+    const result = mockGetTrip("success", "trip_open");
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.viewerRole).toBe("none");
+    expect(result.data.host.username).toBe("wayan");
+    expect(result.data.joinFree).toBe(true);
+    expect(result.data.myJoinRequest).toBeNull();
+  });
 });
