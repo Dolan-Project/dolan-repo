@@ -1,4 +1,5 @@
 import { jsonResult, statusForCode } from "@/lib/auth/api-response";
+import { isChosenItineraryPath } from "@/lib/offline/itinerary-path";
 import { readSessionId } from "@/lib/auth/session-cookie";
 import { createApiError } from "@/mocks/scenarios";
 import {
@@ -287,7 +288,7 @@ export async function handleSaveOfflineItineraryRequest(request: Request) {
   const id = String(body.id ?? "");
   const title = String(body.title ?? "");
   const path = String(body.path ?? "");
-  if (!id || !title || !path.startsWith("/itinerary/")) {
+  if (!id || !title || !isChosenItineraryPath(path)) {
     return fail("NOT_ELIGIBLE", "Offline hanya untuk itinerary yang dipilih");
   }
   const store = communityStore();

@@ -20,17 +20,41 @@ import {
 
 export const communityRouteHandlers = {
   follow: (request: Request, username: string) =>
-    withMockOrUnavailable(request, (req) => handleFollowRequest(req, username)),
+    withMockOrUnavailable(
+      request,
+      (req) => handleFollowRequest(req, username),
+      `/api/v1/users/${encodeURIComponent(username)}/follow`,
+    ),
   unfollow: (request: Request, username: string) =>
-    withMockOrUnavailable(request, (req) => handleUnfollowRequest(req, username)),
+    withMockOrUnavailable(
+      request,
+      (req) => handleUnfollowRequest(req, username),
+      `/api/v1/users/${encodeURIComponent(username)}/follow`,
+    ),
   followers: (request: Request, username: string) =>
-    withMockOrUnavailable(request, (req) => handleGetFollowersRequest(req, username)),
+    withMockOrUnavailable(
+      request,
+      (req) => handleGetFollowersRequest(req, username),
+      `/api/v1/users/${encodeURIComponent(username)}/followers`,
+    ),
   following: (request: Request, username: string) =>
-    withMockOrUnavailable(request, (req) => handleGetFollowingRequest(req, username)),
+    withMockOrUnavailable(
+      request,
+      (req) => handleGetFollowingRequest(req, username),
+      `/api/v1/users/${encodeURIComponent(username)}/following`,
+    ),
   block: (request: Request, username: string) =>
-    withMockOrUnavailable(request, (req) => handleBlockRequest(req, username)),
+    withMockOrUnavailable(
+      request,
+      (req) => handleBlockRequest(req, username),
+      `/api/v1/users/${encodeURIComponent(username)}/block`,
+    ),
   unblock: (request: Request, username: string) =>
-    withMockOrUnavailable(request, (req) => handleUnblockRequest(req, username)),
+    withMockOrUnavailable(
+      request,
+      (req) => handleUnblockRequest(req, username),
+      `/api/v1/users/${encodeURIComponent(username)}/block`,
+    ),
   reviews: {
     GET: (request: Request, username: string) =>
       withMockOrUnavailable(request, (req) => handleGetReviewsRequest(req, username)),

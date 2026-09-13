@@ -6,9 +6,13 @@ self.addEventListener("activate", (event) => {
   event.waitUntil(self.clients.claim());
 });
 
+function isChosenItineraryPath(path) {
+  return path.startsWith("/itinerary/") || /^\/trip-saya\/[^/]+\/itinerary\/?$/.test(path);
+}
+
 self.addEventListener("message", (event) => {
   const data = event.data ?? {};
-  if (data.type === "CACHE_ITINERARY" && typeof data.path === "string" && data.path.startsWith("/itinerary/")) {
+  if (data.type === "CACHE_ITINERARY" && typeof data.path === "string" && isChosenItineraryPath(data.path)) {
     event.waitUntil(
       caches.open("dolan-private-itinerary").then((cache) => cache.add(data.path)),
     );
@@ -20,7 +24,7 @@ self.addEventListener("message", (event) => {
 
 self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
-  if (!url.pathname.startsWith("/itinerary/")) return;
+  if (!isChosenItineraryPath(url.pathname)) return;
   event.respondWith(
     caches.open("dolan-private-itinerary").then(async (cache) => {
       const cached = await cache.match(event.request);

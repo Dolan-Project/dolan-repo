@@ -31,6 +31,7 @@ import {
   resetSocialMocks,
   socialStore,
 } from "@/mocks/social-store";
+import { isBlockedEitherWay } from "@/mocks/community-store";
 import { mockStoredRole, mockTripExists } from "@/mocks/trips";
 import { jsonResult, statusForCode, validationError } from "@/lib/auth/api-response";
 import { readSessionId } from "@/lib/auth/session-cookie";
@@ -241,6 +242,9 @@ export async function handleRequestJoinRequest(request: Request, tripId: string)
   }
   if (viewerRole(tripId, session) === "host") {
     return fail(AuthErrorCode.FORBIDDEN, "Host tidak mengajukan join ke trip sendiri");
+  }
+  if (isBlockedEitherWay(session.user.id, tripHost(tripId).id)) {
+    return fail("BLOCKED_RELATION", "Tidak bisa join trip pengguna yang diblokir");
   }
   const parsed = joinRequestBodySchema.safeParse(await readBody(request));
   if (!parsed.success) return validationError(parsed.error);

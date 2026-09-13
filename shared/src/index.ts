@@ -67,4 +67,8 @@ export {
   tripCancelPath,
   tripVisibilityPath,
   tripCommentPath,
+  userFollowPath,
+  userFollowersPath,
+  userFollowingPath,
+  userBlockPath,
 } from "./api/express-paths.ts";

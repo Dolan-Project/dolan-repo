@@ -1,4 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
+import { handleBlockRequest } from "@/lib/community/handle-community";
+import { resetCommunityMocks } from "@/mocks/community-store";
 import {
   handleCreateCommentRequest,
   handleGetTripRequest,
@@ -15,6 +17,7 @@ import {
 
 afterEach(() => {
   resetSocialMocks();
+  resetCommunityMocks();
 });
 
 function cookie(value: string) {
@@ -102,6 +105,27 @@ describe("join", () => {
     expect(json.data.status).toBe("PENDING");
     expect("joinFee" in json.data).toBe(false);
     expect("checkout" in json.data).toBe(false);
+  });
+
+  it("rejects join when the applicant blocked the host", async () => {
+    await handleBlockRequest(
+      new Request("http://localhost/api/v1/users/wayan/block", {
+        method: "POST",
+        headers: { ...cookie("complete"), "content-type": "application/json" },
+      }),
+      "wayan",
+    );
+    const response = await handleRequestJoinRequest(
+      new Request("http://localhost/api/v1/trips/trip_open/join-requests", {
+        method: "POST",
+        headers: { ...cookie("complete"), "content-type": "application/json" },
+        body: JSON.stringify({ message: "Ikut ya" }),
+      }),
+      "trip_open",
+    );
+    const json = (await response.json()) as { error: { code: string } };
+    expect(response.status).toBe(409);
+    expect(json.error.code).toBe("BLOCKED_RELATION");
   });
 
   it("shows the host decision to the applicant", async () => {

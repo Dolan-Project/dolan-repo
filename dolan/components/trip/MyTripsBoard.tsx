@@ -6,7 +6,7 @@ import { Icon } from "@/components/ui/Icon";
 import { TripBoardMap } from "@/components/trip/TripBoardMap";
 import type { ApiError, MyTripRole, TripSummary } from "@/lib/contracts";
 import { ASSETS } from "@/lib/assets";
-import { ROUTES, tripDetailHref } from "@/lib/routes";
+import { ROUTES, tripDetailHref, tripItineraryPath } from "@/lib/routes";
 import { meetingPointFor } from "@/mocks/geo";
 
 const tabs: { id: MyTripRole; label: string }[] = [
@@ -324,12 +324,22 @@ function TripCard({
           </p>
         </div>
       </button>
-      <Link
-        href={tripDetailHref(trip.id)}
-        className="btn-brand mt-2 !min-h-9 !px-4 !text-[0.8125rem]"
-      >
-        Buka detail
-      </Link>
+      <div className="mt-2 flex flex-wrap gap-2">
+        <Link
+          href={tripDetailHref(trip.id)}
+          className="btn-brand !min-h-9 !px-4 !text-[0.8125rem]"
+        >
+          Buka detail
+        </Link>
+        {tab !== "pending" ? (
+          <Link
+            href={tripItineraryPath(trip.id)}
+            className="btn-ghost !min-h-9 !px-4 !text-[0.8125rem]"
+          >
+            Itinerary
+          </Link>
+        ) : null}
+      </div>
     </article>
   );
 }

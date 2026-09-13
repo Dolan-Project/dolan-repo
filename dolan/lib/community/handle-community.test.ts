@@ -245,6 +245,19 @@ describe("offline itinerary and logout", () => {
       ),
     );
     expect(saved.success).toBe(true);
+
+    const editor = await json(
+      await handleSaveOfflineItineraryRequest(
+        authed("http://localhost/api/v1/offline/itineraries", {
+          body: {
+            id: "trip_1",
+            title: "Itinerary trip saya",
+            path: "/trip-saya/trip_1/itinerary",
+          },
+        }),
+      ),
+    );
+    expect(editor.success).toBe(true);
   });
 
   it("clears private offline itineraries on logout", async () => {

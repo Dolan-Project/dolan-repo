@@ -71,3 +71,19 @@ export function tripVisibilityPath(tripId: string): string {
 export function tripCommentPath(tripId: string, commentId: string): string {
   return `/trips/${tripId}/comments/${commentId}`;
 }
+
+export function userFollowPath(username: string): string {
+  return `/users/${encodeURIComponent(username)}/follow`;
+}
+
+export function userFollowersPath(username: string): string {
+  return `/users/${encodeURIComponent(username)}/followers`;
+}
+
+export function userFollowingPath(username: string): string {
+  return `/users/${encodeURIComponent(username)}/following`;
+}
+
+export function userBlockPath(username: string): string {
+  return `/users/${encodeURIComponent(username)}/block`;
+}

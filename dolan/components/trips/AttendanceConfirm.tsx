@@ -4,7 +4,11 @@ import { useState } from "react";
 import Link from "next/link";
 import { ROUTES } from "@/lib/routes";
 
-export function AttendanceConfirm() {
+type AttendanceConfirmProps = {
+  tripId?: string;
+};
+
+export function AttendanceConfirm({ tripId = "trip_completed" }: AttendanceConfirmProps) {
   const [confirmed, setConfirmed] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -12,7 +16,7 @@ export function AttendanceConfirm() {
   async function onConfirm() {
     setPending(true);
     setMessage(null);
-    const response = await fetch("/api/v1/trips/trip_completed/attendance", {
+    const response = await fetch(`/api/v1/trips/${tripId}/attendance`, {
       method: "POST",
       credentials: "include",
       headers: { "content-type": "application/json" },

@@ -5,18 +5,24 @@ import { Icon } from "@/components/ui/Icon";
 import { cacheChosenItinerary, putOfflineItinerary } from "@/lib/offline/private-cache";
 import { ROUTES } from "@/lib/routes";
 
-export function SaveOfflineItineraryButton() {
+type SaveOfflineItineraryButtonProps = {
+  id?: string;
+  title?: string;
+  path?: string;
+};
+
+export function SaveOfflineItineraryButton({
+  id = "bali-3h2m",
+  title = "Trip ke Bali 3H2M",
+  path = ROUTES.itineraryBali,
+}: SaveOfflineItineraryButtonProps) {
   const [message, setMessage] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
   async function onClick() {
     setPending(true);
     setMessage(null);
-    const payload = {
-      id: "bali-3h2m",
-      title: "Trip ke Bali 3H2M",
-      path: ROUTES.itineraryBali,
-    };
+    const payload = { id, title, path };
     const response = await fetch("/api/v1/offline/itineraries", {
       method: "POST",
       credentials: "include",
