@@ -315,7 +315,7 @@ export default function DetailWisataBaliPage() {
             {publicTrips.map((trip, idx) => (
               <Link
                 key={trip.title}
-                href={ROUTES.jelajah}
+                href={idx === 0 ? ROUTES.trip("trip_1") : ROUTES.jelajah}
                 className={`card-surface overflow-hidden ${
                   idx === 2 ? "hidden md:block" : ""
                 }`}

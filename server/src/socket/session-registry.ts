@@ -25,6 +25,10 @@ export class SocketSessionRegistry {
     return (this.socketsByUser.get(userId)?.size ?? 0) > 0;
   }
 
+  socketIds(userId: string): string[] {
+    return [...(this.socketsByUser.get(userId) ?? [])];
+  }
+
   disconnectUser(userId: string, disconnect: (socketId: string) => void) {
     const bucket = this.socketsByUser.get(userId);
     if (!bucket) return 0;

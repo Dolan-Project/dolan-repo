@@ -47,7 +47,18 @@ export function statusForCode(code: string): number {
     case "PROVIDER_UNAVAILABLE":
       return 503;
     case "NOT_FOUND":
+    case "TRIP_NOT_FOUND":
       return 404;
+    case "EMAIL_UNVERIFIED":
+    case "PROFILE_INCOMPLETE":
+    case "NOT_MEMBER":
+    case "NOT_HOST":
+    case "PENDING_MEMBER":
+    case "FORBIDDEN":
+      return 403;
+    case "TRIP_FULL":
+    case "DUPLICATE_REQUEST":
+      return 409;
     default:
       return 400;
   }

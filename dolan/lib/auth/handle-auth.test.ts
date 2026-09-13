@@ -112,8 +112,8 @@ describe("handleLogoutRequest", () => {
 });
 
 describe("handleCallbackRequest", () => {
-  it("redirects to profile edit and sets a pending session cookie", () => {
-    const response = handleCallbackRequest(
+  it("redirects to profile edit and sets a pending session cookie", async () => {
+    const response = await handleCallbackRequest(
       new Request("http://localhost/api/auth/callback?token=valid"),
     );
     expect(response.status).toBe(302);

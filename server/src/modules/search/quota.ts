@@ -1,4 +1,5 @@
 import { SearchErrorCode } from "@dolan/shared";
+import { env } from "../../config/env.ts";
 import { tooManyRequests } from "../../lib/api-error.ts";
 import type { QuotaStore } from "./types.ts";
 
@@ -21,6 +22,7 @@ export class QuotaService {
       period,
       userId,
       limit: operationLimit,
+      estimatedCost: env.placesEstimatedCostPerRequest,
     });
     if (count > operationLimit) {
       throw tooManyRequests(SearchErrorCode.QUOTA_EXCEEDED, "Daily Places quota exceeded");
@@ -37,6 +39,7 @@ export class MemoryQuotaStore implements QuotaStore {
     period: string;
     userId: string | null;
     limit: number;
+    estimatedCost?: number;
   }): Promise<number> {
     const key = `${input.provider}:${input.operation}:${input.period}:${input.userId ?? "guest"}`;
     const next = (this.counts.get(key) ?? 0) + 1;

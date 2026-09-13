@@ -13,6 +13,7 @@ export * from "./schemas/generation.ts";
 export * from "./schemas/search.ts";
 export * from "./schemas/template.ts";
 export * from "./schemas/itinerary.ts";
+export * from "./schemas/trip.ts";
 
 export type { PublicUser } from "./types/kickoff.ts";
 
@@ -40,6 +41,12 @@ export { fieldErrorsFromZod } from "./schemas/zod-fields.ts";
 export type { JoinRequest, JoinReviewDecision } from "./types/join.ts";
 export type { TripComment, ChatMessage } from "./types/chat.ts";
 export {
+  sendMessageSchema,
+  listMessagesQuerySchema,
+  markReadSchema,
+} from "./schemas/chat.ts";
+export type { SendMessageInput } from "./schemas/chat.ts";
+export {
   API_V1_PREFIX,
   EXPRESS_PATHS,
   userByUsernamePath,
@@ -50,4 +57,12 @@ export {
   joinRequestWithdrawPath,
   tripCommentsPath,
   tripMessagesPath,
+  tripClosePath,
+  tripReopenPath,
+  tripStartPath,
+  tripCompletePath,
+  tripCancelPath,
+  tripVisibilityPath,
+  tripLeavePath,
+  tripCommentPath,
 } from "./api/express-paths.ts";

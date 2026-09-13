@@ -68,7 +68,12 @@ export const placeSearchQuerySchema = z.object({
 export const tripSearchQuerySchema = z.object({
   q: optionalString,
   city: optionalString,
-  sort: z.preprocess(singleQueryValue, z.enum(["recent", "popular"]).default("recent")),
+  sort: z.preprocess(
+    singleQueryValue,
+    z.enum(["popular", "nearest", "soonest", "recent"]).default("soonest"),
+  ),
+  lat: optionalCoord,
+  lng: optionalLng,
   dateFrom: optionalString,
   dateTo: optionalString,
   page: pageSchema,

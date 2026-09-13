@@ -6,6 +6,9 @@ import type { AuthAdapter } from "./integrations/supabase/auth-adapter.ts";
 import { MockAuthAdapter } from "./integrations/supabase/mock-auth-adapter.ts";
 import { SupabaseAuthAdapter } from "./integrations/supabase/supabase-auth-adapter.ts";
 import { AuthService } from "./modules/auth/auth-service.ts";
+import { ChatService } from "./modules/chat/chat-service.ts";
+import { MemoryChatStore } from "./modules/chat/memory-chat-store.ts";
+import { SequelizeChatStore } from "./modules/chat/sequelize-chat-store.ts";
 import { SequelizeUserRepository } from "./modules/auth/sequelize-user-repository.ts";
 import { MemoryUserRepository, type UserRepository } from "./modules/auth/user-repository.ts";
 import { GeminiAdapter, MockGeminiAdapter } from "./modules/jobs/gemini-adapter.ts";
@@ -20,6 +23,10 @@ import { MemoryQuotaStore, QuotaService } from "./modules/search/quota.ts";
 import { SearchService } from "./modules/search/search-service.ts";
 import { SequelizeQuotaStore } from "./modules/search/sequelize-quota.ts";
 import { SequelizeSearchStore } from "./modules/search/sequelize-store.ts";
+import { MemoryTripStore } from "./modules/trips/memory-store.ts";
+import { SequelizeTripStore } from "./modules/trips/sequelize-store.ts";
+import { TripService, type TripRealtime } from "./modules/trips/trip-service.ts";
+import { MemorySocialStore, SequelizeSocialStore } from "./modules/social/social-queries.ts";
 
 export function createAuthAdapter(): AuthAdapter {
   if (env.authAdapter === "supabase" && env.supabaseUrl && env.supabaseServiceRoleKey) {
@@ -34,6 +41,10 @@ export function createUserRepository(useDatabase: boolean): UserRepository {
 
 export function createAuthService(users?: UserRepository) {
   return new AuthService(createAuthAdapter(), users ?? new MemoryUserRepository());
+}
+
+export function createChatService(useDatabase: boolean) {
+  return new ChatService(useDatabase ? new SequelizeChatStore() : new MemoryChatStore());
 }
 
 export function createJobService() {
@@ -91,4 +102,22 @@ export function createRuntimeSearchService(databaseReady: boolean) {
       ? new GooglePlacesClient(env.googleMapsServerKey)
       : undefined,
   });
+}
+
+export function createMemoryTripService(store = new MemoryTripStore(), realtime?: TripRealtime) {
+  return new TripService(store, realtime);
+}
+
+export function createProductionTripService(realtime?: TripRealtime) {
+  initModels();
+  return new TripService(new SequelizeTripStore(), realtime);
+}
+
+export function createMemorySocialStore() {
+  return new MemorySocialStore();
+}
+
+export function createProductionSocialStore() {
+  initModels();
+  return new SequelizeSocialStore();
 }

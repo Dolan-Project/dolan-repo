@@ -71,6 +71,11 @@ describe("authorization rules", () => {
     if (!decision.allowed) expect(decision.code).toBe("ACCOUNT_SUSPENDED");
   });
 
+  it("lets login reach join approval so the service can hide unknown trips", () => {
+    const decision = authorize(userActor(), "approve_join");
+    expect(decision.allowed).toBe(true);
+  });
+
   it("allows active participants to read chat", () => {
     const actor = userActor({}, {
       tripId: "trip-1",
