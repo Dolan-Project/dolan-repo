@@ -16,4 +16,12 @@ export const ROUTES = {
   trip: (tripId: string) => `/trip/${tripId}`,
 } as const;
 
+export function tripDetailHref(tripId: string) {
+  return `/trip/${tripId}`;
+}
+
+export function tripEditHref(tripId: string) {
+  return `/trip/${tripId}/edit`;
+}
+
 export type NavKey = "beranda" | "jelajah" | "trip-saya" | "buat-trip" | "profil";

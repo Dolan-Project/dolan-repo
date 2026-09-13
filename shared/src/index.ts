@@ -50,6 +50,7 @@ export {
   userByUsernamePath,
   tripPath,
   tripPublishPath,
+  tripLeavePath,
   tripJoinRequestsPath,
   joinRequestReviewPath,
   joinRequestWithdrawPath,
@@ -61,6 +62,5 @@ export {
   tripCompletePath,
   tripCancelPath,
   tripVisibilityPath,
-  tripLeavePath,
   tripCommentPath,
 } from "./api/express-paths.ts";

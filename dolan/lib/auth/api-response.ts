@@ -61,6 +61,10 @@ export function statusForCode(code: string): number {
     case "TRIP_FULL":
     case "DUPLICATE_REQUEST":
       return 409;
+    case "CAPACITY_BELOW_MEMBERS":
+    case "LEAVE_CONFIRM_REQUIRED":
+    case "INVALID_TRANSITION":
+      return 400;
     default:
       return 400;
   }

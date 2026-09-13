@@ -12,6 +12,24 @@ import {
   handlePatchMeRequest,
   handleUploadRequest,
 } from "@/lib/auth/handle-profile";
+import {
+  handleCreateTripRequest,
+  handleGetTripRequest,
+  handleLeaveTripRequest,
+  handleListMyTripsRequest,
+  handlePublishTripRequest,
+  handleTransitionTripRequest,
+  handleUpdateTripRequest,
+} from "@/lib/auth/handle-trip";
+import {
+  proxyCreateTrip,
+  proxyGetTrip,
+  proxyLeaveTrip,
+  proxyListMyTrips,
+  proxyPublishTrip,
+  proxyTransitionTrip,
+  proxyUpdateTrip,
+} from "@/lib/auth/handle-trip-live";
 import { jsonResult, statusForCode } from "@/lib/auth/api-response";
 import { useMockApi } from "@/lib/auth/use-mock";
 import { createApiError } from "@/mocks/scenarios";
@@ -30,6 +48,15 @@ export async function withMockOrUnavailable(
     );
   }
   return handle(request);
+}
+
+async function withMockOrExpress(
+  request: Request,
+  mock: (request: Request) => Promise<Response> | Response,
+  live: (request: Request) => Promise<Response>,
+): Promise<Response> {
+  if (useMockApi()) return mock(request);
+  return live(request);
 }
 
 export const authRouteHandlers = {
@@ -66,4 +93,41 @@ export const profileRouteHandlers = {
     withMockOrUnavailable(request, (req) => handleUploadRequest(req, "cover")),
   byUsername: (request: Request, username: string) =>
     withMockOrUnavailable(request, () => handleGetPublicProfileRequest(username)),
+};
+
+export const tripRouteHandlers = {
+  create: (request: Request) =>
+    withMockOrExpress(request, handleCreateTripRequest, proxyCreateTrip),
+  listMine: (request: Request) =>
+    withMockOrExpress(request, handleListMyTripsRequest, proxyListMyTrips),
+  get: (request: Request, tripId: string) =>
+    withMockOrExpress(
+      request,
+      (req) => handleGetTripRequest(req, tripId),
+      (req) => proxyGetTrip(req, tripId),
+    ),
+  update: (request: Request, tripId: string) =>
+    withMockOrExpress(
+      request,
+      (req) => handleUpdateTripRequest(req, tripId),
+      (req) => proxyUpdateTrip(req, tripId),
+    ),
+  publish: (request: Request, tripId: string) =>
+    withMockOrExpress(
+      request,
+      (req) => handlePublishTripRequest(req, tripId),
+      (req) => proxyPublishTrip(req, tripId),
+    ),
+  leave: (request: Request, tripId: string) =>
+    withMockOrExpress(
+      request,
+      (req) => handleLeaveTripRequest(req, tripId),
+      (req) => proxyLeaveTrip(req, tripId),
+    ),
+  transition: (request: Request, tripId: string) =>
+    withMockOrExpress(
+      request,
+      (req) => handleTransitionTripRequest(req, tripId),
+      (req) => proxyTransitionTrip(req, tripId),
+    ),
 };
