@@ -8,6 +8,7 @@ import type {
   TripViewerRole,
 } from "@/lib/contracts";
 import { sampleOtherUser, samplePublicUser } from "./fixtures";
+import { meetingPointFor, resolveGeoPlace } from "./geo";
 import { createApiError, type MockScenario } from "./scenarios";
 
 const idempotentCreates = new Map<string, string>();
@@ -33,6 +34,8 @@ function buildDetail(input: SeedInput): TripDetail {
   const meetingPoint =
     input.meetingPoint ?? input.publicMeetingPointLabel ?? null;
   const transport = input.transport ?? input.transportMode ?? "Darat";
+  const originPlace = resolveGeoPlace(origin);
+  const meeting = meetingPointFor(meetingPoint, input.destinationCity);
   return {
     id: input.id,
     title: input.title,
@@ -50,11 +53,15 @@ function buildDetail(input: SeedInput): TripDetail {
     planningPartySize: input.planningPartySize ?? 1,
     maxParticipants: input.maxParticipants ?? null,
     publicMeetingPointLabel: meetingPoint,
-    publicMeetingPointLatitude: input.publicMeetingPointLatitude ?? null,
-    publicMeetingPointLongitude: input.publicMeetingPointLongitude ?? null,
+    publicMeetingPointLatitude:
+      meeting?.latitude ?? input.publicMeetingPointLatitude ?? null,
+    publicMeetingPointLongitude:
+      meeting?.longitude ?? input.publicMeetingPointLongitude ?? null,
     privateOriginLabel: origin,
-    privateOriginLatitude: input.privateOriginLatitude ?? null,
-    privateOriginLongitude: input.privateOriginLongitude ?? null,
+    privateOriginLatitude:
+      originPlace?.latitude ?? input.privateOriginLatitude ?? null,
+    privateOriginLongitude:
+      originPlace?.longitude ?? input.privateOriginLongitude ?? null,
     preferences: input.preferences ?? null,
     host: input.host,
     viewerRole: input.viewerRole,

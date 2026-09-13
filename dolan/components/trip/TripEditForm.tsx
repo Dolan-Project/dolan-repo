@@ -2,10 +2,13 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Field } from "@/components/auth/Field";
+import { PlacePicker } from "@/components/trip/PlacePicker";
+import { TripBoardMap } from "@/components/trip/TripBoardMap";
 import type { ApiError, CreateTripInput, TripDetail } from "@/lib/contracts";
 import { tripDetailHref } from "@/lib/routes";
+import { meetingPointFor, resolveGeoPlace } from "@/mocks/geo";
 
 const activities = [
   "Snorkeling",
@@ -99,6 +102,39 @@ export function TripEditForm({ tripId }: { tripId: string }) {
     void load();
     return () => ac.abort();
   }, [tripId]);
+
+  const previewMarkers = useMemo(() => {
+    const markers: {
+      id: string;
+      label: string;
+      latitude: number;
+      longitude: number;
+      selected?: boolean;
+      tone: "origin" | "meeting";
+    }[] = [];
+    const originPlace = resolveGeoPlace(origin);
+    if (originPlace) {
+      markers.push({
+        id: "origin",
+        label: originPlace.label,
+        latitude: originPlace.latitude,
+        longitude: originPlace.longitude,
+        tone: "origin",
+      });
+    }
+    const meeting = meetingPointFor(meetingPoint, destinationCity);
+    if (visibility === "PUBLIC" && meeting) {
+      markers.push({
+        id: "meeting",
+        label: meetingPoint || destinationCity || "Titik temu",
+        latitude: meeting.latitude,
+        longitude: meeting.longitude,
+        selected: true,
+        tone: "meeting",
+      });
+    }
+    return markers;
+  }, [origin, meetingPoint, destinationCity, visibility]);
 
   function payload(): CreateTripInput {
     return {
@@ -205,14 +241,15 @@ export function TripEditForm({ tripId }: { tripId: string }) {
           />
         </Field>
         <div className="grid gap-4 md:grid-cols-2">
-          <Field id="origin" label="Asal / titik keberangkatan" error={fieldErrors.origin}>
-            <input
-              id="origin"
-              className="field-input"
-              value={origin}
-              onChange={(e) => setOrigin(e.target.value)}
-            />
-          </Field>
+          <PlacePicker
+            id="origin"
+            label="Asal / titik keberangkatan"
+            value={origin}
+            onChange={setOrigin}
+            error={fieldErrors.origin}
+            placeholder="Cari kota atau bandara"
+            hint="Asal pribadi tidak dipakai sebagai titik temu publik."
+          />
           <Field
             id="destinationCity"
             label="Destinasi utama"
@@ -226,6 +263,9 @@ export function TripEditForm({ tripId }: { tripId: string }) {
             />
           </Field>
         </div>
+        {previewMarkers.length > 0 ? (
+          <TripBoardMap compact markers={previewMarkers} />
+        ) : null}
         <div className="grid gap-4 md:grid-cols-2">
           <Field id="startDate" label="Tanggal mulai" error={fieldErrors.startDate}>
             <input
@@ -372,19 +412,18 @@ export function TripEditForm({ tripId }: { tripId: string }) {
                 onChange={(e) => setMaxParticipants(Number(e.target.value))}
               />
             </Field>
-            <Field
+            <PlacePicker
               id="meetingPoint"
               label="Titik temu publik"
-              hint="Jangan salin alamat/asal pribadi."
+              value={meetingPoint}
+              onChange={setMeetingPoint}
+              excludeLabel={origin}
               error={fieldErrors.meetingPoint}
-            >
-              <input
-                id="meetingPoint"
-                className="field-input"
-                value={meetingPoint}
-                onChange={(e) => setMeetingPoint(e.target.value)}
-              />
-            </Field>
+              hint="Jangan salin alamat/asal pribadi."
+            />
+            {previewMarkers.length > 0 ? (
+              <TripBoardMap compact markers={previewMarkers} />
+            ) : null}
             <Field id="companionNote" label="Catatan untuk rekan jalan">
               <textarea
                 id="companionNote"

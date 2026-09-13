@@ -3,9 +3,11 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { Icon } from "@/components/ui/Icon";
+import { TripBoardMap } from "@/components/trip/TripBoardMap";
 import type { ApiError, MyTripRole, TripSummary } from "@/lib/contracts";
 import { ASSETS } from "@/lib/assets";
 import { ROUTES, tripDetailHref } from "@/lib/routes";
+import { meetingPointFor } from "@/mocks/geo";
 
 const tabs: { id: MyTripRole; label: string }[] = [
   { id: "hosted", label: "Dibuat" },
@@ -14,28 +16,6 @@ const tabs: { id: MyTripRole; label: string }[] = [
 ];
 
 type SheetPos = "collapsed" | "half" | "expanded";
-
-const CITY_MARKERS: Record<string, { left: string; top: string }> = {
-  Yogyakarta: { left: "38%", top: "62%" },
-  Lombok: { left: "68%", top: "54%" },
-  Karimunjawa: { left: "44%", top: "36%" },
-  Bromo: { left: "52%", top: "48%" },
-  "Labuan Bajo": { left: "74%", top: "58%" },
-  Dieng: { left: "34%", top: "50%" },
-};
-
-function markerPos(city: string): { left: string; top: string } {
-  const known = CITY_MARKERS[city];
-  if (known) return known;
-  let hash = 0;
-  for (let i = 0; i < city.length; i += 1) {
-    hash = (hash + city.charCodeAt(i) * 17) % 100;
-  }
-  return {
-    left: `${18 + (hash % 62)}%`,
-    top: `${22 + ((hash * 3) % 48)}%`,
-  };
-}
 
 function coverFor(city: string) {
   const key = city.toLowerCase();
@@ -104,6 +84,43 @@ export function MyTripsBoard() {
     [rows, selectedId],
   );
 
+  const mapMarkers = useMemo(
+    () =>
+      rows.flatMap((trip) => {
+        const point = meetingPointFor(
+          trip.publicMeetingPointLabel,
+          trip.destinationCity,
+        );
+        if (
+          trip.publicMeetingPointLatitude == null ||
+          trip.publicMeetingPointLongitude == null
+        ) {
+          if (!point) return [];
+          return [
+            {
+              id: trip.id,
+              label: trip.publicMeetingPointLabel || trip.destinationCity || trip.title,
+              latitude: point.latitude,
+              longitude: point.longitude,
+              selected: trip.id === selected?.id,
+              tone: "meeting" as const,
+            },
+          ];
+        }
+        return [
+          {
+            id: trip.id,
+            label: trip.publicMeetingPointLabel || trip.destinationCity || trip.title,
+            latitude: trip.publicMeetingPointLatitude,
+            longitude: trip.publicMeetingPointLongitude,
+            selected: trip.id === selected?.id,
+            tone: "meeting" as const,
+          },
+        ];
+      }),
+    [rows, selected?.id],
+  );
+
   function selectTrip(id: string) {
     setSelectedId(id);
     setSheet((current) => (current === "expanded" ? "half" : current));
@@ -119,7 +136,7 @@ export function MyTripsBoard() {
             </p>
             <h1 className="type-title text-on-surface">Trip Saya</h1>
             <p className="type-caption text-on-surface-variant">
-              Pilih trip untuk geser marker. Pending ada di Pengajuan, belum peserta.
+              Pilih trip untuk menyorot titik temu publik di peta. Pending ada di Pengajuan, belum peserta.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -153,46 +170,8 @@ export function MyTripsBoard() {
       </div>
 
       <div className="relative flex min-h-0 flex-1">
-        <div
-          className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: `url('${ASSETS.mapBali}')` }}
-        >
-          <div className="absolute inset-0 bg-linear-to-b from-surface/20 via-transparent to-surface/40" />
-          {rows.map((trip) => {
-            const pos = markerPos(trip.destinationCity);
-            const active = trip.id === selected?.id;
-            return (
-              <button
-                key={trip.id}
-                type="button"
-                onClick={() => selectTrip(trip.id)}
-                className="pointer-events-auto absolute z-10 -translate-x-1/2 -translate-y-1/2"
-                style={{ left: pos.left, top: pos.top }}
-                aria-label={`Pilih ${trip.title}`}
-              >
-                {active ? (
-                  <span className="absolute inset-0 animate-ping rounded-full bg-primary-container/30" />
-                ) : null}
-                <span
-                  className={`relative flex max-w-48 items-center gap-1.5 rounded-full p-1 pr-2.5 shadow-lg ${
-                    active
-                      ? "bg-primary text-on-primary"
-                      : "bg-surface-container-lowest text-on-surface"
-                  }`}
-                >
-                  <span
-                    className={`h-7 w-7 rounded-full bg-cover bg-center ring-2 ${
-                      active ? "ring-on-primary" : "ring-primary-container"
-                    }`}
-                    style={{ backgroundImage: `url('${coverFor(trip.destinationCity)}')` }}
-                  />
-                  <span className="type-micro truncate">
-                    {trip.destinationCity || trip.title}
-                  </span>
-                </span>
-              </button>
-            );
-          })}
+        <div className="absolute inset-0">
+          <TripBoardMap markers={mapMarkers} onSelect={selectTrip} />
         </div>
 
         <div className="relative z-10 flex-1 pointer-events-none" />
@@ -203,7 +182,7 @@ export function MyTripsBoard() {
               {rows.length} trip di tab {tabs.find((item) => item.id === tab)?.label}
             </p>
             <p className="type-caption text-on-surface-variant">
-              Peta kiri · daftar kanan · mock marker, bukan Google Places
+              Peta kiri · daftar kanan · titik temu publik
             </p>
           </div>
           <div className="flex-1 space-y-2.5 overflow-y-auto p-4">
