@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import type { ApiError, TripDetail } from "@/lib/contracts";
 import { ROUTES, tripEditHref } from "@/lib/routes";
 import { TripBoardMap, type TripMapMarker } from "./TripBoardMap";
+import { TripExperience } from "./TripExperience";
 
 function isVisitorRole(role: TripDetail["viewerRole"]) {
   return role === "none" || role === "visitor";
@@ -48,7 +49,15 @@ function detailMarkers(trip: TripDetail): TripMapMarker[] {
   return markers;
 }
 
-export function TripDetailView({ tripId }: { tripId: string }) {
+export function TripDetailView({
+  tripId,
+  isLoggedIn,
+  emailVerified,
+}: {
+  tripId: string;
+  isLoggedIn: boolean;
+  emailVerified: boolean;
+}) {
   const router = useRouter();
   const [trip, setTrip] = useState<TripDetail | null>(null);
   const [error, setError] = useState("");
@@ -311,12 +320,17 @@ export function TripDetailView({ tripId }: { tripId: string }) {
             keluar sebagai anggota.
           </p>
         ) : null}
-        {visitor ? (
-          <p className="type-caption text-on-surface-variant">
-            Join gratis. Kamu bisa baca detail trip ini tanpa masuk.
-          </p>
-        ) : null}
       </div>
+      {trip.visibility === "PUBLIC" ? (
+        <div className="mt-8">
+          <TripExperience
+            tripId={trip.id}
+            isLoggedIn={isLoggedIn}
+            emailVerified={emailVerified}
+            hideHero
+          />
+        </div>
+      ) : null}
       <Link
         href={visitor ? ROUTES.beranda : ROUTES.tripSaya}
         className="type-label mt-8 inline-block text-primary"
