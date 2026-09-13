@@ -5,9 +5,12 @@ import { createApp } from "./app.ts";
 import {
   createAuthAdapter,
   createChatService,
+  createItineraryExportService,
   createJobService,
+  createLocationService,
   createProductionJobService,
   createProductionSearchService,
+  createShareLinkService,
   createUserRepository,
 } from "./container.ts";
 import { logger } from "./lib/logger.ts";
@@ -42,6 +45,9 @@ async function main() {
     databaseReady ? createProductionSearchService() : undefined,
     jobService,
     chatService,
+    createLocationService(chatService, databaseReady),
+    createShareLinkService(chatService, databaseReady),
+    createItineraryExportService(chatService, databaseReady),
   );
 
   httpServer.on("request", app);

@@ -23,6 +23,14 @@ import { MemoryQuotaStore, QuotaService } from "./modules/search/quota.ts";
 import { SearchService } from "./modules/search/search-service.ts";
 import { SequelizeQuotaStore } from "./modules/search/sequelize-quota.ts";
 import { SequelizeSearchStore } from "./modules/search/sequelize-store.ts";
+import { ItineraryExportService } from "./modules/location/itinerary-export.ts";
+import { loadExportItinerary } from "./modules/location/load-export-itinerary.ts";
+import { loadTripPreview } from "./modules/location/load-trip-preview.ts";
+import { LocationService } from "./modules/location/location-service.ts";
+import { MemoryLocationStore } from "./modules/location/memory-location-store.ts";
+import { SequelizeLocationStore } from "./modules/location/sequelize-location-store.ts";
+import { SequelizeShareLinkStore } from "./modules/location/sequelize-share-link-store.ts";
+import { MemoryShareLinkStore, ShareLinkService } from "./modules/location/share-link-service.ts";
 
 export function createAuthAdapter(): AuthAdapter {
   if (env.authAdapter === "supabase" && env.supabaseUrl && env.supabaseServiceRoleKey) {
@@ -70,6 +78,30 @@ export function createProductionJobService(onJobUpdated?: JobServiceOptions["onJ
       onJobUpdated,
     },
   );
+}
+
+export function createLocationService(chat: ChatService, useDatabase: boolean) {
+  return new LocationService(useDatabase ? new SequelizeLocationStore() : new MemoryLocationStore(), chat);
+}
+
+export function createShareLinkService(chat: ChatService, useDatabase: boolean) {
+  return new ShareLinkService(
+    useDatabase ? new SequelizeShareLinkStore() : new MemoryShareLinkStore(),
+    chat,
+    useDatabase
+      ? loadTripPreview
+      : async (tripId) => ({
+          title: `Trip ${tripId}`,
+          destinationCity: "Yogyakarta",
+          startDate: "2026-10-01",
+          endDate: "2026-10-03",
+          summary: "Ringkasan publik",
+        }),
+  );
+}
+
+export function createItineraryExportService(chat: ChatService, useDatabase: boolean) {
+  return new ItineraryExportService(chat, useDatabase ? loadExportItinerary : async () => null);
 }
 
 export function createMemorySearchService(options?: {

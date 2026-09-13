@@ -1,5 +1,7 @@
-export const STALE_AFTER_MS = 2 * 60 * 1000;
-export const HIDE_AFTER_MS = 10 * 60 * 1000;
+import { env } from "../../config/env.ts";
+
+export const STALE_AFTER_MS = env.locationStaleSeconds * 1000;
+export const HIDE_AFTER_MS = env.locationHideSeconds * 1000;
 export const ONE_HOUR_MS = 60 * 60 * 1000;
 const APPROX_DECIMALS = 2;
 

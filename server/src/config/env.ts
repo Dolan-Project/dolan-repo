@@ -27,6 +27,11 @@ export const env = {
   jobRetryBackoffMs: Number(process.env.JOB_RETRY_BACKOFF_MS ?? 2000),
   geminiApiKey: process.env.GEMINI_API_KEY ?? "",
   geminiModel: process.env.GEMINI_MODEL ?? "gemini-2.0-flash",
+  apiUrl: process.env.API_URL ?? "http://localhost:4000",
+  locationStaleSeconds: Number(process.env.LOCATION_STALE_SECONDS ?? 120),
+  locationHideSeconds: Number(process.env.LOCATION_HIDE_SECONDS ?? 600),
+  shareTokenSecret: process.env.SHARE_TOKEN_SECRET ?? "dev-share-token-secret",
+  shareLinkTtlHours: Number(process.env.SHARE_LINK_TTL_HOURS ?? 168),
 };
 
 export function isProduction(): boolean {

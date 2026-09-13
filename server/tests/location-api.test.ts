@@ -7,7 +7,8 @@ import { AuthService } from "../src/modules/auth/auth-service.ts";
 import { ChatService } from "../src/modules/chat/chat-service.ts";
 import { MemoryChatStore } from "../src/modules/chat/memory-chat-store.ts";
 import { MemoryUserRepository } from "../src/modules/auth/user-repository.ts";
-import { LocationService, MemoryLocationStore } from "../src/modules/location/location-service.ts";
+import { LocationService } from "../src/modules/location/location-service.ts";
+import { MemoryLocationStore } from "../src/modules/location/memory-location-store.ts";
 
 const HOST = "11111111-1111-4111-8111-111111111111";
 const MEMBER = "44444444-4444-4444-8444-444444444444";

@@ -12,8 +12,11 @@ import type { AuthService } from "./modules/auth/auth-service.ts";
 import { createChatRouter } from "./modules/chat/chat-routes.ts";
 import { ChatService } from "./modules/chat/chat-service.ts";
 import { MemoryChatStore } from "./modules/chat/memory-chat-store.ts";
+import { ItineraryExportService } from "./modules/location/itinerary-export.ts";
 import { createLocationRouter } from "./modules/location/location-routes.ts";
-import { LocationService, MemoryLocationStore } from "./modules/location/location-service.ts";
+import { LocationService } from "./modules/location/location-service.ts";
+import { MemoryLocationStore } from "./modules/location/memory-location-store.ts";
+import { MemoryShareLinkStore, ShareLinkService } from "./modules/location/share-link-service.ts";
 import { createJobRouter } from "./modules/jobs/job-routes.ts";
 import type { GenerationJobService } from "./modules/jobs/job-service.ts";
 import { createSearchRouter } from "./modules/search/search-routes.ts";
@@ -26,6 +29,16 @@ export function createApp(
   jobService: GenerationJobService = createJobService(),
   chatService: ChatService = new ChatService(new MemoryChatStore()),
   locationService: LocationService = new LocationService(new MemoryLocationStore(), chatService),
+  shareLinkService: ShareLinkService = new ShareLinkService(new MemoryShareLinkStore(), chatService, async (tripId) => ({
+    title: `Trip ${tripId}`,
+    destinationCity: "Yogyakarta",
+    startDate: "2026-10-01",
+    endDate: "2026-10-03",
+    summary: "Ringkasan publik",
+    privateOriginLabel: "SECRET_HOME",
+    email: "hidden@example.com",
+  })),
+  itineraryExport: ItineraryExportService = new ItineraryExportService(chatService, async () => null),
 ) {
   const app = express();
   app.disable("x-powered-by");
@@ -53,7 +66,7 @@ export function createApp(
   app.use("/api/v1", createSearchRouter(search));
   app.use("/api/v1", createJobRouter(jobService));
   app.use("/api/v1", createChatRouter(chatService));
-  app.use("/api/v1", createLocationRouter(locationService));
+  app.use("/api/v1", createLocationRouter(locationService, shareLinkService, itineraryExport));
 
   app.get("/api/v1/public/ping", requireCapability("read_public"), (_req, res) => {
     res.json(apiSuccess({ ok: true }));
