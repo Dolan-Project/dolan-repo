@@ -319,13 +319,14 @@ Offline: itinerary yang diunduh bisa dibaca, dengan waktu sinkronisasi. Search, 
 | Peta/data | Google Maps JavaScript, Places New, Photos, Routes, Maps URLs | Tempat, peta, perjalanan, navigasi |
 | AI | Gemini API sebagai kandidat | Rekomendasi dan keluaran terstruktur; model belum dikunci |
 | Worker | Worker Node terpisah dengan job tersimpan | Generate, retry terbatas, pembuatan PDF bila perlu |
-| File | Object storage kompatibel S3 atau pilihan tim | Avatar, cover, unggahan, PDF |
+| Media pengguna | ImageKit | Avatar, cover, transformasi ukuran, dan gambar unggahan pengguna |
+| Dokumen | Object storage pilihan tim | PDF itinerary dan dokumen non-gambar |
 | Email | Penyedia transactional pilihan tim | Verifikasi/reset password |
 | PDF | React-pdf atau renderer setara setelah uji | Dokumen itinerary |
 | PWA | Manifest, service worker, IndexedDB, Web Push | Instalasi, offline terpilih, notifikasi |
 | Deployment | Dikelola tim, di luar anggaran API | Hosting client/server, database, worker, storage |
 
-Supabase boleh dipilih sebagai penyedia PostgreSQL/Auth/Storage bila sesuai hosting tim, tetapi Supabase Realtime tidak diperlukan. Pilihan auth terkelola versus sesi sendiri harus dikunci sebelum implementasi auth; jangan menjalankan dua sistem identitas paralel.
+Supabase dipakai untuk PostgreSQL dan Auth, sedangkan ImageKit menjadi penyedia media pengguna. Upload avatar dan cover tetap masuk melalui endpoint Express agar server memvalidasi pemilik, MIME, ukuran, dan menyimpan `fileId` serta URL hasil upload; private key ImageKit tidak boleh berada di client. Supabase Realtime tidak diperlukan dan aplikasi tidak menjalankan dua sistem identitas paralel.
 
 ### 7.1 Batas tanggung jawab
 
@@ -363,7 +364,7 @@ Gunakan UUID sebagai ID internal dan timestamp dengan zona waktu untuk kejadian.
 | Kelompok/tabel | Kolom inti |
 | --- | --- |
 | users | id, email, auth_reference/password_hash sesuai auth terpilih, role, status, email_verified_at |
-| user_profiles | user_id, username, display_name, avatar_url, cover_url, cover_caption, bio, domicile |
+| user_profiles | user_id, username, display_name, avatar_url, avatar_file_id, cover_url, cover_file_id, cover_caption, bio, domicile |
 | sessions/auth_tokens | user_id, token_hash, expires_at, revoked_at; ditangani penyedia bila managed |
 | places | id, google_place_id unik, status |
 | trips | id, host_user_id, title, description, visibility, status, dates, timezone, private_origin, public_meeting_point, transport_mode, budget_amount, budget_basis, currency, planning_party_size, max_participants, current_itinerary_version_id |

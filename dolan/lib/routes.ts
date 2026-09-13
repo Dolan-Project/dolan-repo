@@ -15,3 +15,5 @@ export const ROUTES = {
 } as const;
 
 export type NavKey = "beranda" | "jelajah" | "trip-saya" | "buat-trip" | "profil";
+
+export const tripItineraryPath = (tripId: string) => `/trip-saya/${encodeURIComponent(tripId)}/itinerary`;

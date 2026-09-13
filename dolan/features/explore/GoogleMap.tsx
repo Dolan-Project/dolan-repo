@@ -20,6 +20,7 @@ type GoogleMapProps = {
   zoomCommand?: { id: number; delta: 1 | -1 } | null;
   searchOverlay?: boolean;
   className?: string;
+  showRoute?: boolean;
 };
 
 declare global {
@@ -29,6 +30,7 @@ declare global {
       maps: {
         Map: new (node: HTMLElement, options: Record<string, unknown>) => GoogleMapInstance;
         Marker: new (options: Record<string, unknown>) => GoogleMarker;
+        Polyline: new (options: Record<string, unknown>) => GooglePolyline;
         LatLngBounds: new () => GoogleBounds;
         Point: new (x: number, y: number) => object;
         event: { clearInstanceListeners(instance: object): void };
@@ -52,6 +54,7 @@ type GoogleMarker = {
   setZIndex(zIndex: number | null): void;
   addListener(event: string, handler: () => void): { remove(): void };
 };
+type GooglePolyline = { setMap(map: GoogleMapInstance | null): void };
 type GoogleBounds = {
   extend(position: { lat: number; lng: number }): void;
 };
@@ -94,11 +97,13 @@ export function GoogleMap({
   zoomCommand,
   searchOverlay = false,
   className = "",
+  showRoute = false,
 }: GoogleMapProps) {
   const nodeRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<GoogleMapInstance | null>(null);
   const markersRef = useRef(new Map<string, GoogleMarker>());
   const locationMarkerRef = useRef<GoogleMarker | null>(null);
+  const routeRef = useRef<GooglePolyline | null>(null);
   const [mapReady, setMapReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_KEY ?? "";
@@ -140,6 +145,8 @@ export function GoogleMap({
       }
       locationMarkerRef.current?.setMap(null);
       locationMarkerRef.current = null;
+      routeRef.current?.setMap(null);
+      routeRef.current = null;
       mapRef.current = null;
       setMapReady(false);
     };
@@ -201,7 +208,16 @@ export function GoogleMap({
       map.panTo({ lat: points[0]!.lat, lng: points[0]!.lng });
       map.setZoom(14);
     }
-  }, [mapReady, onSelect, points]);
+    routeRef.current?.setMap(null);
+    routeRef.current = showRoute && points.length > 1 ? new maps.Polyline({
+      map,
+      path: points.map((point) => ({ lat: point.lat, lng: point.lng })),
+      geodesic: true,
+      strokeColor: "#fe893c",
+      strokeOpacity: 0.95,
+      strokeWeight: 5,
+    }) : null;
+  }, [mapReady, onSelect, points, showRoute]);
 
   useEffect(() => {
     const point = points.find((item) => item.id === selectedId);
