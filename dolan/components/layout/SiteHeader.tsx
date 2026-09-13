@@ -55,7 +55,7 @@ export function SiteHeader({
           : "border-b border-white/60 bg-white/82 shadow-[0_8px_30px_rgba(15,59,94,.08)] backdrop-blur-xl"
       }`}
     >
-      <div className="mx-auto flex h-14 max-w-[1200px] items-center justify-between gap-3 px-margin md:h-16 md:px-margin-desktop">
+      <div className="mx-auto flex h-14 max-w-[1240px] items-center justify-between gap-3 px-margin md:h-16 md:px-margin-desktop lg:grid lg:grid-cols-3">
         <div className="flex min-w-0 items-center gap-6">
           <Link href={ROUTES.beranda} className="flex items-center gap-2">
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -69,28 +69,23 @@ export function SiteHeader({
             </span>
           </Link>
 
-          <nav className="hidden items-center gap-1 lg:flex">
-            {desktopLinks.map((link) => {
-              const active = isActive(pathname, link.key);
-              return (
-                <Link
-                  key={link.key}
-                  href={link.href}
-                  aria-current={active ? "page" : undefined}
-                  className={
-                    active
-                      ? "type-label rounded-full bg-surface-container-low px-3.5 py-2 text-primary"
-                      : "type-label rounded-full px-3.5 py-2 text-on-surface-variant transition-colors hover:bg-surface-container-low hover:text-on-surface"
-                  }
-                >
-                  {link.label}
-                </Link>
-              );
-            })}
-          </nav>
         </div>
 
-        <div className="flex items-center gap-2 md:gap-3">
+        <nav className="hidden items-center justify-center gap-1 lg:flex">
+          {desktopLinks.map((link) => {
+            const active = isActive(pathname, link.key);
+            return (
+              <Link
+                key={link.key}
+                href={link.href}
+                aria-current={active ? "page" : undefined}
+                className={active ? "type-label rounded-full bg-surface-container-low px-3.5 py-2 text-primary" : "type-label rounded-full px-3.5 py-2 text-on-surface-variant transition-colors hover:bg-surface-container-low hover:text-on-surface"}
+              >{link.label}</Link>
+            );
+          })}
+        </nav>
+
+        <div className="flex items-center justify-end gap-2 md:gap-3">
           <Link
             href={ROUTES.notifikasi}
             aria-label={unreadCount > 0 ? `Notifikasi, ${unreadCount} belum dibaca` : "Notifikasi"}
