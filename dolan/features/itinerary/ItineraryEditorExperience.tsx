@@ -6,6 +6,8 @@ import { Icon } from "@/components/ui/Icon";
 import { findScheduleConflicts, generateAlternative, getItineraryEditor, saveItineraryVersion } from "./api";
 import { INITIAL_BUDGET_ITEMS, PLACE_CANDIDATES } from "./mock-data";
 import { RoutePreview } from "./RoutePreview";
+import { SaveOfflineItineraryButton } from "@/components/offline/SaveOfflineItineraryButton";
+import { tripItineraryPath } from "@/lib/routes";
 
 type Tab = "itinerary" | "budget" | "checklist";
 type Notice = { tone: "success" | "error" | "info"; text: string } | null;
@@ -157,6 +159,11 @@ export function ItineraryEditorExperience({ tripId }: { tripId: string }) {
             {snapshot.versions.map((version) => <option key={version.id} value={version.id}>Versi {version.versionNumber} · {version.source}{version.id === snapshot.activeVersionId ? " · Aktif" : ""}</option>)}
           </select>
           <button type="button" onClick={generate} disabled={generating} className="btn-primary"><Icon name="rocket_launch" /> {generating ? "Mengoptimalkan…" : "Optimalkan dengan AI"}</button>
+          <SaveOfflineItineraryButton
+            id={tripId}
+            title={snapshot.tripTitle}
+            path={tripItineraryPath(tripId)}
+          />
           <button type="button" onClick={() => setNotice({ tone: "info", text: "Tutup slot akan tersedia setelah endpoint status trip terhubung." })} className="rounded-full border border-outline-variant bg-white px-4 py-3 type-label text-on-surface-variant hover:border-primary hover:text-primary"><Icon name="lock" /> Tutup Slot</button>
           <button type="button" onClick={() => setNotice({ tone: "info", text: "Hapus trip memerlukan konfirmasi dan endpoint trip terhubung." })} className="rounded-full border border-error/30 bg-white px-4 py-3 type-label text-error hover:bg-error-container"><Icon name="delete" /> Hapus Trip</button>
         </div>

@@ -84,4 +84,24 @@ export class AuthService {
     if (!user) throw notFound("NOT_FOUND", "Pengguna tidak ditemukan");
     return this.toPublicUser(user);
   }
+
+  async resolveUser(usernameOrId: string) {
+    const byId = await this.users.findById(usernameOrId);
+    if (byId) return byId;
+    const byUsername = await this.users.findByUsername(usernameOrId);
+    if (!byUsername) throw notFound("NOT_FOUND", "Pengguna tidak ditemukan");
+    return byUsername;
+  }
+
+  async publicListItem(userId: string) {
+    const user = await this.users.findById(userId);
+    if (!user) return null;
+    const publicUser = this.toPublicUser(user);
+    return {
+      id: publicUser.id,
+      username: publicUser.username,
+      displayName: publicUser.displayName,
+      avatarUrl: publicUser.avatarUrl,
+    };
+  }
 }

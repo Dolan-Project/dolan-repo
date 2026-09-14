@@ -100,8 +100,32 @@ function detailToSummary(detail: TripDetail): MyTripSummary {
   };
 }
 
+function ensureCompletedJoinedTrip() {
+  if (trips.has("trip_completed")) return;
+  const joined = trips.get("trip_joined");
+  if (!joined) return;
+  const completed = buildDetail({
+    ...joined,
+    id: "trip_completed",
+    title: "Sailing Komodo selesai",
+    host: sampleOtherUser,
+    destinationCity: "Labuan Bajo",
+    status: "COMPLETED",
+    startDate: "2026-08-01",
+    endDate: "2026-08-04",
+    meetingPoint: "Pelabuhan Labuan Bajo",
+    viewerRole: "participant",
+    activeParticipantCount: 2,
+  });
+  trips.set(completed.id, completed);
+  roles.set(completed.id, "participant");
+}
+
 function seed() {
-  if (trips.has("trip_1")) return;
+  if (trips.has("trip_1")) {
+    ensureCompletedJoinedTrip();
+    return;
+  }
   const hosted = buildDetail({
     id: "trip_1",
     title: "Jelajah Yogyakarta",
@@ -223,6 +247,7 @@ function seed() {
   roles.set(closed.id, "host");
   roles.set(privateTrip.id, "host");
   roles.set(hostedSocial.id, "host");
+  ensureCompletedJoinedTrip();
 }
 
 export function mockListMyTrips(

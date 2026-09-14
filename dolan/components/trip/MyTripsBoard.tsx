@@ -4,9 +4,10 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { Icon } from "@/components/ui/Icon";
 import { TripBoardMap } from "@/components/trip/TripBoardMap";
-import type { ApiError, MyTripRole, TripSummary } from "@/lib/contracts";
+import { AttendanceConfirm } from "@/components/trips/AttendanceConfirm";
+import type { ApiError, MyTripRole, MyTripSummary } from "@/lib/contracts";
 import { ASSETS } from "@/lib/assets";
-import { ROUTES, tripDetailHref } from "@/lib/routes";
+import { ROUTES, tripDetailHref, tripItineraryPath } from "@/lib/routes";
 import { meetingPointFor } from "@/mocks/geo";
 
 const tabs: { id: MyTripRole; label: string }[] = [
@@ -35,7 +36,7 @@ function nextSheet(pos: SheetPos): SheetPos {
 
 export function MyTripsBoard() {
   const [tab, setTab] = useState<MyTripRole>("hosted");
-  const [rows, setRows] = useState<TripSummary[]>([]);
+  const [rows, setRows] = useState<MyTripSummary[]>([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -54,7 +55,7 @@ export function MyTripsBoard() {
           signal: ac.signal,
         });
         const json = (await response.json()) as
-          | { success: true; data: TripSummary[] }
+          | { success: true; data: MyTripSummary[] }
           | ApiError;
         if (ac.signal.aborted) return;
         if (!json.success) {
@@ -285,7 +286,7 @@ function TripCard({
   selected,
   onSelect,
 }: {
-  trip: TripSummary;
+  trip: MyTripSummary;
   tab: MyTripRole;
   selected: boolean;
   onSelect: () => void;
@@ -324,12 +325,29 @@ function TripCard({
           </p>
         </div>
       </button>
-      <Link
-        href={tripDetailHref(trip.id)}
-        className="btn-brand mt-2 !min-h-9 !px-4 !text-[0.8125rem]"
-      >
-        Buka detail
-      </Link>
+      <div className="mt-2 flex flex-wrap gap-2">
+        <Link
+          href={tripDetailHref(trip.id)}
+          className="btn-brand !min-h-9 !px-4 !text-[0.8125rem]"
+        >
+          Buka detail
+        </Link>
+        {tab !== "pending" ? (
+          <Link
+            href={tripItineraryPath(trip.id)}
+            className="btn-ghost !min-h-9 !px-4 !text-[0.8125rem]"
+          >
+            Itinerary
+          </Link>
+        ) : null}
+      </div>
+      {trip.status === "COMPLETED" ? (
+        <AttendanceConfirm
+          tripId={trip.id}
+          tripTitle={trip.title}
+          reviewUsername={tab === "joined" ? trip.host.username : null}
+        />
+      ) : null}
     </article>
   );
 }

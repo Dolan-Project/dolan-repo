@@ -56,6 +56,13 @@ export function statusForCode(code: string): number {
     case "PENDING_MEMBER":
     case "FORBIDDEN":
       return 403;
+    case "SELF_FOLLOW":
+    case "SELF_REVIEW":
+    case "SELF_BLOCK":
+    case "DUPLICATE_REVIEW":
+    case "ALREADY_FOLLOWING":
+    case "NOT_ELIGIBLE":
+    case "BLOCKED_RELATION":
     case "TRIP_FULL":
     case "DUPLICATE_REQUEST":
       return 409;
