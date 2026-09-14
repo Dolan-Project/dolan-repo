@@ -264,6 +264,16 @@ export function createTripRouter(trips: TripService) {
     }
   });
 
+  router.post("/trips/:id/publish-as-template", requireCapability("publish_trip"), withTripContext, async (req, res, next) => {
+    try {
+      res.status(201).json(
+        apiSuccess(await trips.publishAsTemplate(req.actor ?? { kind: "guest" }, param(req.params.id))),
+      );
+    } catch (error) {
+      next(error);
+    }
+  });
+
   for (const [path, handler] of [
     ["/trips/:id/close", (actor: Parameters<TripService["close"]>[0], id: string) => trips.close(actor, id)],
     ["/trips/:id/reopen", (actor: Parameters<TripService["reopen"]>[0], id: string) => trips.reopen(actor, id)],

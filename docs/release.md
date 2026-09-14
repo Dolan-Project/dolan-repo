@@ -2,6 +2,24 @@
 
 Acuan: `PRD.md` §9, `task-assignment.md` (WIRA-D4). Reviewer: **Alya**.
 
+## Live demo checklist (mock off)
+
+Untuk data wisata nyata dan alur P0 tanpa simulasi:
+
+| Variable | Required for |
+|---|---|
+| `NEXT_PUBLIC_USE_MOCK_API=false` | Homepage search + auth via Express (not typed mocks / "Salsa") |
+| `NEXT_PUBLIC_API_URL` / `NEXT_PUBLIC_SOCKET_URL` / `EXPRESS_ORIGIN` | Browser/BFF → Express |
+| `AUTH_ADAPTER=local` | Password + Google OAuth + `auth_sessions` in Postgres (default) |
+| `GOOGLE_OAUTH_CLIENT_ID` / `SECRET` / `REDIRECT_URI` | Tombol **Akun Google** (Express OAuth, tanpa Supabase) |
+| `DATABASE_URL` (+ migrate, including local-auth migration) | Persistence for users/sessions |
+| `GOOGLE_MAPS_SERVER_KEY` | Places Text Search / Details / Photos / Routes **at runtime**; also one-shot photo download during `db:seed` / `db:seed:photos` |
+| `NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_KEY` | Maps JS on Explore / My Trip |
+| `GROQ_API_KEY` (+ optional `GROQ_MODEL`) | AI itinerary / destination candidates |
+| `IMAGEKIT_*` | Avatar/cover CDN |
+
+Auth Express: register/login email+password, atau Google OAuth (`/api/v1/auth/google`). Setelah `npm run db:seed`: `traveler01@dolan.demo` / `password123` (dan traveler02–24), plus `curator@dolan.local` / `password123`. Memory fallback: `verified@dolan.test` / `password123`. Foto destinasi seed tersimpan di `places.cached_photo_url` (+ opsional `dolan/public/seed-places/`); request user biasa tidak memanggil Places Photo bila cache ada. Tanpa Maps server key di runtime, Places jatuh ke `FakePlacesClient`. Cookie `dolan_session` memakai `Secure` saat `NODE_ENV=production`. Supabase Auth tidak dipakai.
+
 ## Staging migration
 
 Migration yang sudah di-share **tidak diedit**. Koreksi lewat file baru di `database/migrations/`.

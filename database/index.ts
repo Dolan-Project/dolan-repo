@@ -6,6 +6,8 @@ export {
   getModels,
   User,
   UserProfile,
+  AuthSession,
+  PasswordResetToken,
   Place,
   Province,
   ProvincePlace,

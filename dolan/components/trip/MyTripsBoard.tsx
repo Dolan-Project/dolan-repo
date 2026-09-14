@@ -11,6 +11,7 @@ import type { ApiError, MyTripRole, MyTripSummary, TripSummary } from "@/lib/con
 import { ASSETS } from "@/lib/assets";
 import { ROUTES, tripDetailHref, tripItineraryPath } from "@/lib/routes";
 import { meetingPointFor } from "@/mocks/geo";
+import { ItineraryPdfButton } from "./ItineraryPdfButton";
 
 const tabs: { id: MyTripRole; label: string }[] = [
   { id: "hosted", label: "Dibuat" },
@@ -387,7 +388,7 @@ function TripCard({ trip, tab, selected, onSelect }: { trip: MyTripSummary; tab:
       <span className={`absolute right-0 top-0 z-10 rounded-bl-xl px-2.5 py-1.5 text-[8px] font-extrabold tracking-wide text-white md:text-[9px] ${tab === "hosted" ? "bg-primary" : tab === "joined" ? "bg-teal-600" : "bg-amber-500"}`}>{roleLabel}</span>
       <button type="button" aria-pressed={selected} onClick={onSelect} className="flex w-full cursor-pointer items-start gap-3 px-3 pb-3 pt-6 text-left" aria-label={`Tampilkan lokasi ${trip.title}`}>
         <div className="relative h-20 w-24 shrink-0 overflow-hidden rounded-xl bg-surface-container md:h-24 md:w-28">
-          {trip.coverPlace ? <PlacePhoto googlePlaceId={trip.coverPlace.googlePlaceId} photoName={trip.coverPlace.photoName} alt={trip.title} className="h-full w-full transition duration-300 group-hover:scale-105" /> : <Image fill unoptimized sizes="112px" src={coverFor(trip.destinationCity ?? "")} alt={trip.destinationCity ?? trip.title} className="object-cover transition duration-300 group-hover:scale-105" />}
+          {trip.coverPlace ? <PlacePhoto googlePlaceId={trip.coverPlace.googlePlaceId} photoName={trip.coverPlace.photoName} photoUri={trip.coverPlace.photoUri} alt={trip.title} className="h-full w-full transition duration-300 group-hover:scale-105" /> : <Image fill unoptimized sizes="112px" src={coverFor(trip.destinationCity ?? "")} alt={trip.destinationCity ?? trip.title} className="object-cover transition duration-300 group-hover:scale-105" />}
           <span className={`absolute bottom-2 left-2 rounded-lg px-2 py-1 text-[10px] font-bold text-white backdrop-blur ${trip.visibility === "PUBLIC" ? "bg-primary/90" : "bg-[#071c32]/85"}`}>{trip.visibility === "PUBLIC" ? "Publik" : "Private"}</span>
         </div>
         <div className="min-w-0 flex-1">
@@ -409,6 +410,7 @@ function TripCard({ trip, tab, selected, onSelect }: { trip: MyTripSummary; tab:
       <div className="flex flex-wrap items-center gap-1.5 border-t border-outline-variant/45 px-3 py-2.5">
         {tab === "hosted" && trip.visibility === "PUBLIC" ? <Link href={`${tripDetailHref(trip.id)}#join-requests`} className="btn-primary !min-h-9 !px-3 !text-xs">Kelola Pengajuan {trip.pendingRequestCount ? `(${trip.pendingRequestCount})` : ""}</Link> : null}
         {(tab === "hosted" || tab === "joined") ? <Link href={ROUTES.tripChat(trip.id)} className="rounded-full bg-surface-container px-3 py-2 type-label"><Icon name="forum" /> Grup Chat</Link> : null}
+        {(tab === "hosted" || tab === "joined") ? <ItineraryPdfButton tripId={trip.id} /> : null}
         {tab === "hosted" ? <Link href={tripItineraryPath(trip.id)} className="rounded-full bg-surface-container px-3 py-2 type-label"><Icon name="edit" /> Edit itinerary</Link> : null}
         {tab === "pending" ? <Link href={tripDetailHref(trip.id)} className="btn-brand !min-h-9 !px-3 !text-xs"><Icon name="forum" /> Buka diskusi publik</Link> : null}
         {tripPoints(trip).length > 0 ? <a href={mapsRouteUrl(tripPoints(trip))} target="_blank" rel="noreferrer" className="rounded-full px-3 py-2 type-label text-primary hover:bg-primary-fixed"><Icon name="share" /> Bagikan rute</a> : null}

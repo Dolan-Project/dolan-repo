@@ -7,6 +7,7 @@ describe("AUTH_PATHS", () => {
     expect(AUTH_PATHS.login).toBe("/api/auth/login");
     expect(AUTH_PATHS.logout).toBe("/api/auth/logout");
     expect(AUTH_PATHS.callback).toBe("/api/auth/callback");
+    expect(AUTH_PATHS.google).toBe("/api/auth/google");
     expect(AUTH_PATHS.forgotPassword).toBe("/api/auth/forgot-password");
     expect(AUTH_PATHS.resetPassword).toBe("/api/auth/reset-password");
   });

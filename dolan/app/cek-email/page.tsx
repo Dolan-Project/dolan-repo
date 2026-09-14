@@ -21,39 +21,32 @@ export default async function CekEmailPage({ searchParams }: PageProps) {
   const resetLink = `${ROUTES.resetPassword}?token=valid`;
 
   return (
-    <AuthShell>
-      <div className="flex flex-col items-center py-2 text-center">
-        <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-surface-container-high text-primary">
+    <AuthShell
+      mode="utility"
+      sideHref={ROUTES.masuk}
+      sideLabel="Masuk"
+      title="Cek kotak masuk kamu"
+      description={
+        error
+          ? "Tautan tidak valid atau kedaluwarsa. Minta tautan baru."
+          : `Kami telah mengirim tautan ${isReset ? "reset kata sandi" : "verifikasi"}${email ? ` ke ${email}` : ""}. Buka tautan di email, lalu lanjut di sini.`
+      }
+    >
+      <div className="flex flex-col items-center text-center">
+        <div className="mb-2 flex h-16 w-16 items-center justify-center rounded-full bg-primary-fixed text-primary">
           <Icon name="mail" className="text-[32px]" />
         </div>
-        <h1 className="type-title text-on-surface">Cek Kotak Masuk Kamu</h1>
         {error ? (
-          <p className="type-body mt-2 text-error" role="alert">
-            Tautan tidak valid atau kedaluwarsa. Minta tautan baru.
+          <p className="type-body text-error" role="alert">
+            Tautan tidak valid atau kedaluwarsa.
           </p>
-        ) : (
-          <p className="type-body mt-2 max-w-md text-on-surface-variant">
-            Kami telah mengirim tautan{" "}
-            {isReset ? "reset kata sandi" : "verifikasi"}
-            {email ? (
-              <>
-                {" "}
-                ke <strong className="text-on-surface">{email}</strong>
-              </>
-            ) : null}
-            . Bukan kode OTP — buka tautan di email, lalu lanjut di sini.
-          </p>
-        )}
-        <div className="mt-6 flex w-full flex-col gap-2">
+        ) : null}
+        <div className="mt-4 flex w-full flex-col gap-2">
           <Link
-            href={
-              isReset
-                ? resetLink
-                : `${AUTH_PATHS.callback}?${callback.toString()}`
-            }
+            href={isReset ? resetLink : `${AUTH_PATHS.callback}?${callback.toString()}`}
             className="btn-primary w-full !min-h-12"
           >
-            {isReset ? "Saya sudah buka tautan" : "Verifikasi & Lanjutkan"}
+            {isReset ? "Saya sudah buka tautan" : "Verifikasi & lanjutkan"}
           </Link>
           <Link
             href={isReset ? ROUTES.lupaPassword : ROUTES.daftar}

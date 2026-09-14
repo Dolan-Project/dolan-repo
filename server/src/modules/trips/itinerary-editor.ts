@@ -3,6 +3,7 @@ import {
   checklistMutationSchema,
   saveItineraryVersionSchema,
   selectItineraryVersionSchema,
+  type BudgetItemInput,
   type EditableItineraryDay,
   type EditableItineraryStop,
   type EditableItineraryVersion,
@@ -100,7 +101,7 @@ async function mapVersion(version: {
   const budgetRows = await BudgetItem.findAll({ where: { itineraryVersionId: version.id } });
   const budget = buildBudgetSummary(
     budgetRows.map((item) => ({
-      category: item.category,
+      category: item.category as BudgetItemInput["category"],
       label: item.label,
       quantity: item.quantity,
       unit: item.unit,

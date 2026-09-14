@@ -84,6 +84,25 @@ export async function applyRouteLegs(
         cursor += 1;
         continue;
       }
+      const haversineKm = approximateKm(from, to);
+      if (haversineKm > 200) {
+        stops.push({
+          ...stop,
+          travelDurationMinutes: null,
+          notes: [
+            stop.notes,
+            `Segmen antarpulau/moda khusus (~${Math.round(haversineKm)} km). Jangan anggap garis lurus sebagai jalan — isi estimasi ferry/pesawat secara manual.`,
+          ]
+            .filter(Boolean)
+            .join(" "),
+          routePolyline: null,
+          travelDistanceMeters: Math.round(haversineKm * 1000),
+          routeStatus: "UNAVAILABLE" as const,
+          routeTravelMode: "TRANSIT_MANUAL",
+        });
+        cursor += 1;
+        continue;
+      }
       const leg = await routes.computeLeg(from, to);
       stops.push(
         leg.ok
@@ -99,4 +118,14 @@ export async function applyRouteLegs(
     days.push({ ...day, stops });
   }
   return { ...itinerary, days };
+}
+
+function approximateKm(from: LatLng, to: LatLng): number {
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const dLat = toRad(to.latitude - from.latitude);
+  const dLng = toRad(to.longitude - from.longitude);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(from.latitude)) * Math.cos(toRad(to.latitude)) * Math.sin(dLng / 2) ** 2;
+  return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }

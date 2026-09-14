@@ -25,10 +25,7 @@ export function createSocketServer(httpServer: HttpServer, authService: AuthServ
 
   io.use(async (socket, next) => {
     try {
-      const token = extractAccessTokenFromCookies(
-        socket.handshake.headers.cookie,
-        env.supabaseCookiePrefix,
-      );
+      const token = extractAccessTokenFromCookies(socket.handshake.headers.cookie);
       if (!token) {
         next(new Error(AuthErrorCode.UNAUTHENTICATED));
         return;

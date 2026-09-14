@@ -5,9 +5,13 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { Icon } from "@/components/ui/Icon";
 import { AttendanceConfirm } from "@/components/trips/AttendanceConfirm";
+import { ReportTargetButton } from "@/components/moderation/ReportTargetButton";
 import type { ApiError, JoinRequest, TripComment, TripDetail } from "@/lib/contracts";
 import { ROUTES, tripEditHref, tripItineraryPath } from "@/lib/routes";
 import type { EditableItineraryDay } from "@dolan/shared";
+import { ItineraryPdfButton } from "./ItineraryPdfButton";
+import { LocationSharePanel } from "./LocationSharePanel";
+import { ShareLinkPanel } from "./ShareLinkPanel";
 import { TripBoardMap, type TripMapMarker } from "./TripBoardMap";
 
 type Json<T> = { success: true; data: T } | ApiError;
@@ -263,12 +267,20 @@ export function TripDetailView({
           ) : null}
 
           <section className="card-surface p-5">
-            <h2 className="type-subtitle">Diskusi publik</h2>
-            <p className="type-caption mt-1 text-on-surface-variant">Tamu boleh membaca. Menulis butuh akun terverifikasi. Percakapan grup trip ada di halaman chat terpisah.</p>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h2 className="type-subtitle">Diskusi publik</h2>
+                <p className="type-caption mt-1 text-on-surface-variant">Tamu boleh membaca. Menulis butuh akun terverifikasi. Percakapan grup trip ada di halaman chat terpisah.</p>
+              </div>
+              {trip ? <ReportTargetButton targetType="trip" targetId={trip.id} label="Laporkan trip" /> : null}
+            </div>
             <ul className="mt-4 flex flex-col gap-4">
               {threads.length === 0 ? <li className="type-body text-on-surface-variant">Belum ada komentar.</li> : threads.map(({ root, replies }) => (
                 <li key={root.id}>
-                  <p className="type-label">@{root.author.username}</p>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="type-label">@{root.author.username}</p>
+                    <ReportTargetButton targetType="comment" targetId={root.id} label="Laporkan" />
+                  </div>
                   <p className="type-body">{root.body}</p>
                   <button type="button" className="type-micro mt-1 text-primary" onClick={() => setReplyTo(root.id)}>Balas</button>
                   {replies.map((reply) => (
@@ -294,7 +306,7 @@ export function TripDetailView({
 
         <aside className="space-y-5 lg:sticky lg:top-24 h-fit">
           {markers.length ? <div className="overflow-hidden rounded-[1.75rem]"><TripBoardMap markers={markers} /></div> : null}
-          <section className="card-surface p-5">
+          <section id="join" className="card-surface scroll-mt-24 p-5">
             <h2 className="type-subtitle">Ajukan join</h2>
             <p className="type-caption mt-1 text-on-surface-variant">Tidak ada booking atau pembayaran ke host. Setiap orang menanggung biayanya sendiri.</p>
             {joinCta === "login" ? <Link href={`${ROUTES.masuk}?next=${encodeURIComponent(ROUTES.trip(tripId))}`} className="btn-primary mt-4">Masuk untuk ajukan join</Link> : null}
@@ -313,8 +325,16 @@ export function TripDetailView({
 
           {error ? <p className="rounded-xl bg-error-container px-4 py-3 type-body text-on-error-container" role="alert">{error}</p> : null}
 
+          {(trip.viewerRole === "host" || trip.viewerRole === "participant") ? (
+            <>
+              <LocationSharePanel tripId={trip.id} />
+              <ShareLinkPanel tripId={trip.id} />
+            </>
+          ) : null}
+
           <div className="flex flex-wrap gap-2">
             {(trip.viewerRole === "host" || trip.viewerRole === "participant") ? <Link href={ROUTES.tripChat(trip.id)} className="btn-primary"><Icon name="forum" /> Buka grup chat</Link> : null}
+            {(trip.viewerRole === "host" || trip.viewerRole === "participant") ? <ItineraryPdfButton tripId={trip.id} className="btn-ghost" label="Unduh itinerary PDF" /> : null}
             {trip.viewerRole === "host" ? <Link href={tripItineraryPath(trip.id)} className="btn-ghost">Edit itinerary</Link> : null}
             {trip.viewerRole === "host" && trip.status !== "CANCELLED" && trip.status !== "COMPLETED" ? <Link href={tripEditHref(trip.id)} className="btn-ghost">Edit trip</Link> : null}
             {trip.viewerRole === "host" && trip.status === "DRAFT" ? <button type="button" className="btn-primary" disabled={pending} onClick={() => void act(`/api/v1/trips/${trip.id}/publish`, { confirmPublish: true, visibility: trip.visibility })}>Publish</button> : null}

@@ -1,10 +1,16 @@
 export const SESSION_COOKIE = "dolan_session";
 
+function cookieFlags(maxAge?: number): string {
+  const secure = process.env.NODE_ENV === "production" ? "; Secure" : "";
+  const age = typeof maxAge === "number" ? `; Max-Age=${maxAge}` : "";
+  return `Path=/; HttpOnly; SameSite=Lax${secure}${age}`;
+}
+
 export function sessionCookieHeader(value: string | null): string {
   if (value === null) {
-    return `${SESSION_COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`;
+    return `${SESSION_COOKIE}=; ${cookieFlags(0)}`;
   }
-  return `${SESSION_COOKIE}=${encodeURIComponent(value)}; Path=/; HttpOnly; SameSite=Lax`;
+  return `${SESSION_COOKIE}=${encodeURIComponent(value)}; ${cookieFlags()}`;
 }
 
 export function readSessionId(cookieHeader: string | null): string | null {

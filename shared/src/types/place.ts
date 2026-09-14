@@ -8,6 +8,8 @@ export type PlaceSummary = {
   rating: number | null;
   userRatingCount: number | null;
   photoName: string | null;
+  /** Permanent cached photo URL (seeded locally); preferred over live Places media. */
+  photoUri?: string | null;
   googleMapsUrl: string | null;
   types?: string[];
   visitCount?: number;

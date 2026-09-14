@@ -14,7 +14,8 @@ const PRAMBANAN: PlaceSummary = {
   longitude: 110.4915,
   rating: 4.7,
   userRatingCount: 8000,
-  photoName: null,
+  photoName: "places/ChIJf5UqGYeXeY4RwZVQ9n0s7oE/photos/seed",
+  photoUri: "https://images.unsplash.com/photo-1584810359583-96fc3448beaa?auto=format&fit=crop&w=1200&q=80",
   googleMapsUrl: null,
   types: ["tourist_attraction", "hindu_temple"],
 };

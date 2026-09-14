@@ -1,4 +1,9 @@
-import type { GenerationJob, GenerationJobStatus, GenerationJobType } from "@dolan/shared";
+import type {
+  DestinationRecommendation,
+  GenerationJob,
+  GenerationJobStatus,
+  GenerationJobType,
+} from "@dolan/shared";
 import { env } from "../../config/env.ts";
 import { isJobReadyForClaim } from "./backoff.ts";
 
@@ -17,6 +22,11 @@ export type CreateJobInput = {
   selectedVersionId: string | null;
 };
 
+export type MarkSucceededPayload = {
+  resultVersionId?: string | null;
+  resultCandidates?: DestinationRecommendation[];
+};
+
 export interface JobRepository {
   createOrGetIdempotent(input: CreateJobInput): Promise<{ job: JobRecord; created: boolean }>;
   getById(id: string): Promise<JobRecord | null>;
@@ -24,7 +34,12 @@ export interface JobRepository {
   findActiveForTrip(tripId: string): Promise<JobRecord | null>;
   claimNextQueued(workerId: string, now?: Date): Promise<JobRecord | null>;
   recoverStale(lockTimeoutMs: number, now?: Date): Promise<number>;
-  markSucceeded(id: string, resultVersionId: string): Promise<JobRecord>;
+  markSucceeded(
+    id: string,
+    resultVersionId: string | null,
+    payload?: Pick<MarkSucceededPayload, "resultCandidates">,
+  ): Promise<JobRecord>;
+  markSucceededWithPayload(id: string, payload: MarkSucceededPayload): Promise<JobRecord>;
   markFailed(id: string, errorCode: string): Promise<JobRecord>;
   requeue(id: string): Promise<JobRecord>;
 }
@@ -50,6 +65,7 @@ export class MemoryJobRepository implements JobRepository {
       attemptCount: 0,
       resultVersionId: null,
       selectedVersionId: input.selectedVersionId,
+      resultCandidates: null,
       errorCode: null,
       createdAt: now,
       updatedAt: now,
@@ -123,16 +139,28 @@ export class MemoryJobRepository implements JobRepository {
     return recovered;
   }
 
-  async markSucceeded(id: string, resultVersionId: string): Promise<JobRecord> {
-    const current = this.require(id);
-    const next = {
-      ...current,
-      status: "SUCCEEDED" as const,
+  async markSucceeded(
+    id: string,
+    resultVersionId: string | null,
+    payload?: Pick<MarkSucceededPayload, "resultCandidates">,
+  ): Promise<JobRecord> {
+    return this.markSucceededWithPayload(id, {
       resultVersionId,
+      resultCandidates: payload?.resultCandidates,
+    });
+  }
+
+  async markSucceededWithPayload(id: string, payload: MarkSucceededPayload): Promise<JobRecord> {
+    const current = this.require(id);
+    const next: JobRecord = {
+      ...current,
+      status: "SUCCEEDED",
+      resultVersionId: payload.resultVersionId ?? null,
+      resultCandidates: payload.resultCandidates ?? current.resultCandidates ?? null,
       lockedBy: null,
       lockedAt: null,
       updatedAt: new Date().toISOString(),
-      draftPreserved: true as const,
+      draftPreserved: true,
     };
     this.jobs.set(id, next);
     return next;

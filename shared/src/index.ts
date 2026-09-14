@@ -54,6 +54,7 @@ export {
   createReviewBodySchema,
   createReportBodySchema,
   moderateReportBodySchema,
+  pushSubscriptionBodySchema,
 } from "./schemas/social.ts";
 export {
   API_V1_PREFIX,

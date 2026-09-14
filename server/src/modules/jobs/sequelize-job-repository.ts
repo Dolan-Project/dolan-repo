@@ -1,8 +1,14 @@
 import { getModels, getSequelize } from "@dolan/database";
 import type { GenerationJob as GenerationJobRow } from "@dolan/database";
+import type { DestinationRecommendation } from "@dolan/shared";
 import { QueryTypes } from "sequelize";
 import { env } from "../../config/env.ts";
-import type { CreateJobInput, JobRecord, JobRepository } from "./job-repository.ts";
+import type {
+  CreateJobInput,
+  JobRecord,
+  JobRepository,
+  MarkSucceededPayload,
+} from "./job-repository.ts";
 
 export class SequelizeJobRepository implements JobRepository {
   async createOrGetIdempotent(input: CreateJobInput): Promise<{ job: JobRecord; created: boolean }> {
@@ -100,12 +106,26 @@ export class SequelizeJobRepository implements JobRepository {
     return recovered;
   }
 
-  async markSucceeded(id: string, resultVersionId: string): Promise<JobRecord> {
+  async markSucceeded(
+    id: string,
+    resultVersionId: string | null,
+    payload?: Pick<MarkSucceededPayload, "resultCandidates">,
+  ): Promise<JobRecord> {
+    return this.markSucceededWithPayload(id, {
+      resultVersionId,
+      resultCandidates: payload?.resultCandidates,
+    });
+  }
+
+  async markSucceededWithPayload(id: string, payload: MarkSucceededPayload): Promise<JobRecord> {
     const { GenerationJob } = getModels();
     const job = await GenerationJob.findByPk(id);
     if (!job) throw new Error(`Job ${id} not found`);
     job.status = "SUCCEEDED";
-    job.resultVersionId = resultVersionId;
+    job.resultVersionId = payload.resultVersionId ?? null;
+    if (payload.resultCandidates) {
+      job.resultPayload = { candidates: payload.resultCandidates };
+    }
     job.finishedAt = new Date();
     job.lockedBy = null;
     job.lockedAt = null;
@@ -139,6 +159,11 @@ export class SequelizeJobRepository implements JobRepository {
   }
 }
 
+function candidatesFromPayload(payload: Record<string, unknown> | null | undefined): DestinationRecommendation[] | null {
+  if (!payload || !Array.isArray(payload.candidates)) return null;
+  return payload.candidates as DestinationRecommendation[];
+}
+
 async function toRecord(job: GenerationJobRow, selectedVersionId?: string | null): Promise<JobRecord> {
   return {
     id: job.id,
@@ -149,6 +174,7 @@ async function toRecord(job: GenerationJobRow, selectedVersionId?: string | null
     attemptCount: job.attemptCount,
     resultVersionId: job.resultVersionId,
     selectedVersionId: selectedVersionId ?? job.selectedItineraryVersionId ?? null,
+    resultCandidates: candidatesFromPayload(job.resultPayload),
     errorCode: job.errorCode,
     createdAt: job.createdAt.toISOString(),
     updatedAt: job.updatedAt.toISOString(),

@@ -1,26 +1,40 @@
+import { redirect } from "next/navigation";
 import { AuthShell } from "@/components/auth/AuthShell";
 import { LoginForm } from "@/components/auth/LoginForm";
 import { Icon } from "@/components/ui/Icon";
+import { getSession } from "@/lib/auth/get-session";
+import { resolveAfterAuth } from "@/lib/auth/post-auth-path";
 
 type PageProps = {
-  searchParams: Promise<{ next?: string }>;
+  searchParams: Promise<{ next?: string; error?: string; message?: string }>;
 };
 
 export default async function MasukPage({ searchParams }: PageProps) {
-  const { next } = await searchParams;
+  const { next, error, message } = await searchParams;
+  const session = await getSession();
+  if (session) {
+    redirect(resolveAfterAuth(session, next));
+  }
+
   return (
-    <AuthShell>
-      <div>
-        <span className="mb-2 inline-flex w-fit items-center gap-1.5 rounded-full bg-primary-fixed px-3 py-1 type-micro text-on-primary-fixed">
-          <Icon name="login" className="text-[16px]" /> Selamat Datang Kembali
-        </span>
-        <h1 className="type-title text-on-surface">Masuk ke Komunitas DOLAN</h1>
-        <p className="type-body mt-1 text-on-surface-variant">
-          Lanjutkan rencana penjelajahan dan diskusi trip bareng teman
-          seperjalanan.
-        </p>
-      </div>
-      <LoginForm next={next} />
+    <AuthShell
+      mode="login"
+      eyebrow={
+        <>
+          <Icon name="login" className="text-[15px]" /> Selamat datang kembali
+        </>
+      }
+      title="Masuk ke komunitas Dolan"
+      description="Lanjutkan rencana penjelajahan dan diskusi trip bareng teman seperjalanan."
+    >
+      <LoginForm
+        next={next}
+        initialError={
+          error === "google"
+            ? message || "Login Google gagal. Coba lagi atau masuk dengan email."
+            : undefined
+        }
+      />
     </AuthShell>
   );
 }

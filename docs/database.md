@@ -15,7 +15,27 @@ Package `@dolan/database` memakai `"type": "module"` untuk model TypeScript. Fol
 1. Salin `.env.example` → `.env` dan isi `DATABASE_URL` atau `DB_*`
 2. `npm install` di root (workspace `@dolan/database`)
 3. `npm run db:migrate`
-4. `npm run db:seed` (opsional, demo Yogyakarta)
+4. `npm run db:seed` (demo: provinces, places+foto cache, social liveliness)
+
+## Demo seed & logins
+
+```bash
+npm run db:migrate
+# Optional once: GOOGLE_MAPS_SERVER_KEY=... npm run db:seed
+# Without the key, seed still fills places.cached_photo_url with Unsplash fallbacks
+# (no Places calls at runtime). With the key, photos are downloaded to dolan/public/seed-places/.
+npm run db:seed
+# Re-run photos only:
+npm run db:seed:photos
+```
+
+| Email | Password | Notes |
+|---|---|---|
+| `traveler01@dolan.demo` … `traveler24@dolan.demo` | `password123` | 24 travelers + public trips / chat / notif |
+| `curator@dolan.local` | `password123` | Yogya curated template owner |
+| Memory fallback (no DB): `verified@dolan.test` | `password123` | `AUTH_ADAPTER=local` memory users |
+
+`GOOGLE_MAPS_SERVER_KEY` is needed for **seed-time** Places Text/Photo download only. Runtime Explore/home prefer `places.cached_photo_url` and skip Places quota when cache exists.
 
 Scripts:
 
@@ -58,10 +78,13 @@ Koreksi index: `database/migrations/20260913000100-add-d4-query-indexes.js`. Pro
 
 ## Seeder
 
-- Kota demo: Yogyakarta
-- Places memakai Google Place ID placeholder yang sudah disiapkan untuk development; validasi ulang sebelum production
+- Provinsi Indonesia + template kurasi (featured)
+- ~40 destinasi berfoto (`cached_photo_*`); Google Places hanya saat seed jika key ada
+- Social liveliness: 24 user `@dolan.demo`, ~30 public trips, members/joins/comments/chat/notif/follows
+- Kota demo klasik: Yogyakarta template (`curator@dolan.local`)
+- Places memakai Google Place ID nyata bila di-resolve saat seed; tanpa key memakai `seed_{slug}` + Unsplash
 - Template `source = CURATED` → label produk **Kurasi Dolan**
-- `usage_count = 0` → tidak boleh dilabeli **Populer di Dolan**
+- Seed menaikkan `usage_count` beberapa template agar label popularitas muncul di demo
 
 ## Pemakaian dari server
 

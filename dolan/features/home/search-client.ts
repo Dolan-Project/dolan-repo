@@ -39,7 +39,9 @@ function category(place: PlaceSummary) {
 }
 
 async function photoUrl(baseUrl: string, place: PlaceSummary | null, fallbackIndex: number, signal?: AbortSignal) {
-  if (!place?.photoName) return fallbackCovers[fallbackIndex % fallbackCovers.length];
+  if (!place) return fallbackCovers[fallbackIndex % fallbackCovers.length];
+  if (place.photoUri) return place.photoUri;
+  if (!place.photoName) return fallbackCovers[fallbackIndex % fallbackCovers.length];
   const key = `${place.googlePlaceId}:${place.photoName}`;
   const cached = photoCache.get(key);
   if (cached) return cached;

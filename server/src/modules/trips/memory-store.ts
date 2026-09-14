@@ -141,6 +141,9 @@ export class MemoryTripStore implements TripStore {
       role: "HOST",
       membershipStatus: "ACTIVE",
       attendanceConfirmed: false,
+      attendanceDisputed: false,
+      hostAttendance: "UNCONFIRMED",
+      selfAttendance: "UNCONFIRMED",
       showOnProfile: true,
       joinedAt: new Date().toISOString(),
       leftAt: null,
@@ -163,6 +166,9 @@ export class MemoryTripStore implements TripStore {
       role: "PARTICIPANT",
       membershipStatus: "ACTIVE",
       attendanceConfirmed: false,
+      attendanceDisputed: false,
+      hostAttendance: "UNCONFIRMED",
+      selfAttendance: "UNCONFIRMED",
       showOnProfile: true,
       joinedAt: new Date().toISOString(),
       leftAt: null,
@@ -171,12 +177,49 @@ export class MemoryTripStore implements TripStore {
     return member;
   }
 
-  async confirmAttendance(tripId: string, userId: string, confirmed: boolean) {
+  async confirmAttendance(
+    tripId: string,
+    actorUserId: string,
+    input: { confirmed: boolean; targetUserId?: string },
+  ) {
+    const actor = this.members.find(
+      (row) => row.tripId === tripId && row.userId === actorUserId && row.membershipStatus === "ACTIVE",
+    );
+    if (!actor) return null;
+    const targetId = input.targetUserId ?? actorUserId;
     const member = this.members.find(
-      (row) => row.tripId === tripId && row.userId === userId && row.membershipStatus === "ACTIVE",
+      (row) => row.tripId === tripId && row.userId === targetId && row.membershipStatus === "ACTIVE",
     );
     if (!member) return null;
-    member.attendanceConfirmed = confirmed;
+    const value = input.confirmed ? "PRESENT" : "ABSENT";
+    if (input.targetUserId && input.targetUserId !== actorUserId) {
+      if (actor.role !== "HOST") return null;
+      member.hostAttendance = value;
+    } else if (member.role === "HOST") {
+      member.hostAttendance = value;
+      member.selfAttendance = value;
+    } else {
+      member.selfAttendance = value;
+    }
+    if (
+      member.role === "PARTICIPANT" &&
+      (member.hostAttendance === "PRESENT" || member.hostAttendance === "ABSENT") &&
+      (member.selfAttendance === "PRESENT" || member.selfAttendance === "ABSENT") &&
+      member.hostAttendance !== member.selfAttendance
+    ) {
+      member.hostAttendance = "DISPUTED";
+      member.selfAttendance = "DISPUTED";
+      member.attendanceDisputed = true;
+      member.attendanceConfirmed = false;
+    } else {
+      member.attendanceDisputed = false;
+      member.attendanceConfirmed =
+        member.role === "HOST"
+          ? member.hostAttendance === "PRESENT" || member.selfAttendance === "PRESENT"
+          : member.selfAttendance === "PRESENT" &&
+            member.hostAttendance !== "ABSENT" &&
+            member.hostAttendance !== "DISPUTED";
+    }
     return member;
   }
 
@@ -279,6 +322,12 @@ export class MemoryTripStore implements TripStore {
 
   async revokeTripLocation(userId: string, tripId: string) {
     this.usages.push({ userId, tripId, revokedAt: new Date().toISOString() });
+  }
+
+  async publishTripAsTemplate(tripId: string, _creatorUserId: string) {
+    const trip = this.trips.find((row) => row.id === tripId);
+    if (!trip) throw notFound(TripErrorCode.TRIP_NOT_FOUND, "Trip not found");
+    return { templateId: randomUUID(), title: trip.title };
   }
 
   async createNotification(input: {

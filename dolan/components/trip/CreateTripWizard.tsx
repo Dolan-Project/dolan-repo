@@ -6,7 +6,7 @@ import { Field } from "@/components/auth/Field";
 import { Icon } from "@/components/ui/Icon";
 import { PlacePicker } from "@/components/trip/PlacePicker";
 import { TripBoardMap } from "@/components/trip/TripBoardMap";
-import type { ItineraryTemplateDetail, UseTemplateResult } from "@dolan/shared";
+import type { DestinationRecommendation, ItineraryTemplateDetail, UseTemplateResult } from "@dolan/shared";
 import type { ApiError, CreateTripInput, TripDetail } from "@/lib/contracts";
 import { ASSETS } from "@/lib/assets";
 import { tripDetailHref, tripItineraryPath } from "@/lib/routes";
@@ -31,10 +31,23 @@ const activities = [
 ] as const;
 
 const aiPicks = [
-  { city: "Labuan Bajo", region: "NTT", cover: ASSETS.komodo },
-  { city: "Gunung Bromo", region: "Jawa Timur", cover: ASSETS.mountBatur },
-  { city: "Raja Ampat", region: "Papua Barat Daya", cover: ASSETS.nusaPenida },
+  { city: "Labuan Bajo", region: "NTT", cover: ASSETS.komodo, googlePlaceId: "ChIJ-LBJ-Airport", name: "Labuan Bajo" },
+  { city: "Gunung Bromo", region: "Jawa Timur", cover: ASSETS.mountBatur, googlePlaceId: "ChIJaaaaaaaaaaaaaaaaaaaa", name: "Gunung Bromo" },
+  { city: "Raja Ampat", region: "Papua Barat Daya", cover: ASSETS.nusaPenida, googlePlaceId: "ChIJxYBx6Da5eY4R2lX2sQ0oYkA", name: "Raja Ampat" },
 ] as const;
+
+function coverForCandidate(candidate: DestinationRecommendation) {
+  const haystack = `${candidate.city} ${candidate.name} ${candidate.region ?? ""}`.toLowerCase();
+  if (haystack.includes("bajo") || haystack.includes("komodo")) return ASSETS.komodo;
+  if (haystack.includes("bali") || haystack.includes("ubud") || haystack.includes("canggu")) return ASSETS.cangguUbud;
+  if (haystack.includes("yogya") || haystack.includes("jogja")) return ASSETS.jogja;
+  if (haystack.includes("bromo") || haystack.includes("batur")) return ASSETS.mountBatur;
+  return ASSETS.tanahLot;
+}
+
+function wait(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 type Path = "manual" | "ai-route" | "ai-discovery" | "template";
 
@@ -90,6 +103,10 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
   const [templateQuery, setTemplateQuery] = useState("");
   const [regenerateMode, setRegenerateMode] = useState<"balanced" | "cheaper" | "alternative">("balanced");
   const [connections, setConnections] = useState<Array<{ username: string; displayName: string }>>([]);
+  const [draftTripId, setDraftTripId] = useState<string | null>(null);
+  const [aiCandidates, setAiCandidates] = useState<DestinationRecommendation[] | null>(null);
+  const [recommendPending, setRecommendPending] = useState(false);
+  const [usedAiFallback, setUsedAiFallback] = useState(false);
 
   useEffect(() => {
     if (!templateId) return;
@@ -227,11 +244,8 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
     if (step === 4) setStep(5);
   }
 
-  async function submit(mode: "draft" | "publish") {
-    if (pending || templateLoading) return;
-    setPending(true);
-    setFormError("");
-    setFieldErrors({});
+  async function ensureDraftTrip(): Promise<string | null> {
+    if (draftTripId) return draftTripId;
     const activeTemplateId = selectedTemplateId || templateId;
     const created = await fetch(activeTemplateId ? `/api/v1/templates/${encodeURIComponent(activeTemplateId)}/use` : "/api/v1/trips", {
       method: "POST",
@@ -256,12 +270,135 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
       | { success: true; data: TripDetail | UseTemplateResult }
       | ApiError;
     if (!json.success) {
-      setPending(false);
       setFormError(json.error.message);
       setFieldErrors(json.error.fields ?? {});
-      return;
+      return null;
     }
-    const createdTripId = "tripId" in json.data ? json.data.tripId : json.data.id;
+    const createdId = "tripId" in json.data ? json.data.tripId : json.data.id;
+    setDraftTripId(createdId);
+    return createdId;
+  }
+
+  async function pollGenerationJob(jobId: string) {
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+      await wait(1000);
+      const response = await fetch(`/api/v1/generation-jobs/${encodeURIComponent(jobId)}`, { credentials: "include" });
+      const payload = await response.json() as {
+        success: boolean;
+        data?: { status: string; resultCandidates?: DestinationRecommendation[] | null };
+      };
+      if (!response.ok || !payload.success || !payload.data) continue;
+      if (payload.data.status === "SUCCEEDED" || payload.data.status === "FAILED") return payload.data;
+    }
+    return null;
+  }
+
+  async function requestDestinationRecommendations() {
+    if (recommendPending) return;
+    setRecommendPending(true);
+    setFormError("");
+    setUsedAiFallback(false);
+    try {
+      const tripId = await ensureDraftTrip();
+      if (!tripId) return;
+      const jobKey = newKey();
+      const response = await fetch(`/api/v1/trips/${encodeURIComponent(tripId)}/generate`, {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "content-type": "application/json",
+          "idempotency-key": jobKey,
+        },
+        body: JSON.stringify({
+          type: "RECOMMEND_DESTINATIONS",
+          idempotencyKey: jobKey,
+          preferences: {
+            mode: path,
+            regenerateMode,
+            origin,
+            budgetAmount,
+            budgetBasis,
+            activityPrefs,
+            lodgingPref,
+            startDate,
+            endDate,
+          },
+        }),
+      });
+      const json = await response.json() as {
+        success: boolean;
+        data?: { id: string; resultCandidates?: DestinationRecommendation[] | null; status?: string };
+        error?: { message?: string };
+      };
+      if (!response.ok || !json.success || !json.data?.id) {
+        throw new Error(json.error?.message ?? "Gagal meminta rekomendasi AI");
+      }
+      const job = json.data.status === "SUCCEEDED" || json.data.status === "FAILED"
+        ? json.data
+        : await pollGenerationJob(json.data.id);
+      if (job?.status === "SUCCEEDED" && job.resultCandidates && job.resultCandidates.length > 0) {
+        setAiCandidates(job.resultCandidates);
+        return;
+      }
+      throw new Error("Rekomendasi AI belum tersedia");
+    } catch (error) {
+      const useMockFallback = process.env.NEXT_PUBLIC_USE_MOCK_API !== "false";
+      if (useMockFallback) {
+        setAiCandidates(aiPicks.map((pick) => ({
+          googlePlaceId: pick.googlePlaceId,
+          name: pick.name,
+          city: pick.city,
+          region: pick.region,
+        })));
+        setUsedAiFallback(true);
+        setFormError("");
+      } else {
+        setFormError(error instanceof Error ? error.message : "Gagal meminta rekomendasi AI");
+      }
+    } finally {
+      setRecommendPending(false);
+    }
+  }
+
+  async function submit(mode: "draft" | "publish") {
+    if (pending || templateLoading) return;
+    setPending(true);
+    setFormError("");
+    setFieldErrors({});
+    const activeTemplateId = selectedTemplateId || templateId;
+    let createdTripId = draftTripId;
+    if (!createdTripId) {
+      const created = await fetch(activeTemplateId ? `/api/v1/templates/${encodeURIComponent(activeTemplateId)}/use` : "/api/v1/trips", {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "content-type": "application/json",
+          "idempotency-key": idempotencyKey,
+        },
+        body: JSON.stringify(activeTemplateId ? {
+          templateTitle: templateTitle || title,
+          destinationCity,
+          originLabel: origin || undefined,
+          startDate,
+          endDate: endDate || undefined,
+          transportMode: transport || undefined,
+          planningPartySize,
+          budgetAmount: String(budgetAmount),
+          budgetBasis,
+        } : payload()),
+      });
+      const json = (await created.json()) as
+        | { success: true; data: TripDetail | UseTemplateResult }
+        | ApiError;
+      if (!json.success) {
+        setPending(false);
+        setFormError(json.error.message);
+        setFieldErrors(json.error.fields ?? {});
+        return;
+      }
+      createdTripId = "tripId" in json.data ? json.data.tripId : json.data.id;
+      setDraftTripId(createdTripId);
+    }
     if (visibility === "PRIVATE" && privateInvite.trim()) {
       const entries = privateInvite.split(",").map((item) => item.trim()).filter(Boolean);
       for (const entry of entries) {
@@ -278,7 +415,7 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
         }
       }
     }
-    if (path === "ai-route" || path === "ai-discovery") {
+    if (path === "ai-route" || (path === "ai-discovery" && !aiCandidates?.length)) {
       await fetch(`/api/v1/trips/${createdTripId}/generate`, { method: "POST", credentials: "include", headers: { "content-type": "application/json", "idempotency-key": newKey() }, body: JSON.stringify({ type: path === "ai-discovery" ? "RECOMMEND_DESTINATIONS" : "GENERATE_ITINERARY", idempotencyKey: newKey(), preferences: { mode: path, regenerateMode } }) }).catch(() => undefined);
     }
     if (mode === "publish") {
@@ -664,8 +801,11 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
         <>
           <Header n={4} title={path === "ai-discovery" ? "Pilih arah rekomendasi AI" : "Atur cara Groq menyusun rute"} />
           <p className="type-body mb-4 text-on-surface-variant">
-            Setelah draft disimpan, Groq membuat versi itinerary baru. Kalau hasilnya kurang cocok, kamu bisa regenerate biasa, hemat, atau rute alternatif dari editor.
+            {path === "ai-discovery"
+              ? "Minta rekomendasi destinasi berdasarkan tanggal, asal, budget, dan preferensi. Setelah memilih, lanjut ke review."
+              : "Setelah draft disimpan, Groq membuat versi itinerary baru. Kalau hasilnya kurang cocok, kamu bisa regenerate biasa, hemat, atau rute alternatif dari editor."}
           </p>
+          {path !== "ai-discovery" ? (
           <div className="mb-5 grid gap-3 md:grid-cols-3">
             {([
               ["balanced", "Regenerate biasa", "Seimbang antara waktu, biaya, dan destinasi populer."],
@@ -678,26 +818,56 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
               </button>
             ))}
           </div>
+          ) : null}
           {path === "ai-discovery" ? (
-          <div className="grid gap-3 md:grid-cols-3">
-            {aiPicks.map((pick) => (
-              <button
-                key={pick.city}
-                type="button"
-                onClick={() => setDestinationCity(pick.city)}
-                className={`card-surface overflow-hidden text-left ${
-                  destinationCity === pick.city ? "ring-2 ring-primary" : ""
-                }`}
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img alt="" src={pick.cover} className="h-28 w-full object-cover" />
-                <div className="p-3">
-                  <p className="type-subtitle text-on-surface">{pick.city}</p>
-                  <p className="type-caption text-on-surface-variant">{pick.region}</p>
-                </div>
-              </button>
-            ))}
-          </div>
+            <div className="space-y-4">
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  className="btn-primary"
+                  disabled={recommendPending}
+                  onClick={() => void requestDestinationRecommendations()}
+                >
+                  {recommendPending ? "Meminta rekomendasi…" : "Minta rekomendasi AI"}
+                </button>
+                {usedAiFallback ? (
+                  <p className="type-caption text-on-surface-variant">Menampilkan pilihan cadangan (mock).</p>
+                ) : null}
+              </div>
+              {formError ? (
+                <p className="type-body text-error" role="alert">{formError}</p>
+              ) : null}
+              <div className="grid gap-3 md:grid-cols-3">
+                {(aiCandidates ?? []).map((pick) => {
+                  const label = pick.city || pick.name;
+                  return (
+                    <button
+                      key={pick.googlePlaceId}
+                      type="button"
+                      onClick={() => setDestinationCity(label)}
+                      className={`card-surface overflow-hidden text-left ${
+                        destinationCity === label ? "ring-2 ring-primary" : ""
+                      }`}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img alt="" src={coverForCandidate(pick)} className="h-28 w-full object-cover" />
+                      <div className="p-3">
+                        <p className="type-subtitle text-on-surface">{pick.name}</p>
+                        <p className="type-caption text-on-surface-variant">
+                          {pick.region ?? pick.city}
+                          {pick.estimateNote ? ` · ${pick.estimateNote}` : ""}
+                        </p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+              {!aiCandidates?.length && !recommendPending ? (
+                <p className="type-caption text-on-surface-variant">
+                  Tekan “Minta rekomendasi AI” untuk melihat kandidat destinasi.
+                </p>
+              ) : null}
+            </div>
           ) : null}
           <Nav
             onBack={() => setStep(3)}

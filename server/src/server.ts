@@ -14,9 +14,12 @@ import {
   createProductionSocialStore,
   createProductionTripService,
   createRuntimeSearchService,
+  createSessionStore,
   createShareLinkService,
   createUserRepository,
 } from "./container.ts";
+import { MemoryQuotaStore, QuotaService } from "./modules/search/quota.ts";
+import { SequelizeQuotaStore } from "./modules/search/sequelize-quota.ts";
 import { envRateLimit } from "./middleware/rate-limit.ts";
 import { logger } from "./lib/logger.ts";
 import { AuthService } from "./modules/auth/auth-service.ts";
@@ -37,7 +40,13 @@ async function main() {
     logger.warn("Database unavailable; using in-memory user repository");
   }
 
-  const authService = new AuthService(createAuthAdapter(), createUserRepository(databaseReady));
+  const authUsers = createUserRepository(databaseReady);
+  const authSessions = createSessionStore(databaseReady);
+  const authService = new AuthService(
+    createAuthAdapter(authUsers, authSessions),
+    authUsers,
+    authSessions,
+  );
   const chatService = createChatService(databaseReady);
   const onJobUpdated = (job: {
     id: string;
@@ -55,6 +64,10 @@ async function main() {
     : createMemoryTripService(undefined, chatService, social);
   const httpServer = createServer();
   const sockets = createSocketServer(httpServer, authService, chatService);
+  const routesQuota = new QuotaService(
+    databaseReady ? new SequelizeQuotaStore() : new MemoryQuotaStore(),
+    env.placesMaxRequestsPerUserPerDay,
+  );
   const app = createApp(
     authService,
     sockets.disconnectUser,
@@ -68,6 +81,7 @@ async function main() {
     createShareLinkService(chatService, databaseReady),
     createItineraryExportService(chatService, databaseReady),
     new ProvinceService(databaseReady),
+    routesQuota,
   );
 
   httpServer.on("request", app);

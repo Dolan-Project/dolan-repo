@@ -28,6 +28,37 @@ export class QuotaService {
       throw tooManyRequests(SearchErrorCode.QUOTA_EXCEEDED, "Daily Places quota exceeded");
     }
   }
+
+  async consumeAi(userId: string) {
+    const period = this.now().toISOString().slice(0, 10);
+    const limit = env.aiMaxRegeneratePerUserPerDay;
+    const count = await this.store.countAndIncrement({
+      provider: "ai",
+      operation: "generate",
+      period,
+      userId,
+      limit,
+    });
+    if (count > limit) {
+      throw tooManyRequests(SearchErrorCode.QUOTA_EXCEEDED, "Daily AI generation quota exceeded");
+    }
+  }
+
+  async consumeRoutes(userId: string | null) {
+    const period = this.now().toISOString().slice(0, 10);
+    const limit = this.dailyLimit;
+    const count = await this.store.countAndIncrement({
+      provider: "google_routes",
+      operation: "computeRoutes",
+      period,
+      userId,
+      limit,
+      estimatedCost: env.placesEstimatedCostPerRequest,
+    });
+    if (count > limit) {
+      throw tooManyRequests(SearchErrorCode.QUOTA_EXCEEDED, "Daily Routes quota exceeded");
+    }
+  }
 }
 
 export class MemoryQuotaStore implements QuotaStore {

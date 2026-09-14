@@ -14,6 +14,7 @@ export class User extends Model<
   declare id: CreationOptional<string>;
   declare authReference: string;
   declare email: string;
+  declare passwordHash: CreationOptional<string | null>;
   declare role: CreationOptional<"USER" | "ADMIN">;
   declare status: CreationOptional<"ACTIVE" | "RESTRICTED" | "SUSPENDED">;
   declare emailVerifiedAt: CreationOptional<Date | null>;
@@ -39,6 +40,11 @@ export function initUserModel(sequelize: Sequelize): typeof User {
         type: DataTypes.STRING(320),
         allowNull: false,
         unique: true,
+      },
+      passwordHash: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+        field: "password_hash",
       },
       role: {
         type: DataTypes.STRING(32),

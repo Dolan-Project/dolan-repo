@@ -2,6 +2,11 @@ import type { Sequelize } from "sequelize";
 import { getSequelize } from "../src/connection.ts";
 import { initUserModel, User } from "./user.ts";
 import { initUserProfileModel, UserProfile } from "./user-profile.ts";
+import {
+  AuthSession,
+  initAuthSessionModels,
+  PasswordResetToken,
+} from "./auth-session.ts";
 import { initPlaceModel, Place } from "./place.ts";
 import { initProvinceModels, Province, ProvincePlace } from "./province.ts";
 import {
@@ -53,6 +58,11 @@ let initialized = false;
 function applyAssociations() {
   User.hasOne(UserProfile, { foreignKey: "userId", as: "profile" });
   UserProfile.belongsTo(User, { foreignKey: "userId", as: "user" });
+
+  User.hasMany(AuthSession, { foreignKey: "userId", as: "authSessions" });
+  AuthSession.belongsTo(User, { foreignKey: "userId", as: "user" });
+  User.hasMany(PasswordResetToken, { foreignKey: "userId", as: "passwordResetTokens" });
+  PasswordResetToken.belongsTo(User, { foreignKey: "userId", as: "user" });
 
   User.hasMany(Trip, { foreignKey: "hostUserId", as: "hostedTrips" });
   Trip.belongsTo(User, { foreignKey: "hostUserId", as: "host" });
@@ -232,6 +242,7 @@ export function initModels(sequelize: Sequelize = getSequelize()) {
 
   initUserModel(sequelize);
   initUserProfileModel(sequelize);
+  initAuthSessionModels(sequelize);
   initPlaceModel(sequelize);
   initProvinceModels(sequelize);
   initTemplateModels(sequelize);
@@ -254,6 +265,8 @@ export function getModels() {
   return {
     User,
     UserProfile,
+    AuthSession,
+    PasswordResetToken,
     Place,
     Province,
     ProvincePlace,
@@ -293,6 +306,8 @@ export function getModels() {
 export {
   User,
   UserProfile,
+  AuthSession,
+  PasswordResetToken,
   Place,
   Province,
   ProvincePlace,

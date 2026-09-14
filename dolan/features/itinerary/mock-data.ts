@@ -86,10 +86,10 @@ const baseDays: EditableItineraryDay[] = [
 ];
 
 export const INITIAL_BUDGET_ITEMS: BudgetItemInput[] = [
-  { category: "TRANSPORT", label: "Liveaboard dan transfer", quantity: "1", unit: "paket", unitCostLow: "1850000", unitCostHigh: "2300000", sourceType: "ESTIMATE", notes: "Estimasi per orang" },
-  { category: "ACCOMMODATION", label: "Kabin kapal 3 malam", quantity: "3", unit: "malam", unitCostLow: "250000", unitCostHigh: "350000", sourceType: "ESTIMATE", notes: null },
+  { category: "TRANSPORT_ROUNDTRIP", label: "Liveaboard dan transfer", quantity: "1", unit: "paket", unitCostLow: "1850000", unitCostHigh: "2300000", sourceType: "ESTIMATE", notes: "Estimasi per orang" },
+  { category: "LODGING", label: "Kabin kapal 3 malam", quantity: "3", unit: "malam", unitCostLow: "250000", unitCostHigh: "350000", sourceType: "ESTIMATE", notes: null },
   { category: "FOOD", label: "Makan dan air minum", quantity: "4", unit: "hari", unitCostLow: "125000", unitCostHigh: "175000", sourceType: "ESTIMATE", notes: null },
-  { category: "TICKET", label: "Tiket kawasan konservasi", quantity: "1", unit: "orang", unitCostLow: "250000", unitCostHigh: "400000", sourceType: "ESTIMATE", notes: "Harga dapat berubah" },
+  { category: "ACTIVITIES", label: "Tiket kawasan konservasi", quantity: "1", unit: "orang", unitCostLow: "250000", unitCostHigh: "400000", sourceType: "ESTIMATE", notes: "Harga dapat berubah" },
 ];
 
 export const createBudgetSummary = (items: BudgetItemInput[]) => {

@@ -5,14 +5,25 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { io, type Socket } from "socket.io-client";
 import type { ApiError, ChatMessage, TripDetail } from "@/lib/contracts";
 import { Icon } from "@/components/ui/Icon";
+import { LocationSharePanel } from "@/components/trip/LocationSharePanel";
 import { ROUTES } from "@/lib/routes";
 
 type ChatState = "connecting" | "online" | "offline";
+
+const NEAR_BOTTOM_PX = 96;
 
 function mergeMessages(current: ChatMessage[], incoming: ChatMessage) {
   const index = current.findIndex((item) => item.id === incoming.id || item.clientMessageId === incoming.clientMessageId);
   if (index < 0) return [...current, incoming];
   const next = [...current]; next[index] = incoming; return next;
+}
+
+function mergeMessageList(current: ChatMessage[], incoming: ChatMessage[]) {
+  return incoming.reduce((all, message) => mergeMessages(all, message), current);
+}
+
+function parseMessagesPayload(data: ChatMessage[] | { messages: ChatMessage[] }) {
+  return Array.isArray(data) ? data : data.messages;
 }
 
 export function TripChatRoom({ tripId }: { tripId: string }) {
@@ -23,6 +34,13 @@ export function TripChatRoom({ tripId }: { tripId: string }) {
   const [error, setError] = useState("");
   const socketRef = useRef<Socket | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const lastMessageIdRef = useRef<string | null>(null);
+  const stickToBottomRef = useRef(true);
+  const hasJoinedOnceRef = useRef(false);
+
+  useEffect(() => {
+    lastMessageIdRef.current = messages.at(-1)?.id ?? null;
+  }, [messages]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -36,24 +54,64 @@ export function TripChatRoom({ tripId }: { tripId: string }) {
       if (!tripPayload.success) throw new Error(tripPayload.error.message);
       if (!messagePayload.success) throw new Error(messagePayload.error.message);
       setTrip(tripPayload.data);
-      setMessages(Array.isArray(messagePayload.data) ? messagePayload.data : messagePayload.data.messages);
+      setMessages(parseMessagesPayload(messagePayload.data));
     }
     void hydrate().catch((reason) => { if (!controller.signal.aborted) setError(reason instanceof Error ? reason.message : "Chat tidak dapat dimuat"); });
     return () => controller.abort();
   }, [tripId]);
 
   useEffect(() => {
+    hasJoinedOnceRef.current = false;
     const origin = process.env.NEXT_PUBLIC_SOCKET_URL ?? "http://localhost:4000";
     const socket = io(origin, { withCredentials: true, transports: ["websocket", "polling"], reconnection: true });
     socketRef.current = socket;
-    socket.on("connect", () => { setState("connecting"); socket.emit("room.join", { tripId }, (result: { ok?: boolean; code?: string }) => result.ok ? setState("online") : (setState("offline"), setError(result.code ?? "Tidak dapat masuk room"))); });
+
+    async function refetchAfterReconnect() {
+      const after = lastMessageIdRef.current;
+      if (!after) return;
+      try {
+        const response = await fetch(`/api/v1/trips/${tripId}/messages?after=${encodeURIComponent(after)}&limit=50`, {
+          credentials: "include",
+        });
+        const payload = await response.json() as { success: true; data: ChatMessage[] | { messages: ChatMessage[] } } | ApiError;
+        if (!payload.success) return;
+        const next = parseMessagesPayload(payload.data);
+        if (next.length) setMessages((current) => mergeMessageList(current, next));
+      } catch {
+        // Keep the live socket stream; REST catch-up is best-effort.
+      }
+    }
+
+    socket.on("connect", () => {
+      setState("connecting");
+      socket.emit("room.join", { tripId }, (result: { ok?: boolean; code?: string }) => {
+        if (!result.ok) {
+          setState("offline");
+          setError(result.code ?? "Tidak dapat masuk room");
+          return;
+        }
+        setState("online");
+        if (hasJoinedOnceRef.current) void refetchAfterReconnect();
+        hasJoinedOnceRef.current = true;
+      });
+    });
     socket.on("disconnect", () => setState("offline"));
     socket.on("connect_error", () => setState("offline"));
     socket.on("message.created", (message: ChatMessage) => setMessages((current) => mergeMessages(current, message)));
     return () => { socket.disconnect(); socketRef.current = null; };
   }, [tripId]);
 
-  useEffect(() => { listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: "smooth" }); }, [messages]);
+  useEffect(() => {
+    if (!stickToBottomRef.current) return;
+    listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: "smooth" });
+  }, [messages]);
+
+  function onListScroll() {
+    const list = listRef.current;
+    if (!list) return;
+    stickToBottomRef.current = list.scrollHeight - list.scrollTop - list.clientHeight <= NEAR_BOTTOM_PX;
+  }
+
   const canChat = trip?.viewerRole === "host" || trip?.viewerRole === "participant";
   const statusLabel = useMemo(() => state === "online" ? "Terhubung" : state === "connecting" ? "Menghubungkan…" : "Mencoba menyambung ulang…", [state]);
 
@@ -62,6 +120,7 @@ export function TripChatRoom({ tripId }: { tripId: string }) {
     const content = body.trim(); if (!content || !canChat) return;
     const clientMessageId = crypto.randomUUID();
     const optimistic: ChatMessage = { id: clientMessageId, tripId, clientMessageId, body: content, sentAt: new Date().toISOString(), sender: trip!.host };
+    stickToBottomRef.current = true;
     setMessages((current) => mergeMessages(current, optimistic)); setBody(""); setError("");
     const socket = socketRef.current;
     if (socket?.connected) {
@@ -76,9 +135,9 @@ export function TripChatRoom({ tripId }: { tripId: string }) {
   }
 
   return <main className="min-h-[calc(100dvh-5rem)] bg-surface px-margin py-5 md:px-margin-desktop md:py-8"><section className="mx-auto grid h-[calc(100dvh-8rem)] max-w-6xl overflow-hidden rounded-[2rem] border border-outline-variant/50 bg-white shadow-xl md:grid-cols-[280px_1fr]">
-    <aside className="hidden border-r border-outline-variant/45 bg-surface-container-low p-5 md:block"><Link href={ROUTES.trip(tripId)} className="inline-flex items-center gap-2 text-sm font-bold text-primary"><Icon name="arrow_back" /> Detail trip</Link><div className="mt-8 rounded-2xl bg-gradient-to-br from-primary to-[#1397d4] p-5 text-white"><p className="text-xs font-bold text-white/70">ROOM TRIP</p><h1 className="mt-2 text-xl font-extrabold">{trip?.title ?? "Memuat trip…"}</h1><p className="mt-3 text-xs leading-5 text-white/80">{trip?.destinationCity}</p></div><p className="mt-5 text-xs leading-5 text-on-surface-variant">Chat hanya dapat dibaca host dan peserta yang sudah diterima.</p></aside>
+    <aside className="hidden min-h-0 space-y-4 overflow-y-auto border-r border-outline-variant/45 bg-surface-container-low p-5 md:block"><Link href={ROUTES.trip(tripId)} className="inline-flex items-center gap-2 text-sm font-bold text-primary"><Icon name="arrow_back" /> Detail trip</Link><div className="rounded-2xl bg-gradient-to-br from-primary to-[#1397d4] p-5 text-white"><p className="text-xs font-bold text-white/70">ROOM TRIP</p><h1 className="mt-2 text-xl font-extrabold">{trip?.title ?? "Memuat trip…"}</h1><p className="mt-3 text-xs leading-5 text-white/80">{trip?.destinationCity}</p></div><p className="text-xs leading-5 text-on-surface-variant">Chat hanya dapat dibaca host dan peserta yang sudah diterima.</p>{canChat ? <LocationSharePanel tripId={tripId} /> : null}</aside>
     <div className="flex min-h-0 flex-col"><header className="flex items-center gap-3 border-b border-outline-variant/45 px-4 py-3 md:px-6"><Link href={ROUTES.trip(tripId)} className="grid h-10 w-10 place-items-center rounded-full bg-surface-container md:hidden"><Icon name="arrow_back" /></Link><div className="min-w-0 flex-1"><h1 className="truncate font-extrabold text-on-surface">{trip?.title ?? "Grup perjalanan"}</h1><p className="text-xs text-on-surface-variant"><span className={`mr-1 inline-block h-2 w-2 rounded-full ${state === "online" ? "bg-emerald-500" : "bg-amber-500"}`} />{statusLabel}</p></div></header>
-      <div ref={listRef} className="min-h-0 flex-1 space-y-3 overflow-y-auto bg-[#f4f8fc] p-4 md:p-6">{error ? <p className="rounded-xl bg-error-container px-4 py-3 text-sm text-on-error-container" role="alert">{error}</p> : null}{messages.map((message) => <article key={message.id} className="max-w-[82%] rounded-2xl rounded-bl-md bg-white px-4 py-3 shadow-sm"><p className="text-xs font-extrabold text-primary">@{message.sender.username}</p><p className="mt-1 text-sm leading-6 text-on-surface">{message.body}</p><time className="mt-1 block text-[10px] text-on-surface-variant">{new Intl.DateTimeFormat("id-ID", { hour: "2-digit", minute: "2-digit" }).format(new Date(message.sentAt))}</time></article>)}</div>
+      <div ref={listRef} onScroll={onListScroll} className="min-h-0 flex-1 space-y-3 overflow-y-auto bg-[#f4f8fc] p-4 md:p-6">{error ? <p className="rounded-xl bg-error-container px-4 py-3 text-sm text-on-error-container" role="alert">{error}</p> : null}{messages.map((message) => <article key={message.id} className="max-w-[82%] rounded-2xl rounded-bl-md bg-white px-4 py-3 shadow-sm"><p className="text-xs font-extrabold text-primary">@{message.sender.username}</p><p className="mt-1 text-sm leading-6 text-on-surface">{message.body}</p><time className="mt-1 block text-[10px] text-on-surface-variant">{new Intl.DateTimeFormat("id-ID", { hour: "2-digit", minute: "2-digit" }).format(new Date(message.sentAt))}</time></article>)}</div>
       <form onSubmit={send} className="flex gap-2 border-t border-outline-variant/45 bg-white p-3 md:p-4"><input className="field-input min-w-0 flex-1 !rounded-full" value={body} onChange={(event) => setBody(event.target.value)} placeholder={canChat ? "Tulis pesan…" : "Khusus anggota trip"} disabled={!canChat}/><button className="grid h-12 w-12 flex-none place-items-center rounded-full bg-primary text-white disabled:opacity-40" disabled={!canChat || !body.trim()} aria-label="Kirim pesan"><Icon name="send" filled /></button></form>
     </div>
   </section></main>;

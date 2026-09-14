@@ -17,6 +17,9 @@ export class Place extends Model<
   declare cachedCity: CreationOptional<string | null>;
   declare cachedLatitude: CreationOptional<number | null>;
   declare cachedLongitude: CreationOptional<number | null>;
+  declare cachedPhotoName: CreationOptional<string | null>;
+  declare cachedPhotoUrl: CreationOptional<string | null>;
+  declare cachedPhotoAttribution: CreationOptional<string | null>;
   declare cacheCheckedAt: CreationOptional<Date | null>;
   declare status: CreationOptional<"ACTIVE" | "INACTIVE">;
   declare createdAt: CreationOptional<Date>;
@@ -44,6 +47,13 @@ export function initPlaceModel(sequelize: Sequelize): typeof Place {
         type: DataTypes.DOUBLE,
         allowNull: true,
         field: "cached_longitude",
+      },
+      cachedPhotoName: { type: DataTypes.TEXT, allowNull: true, field: "cached_photo_name" },
+      cachedPhotoUrl: { type: DataTypes.TEXT, allowNull: true, field: "cached_photo_url" },
+      cachedPhotoAttribution: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+        field: "cached_photo_attribution",
       },
       cacheCheckedAt: { type: DataTypes.DATE, allowNull: true, field: "cache_checked_at" },
       status: {

@@ -59,6 +59,7 @@ export function createSocialRouter(authService: AuthService, social: SocialQuery
       try {
         const target = await authService.resolveUser(param(req.params.username));
         await social.follow(req.authUser!.id, target.id);
+        await trips.notifyUser(target.id, req.authUser!.id, "follower.created", "user", req.authUser!.id);
         res.status(201).json(apiSuccess({ following: true, followed: true }));
       } catch (error) {
         next(error);

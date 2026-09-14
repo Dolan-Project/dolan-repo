@@ -5,7 +5,7 @@ describe("server-calculated budget", () => {
   it("multiplies quantity and unit cost without trusting AI totals", () => {
     const summary = buildBudgetSummary([
       {
-        category: "makan",
+        category: "FOOD",
         label: "Makan siang",
         quantity: "2.00",
         unit: "porsi",
@@ -14,7 +14,7 @@ describe("server-calculated budget", () => {
         sourceType: "estimate",
       },
       {
-        category: "transport",
+        category: "TRANSPORT_LOCAL",
         label: "Ojek",
         quantity: "1.00",
         unit: "trip",

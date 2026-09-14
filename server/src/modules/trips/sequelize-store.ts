@@ -13,6 +13,8 @@ import {
   Message,
   Notification,
   Place,
+  TemplateDay,
+  TemplateStop,
   TemplateUsage,
   Trip,
   TripComment,
@@ -279,17 +281,44 @@ export class SequelizeTripStore implements TripStore {
     return toStoredMember(member);
   }
 
-  async confirmAttendance(tripId: string, userId: string, confirmed: boolean) {
+  async confirmAttendance(
+    tripId: string,
+    actorUserId: string,
+    input: { confirmed: boolean; targetUserId?: string },
+  ) {
+    const actor = await TripMember.findOne({
+      where: { tripId, userId: actorUserId, membershipStatus: "ACTIVE" },
+      transaction: this.tx(),
+    });
+    if (!actor) return null;
+    const value = input.confirmed ? "PRESENT" : "ABSENT";
+    const targetId = input.targetUserId ?? actorUserId;
     const member = await TripMember.findOne({
-      where: { tripId, userId, membershipStatus: "ACTIVE" },
+      where: { tripId, userId: targetId, membershipStatus: "ACTIVE" },
       transaction: this.tx(),
     });
     if (!member) return null;
-    const value = confirmed ? "PRESENT" : "ABSENT";
-    if (member.role === "HOST") {
+
+    if (input.targetUserId && input.targetUserId !== actorUserId) {
+      if (actor.role !== "HOST") return null;
       await member.update({ hostAttendance: value }, { transaction: this.tx() });
+    } else if (member.role === "HOST") {
+      await member.update({ hostAttendance: value, selfAttendance: value }, { transaction: this.tx() });
     } else {
       await member.update({ selfAttendance: value }, { transaction: this.tx() });
+    }
+
+    await member.reload({ transaction: this.tx() });
+    const host = member.hostAttendance ?? "UNCONFIRMED";
+    const self = member.selfAttendance ?? "UNCONFIRMED";
+    if (
+      member.role === "PARTICIPANT" &&
+      (host === "PRESENT" || host === "ABSENT") &&
+      (self === "PRESENT" || self === "ABSENT") &&
+      host !== self
+    ) {
+      await member.update({ hostAttendance: "DISPUTED", selfAttendance: "DISPUTED" }, { transaction: this.tx() });
+      await member.reload({ transaction: this.tx() });
     }
     return toStoredMember(member);
   }
@@ -433,6 +462,61 @@ export class SequelizeTripStore implements TripStore {
     }
   }
 
+  async publishTripAsTemplate(tripId: string, creatorUserId: string) {
+    const trip = await Trip.findByPk(tripId, { transaction: this.tx() });
+    if (!trip) throw notFound(TripErrorCode.TRIP_NOT_FOUND, "Trip not found");
+    const versionId = trip.currentItineraryVersionId;
+    if (!versionId) throw notFound(TripErrorCode.TRIP_NOT_FOUND, "Trip has no selected itinerary version");
+    const version = await ItineraryVersion.findByPk(versionId, {
+      include: [{ model: ItineraryDay, as: "days", include: [{ model: ItineraryStop, as: "stops" }] }],
+      transaction: this.tx(),
+    });
+    if (!version) throw notFound(TripErrorCode.TRIP_NOT_FOUND, "Itinerary version not found");
+    const days = ((version as unknown as { days?: ItineraryDay[] }).days ?? [])
+      .slice()
+      .sort((a, b) => a.dayNumber - b.dayNumber);
+    const template = await ItineraryTemplate.create(
+      {
+        creatorUserId,
+        sourceTripId: tripId,
+        title: trip.title,
+        description: trip.description,
+        city: trip.destinationCity ?? "Indonesia",
+        durationDays: Math.max(days.length, 1),
+        transportMode: trip.transportMode,
+        source: "USER_TRIP",
+        publicationStatus: "PUBLISHED",
+        publishedAt: new Date(),
+        usageCount: 0,
+      },
+      { transaction: this.tx() },
+    );
+    for (const day of days) {
+      const templateDay = await TemplateDay.create(
+        { templateId: template.id, dayNumber: day.dayNumber, title: day.title },
+        { transaction: this.tx() },
+      );
+      const stops = ((day as unknown as { stops?: ItineraryStop[] }).stops ?? [])
+        .slice()
+        .sort((a, b) => a.sequence - b.sequence);
+      for (const stop of stops) {
+        await TemplateStop.create(
+          {
+            templateDayId: templateDay.id,
+            sequence: stop.sequence,
+            placeId: stop.placeId,
+            customTitle: stop.customTitle,
+            activityType: stop.activityType,
+            durationMinutes: stop.durationMinutes,
+            notes: stop.notes,
+          },
+          { transaction: this.tx() },
+        );
+      }
+    }
+    return { templateId: template.id, title: template.title };
+  }
+
   async createNotification(input: {
     recipientUserId: string;
     actorUserId: string;
@@ -550,8 +634,14 @@ function toStoredTrip(trip: Trip): StoredTrip {
 }
 
 function toStoredMember(member: TripMember): StoredMember {
+  const hostAttendance = (member.hostAttendance ?? "UNCONFIRMED") as StoredMember["hostAttendance"];
+  const selfAttendance = (member.selfAttendance ?? "UNCONFIRMED") as StoredMember["selfAttendance"];
+  const attendanceDisputed = hostAttendance === "DISPUTED" || selfAttendance === "DISPUTED";
   const confirmed =
-    member.role === "HOST" ? member.hostAttendance === "PRESENT" : member.selfAttendance === "PRESENT";
+    !attendanceDisputed &&
+    (member.role === "HOST"
+      ? hostAttendance === "PRESENT" || selfAttendance === "PRESENT"
+      : selfAttendance === "PRESENT" && hostAttendance !== "ABSENT");
   return {
     id: member.id,
     tripId: member.tripId,
@@ -559,6 +649,9 @@ function toStoredMember(member: TripMember): StoredMember {
     role: member.role,
     membershipStatus: member.membershipStatus,
     attendanceConfirmed: confirmed,
+    attendanceDisputed,
+    hostAttendance,
+    selfAttendance,
     showOnProfile: member.showOnProfile ?? true,
     joinedAt: member.joinedAt.toISOString(),
     leftAt: member.leftAt ? member.leftAt.toISOString() : null,

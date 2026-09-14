@@ -7,6 +7,20 @@ export const placeCandidateSchema = z.object({
   city: z.string().nullable(),
 });
 
+export const destinationRecommendationSchema = z.object({
+  googlePlaceId: z.string().regex(/^ChIJ/),
+  name: z.string().min(1),
+  city: z.string().min(1),
+  region: z.string().nullable().optional(),
+  estimateNote: z.string().nullable().optional(),
+  estimatedBudgetLow: z.string().nullable().optional(),
+  estimatedBudgetHigh: z.string().nullable().optional(),
+});
+
+export const destinationRecommendationsSchema = z.object({
+  candidates: z.array(destinationRecommendationSchema).min(1).max(8),
+});
+
 export const generatedStopSchema = z.object({
   sequence: z.number().int().positive(),
   place: placeCandidateSchema.nullable(),
@@ -46,13 +60,16 @@ export const generationJobSchema = z.object({
   attemptCount: z.number().int().nonnegative(),
   resultVersionId: z.string().uuid().nullable(),
   selectedVersionId: z.string().uuid().nullable(),
+  resultCandidates: z.array(destinationRecommendationSchema).nullable().optional(),
   errorCode: z.string().nullable(),
   createdAt: z.string(),
   updatedAt: z.string(),
 });
 
 export const enqueueGenerationSchema = z.object({
-  type: z.enum(["RECOMMEND_DESTINATIONS", "GENERATE_ITINERARY", "REGENERATE_ITINERARY"]).default("GENERATE_ITINERARY"),
+  type: z
+    .enum(["RECOMMEND_DESTINATIONS", "GENERATE_ITINERARY", "REGENERATE_ITINERARY"])
+    .default("GENERATE_ITINERARY"),
   idempotencyKey: z.string().uuid(),
   preferences: z.record(z.string(), z.unknown()).optional(),
 });
@@ -60,3 +77,4 @@ export const enqueueGenerationSchema = z.object({
 export type GeminiItinerary = z.infer<typeof geminiItinerarySchema>;
 export type GenerationJob = z.infer<typeof generationJobSchema>;
 export type EnqueueGeneration = z.infer<typeof enqueueGenerationSchema>;
+export type DestinationRecommendation = z.infer<typeof destinationRecommendationSchema>;
