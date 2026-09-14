@@ -2,12 +2,14 @@ import { AuthErrorCode, enqueueGenerationSchema, type GeminiItinerary, type Gene
 import { ZodError } from "zod";
 import { env } from "../../config/env.ts";
 import { HttpError } from "../../lib/api-error.ts";
+import { logger } from "../../lib/logger.ts";
 import { buildBudgetSummary } from "./budget.ts";
-import { parseGeminiItinerary, type GenerationModel } from "./gemini-adapter.ts";
+import { parseGeneratedItinerary, type GenerationModel } from "./groq-adapter.ts";
 import type { JobRecord, JobRepository } from "./job-repository.ts";
 import { applyLockedStops, type LockedStop } from "./locked-stops.ts";
 import { assertRealPlaces } from "./place-guard.ts";
 import { applyRouteLegs, type LatLng, type RoutesClient } from "./routes-adapter.ts";
+import { isUuid } from "./persist-itinerary.ts";
 
 export type DraftTrip = {
   id: string;
@@ -37,6 +39,7 @@ export type JobServiceOptions = {
   routes?: RoutesClient;
   resolveCoords?: (itinerary: GeminiItinerary) => Promise<Array<LatLng | null>>;
   verifyPlaces?: (itinerary: GeminiItinerary) => Promise<void>;
+  hydratePlaces?: (itinerary: GeminiItinerary) => Promise<GeminiItinerary>;
   requireDatabaseTrip?: boolean;
   onJobUpdated?: (job: GenerationJob) => void | Promise<void>;
 };
@@ -86,6 +89,9 @@ export class GenerationJobService {
   }
 
   async getById(id: string, actorId: string): Promise<GenerationJob> {
+    if (!isUuid(id)) {
+      throw new HttpError(404, "NOT_FOUND", "Generation job not found");
+    }
     const job = await this.jobs.getById(id);
     if (!job || job.requestedBy !== actorId) {
       throw new HttpError(404, "NOT_FOUND", "Generation job not found");
@@ -113,7 +119,10 @@ export class GenerationJobService {
         tripId: claimed.tripId,
         preferences: trip?.preferences ?? undefined,
       });
-      let itinerary = parseGeminiItinerary(raw);
+      let itinerary = parseGeneratedItinerary(raw);
+      if (this.options.hydratePlaces) {
+        itinerary = await this.options.hydratePlaces(itinerary);
+      }
       assertRealPlaces(itinerary);
       await this.options.verifyPlaces?.(itinerary);
       const locked = (await this.options.loadLockedStops?.(claimed.selectedVersionId)) ?? [];
@@ -146,6 +155,14 @@ export class GenerationJobService {
       await this.options.onJobUpdated?.(publicJob(succeeded));
       return succeeded;
     } catch (error) {
+      if (error instanceof ZodError) {
+        logger.warn("Generated itinerary failed validation", {
+          issues: error.issues.map((issue) => issue.path.join(".")).slice(0, 8),
+        });
+      }
+      if (error instanceof HttpError) {
+        logger.warn("Generation provider error", { status: error.status, code: error.code });
+      }
       const message = error instanceof Error ? error.message : "";
       const code =
         error instanceof ZodError ||

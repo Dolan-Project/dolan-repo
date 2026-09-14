@@ -4,14 +4,14 @@ import { createApp } from "../src/app.ts";
 import { MockAuthAdapter } from "../src/integrations/supabase/mock-auth-adapter.ts";
 import { AuthService } from "../src/modules/auth/auth-service.ts";
 import { MemoryUserRepository } from "../src/modules/auth/user-repository.ts";
-import { MockGeminiAdapter } from "../src/modules/jobs/gemini-adapter.ts";
+import { MockGroqAdapter } from "../src/modules/jobs/groq-adapter.ts";
 import { MemoryJobRepository } from "../src/modules/jobs/job-repository.ts";
 import { GenerationJobService } from "../src/modules/jobs/job-service.ts";
 
 const keyA = "11111111-1111-4111-8111-111111111111";
 const keyB = "22222222-2222-4222-8222-222222222222";
 
-function setup(model: MockGeminiAdapter = new MockGeminiAdapter()) {
+function setup(model: MockGroqAdapter = new MockGroqAdapter()) {
   const auth = new AuthService(new MockAuthAdapter(), new MemoryUserRepository());
   const jobs = new GenerationJobService(new MemoryJobRepository(), model);
   return { app: createApp(auth, () => 0, undefined, jobs), jobs };
@@ -50,7 +50,7 @@ describe("generation job skeleton", () => {
 
   it("does not create a second active job and does not drop the draft on failure", async () => {
     const { app, jobs } = setup(
-      new MockGeminiAdapter({
+      new MockGroqAdapter({
         summary: "bad",
         assumptions: [],
         days: [
@@ -100,7 +100,7 @@ describe("generation job skeleton", () => {
 
   it("rejects a placeholder trip id with 404 when the database trip is required", async () => {
     const auth = new AuthService(new MockAuthAdapter(), new MemoryUserRepository());
-    const jobs = new GenerationJobService(new MemoryJobRepository(), new MockGeminiAdapter(), {
+    const jobs = new GenerationJobService(new MemoryJobRepository(), new MockGroqAdapter(), {
       requireDatabaseTrip: true,
     });
     const response = await request(createApp(auth, () => 0, undefined, jobs))
@@ -114,7 +114,7 @@ describe("generation job skeleton", () => {
 
   it("requeues a stale processing job", async () => {
     const repo = new MemoryJobRepository();
-    const jobs = new GenerationJobService(repo, new MockGeminiAdapter());
+    const jobs = new GenerationJobService(repo, new MockGroqAdapter());
     const created = await repo.createOrGetIdempotent({
       tripId: "trip-draft",
       requestedBy: "11111111-1111-4111-8111-111111111111",
@@ -136,7 +136,7 @@ describe("generation job skeleton", () => {
   it("does not persist another version when the job already has a result", async () => {
     const repo = new MemoryJobRepository();
     let persists = 0;
-    const jobs = new GenerationJobService(repo, new MockGeminiAdapter(), {
+    const jobs = new GenerationJobService(repo, new MockGroqAdapter(), {
       persistVersion: async () => {
         persists += 1;
         return "should-not-run";
@@ -187,7 +187,7 @@ describe("generation job skeleton", () => {
   it("notifies listeners when a job finishes", async () => {
     const updates: string[] = [];
     const repo = new MemoryJobRepository();
-    const jobs = new GenerationJobService(repo, new MockGeminiAdapter(), {
+    const jobs = new GenerationJobService(repo, new MockGroqAdapter(), {
       onJobUpdated: (job) => {
         updates.push(job.status);
       },

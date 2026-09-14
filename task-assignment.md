@@ -525,7 +525,7 @@ Database dan API P0 siap untuk final regression.
 
 - Membuat generation-job polling.
 - Membuat row-lock job claim.
-- Mengintegrasikan Gemini structured output.
+- Mengintegrasikan Groq structured output.
 - Memvalidasi output dengan Zod.
 - Memvalidasi kandidat tempat nyata.
 - Mengintegrasikan Google Routes.

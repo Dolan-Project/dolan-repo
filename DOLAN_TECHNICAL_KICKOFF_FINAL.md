@@ -39,7 +39,7 @@ Fitur tidak boleh diganti dengan simulasi pada build final. Mock hanya digunakan
 | Auth | Supabase Auth |
 | Storage | Supabase Storage |
 | Realtime | Socket.IO pada Express server |
-| AI | Gemini structured JSON output |
+| AI | Groq structured JSON output |
 | Tempat/peta/rute | Google Places New, Maps JavaScript, Routes API, Maps URLs |
 | PDF | `@react-pdf/renderer` |
 | Offline | Service worker + IndexedDB untuk itinerary yang dipilih user |
@@ -454,7 +454,7 @@ Worker memakai tabel `generation_jobs`, tanpa Redis pada sprint ini:
 
 1. Poll job `QUEUED` setiap 2 detik.
 2. Claim satu job dengan transaction, `FOR UPDATE SKIP LOCKED`, `locked_by`, dan `locked_at`.
-3. Ubah ke `PROCESSING`, panggil Gemini/Routes, validasi output dengan Zod, lalu simpan itinerary version.
+3. Ubah ke `PROCESSING`, panggil Groq/Routes, validasi output dengan Zod, lalu simpan itinerary version.
 4. Maksimal dua retry untuk error sementara dengan backoff.
 5. Error validasi/provider permanen menjadi `FAILED` dengan `error_code` aman.
 6. Job `PROCESSING` yang lock-nya lebih dari 5 menit dikembalikan ke queue jika attempt masih tersedia.
@@ -482,8 +482,8 @@ SUPABASE_SERVICE_ROLE_KEY=
 SUPABASE_STORAGE_BUCKET=dolan-assets
 NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_KEY=
 GOOGLE_MAPS_SERVER_KEY=
-GEMINI_API_KEY=
-GEMINI_MODEL=
+GROQ_API_KEY=
+GROQ_MODEL=
 COOKIE_DOMAIN=
 CORS_ALLOWED_ORIGINS=http://localhost:3000
 SOCKET_PATH=/socket.io

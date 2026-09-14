@@ -3,7 +3,7 @@ import type { GeminiItinerary } from "@dolan/shared";
 import { FakePlacesClient } from "../src/integrations/google/fake-places-client.ts";
 import { applyLockedStops } from "../src/modules/jobs/locked-stops.ts";
 import { assertRealPlaces } from "../src/modules/jobs/place-guard.ts";
-import { uniquePlaceIds } from "../src/modules/jobs/place-lookup.ts";
+import { createPlaceLookup, uniquePlaceIds } from "../src/modules/jobs/place-lookup.ts";
 
 const base: GeminiItinerary = {
   summary: "test",
@@ -60,10 +60,23 @@ describe("locked stops and real places", () => {
     ).toThrow("INVALID_GENERATION");
   });
 
-  it("collects unique place ids for live verification", async () => {
-    expect(uniquePlaceIds(base)).toEqual(["ChIJaaaaaaaaaaaaaaaaaaaa"]);
-    await expect(new FakePlacesClient().getDetails("ChIJaaaaaaaaaaaaaaaaaaaa")).rejects.toMatchObject({
-      status: 404,
+  it("replaces invented place ids with Google search matches", async () => {
+    const lookup = createPlaceLookup(new FakePlacesClient(), { requireKnownPlace: true });
+    const hydrated = await lookup.hydratePlaces({
+      ...base,
+      days: [
+        {
+          ...base.days[0]!,
+          stops: [
+            {
+              ...base.days[0]!.stops[0]!,
+              place: { googlePlaceId: "unknown", name: "Malioboro", city: "Yogyakarta" },
+            },
+          ],
+        },
+      ],
     });
+    expect(hydrated.days[0]?.stops[0]?.place?.googlePlaceId).toMatch(/^ChIJ/);
+    expect(hydrated.days[0]?.stops[0]?.place?.name).toMatch(/Malioboro/i);
   });
 });

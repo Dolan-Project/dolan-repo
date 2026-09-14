@@ -69,11 +69,50 @@ export function createPlaceLookup(
         if (options.requireKnownPlace) throw new Error("INVALID_GENERATION");
         return null;
       }
+      if (error instanceof HttpError && (error.status === 400 || error.status === 502)) {
+        if (options.requireKnownPlace) throw new Error("INVALID_GENERATION");
+        return null;
+      }
       throw error;
     }
   }
 
+  async function resolvePlaceCandidate(place: { googlePlaceId: string; name: string; city: string | null }) {
+    let hits = await places!.searchText({
+      query: place.name,
+      city: place.city ?? undefined,
+    });
+    if (hits.length === 0) {
+      hits = await places!.searchText({ query: place.name });
+    }
+    const hit = hits[0];
+    if (!hit) throw new Error("INVALID_GENERATION");
+    await remember(hit.googlePlaceId, hit.latitude, hit.longitude, hit.name);
+    return {
+      googlePlaceId: hit.googlePlaceId,
+      name: hit.name,
+      city: hit.city,
+    };
+  }
+
   return {
+    async hydratePlaces(itinerary: GeminiItinerary): Promise<GeminiItinerary> {
+      if (!places) return itinerary;
+      const days = [];
+      for (const day of itinerary.days) {
+        const stops = [];
+        for (const stop of day.stops) {
+          if (!stop.place) {
+            stops.push(stop);
+            continue;
+          }
+          stops.push({ ...stop, place: await resolvePlaceCandidate(stop.place) });
+        }
+        days.push({ ...day, stops });
+      }
+      return { ...itinerary, days };
+    },
+
     async resolveCoords(itinerary: GeminiItinerary): Promise<Array<LatLng | null>> {
       const coords: Array<LatLng | null> = [];
       for (const day of itinerary.days) {
@@ -94,7 +133,7 @@ export function createPlaceLookup(
         try {
           await places.getDetails(googlePlaceId);
         } catch (error) {
-          if (error instanceof HttpError && error.status === 404) {
+          if (error instanceof HttpError && (error.status === 404 || error.status === 400 || error.status === 502)) {
             throw new Error("INVALID_GENERATION");
           }
           throw error;

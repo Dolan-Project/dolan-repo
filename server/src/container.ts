@@ -11,7 +11,7 @@ import { MemoryChatStore } from "./modules/chat/memory-chat-store.ts";
 import { SequelizeChatStore } from "./modules/chat/sequelize-chat-store.ts";
 import { SequelizeUserRepository } from "./modules/auth/sequelize-user-repository.ts";
 import { MemoryUserRepository, type UserRepository } from "./modules/auth/user-repository.ts";
-import { GeminiAdapter, MockGeminiAdapter } from "./modules/jobs/gemini-adapter.ts";
+import { GroqAdapter, MockGroqAdapter } from "./modules/jobs/groq-adapter.ts";
 import { MemoryJobRepository } from "./modules/jobs/job-repository.ts";
 import { GenerationJobService, type JobServiceOptions } from "./modules/jobs/job-service.ts";
 import { createPlaceLookup } from "./modules/jobs/place-lookup.ts";
@@ -52,7 +52,7 @@ export function createChatService(useDatabase: boolean) {
 }
 
 export function createJobService(onJobUpdated?: JobServiceOptions["onJobUpdated"]) {
-  return new GenerationJobService(new MemoryJobRepository(), new MockGeminiAdapter(), {
+  return new GenerationJobService(new MemoryJobRepository(), new MockGroqAdapter(), {
     routes: new MockRoutesClient(),
     onJobUpdated,
   });
@@ -66,7 +66,7 @@ export function createProductionJobService(onJobUpdated?: JobServiceOptions["onJ
   const lookup = createPlaceLookup(places, { requireKnownPlace: Boolean(env.googleMapsServerKey) });
   return new GenerationJobService(
     new SequelizeJobRepository(),
-    env.geminiApiKey ? new GeminiAdapter(env.geminiApiKey, env.geminiModel) : new MockGeminiAdapter(),
+    env.groqApiKey ? new GroqAdapter(env.groqApiKey, env.groqModel) : new MockGroqAdapter(),
     {
       loadTrip: loadDraftTrip,
       loadLockedStops,
@@ -74,6 +74,7 @@ export function createProductionJobService(onJobUpdated?: JobServiceOptions["onJ
       routes: env.googleMapsServerKey ? new GoogleRoutesClient(env.googleMapsServerKey) : new MockRoutesClient(),
       resolveCoords: lookup.resolveCoords,
       verifyPlaces: lookup.verifyPlaces,
+      hydratePlaces: lookup.hydratePlaces,
       requireDatabaseTrip: true,
       onJobUpdated,
     },
