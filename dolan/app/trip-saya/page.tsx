@@ -1,6 +1,5 @@
 import { ReturnToActionBanner } from "@/components/auth/ReturnToActionBanner";
 import { MyTripsBoard } from "@/components/trip/MyTripsBoard";
-import { AttendanceConfirm } from "@/components/trips/AttendanceConfirm";
 import { getSession } from "@/lib/auth/get-session";
 import { ROUTES } from "@/lib/routes";
 
@@ -16,12 +15,5 @@ export default async function TripSayaPage() {
       </div>
     );
   }
-  return (
-    <>
-      <MyTripsBoard />
-      <div className="mx-auto max-w-[1440px] px-margin pb-8 md:px-margin-desktop">
-        <AttendanceConfirm />
-      </div>
-    </>
-  );
+  return <MyTripsBoard />;
 }

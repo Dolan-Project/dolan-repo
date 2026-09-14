@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { AttendanceConfirm } from "@/components/trips/AttendanceConfirm";
 import type { ApiError, TripDetail } from "@/lib/contracts";
 import { ROUTES, tripEditHref } from "@/lib/routes";
 import { TripBoardMap, type TripMapMarker } from "./TripBoardMap";
@@ -321,6 +322,14 @@ export function TripDetailView({
           </p>
         ) : null}
       </div>
+      {trip.status === "COMPLETED" &&
+      (trip.viewerRole === "host" || trip.viewerRole === "participant") ? (
+        <AttendanceConfirm
+          tripId={trip.id}
+          tripTitle={trip.title}
+          reviewUsername={trip.viewerRole === "participant" ? trip.host.username : null}
+        />
+      ) : null}
       {trip.visibility === "PUBLIC" ? (
         <div className="mt-8">
           <TripExperience

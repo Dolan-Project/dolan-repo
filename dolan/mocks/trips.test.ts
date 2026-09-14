@@ -21,6 +21,15 @@ describe("trip mocks", () => {
     }
   });
 
+  it("exposes the completed joined trip for attendance and review", () => {
+    const joined = mockListMyTrips("success", "joined");
+    expect(joined.success).toBe(true);
+    if (!joined.success) return;
+    const completed = joined.data.find((trip) => trip.id === "trip_completed");
+    expect(completed?.status).toBe("COMPLETED");
+    expect(completed?.host.username).toBe("wayan");
+  });
+
   it("create trip empty scenario returns no trip body payment fields", () => {
     const created = mockCreateTrip("success");
     expect(created.success).toBe(true);
