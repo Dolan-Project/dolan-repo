@@ -59,3 +59,8 @@ stitch-html/
 # local database dumps
 /backups/
 
+# Destination photos downloaded during db:seed (regenerate with GOOGLE_MAPS_SERVER_KEY)
+dolan/public/seed-places/*.jpg
+dolan/public/seed-places/*.jpeg
+dolan/public/seed-places/*.webp
+

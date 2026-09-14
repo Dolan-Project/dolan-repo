@@ -14,13 +14,17 @@ export const env = {
   webUrl: process.env.WEB_URL ?? "http://localhost:3000",
   corsOrigins: readList(process.env.CORS_ALLOWED_ORIGINS, ["http://localhost:3000"]),
   socketPath: process.env.SOCKET_PATH ?? "/socket.io",
-  authAdapter: (process.env.AUTH_ADAPTER ?? "mock") as "mock" | "supabase",
-  supabaseUrl: process.env.SUPABASE_URL ?? "",
-  supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY ?? "",
-  supabaseCookiePrefix: process.env.SUPABASE_COOKIE_PREFIX ?? "sb-",
+  authAdapter: (process.env.AUTH_ADAPTER ?? "local") as "mock" | "local",
+  sessionTtlDays: Number(process.env.SESSION_TTL_DAYS ?? 30),
+  googleOAuthClientId: process.env.GOOGLE_OAUTH_CLIENT_ID ?? "",
+  googleOAuthClientSecret: process.env.GOOGLE_OAUTH_CLIENT_SECRET ?? "",
+  googleOAuthRedirectUri:
+    process.env.GOOGLE_OAUTH_REDIRECT_URI ??
+    `${process.env.API_URL ?? "http://localhost:4000"}/api/v1/auth/google/callback`,
   googleMapsServerKey: process.env.GOOGLE_MAPS_SERVER_KEY ?? "",
   placesMaxRequestsPerUserPerDay: Number(process.env.PLACES_MAX_REQUESTS_PER_USER_PER_DAY ?? 50),
   placesEstimatedCostPerRequest: Number(process.env.PLACES_ESTIMATED_COST_PER_REQUEST ?? 0.01),
+  aiMaxRegeneratePerUserPerDay: Number(process.env.AI_MAX_REGENERATE_PER_USER_PER_DAY || 20),
   rateLimitWindowMs: Number(process.env.RATE_LIMIT_WINDOW_MS ?? 60_000),
   rateLimitMax: Number(process.env.RATE_LIMIT_MAX ?? 120),
   rateLimitSearchMax: Number(process.env.RATE_LIMIT_SEARCH_MAX ?? 40),
@@ -39,6 +43,11 @@ export const env = {
   locationHideSeconds: Number(process.env.LOCATION_HIDE_SECONDS ?? 600),
   shareTokenSecret: process.env.SHARE_TOKEN_SECRET ?? "dev-share-token-secret",
   shareLinkTtlHours: Number(process.env.SHARE_LINK_TTL_HOURS ?? 168),
+  emailProviderApiKey: process.env.EMAIL_PROVIDER_API_KEY ?? "",
+  emailFrom: process.env.EMAIL_FROM ?? "",
+  vapidPublicKey: process.env.VAPID_PUBLIC_KEY ?? "",
+  vapidPrivateKey: process.env.VAPID_PRIVATE_KEY ?? "",
+  vapidSubject: process.env.VAPID_SUBJECT ?? "mailto:halo@dolan.id",
 };
 
 export function isProduction(): boolean {

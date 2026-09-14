@@ -390,7 +390,7 @@ export function budgetItemsFromPlan(days: EditableItineraryDay[], plan: Itinerar
     const cost = plan.byStopId[stop.id];
     const placeName = stop.customTitle || stop.place?.name || "Kunjungan";
     return (cost?.lines ?? [{ key: "ticket" as const, label: "Tiket", amount: 0, detail: placeName }]).map((line) => ({
-      category: line.key === "ticket" ? "TICKET" : line.key === "food" ? "FOOD" : "TRANSPORT",
+      category: line.key === "ticket" ? "ACTIVITIES" : line.key === "food" ? "FOOD" : "TRANSPORT_LOCAL",
       label: `${line.label} · ${placeName}`,
       quantity: "1",
       unit: "orang",

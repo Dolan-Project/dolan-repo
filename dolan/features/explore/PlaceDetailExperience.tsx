@@ -78,8 +78,8 @@ export function PlaceDetailExperience({ googlePlaceId }: { googlePlaceId: string
         </header>
 
         <section className="mt-6 grid h-[300px] gap-2 overflow-hidden rounded-[24px] md:h-[430px] md:grid-cols-[1.65fr_.7fr]">
-          <PlacePhoto googlePlaceId={place.googlePlaceId} photoName={place.photoName} alt={place.name} eager className="h-full min-h-0 rounded-[22px]" />
-          <div className="hidden min-h-0 gap-2 md:grid md:grid-rows-2"><PlacePhoto googlePlaceId={place.googlePlaceId} photoName={place.photoName} alt={`${place.name}, tampilan dekat`} eager className="min-h-0 rounded-[20px]" /><div className="relative min-h-0 overflow-hidden rounded-[20px] bg-gradient-to-br from-primary via-tertiary to-secondary-container p-6 text-white"><Icon name="photo_library" className="text-[32px]" /><p className="type-subtitle mt-3">Jelajahi tempatnya, lalu buat rute versimu.</p><p className="type-caption mt-2 text-white/80">Foto disediakan oleh Google Places bila tersedia.</p></div></div>
+          <PlacePhoto googlePlaceId={place.googlePlaceId} photoName={place.photoName} photoUri={place.photoUri} alt={place.name} eager className="h-full min-h-0 rounded-[22px]" />
+          <div className="hidden min-h-0 gap-2 md:grid md:grid-rows-2"><PlacePhoto googlePlaceId={place.googlePlaceId} photoName={place.photoName} photoUri={place.photoUri} alt={`${place.name}, tampilan dekat`} eager className="min-h-0 rounded-[20px]" /><div className="relative min-h-0 overflow-hidden rounded-[20px] bg-gradient-to-br from-primary via-tertiary to-secondary-container p-6 text-white"><Icon name="photo_library" className="text-[32px]" /><p className="type-subtitle mt-3">Jelajahi tempatnya, lalu buat rute versimu.</p><p className="type-caption mt-2 text-white/80">Foto disediakan oleh Google Places bila tersedia.</p></div></div>
         </section>
         {place.attributions.length ? <p className="mt-2 type-micro text-on-surface-variant">Atribusi foto: {place.attributions.map((item) => item.uri ? <a key={`${item.displayName}-${item.uri}`} href={item.uri} target="_blank" rel="noreferrer" className="underline">{item.displayName}</a> : <span key={item.displayName}>{item.displayName}</span>).reduce<React.ReactNode[]>((all, item, index) => index ? [...all, ", ", item] : [item], [])}</p> : null}
 
@@ -114,7 +114,40 @@ function Fact({ icon, label, value }: { icon: string; label: string; value: stri
 
 function SectionTitle({ eyebrow, title, description }: { eyebrow: string; title: string; description: string }) { return <div className="mb-3"><p className="type-micro uppercase tracking-[.12em] text-secondary">{eyebrow}</p><h2 className="type-title mt-1">{title}</h2><p className="type-body mt-1 text-on-surface-variant">{description}</p></div>; }
 
-function RelatedTrip({ trip }: { trip: TripSummary }) { return <article className="card-surface overflow-hidden"><div className="flex gap-3 p-3">{trip.coverPlace ? <PlacePhoto googlePlaceId={trip.coverPlace.googlePlaceId} photoName={trip.coverPlace.photoName} alt={trip.title} className="h-24 w-24 shrink-0 rounded-xl" /> : <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-xl bg-primary-fixed text-primary"><Icon name="groups" className="text-[30px]" /></div>}<div className="min-w-0"><div className="flex gap-1"><span className="chip bg-primary-fixed text-primary">Publik</span><span className="chip bg-emerald-100 text-emerald-700">Join gratis</span></div><h3 className="type-label-lg mt-1 line-clamp-2">{trip.title}</h3><p className="type-caption mt-1 text-on-surface-variant">{trip.destinationCity ?? "Tujuan fleksibel"} · {trip.participantCount} peserta</p></div></div><div className="flex items-center justify-between border-t border-outline-variant/35 px-4 py-2.5"><span className="type-micro text-on-surface-variant">{trip.pendingRequestCount} permintaan join</span><Link href={`/trip/${encodeURIComponent(trip.id)}`} className="type-label text-primary">Lihat & komentar</Link></div></article>; }
+function RelatedTrip({ trip }: { trip: TripSummary }) {
+  const tripHref = `/trip/${encodeURIComponent(trip.id)}`;
+  const joinHref = `${tripHref}#join`;
+  return (
+    <article className="card-surface overflow-hidden">
+      <div className="flex gap-3 p-3">
+        {trip.coverPlace ? (
+          <PlacePhoto googlePlaceId={trip.coverPlace.googlePlaceId} photoName={trip.coverPlace.photoName} photoUri={trip.coverPlace.photoUri} alt={trip.title} className="h-24 w-24 shrink-0 rounded-xl" />
+        ) : (
+          <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-xl bg-primary-fixed text-primary">
+            <Icon name="groups" className="text-[30px]" />
+          </div>
+        )}
+        <div className="min-w-0">
+          <div className="flex gap-1">
+            <span className="chip bg-primary-fixed text-primary">Publik</span>
+            <span className="chip bg-emerald-100 text-emerald-700">Join gratis</span>
+          </div>
+          <h3 className="type-label-lg mt-1 line-clamp-2">{trip.title}</h3>
+          <p className="type-caption mt-1 text-on-surface-variant">
+            {trip.destinationCity ?? "Tujuan fleksibel"} · {trip.participantCount} peserta
+          </p>
+        </div>
+      </div>
+      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-outline-variant/35 px-4 py-2.5">
+        <span className="type-micro text-on-surface-variant">{trip.pendingRequestCount} permintaan join</span>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link href={tripHref} className="type-label text-on-surface-variant">Lihat & komentar</Link>
+          <Link href={joinHref} className="rounded-full bg-primary px-3 py-1.5 type-micro text-white shadow-sm">Gabung trip</Link>
+        </div>
+      </div>
+    </article>
+  );
+}
 
 function TemplateCard({ template }: { template: ItineraryTemplateSummary }) {
   const province = findProvinceForTemplate({ templateId: template.id, city: template.city });

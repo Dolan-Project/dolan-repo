@@ -23,10 +23,48 @@ export const GROQ_ITINERARY_RESPONSE_SCHEMA = {
   }, required: ["summary", "assumptions", "days", "budgetItems"],
 } as const;
 
+export const GROQ_DESTINATION_RECOMMENDATIONS_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    candidates: {
+      type: "array",
+      minItems: 1,
+      maxItems: 8,
+      items: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          googlePlaceId: { type: "string" },
+          name: { type: "string" },
+          city: { type: "string" },
+          region: nullableString,
+          estimateNote: nullableString,
+          estimatedBudgetLow: nullableString,
+          estimatedBudgetHigh: nullableString,
+        },
+        required: [
+          "googlePlaceId",
+          "name",
+          "city",
+          "region",
+          "estimateNote",
+          "estimatedBudgetLow",
+          "estimatedBudgetHigh",
+        ],
+      },
+    },
+  },
+  required: ["candidates"],
+} as const;
+
 export class GroqAdapter implements GenerationModel {
   private readonly client: Groq;
   constructor(apiKey: string, private readonly model: string) { this.client = new Groq({ apiKey }); }
   async generate(input: { tripId: string; preferences?: Record<string, unknown> }): Promise<unknown> {
+    if (input.preferences?.recommendDestinations) {
+      return this.recommend(input);
+    }
     const mode = String(input.preferences?.regenerateMode ?? "balanced");
     const style =
       mode === "cheaper"
@@ -37,10 +75,39 @@ export class GroqAdapter implements GenerationModel {
     const response = await this.client.chat.completions.create({
       model: this.model, temperature: mode === "alternative" ? 0.5 : 0.2,
       messages: [
-        { role: "system", content: `Kamu adalah perencana perjalanan backpacker Indonesia. ${style} Kembalikan JSON sesuai schema. Budget merupakan estimasi, bukan harga paket. Gunakan tempat nyata yang selanjutnya diverifikasi server.` },
+        { role: "system", content: `Kamu adalah perencana perjalanan backpacker Indonesia. ${style} Kembalikan JSON sesuai schema. Budget merupakan estimasi, bukan harga paket. Gunakan tempat nyata yang selanjutnya diverifikasi server. Kategori budget hanya: TRANSPORT_ROUNDTRIP, TRANSPORT_LOCAL, LODGING, FOOD, ACTIVITIES, OTHER, RESERVE.` },
         { role: "user", content: `Susun itinerary optimal untuk trip ${input.tripId}. Preferensi: ${JSON.stringify(input.preferences ?? {})}` },
       ],
       response_format: { type: "json_schema", json_schema: { name: "dolan_itinerary", strict: true, schema: GROQ_ITINERARY_RESPONSE_SCHEMA } },
+    });
+    const content = response.choices[0]?.message?.content;
+    if (!content) throw new Error("PROVIDER_UNAVAILABLE");
+    return JSON.parse(content);
+  }
+
+  async recommend(input: { tripId: string; preferences?: Record<string, unknown> }): Promise<unknown> {
+    const response = await this.client.chat.completions.create({
+      model: this.model,
+      temperature: 0.3,
+      messages: [
+        {
+          role: "system",
+          content:
+            "Kamu merekomendasikan destinasi backpacker di Indonesia. Kembalikan JSON sesuai schema. Setiap kandidat wajib punya googlePlaceId nyata berawalan ChIJ (bukan fiktif). Sertakan 3–5 destinasi berbeda dengan estimasi budget IDR sebagai string desimal.",
+        },
+        {
+          role: "user",
+          content: `Rekomendasikan destinasi untuk trip ${input.tripId}. Preferensi: ${JSON.stringify(input.preferences ?? {})}`,
+        },
+      ],
+      response_format: {
+        type: "json_schema",
+        json_schema: {
+          name: "dolan_destination_recommendations",
+          strict: true,
+          schema: GROQ_DESTINATION_RECOMMENDATIONS_SCHEMA,
+        },
+      },
     });
     const content = response.choices[0]?.message?.content;
     if (!content) throw new Error("PROVIDER_UNAVAILABLE");

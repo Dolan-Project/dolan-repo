@@ -27,7 +27,7 @@ export function mockLogin(scenario: MockScenario): AuthResult {
   if (scenario === "validationError" || scenario === "unauthorized") {
     return createApiError(
       AUTH_ERROR_CODES.INVALID_CREDENTIALS,
-      "Email atau password salah",
+      "Email atau kata sandi belum cocok. Periksa lagi, atau gunakan Lupa Password.",
     );
   }
   if (scenario === "quotaError") {

@@ -4,7 +4,9 @@ import {
   handleLoginRequest,
   handleLogoutRequest,
   handleRegisterRequest,
+  handleResendVerificationRequest,
   handleResetPasswordRequest,
+  handleVerifyEmailRequest,
 } from "@/lib/auth/handle-auth";
 import {
   handleGetMeRequest,
@@ -72,6 +74,8 @@ export const authRouteHandlers = {
   logout: (request: Request) => handleLogoutRequest(request),
   forgotPassword: (request: Request) => handleForgotPasswordRequest(request),
   resetPassword: (request: Request) => handleResetPasswordRequest(request),
+  verifyEmail: (request: Request) => handleVerifyEmailRequest(request),
+  resendVerification: (request: Request) => handleResendVerificationRequest(request),
   callback: (request: Request) => handleCallbackRequest(request),
 };
 

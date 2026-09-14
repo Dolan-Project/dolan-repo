@@ -1,15 +1,4 @@
-export type SupabaseAuthUser = {
-  authReference: string;
-  email: string;
-  emailVerifiedAt: string | null;
-};
-
-export interface AuthAdapter {
-  validateAccessToken(accessToken: string): Promise<SupabaseAuthUser>;
-}
-
-export function assertNoClientRolePayload(payload: Record<string, unknown>): void {
-  if ("role" in payload || "status" in payload) {
-    throw new Error("role and status must not be accepted from the client");
-  }
-}
+/** Re-export for existing test imports. Prefer `modules/auth/mock-auth-adapter`. */
+export { MOCK_TOKENS, MockAuthAdapter } from "../../modules/auth/mock-auth-adapter.ts";
+export type { AuthAdapter, AuthProviderUser, SupabaseAuthUser } from "../../modules/auth/auth-adapter.ts";
+export { assertNoClientRolePayload } from "../../modules/auth/auth-adapter.ts";

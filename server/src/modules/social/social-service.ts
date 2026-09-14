@@ -26,7 +26,10 @@ export class SocialService {
   async confirmAttendance(actor: SessionActor, tripId: string, body: unknown) {
     const parsed = attendanceBodySchema.safeParse(body ?? {});
     if (!parsed.success) throw badRequest("VALIDATION_ERROR", "Periksa kembali isian form", zodFields(parsed.error));
-    return this.trips.confirmAttendance(actor, tripId, parsed.data.confirmed);
+    return this.trips.confirmAttendance(actor, tripId, {
+      confirmed: parsed.data.confirmed,
+      targetUserId: parsed.data.targetUserId,
+    });
   }
 
   async createReview(actor: SessionActor, username: string, body: unknown) {

@@ -53,7 +53,7 @@ export class MemoryShareLinkStore implements ShareLinkStore {
   }
 }
 
-const DEFAULT_FIELDS = ["title", "destinationCity", "startDate", "endDate", "summary"];
+const DEFAULT_FIELDS = ["title", "destinationCity", "startDate", "endDate", "summary", "days"];
 
 export function stripPrivateShareFields(input: Record<string, unknown>, permitted: string[]) {
   return Object.fromEntries(

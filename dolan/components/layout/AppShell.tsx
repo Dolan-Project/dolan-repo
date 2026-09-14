@@ -2,7 +2,7 @@ import { BottomNav } from "@/components/layout/BottomNav";
 import { SiteFooter } from "@/components/layout/SiteFooter";
 import { SiteHeader } from "@/components/layout/SiteHeader";
 import { getSession } from "@/lib/auth/get-session";
-import { handleListNotificationsRequest } from "@/lib/social/handle-social";
+import { socialRouteHandlers } from "@/lib/social/adapter";
 import { cookies } from "next/headers";
 
 type AppShellProps = {
@@ -25,15 +25,22 @@ export async function AppShell({
       .getAll()
       .map((item) => `${item.name}=${item.value}`)
       .join("; ");
-    const response = await handleListNotificationsRequest(
+    const response = await socialRouteHandlers.notifications.GET(
       new Request("http://localhost/api/v1/notifications", {
         headers: cookie ? { cookie } : {},
       }),
     );
     const json = (await response.json()) as
+      | { success: true; data: Array<{ readAt?: string | null }>; pagination?: { totalItems: number } }
       | { success: true; data: { unreadCount: number } }
       | { success: false };
-    if (json.success) unreadCount = json.data.unreadCount;
+    if (json.success) {
+      if (Array.isArray(json.data)) {
+        unreadCount = json.data.filter((item) => !item.readAt).length;
+      } else if ("unreadCount" in json.data) {
+        unreadCount = json.data.unreadCount;
+      }
+    }
   }
 
   return (

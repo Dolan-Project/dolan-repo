@@ -89,6 +89,13 @@ export class SearchService {
     if (!PHOTO_NAME_PATTERN.test(photoName) || !photoName.includes(googlePlaceId)) {
       throw badRequest(SearchErrorCode.INVALID_FILTER, "Photo name is invalid", { name: "Must belong to this place" });
     }
+    const cached = await this.store.getCachedPlace(googlePlaceId);
+    const useCached =
+      Boolean(cached?.photoUri) &&
+      (cached?.photoName === photoName || photoName.endsWith("/photos/seed") || photoName.includes("/photos/seed"));
+    if (useCached && cached?.photoUri) {
+      return { photoUri: cached.photoUri, attributions: [] };
+    }
     await this.quota.consumePlaces(actorUserId(actor), "getPhotoMedia");
     return this.placesProvider.getPhotoMedia(photoName);
   }
@@ -143,6 +150,11 @@ export class SearchService {
       displayName: actor.user.displayName,
       domicile: actor.user.domicile,
     });
+
+    // Origin/budget change: signal client to regenerate routes & budget from new origin.
+    (result as UseTemplateResult & { needsRecalculate?: boolean }).needsRecalculate = Boolean(
+      body.originLabel || body.budgetAmount,
+    );
 
     await this.store.saveIdempotency(
       actor.user.id,

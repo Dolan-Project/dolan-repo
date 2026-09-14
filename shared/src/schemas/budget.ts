@@ -2,8 +2,19 @@ import { z } from "zod";
 
 export const moneyStringSchema = z.string().regex(/^\d+(\.\d{1,2})?$/, "Invalid money amount");
 
+/** PRD F06 budget categories — planning estimates, not join fees. */
+export const budgetCategorySchema = z.enum([
+  "TRANSPORT_ROUNDTRIP",
+  "TRANSPORT_LOCAL",
+  "LODGING",
+  "FOOD",
+  "ACTIVITIES",
+  "OTHER",
+  "RESERVE",
+]);
+
 export const budgetItemInputSchema = z.object({
-  category: z.string().min(1),
+  category: budgetCategorySchema,
   label: z.string().min(1),
   quantity: moneyStringSchema,
   unit: z.string().min(1),
@@ -29,6 +40,7 @@ export const budgetSummarySchema = z.object({
   items: z.array(budgetItemSchema),
 });
 
+export type BudgetCategory = z.infer<typeof budgetCategorySchema>;
 export type BudgetItemInput = z.infer<typeof budgetItemInputSchema>;
 export type BudgetItem = z.infer<typeof budgetItemSchema>;
 export type BudgetSummary = z.infer<typeof budgetSummarySchema>;

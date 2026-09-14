@@ -53,12 +53,15 @@ export async function proxyToExpress(
 
   try {
     const upstream = await fetch(url.toString(), { method, headers, body });
+    const responseHeaders: Record<string, string> = {
+      "content-type":
+        upstream.headers.get("content-type") ?? "application/json",
+    };
+    const disposition = upstream.headers.get("content-disposition");
+    if (disposition) responseHeaders["content-disposition"] = disposition;
     return new Response(upstream.body, {
       status: upstream.status,
-      headers: {
-        "content-type":
-          upstream.headers.get("content-type") ?? "application/json",
-      },
+      headers: responseHeaders,
     });
   } catch {
     return jsonResult(

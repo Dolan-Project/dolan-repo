@@ -8,6 +8,8 @@ export type ExportItinerary = {
   versionId: string;
   title: string;
   summary: string | null;
+  budgetLine?: string | null;
+  checklistLines?: string[];
   days: Array<{ dayNumber: number; title: string | null; stops: NavStop[] }>;
 };
 
@@ -28,11 +30,16 @@ export class ItineraryExportService {
 
   async pdf(tripId: string, userId: string, versionId?: string) {
     const doc = await this.requireDoc(tripId, userId, versionId);
-    const lines = doc.days.flatMap((day) => [
-      `Hari ${day.dayNumber}${day.title ? ` — ${day.title}` : ""}`,
-      ...day.stops.map((stop, index) => `  ${index + 1}. ${stop.name}`),
-    ]);
-    return renderItineraryPdf(doc.title, [doc.summary ?? "", ...lines].filter(Boolean));
+    const lines = [
+      doc.summary ?? "",
+      doc.budgetLine ?? "",
+      ...doc.days.flatMap((day) => [
+        `Hari ${day.dayNumber}${day.title ? ` — ${day.title}` : ""}`,
+        ...day.stops.map((stop, index) => `  ${index + 1}. ${stop.name}`),
+      ]),
+      ...(doc.checklistLines?.length ? ["Checklist:", ...doc.checklistLines.map((item) => `  - ${item}`)] : []),
+    ].filter(Boolean);
+    return renderItineraryPdf(doc.title, lines);
   }
 
   async navigation(tripId: string, userId: string, dayNumber?: number, versionId?: string) {

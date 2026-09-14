@@ -32,6 +32,10 @@ import type { TripService } from "./modules/trips/trip-service.ts";
 import { ProvinceService } from "./modules/provinces/province-service.ts";
 import { createProvinceRouter } from "./modules/provinces/province-routes.ts";
 import { createRouteRouter } from "./modules/routes/route-routes.ts";
+import { createPushRouter } from "./modules/push/push-routes.ts";
+import type { QuotaService } from "./modules/search/quota.ts";
+import { createHomeRouter } from "./modules/home/home-routes.ts";
+import { HomeFeedService } from "./modules/home/home-service.ts";
 
 export function createApp(
   authService: AuthService,
@@ -46,6 +50,8 @@ export function createApp(
   shareLinkService?: ShareLinkService,
   itineraryExport?: ItineraryExportService,
   provinces: ProvinceService = new ProvinceService(false),
+  routesQuota?: QuotaService,
+  databaseReady = false,
 ) {
   const memoryChat = new MemoryChatStore();
   const chat = chatService ?? new ChatService(memoryChat);
@@ -63,6 +69,7 @@ export function createApp(
       email: "hidden@example.com",
     }));
   const itinerary = itineraryExport ?? new ItineraryExportService(chat, async () => null);
+  const home = new HomeFeedService(search, provinces, tripService, chat);
   const app = express();
   app.disable("x-powered-by");
   if (env.nodeEnv === "production") {
@@ -89,8 +96,12 @@ export function createApp(
   });
 
   app.use("/api/v1/auth", createAuthRouter(authService, disconnectUser));
-  app.get("/api/v1/users/me", requireLogin, (req, res) => {
-    res.json(apiSuccess(authService.toMeSession(req.authUser!)));
+  app.get("/api/v1/users/me", requireLogin, async (req, res, next) => {
+    try {
+      res.json(apiSuccess(await authService.toMeSession(req.authUser!)));
+    } catch (error) {
+      next(error);
+    }
   });
   app.patch("/api/v1/users/me", requireLogin, async (req, res, next) => {
     try {
@@ -115,12 +126,14 @@ export function createApp(
   });
   app.use("/api/v1", createSearchRouter(search));
   app.use("/api/v1", createProvinceRouter(provinces));
-  app.use("/api/v1", createRouteRouter());
+  app.use("/api/v1", routesQuota ? createRouteRouter(routesQuota) : createRouteRouter());
   app.use("/api/v1", createJobRouter(jobService));
   app.use("/api/v1", createTripRouter(tripService));
   app.use("/api/v1", createChatRouter(chat));
   app.use("/api/v1", createLocationRouter(locations, shares, itinerary));
   app.use("/api/v1", createSocialRouter(authService, social, tripService));
+  app.use("/api/v1", createPushRouter(databaseReady));
+  app.use("/api/v1", createHomeRouter(home));
 
   app.get("/api/v1/public/ping", requireCapability("read_public"), (_req, res) => {
     res.json(apiSuccess({ ok: true }));

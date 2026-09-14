@@ -1,4 +1,9 @@
-import { geminiItinerarySchema, type GeminiItinerary } from "@dolan/shared";
+import {
+  destinationRecommendationsSchema,
+  geminiItinerarySchema,
+  type DestinationRecommendation,
+  type GeminiItinerary,
+} from "@dolan/shared";
 
 export const GEMINI_ITINERARY_RESPONSE_SCHEMA = {
   type: "OBJECT",
@@ -78,12 +83,46 @@ export const GEMINI_ITINERARY_RESPONSE_SCHEMA = {
 
 export interface GenerationModel {
   generate(input: { tripId: string; preferences?: Record<string, unknown> }): Promise<unknown>;
+  recommend?(input: { tripId: string; preferences?: Record<string, unknown> }): Promise<unknown>;
 }
+
+const MOCK_DESTINATION_CANDIDATES: DestinationRecommendation[] = [
+  {
+    googlePlaceId: "ChIJxYBx6Da5eY4R2lX2sQ0oYkA",
+    name: "Yogyakarta",
+    city: "Yogyakarta",
+    region: "DI Yogyakarta",
+    estimateNote: "Kota budaya backpacker dengan transport lokal murah",
+    estimatedBudgetLow: "750000.00",
+    estimatedBudgetHigh: "1500000.00",
+  },
+  {
+    googlePlaceId: "ChIJaaaaaaaaaaaaaaaaaaaa",
+    name: "Bali",
+    city: "Bali",
+    region: "Bali",
+    estimateNote: "Pantai, trekking, dan kuliner dengan banyak opsi hemat",
+    estimatedBudgetLow: "1200000.00",
+    estimatedBudgetHigh: "2500000.00",
+  },
+  {
+    googlePlaceId: "ChIJ-LBJ-Airport",
+    name: "Labuan Bajo",
+    city: "Labuan Bajo",
+    region: "Nusa Tenggara Timur",
+    estimateNote: "Gateway Komodo — budget liveaboard & snorkeling",
+    estimatedBudgetLow: "2500000.00",
+    estimatedBudgetHigh: "4500000.00",
+  },
+];
 
 export class MockGeminiAdapter implements GenerationModel {
   constructor(private readonly fixture?: unknown) {}
 
-  async generate(): Promise<unknown> {
+  async generate(input?: { tripId: string; preferences?: Record<string, unknown> }): Promise<unknown> {
+    if (input?.preferences?.recommendDestinations) {
+      return this.recommend(input);
+    }
     if (this.fixture) return this.fixture;
     return {
       summary: "Mock itinerary for development",
@@ -129,7 +168,7 @@ export class MockGeminiAdapter implements GenerationModel {
       ],
       budgetItems: [
         {
-          category: "aktivitas",
+          category: "ACTIVITIES",
           label: "Tiket pantai",
           quantity: "1.00",
           unit: "orang",
@@ -137,8 +176,21 @@ export class MockGeminiAdapter implements GenerationModel {
           unitCostHigh: "50000.00",
           sourceType: "estimate",
         },
+        {
+          category: "TRANSPORT_LOCAL",
+          label: "Ojek antar titik",
+          quantity: "2.00",
+          unit: "trip",
+          unitCostLow: "15000.00",
+          unitCostHigh: "25000.00",
+          sourceType: "estimate",
+        },
       ],
     } satisfies GeminiItinerary;
+  }
+
+  async recommend(_input?: { tripId: string; preferences?: Record<string, unknown> }): Promise<unknown> {
+    return destinationRecommendationsSchema.parse({ candidates: MOCK_DESTINATION_CANDIDATES });
   }
 }
 

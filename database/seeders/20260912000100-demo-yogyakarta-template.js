@@ -5,7 +5,10 @@
  * - Uses verified-style Google Place IDs for Yogyakarta demo destinations.
  * - Template source = CURATED (label "Kurasi Dolan"); usage_count stays 0.
  * - Does not invent popularity.
+ * - Local auth password for curator@dolan.local: password123
  */
+
+const crypto = require("node:crypto");
 
 const DEMO_USER_ID = "11111111-1111-4111-8111-111111111111";
 const DEMO_PROFILE_ID = "22222222-2222-4222-8222-222222222222";
@@ -15,6 +18,12 @@ const PLACE_PARANGTRITIS_ID = "33333333-3333-4333-8333-333333333303";
 const TEMPLATE_ID = "44444444-4444-4444-8444-444444444401";
 const TEMPLATE_DAY1_ID = "55555555-5555-4555-8555-555555555501";
 const TEMPLATE_DAY2_ID = "55555555-5555-4555-8555-555555555502";
+
+function hashPassword(password) {
+  const salt = crypto.randomBytes(16).toString("hex");
+  const derived = crypto.scryptSync(password, salt, 64).toString("hex");
+  return `scrypt$${salt}$${derived}`;
+}
 
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
@@ -26,6 +35,7 @@ module.exports = {
         id: DEMO_USER_ID,
         auth_reference: "seed-dolan-curator",
         email: "curator@dolan.local",
+        password_hash: hashPassword("password123"),
         role: "ADMIN",
         status: "ACTIVE",
         email_verified_at: now,

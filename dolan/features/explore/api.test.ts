@@ -60,9 +60,43 @@ describe("explore API client", () => {
     expect(url.pathname).toBe("/api/v1/search/trips");
     expect(url.searchParams.get("city")).toBe("Yogyakarta");
     expect(url.searchParams.get("q")).toBeNull();
+    expect(url.searchParams.get("sort")).toBe("popular");
     expect(url.searchParams.get("dateFrom")).toBe("2026-10-10");
     expect(url.searchParams.get("dateTo")).toBe("2026-10-12");
     expect(url.searchParams.get("page")).toBe("2");
+  });
+
+  it("sends soonest and nearest trip sorts with coordinates when needed", async () => {
+    const request = vi.fn().mockImplementation(() =>
+      Promise.resolve(
+        new Response(JSON.stringify(emptyPage), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      ),
+    );
+    vi.stubGlobal("fetch", request);
+
+    await searchExplore({
+      tab: "trip",
+      query: "Bali",
+      sort: "soonest",
+    });
+    await searchExplore({
+      tab: "trip",
+      query: "Bali",
+      sort: "nearest",
+      center: { lat: -8.65, lng: 115.22 },
+    });
+
+    const soonestUrl = new URL(String(request.mock.calls[0]?.[0]));
+    expect(soonestUrl.searchParams.get("sort")).toBe("soonest");
+    expect(soonestUrl.searchParams.get("lat")).toBeNull();
+
+    const nearestUrl = new URL(String(request.mock.calls[1]?.[0]));
+    expect(nearestUrl.searchParams.get("sort")).toBe("nearest");
+    expect(nearestUrl.searchParams.get("lat")).toBe("-8.65");
+    expect(nearestUrl.searchParams.get("lng")).toBe("115.22");
   });
 
   it("loads published templates through the templates endpoint", async () => {

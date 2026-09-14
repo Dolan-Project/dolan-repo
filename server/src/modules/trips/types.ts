@@ -55,6 +55,9 @@ export type StoredMember = {
   role: TripMemberRole;
   membershipStatus: MembershipStatus;
   attendanceConfirmed: boolean;
+  attendanceDisputed: boolean;
+  hostAttendance: "UNCONFIRMED" | "PRESENT" | "ABSENT" | "DISPUTED";
+  selfAttendance: "UNCONFIRMED" | "PRESENT" | "ABSENT" | "DISPUTED";
   showOnProfile: boolean;
   joinedAt: string;
   leftAt: string | null;
@@ -105,12 +108,17 @@ export interface TripStore {
   deleteTrip(tripId: string): Promise<void>;
   listHosted(userId: string, page: number, limit: number): Promise<PageResult<StoredTrip>>;
   listJoined(userId: string, page: number, limit: number): Promise<PageResult<StoredTrip>>;
+  profileTripCounts(userId: string): Promise<{ hostTripCount: number; participantTripCount: number }>;
   listPending(userId: string, page: number, limit: number): Promise<PageResult<StoredTrip>>;
   getCoverPlace(tripId: string): Promise<PlaceSummary | null>;
   listMembers(tripId: string): Promise<StoredMember[]>;
   ensureHostMembership(tripId: string, userId: string): Promise<void>;
   addParticipant(tripId: string, userId: string): Promise<StoredMember>;
-  confirmAttendance(tripId: string, userId: string, confirmed: boolean): Promise<StoredMember | null>;
+  confirmAttendance(
+    tripId: string,
+    actorUserId: string,
+    input: { confirmed: boolean; targetUserId?: string },
+  ): Promise<StoredMember | null>;
   leaveMembership(tripId: string, userId: string): Promise<StoredMember | null>;
   getJoinRequest(id: string): Promise<StoredJoin | null>;
   getJoinByTripUser(tripId: string, userId: string): Promise<StoredJoin | null>;
@@ -127,6 +135,7 @@ export interface TripStore {
   isBlocked(userA: string, userB: string): Promise<boolean>;
   addBlock(blockerUserId: string, blockedUserId: string): Promise<void>;
   revokeTripLocation(userId: string, tripId: string): Promise<void>;
+  publishTripAsTemplate(tripId: string, creatorUserId: string): Promise<{ templateId: string; title: string }>;
   createNotification(input: {
     recipientUserId: string;
     actorUserId: string;

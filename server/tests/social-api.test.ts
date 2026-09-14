@@ -159,6 +159,12 @@ describe("SALSA-D4 social REST", () => {
       .send({ confirmed: true });
     expect(guestAttendance.status).toBe(200);
 
+    const hostMarksGuest = await request(api)
+      .post(`/api/v1/trips/${trip.id}/attendance`)
+      .set("Authorization", ALYA)
+      .send({ confirmed: true, targetUserId: "55555555-5555-4555-8555-555555555555" });
+    expect(hostMarksGuest.status).toBe(200);
+
     const self = await request(api)
       .post("/api/v1/users/budi/reviews")
       .set("Authorization", BUDI)

@@ -64,7 +64,9 @@ describe("handleLoginRequest", () => {
     expect(json.success).toBe(false);
     const error = json.error as { code: string; message: string };
     expect(error.code).toBe("INVALID_CREDENTIALS");
-    expect(error.message).toBe("Email atau password salah");
+    expect(error.message).toBe(
+      "Email atau kata sandi belum cocok. Periksa lagi, atau gunakan Lupa Password.",
+    );
   });
 });
 

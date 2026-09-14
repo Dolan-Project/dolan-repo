@@ -98,6 +98,8 @@ export class SequelizeSearchStore implements SearchStore {
         cachedCity: place.city,
         cachedLatitude: place.latitude,
         cachedLongitude: place.longitude,
+        ...(place.photoName ? { cachedPhotoName: place.photoName } : {}),
+        ...(place.photoUri ? { cachedPhotoUrl: place.photoUri } : {}),
         cacheCheckedAt: new Date(),
         status: "ACTIVE",
       });
@@ -375,7 +377,8 @@ function fromCachedPlace(place: Place | null): PlaceSummary | null {
     longitude: place.cachedLongitude ?? 0,
     rating: null,
     userRatingCount: null,
-    photoName: null,
+    photoName: place.cachedPhotoName ?? null,
+    photoUri: place.cachedPhotoUrl ?? null,
     googleMapsUrl: null,
     types: [],
   };

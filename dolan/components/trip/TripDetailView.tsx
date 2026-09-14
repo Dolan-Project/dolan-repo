@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { Icon } from "@/components/ui/Icon";
 import { AttendanceConfirm } from "@/components/trips/AttendanceConfirm";
+import { ReportTargetButton } from "@/components/moderation/ReportTargetButton";
 import { PlacePhoto } from "@/features/explore/PlacePhoto";
 import { destinationCoverUrl, resolveTripItineraryDays } from "@/lib/destination-itinerary";
 import type { ApiError, JoinRequest, TripComment, TripDetail } from "@/lib/contracts";
@@ -12,6 +13,9 @@ import { ROUTES, tripEditHref, tripItineraryPath } from "@/lib/routes";
 import type { EditableItineraryDay } from "@dolan/shared";
 import { hydrateItineraryPlaces, itineraryMapMarkers, itineraryMapRouteGroups, visitWindowLabel, googleMapsDirectionsUrl } from "@/lib/template-itinerary";
 import { ItineraryTimeline } from "@/components/trip/ItineraryTimeline";
+import { ItineraryPdfButton } from "./ItineraryPdfButton";
+import { LocationSharePanel } from "./LocationSharePanel";
+import { ShareLinkPanel } from "./ShareLinkPanel";
 import { TripBoardMap, type TripMapMarker } from "./TripBoardMap";
 
 type Json<T> = { success: true; data: T } | ApiError;
@@ -76,6 +80,8 @@ export function TripDetailView({
   const [routeMarkers, setRouteMarkers] = useState<TripMapMarker[]>([]);
   const [followingHost, setFollowingHost] = useState(false);
   const [shareHint, setShareHint] = useState("");
+  const [templateMessage, setTemplateMessage] = useState("");
+  const [navPending, setNavPending] = useState(false);
 
   async function loadAll() {
     const tripRes = await readJson<TripDetail>(await fetch(`/api/v1/trips/${tripId}`, { credentials: "include" }));
@@ -122,18 +128,60 @@ export function TripDetailView({
     return roots.map((root) => ({ root, replies: comments.filter((row) => row.parentId === root.id) }));
   }, [comments]);
 
+  async function openNavigation(dayNumber?: number) {
+    if (navPending) return;
+    setNavPending(true);
+    setError("");
+    try {
+      const query = dayNumber ? `?day=${dayNumber}` : "";
+      const response = await fetch(`/api/v1/trips/${tripId}/navigation${query}`, {
+        credentials: "include",
+      });
+      const json = (await response.json()) as
+        | { success: true; data: { url?: string; mapsUrl?: string } }
+        | ApiError;
+      if (!json.success) {
+        setError(json.error.message);
+        return;
+      }
+      const url = json.data.url ?? json.data.mapsUrl;
+      if (!url) {
+        setError("Tautan navigasi belum tersedia untuk itinerary ini.");
+        return;
+      }
+      window.open(url, "_blank", "noopener,noreferrer");
+    } catch {
+      setError("Gagal membuka navigasi Google Maps.");
+    } finally {
+      setNavPending(false);
+    }
+  }
+
   async function act(path: string, body: unknown) {
     setPending(true);
+    setTemplateMessage("");
     const response = await fetch(path, {
       method: "POST",
       credentials: "include",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(body),
     });
-    const json = (await response.json()) as { success: boolean; error?: { message: string } };
+    const json = (await response.json()) as {
+      success: boolean;
+      error?: { message: string };
+      data?: { templateId?: string; title?: string };
+    };
     setPending(false);
     if (!json.success) {
       setError(json.error?.message ?? "Aksi gagal");
+      return;
+    }
+    if (path.endsWith("/publish-as-template")) {
+      setTemplateMessage(
+        json.data?.templateId
+          ? `Template "${json.data.title ?? trip?.title ?? "Trip"}" dipublikasikan.`
+          : "Trip dipublikasikan sebagai template.",
+      );
       return;
     }
     if (path.endsWith("/leave")) {
@@ -508,7 +556,10 @@ export function TripDetailView({
                   <h2 className="text-base font-bold text-on-surface">Tanya Jawab & Diskusi Publik</h2>
                   <p className="text-xs text-on-surface-variant">Ajukan pertanyaan seputar rencana atau perkenalkan diri sebelum join</p>
                 </div>
-                <span className="hidden text-xs font-medium text-on-surface-variant sm:inline">Bukan grup chat internal</span>
+                <div className="flex items-center gap-2">
+                  <span className="hidden text-xs font-medium text-on-surface-variant sm:inline">Bukan grup chat internal</span>
+                  <ReportTargetButton targetType="trip" targetId={trip.id} label="Laporkan trip" />
+                </div>
               </div>
               {isLoggedIn && emailVerified ? (
                 <form className="mb-6 rounded-xl border border-slate-100 bg-slate-50 p-4" onSubmit={onComment}>
@@ -532,12 +583,15 @@ export function TripDetailView({
                 <ul className="space-y-4">
                   {threads.map(({ root, replies }) => (
                     <li key={root.id} className="space-y-3 rounded-xl border border-slate-100 p-4">
-                      <div className="flex items-start justify-between">
+                      <div className="flex items-start justify-between gap-2">
                         <div>
                           <p className="text-xs font-bold text-on-surface">@{root.author.username}</p>
                           {root.author.id === trip.host.id ? <span className="text-[10px] font-bold text-primary">Host</span> : null}
                         </div>
-                        <button type="button" className="text-[11px] font-semibold text-on-surface-variant hover:text-primary" onClick={() => setReplyTo(root.id)}>Balas</button>
+                        <div className="flex items-center gap-2">
+                          <ReportTargetButton targetType="comment" targetId={root.id} label="Laporkan" />
+                          <button type="button" className="text-[11px] font-semibold text-on-surface-variant hover:text-primary" onClick={() => setReplyTo(root.id)}>Balas</button>
+                        </div>
                       </div>
                       <p className="pl-0 text-xs text-on-surface sm:pl-0">{root.body}</p>
                       {replies.map((reply) => (
@@ -646,30 +700,52 @@ export function TripDetailView({
               )}
             </div>
             {error ? <p className="rounded-xl bg-error-container px-4 py-3 type-body text-on-error-container" role="alert">{error}</p> : null}
+            {templateMessage ? (
+              <p className="rounded-xl bg-secondary-container px-4 py-3 type-body text-on-secondary-container">
+                {templateMessage}{" "}
+                <Link href={`${ROUTES.jelajah}?tab=template`} className="font-bold text-primary">
+                  Lihat template
+                </Link>
+              </p>
+            ) : null}
 
             {(trip.viewerRole === "host" || trip.viewerRole === "participant") ? (
-              <div className="flex flex-wrap gap-2">
-                {trip.viewerRole === "host" ? <Link href={tripItineraryPath(trip.id)} className="btn-ghost">Edit itinerary</Link> : null}
-                {trip.viewerRole === "host" && trip.status !== "CANCELLED" && trip.status !== "COMPLETED" ? <Link href={tripEditHref(trip.id)} className="btn-ghost">Edit trip</Link> : null}
-                {trip.viewerRole === "host" && trip.status === "DRAFT" ? <button type="button" className="btn-primary" disabled={pending} onClick={() => void act(`/api/v1/trips/${trip.id}/publish`, { confirmPublish: true, visibility: trip.visibility })}>Publish</button> : null}
-                {trip.viewerRole === "host" && trip.status === "OPEN" ? <button type="button" className="btn-ghost" disabled={pending} onClick={() => void act(`/api/v1/trips/${trip.id}/transition`, { action: "close" })}>Tutup pengajuan</button> : null}
-                {trip.viewerRole === "host" && trip.status === "CLOSED" ? <button type="button" className="btn-primary" disabled={pending} onClick={() => void act(`/api/v1/trips/${trip.id}/transition`, { action: "reopen" })}>Buka lagi</button> : null}
-                {trip.viewerRole === "host" && (trip.status === "OPEN" || trip.status === "CLOSED") ? <button type="button" className="btn-ghost" disabled={pending} onClick={() => void act(`/api/v1/trips/${trip.id}/transition`, { action: "start" })}>Mulai trip</button> : null}
-                {trip.viewerRole === "host" && trip.status === "ONGOING" ? <button type="button" className="btn-primary" disabled={pending} onClick={() => void act(`/api/v1/trips/${trip.id}/transition`, { action: "complete" })}>Selesai</button> : null}
-                {trip.viewerRole === "host" && trip.status !== "CANCELLED" && trip.status !== "COMPLETED" ? <button type="button" className="btn-ghost" disabled={pending} onClick={() => void act(`/api/v1/trips/${trip.id}/transition`, { action: "cancel" })}>Batalkan</button> : null}
-                {trip.viewerRole === "participant" && trip.status !== "ONGOING" ? <button type="button" className="btn-ghost" disabled={pending} onClick={() => void act(`/api/v1/trips/${trip.id}/leave`, {})}>Keluar trip</button> : null}
-                {trip.viewerRole === "participant" && trip.status === "ONGOING" ? (
-                  confirmLeave ? (
-                    <div className="flex w-full flex-col gap-2 rounded-xl bg-error-container p-4">
-                      <p className="type-caption text-on-error-container">Trip sedang berlangsung. Konfirmasi dulu sebelum keluar.</p>
-                      <div className="flex flex-wrap gap-2">
-                        <button type="button" className="btn-ghost" disabled={pending} onClick={() => void act(`/api/v1/trips/${trip.id}/leave`, { confirmLeave: true })}>Ya, keluar</button>
-                        <button type="button" className="btn-ghost" onClick={() => setConfirmLeave(false)}>Batal</button>
+              <>
+                <LocationSharePanel tripId={trip.id} />
+                <ShareLinkPanel tripId={trip.id} />
+                <div className="flex flex-wrap gap-2">
+                  <Link href={ROUTES.tripChat(trip.id)} className="btn-primary"><Icon name="forum" /> Buka grup chat</Link>
+                  <ItineraryPdfButton tripId={trip.id} className="btn-ghost" label="Unduh itinerary PDF" />
+                  <button type="button" className="btn-ghost" disabled={navPending} onClick={() => void openNavigation()}>
+                    <Icon name="map" /> {navPending ? "Menyiapkan peta…" : "Buka Google Maps"}
+                  </button>
+                  {trip.viewerRole === "host" ? <Link href={tripItineraryPath(trip.id)} className="btn-ghost">Edit itinerary</Link> : null}
+                  {trip.viewerRole === "host" && trip.status !== "CANCELLED" && trip.status !== "COMPLETED" ? <Link href={tripEditHref(trip.id)} className="btn-ghost">Edit trip</Link> : null}
+                  {trip.viewerRole === "host" && trip.status === "DRAFT" ? <button type="button" className="btn-primary" disabled={pending} onClick={() => void act(`/api/v1/trips/${trip.id}/publish`, { confirmPublish: true, visibility: trip.visibility })}>Publish</button> : null}
+                  {trip.viewerRole === "host" && trip.status === "OPEN" ? <button type="button" className="btn-ghost" disabled={pending} onClick={() => void act(`/api/v1/trips/${trip.id}/transition`, { action: "close" })}>Tutup pengajuan</button> : null}
+                  {trip.viewerRole === "host" && trip.status === "CLOSED" ? <button type="button" className="btn-primary" disabled={pending} onClick={() => void act(`/api/v1/trips/${trip.id}/transition`, { action: "reopen" })}>Buka lagi</button> : null}
+                  {trip.viewerRole === "host" && (trip.status === "OPEN" || trip.status === "CLOSED") ? <button type="button" className="btn-ghost" disabled={pending} onClick={() => void act(`/api/v1/trips/${trip.id}/transition`, { action: "start" })}>Mulai trip</button> : null}
+                  {trip.viewerRole === "host" && trip.status === "ONGOING" ? <button type="button" className="btn-primary" disabled={pending} onClick={() => void act(`/api/v1/trips/${trip.id}/transition`, { action: "complete" })}>Selesai</button> : null}
+                  {trip.viewerRole === "host" && trip.status === "COMPLETED" ? (
+                    <button type="button" className="btn-primary" disabled={pending} onClick={() => void act(`/api/v1/trips/${trip.id}/publish-as-template`, {})}>
+                      Publikasikan sebagai template
+                    </button>
+                  ) : null}
+                  {trip.viewerRole === "host" && trip.status !== "CANCELLED" && trip.status !== "COMPLETED" ? <button type="button" className="btn-ghost" disabled={pending} onClick={() => void act(`/api/v1/trips/${trip.id}/transition`, { action: "cancel" })}>Batalkan</button> : null}
+                  {trip.viewerRole === "participant" && trip.status !== "ONGOING" ? <button type="button" className="btn-ghost" disabled={pending} onClick={() => void act(`/api/v1/trips/${trip.id}/leave`, {})}>Keluar trip</button> : null}
+                  {trip.viewerRole === "participant" && trip.status === "ONGOING" ? (
+                    confirmLeave ? (
+                      <div className="flex w-full flex-col gap-2 rounded-xl bg-error-container p-4">
+                        <p className="type-caption text-on-error-container">Trip sedang berlangsung. Konfirmasi dulu sebelum keluar.</p>
+                        <div className="flex flex-wrap gap-2">
+                          <button type="button" className="btn-ghost" disabled={pending} onClick={() => void act(`/api/v1/trips/${trip.id}/leave`, { confirmLeave: true })}>Ya, keluar</button>
+                          <button type="button" className="btn-ghost" onClick={() => setConfirmLeave(false)}>Batal</button>
+                        </div>
                       </div>
-                    </div>
-                  ) : <button type="button" className="btn-ghost" disabled={pending} onClick={() => setConfirmLeave(true)}>Keluar trip</button>
-                ) : null}
-              </div>
+                    ) : <button type="button" className="btn-ghost" disabled={pending} onClick={() => setConfirmLeave(true)}>Keluar trip</button>
+                  ) : null}
+                </div>
+              </>
             ) : null}
             {trip.status === "COMPLETED" && (trip.viewerRole === "host" || trip.viewerRole === "participant") ? (
               <AttendanceConfirm tripId={trip.id} tripTitle={trip.title} reviewUsername={trip.viewerRole === "participant" ? trip.host.username : null} />

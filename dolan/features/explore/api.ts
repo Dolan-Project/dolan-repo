@@ -9,7 +9,7 @@ import type {
 } from "@dolan/shared";
 
 export type ExploreTab = "wisata" | "trip" | "template";
-export type ExploreSort = "relevance" | "popular" | "nearest" | "recent";
+export type ExploreSort = "relevance" | "popular" | "nearest" | "recent" | "soonest";
 
 export type ExplorePage = {
   items: Array<PlaceSummary | TripSummary | ItineraryTemplateSummary>;
@@ -99,9 +99,15 @@ export async function searchExplore({
   } else if (tab === "trip") {
     path = "/search/trips";
     if (query.trim()) params.set("city", query.trim());
-    params.set("sort", sort === "popular" ? "popular" : "recent");
+    const tripSort =
+      sort === "popular" ? "popular" : sort === "nearest" ? "nearest" : sort === "recent" ? "recent" : "soonest";
+    params.set("sort", tripSort);
     if (dateFrom) params.set("dateFrom", dateFrom);
     if (dateTo) params.set("dateTo", dateTo);
+    if (center && tripSort === "nearest") {
+      params.set("lat", String(center.lat));
+      params.set("lng", String(center.lng));
+    }
   } else {
     path = "/templates";
     if (query.trim()) params.set("city", query.trim());

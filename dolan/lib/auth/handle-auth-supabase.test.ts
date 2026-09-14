@@ -1,21 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-
-const signInWithPassword = vi.fn();
-const signUp = vi.fn();
-const exchangeCodeForSession = vi.fn();
-
-vi.mock("./supabase-anon", () => ({
-  getSupabaseAnon: () => ({
-    auth: {
-      signInWithPassword,
-      signUp,
-      exchangeCodeForSession,
-    },
-  }),
-}));
-
 import {
-  handleCallbackRequest,
   handleLoginRequest,
   handleRegisterRequest,
 } from "./handle-auth";
@@ -23,9 +7,6 @@ import {
 afterEach(() => {
   vi.unstubAllEnvs();
   vi.unstubAllGlobals();
-  signInWithPassword.mockReset();
-  signUp.mockReset();
-  exchangeCodeForSession.mockReset();
 });
 
 function jsonRequest(url: string, body: unknown) {
@@ -36,85 +17,111 @@ function jsonRequest(url: string, body: unknown) {
   });
 }
 
-describe("Supabase password auth when mock is off", () => {
-  it("logs in through Supabase and does not return the access token", async () => {
+describe("Local Express auth when mock is off", () => {
+  it("logs in through Express and sets dolan_session cookie", async () => {
     vi.stubEnv("NEXT_PUBLIC_USE_MOCK_API", "false");
-    vi.stubEnv("EXPRESS_ORIGIN", "");
-    signInWithPassword.mockResolvedValue({
-      data: {
-        session: { access_token: "sb-access-token" },
-        user: {
-          id: "user-1",
-          email: "salsa@dolan.test",
-          email_confirmed_at: "2026-01-01T00:00:00.000Z",
-          user_metadata: { username: "salsa", display_name: "Salsa", domicile: "Jakarta" },
-        },
-      },
-      error: null,
-    });
+    vi.stubEnv("EXPRESS_ORIGIN", "http://express.test");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        new Response(
+          JSON.stringify({
+            success: true,
+            data: {
+              accessToken: "local-session-token",
+              session: {
+                emailVerified: true,
+                profileComplete: true,
+                user: {
+                  id: "11111111-1111-4111-8111-111111111111",
+                  username: "alya",
+                  displayName: "Alya",
+                  avatarUrl: null,
+                  coverUrl: null,
+                  bio: null,
+                  domicile: "Jakarta",
+                  followersCount: 0,
+                  followingCount: 0,
+                  hostTripCount: 0,
+                  participantTripCount: 0,
+                  rating: {
+                    overall: null,
+                    communication: null,
+                    attitude: null,
+                    reviewCount: 0,
+                  },
+                },
+              },
+            },
+          }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        ),
+      ),
+    );
 
     const response = await handleLoginRequest(
       jsonRequest("http://localhost/api/auth/login", {
-        email: "salsa@dolan.test",
-        password: "rahasia8",
+        email: "verified@dolan.test",
+        password: "password123",
       }),
     );
-    const json = (await response.json()) as {
-      success: true;
-      data: { user: { username: string; email?: string }; accessToken?: string };
-    };
-
-    expect(signInWithPassword).toHaveBeenCalledTimes(1);
-    expect(json.success).toBe(true);
-    expect(json.data.user.username).toBe("salsa");
-    expect(json.data.accessToken).toBeUndefined();
-    expect("email" in json.data.user).toBe(false);
-    expect(JSON.stringify(json)).not.toContain("sb-access-token");
-    expect(response.headers.get("set-cookie")).toContain("dolan_session=sb-access-token");
+    const json = await response.json();
+    expect(response.status).toBe(200);
+    expect(json.data.user.username).toBe("alya");
+    expect(response.headers.get("set-cookie")).toContain("dolan_session=local-session-token");
   });
 
-  it("maps a duplicate register to EMAIL_TAKEN", async () => {
+  it("registers through Express", async () => {
     vi.stubEnv("NEXT_PUBLIC_USE_MOCK_API", "false");
-    vi.stubEnv("EXPRESS_ORIGIN", "");
-    signUp.mockResolvedValue({
-      data: { user: null, session: null },
-      error: { message: "User already registered" },
-    });
+    vi.stubEnv("EXPRESS_ORIGIN", "http://express.test");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        new Response(
+          JSON.stringify({
+            success: true,
+            data: {
+              accessToken: "new-session",
+              session: {
+                emailVerified: true,
+                profileComplete: false,
+                user: {
+                  id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                  username: "newbie",
+                  displayName: "Newbie",
+                  avatarUrl: null,
+                  coverUrl: null,
+                  bio: null,
+                  domicile: null,
+                  followersCount: 0,
+                  followingCount: 0,
+                  hostTripCount: 0,
+                  participantTripCount: 0,
+                  rating: {
+                    overall: null,
+                    communication: null,
+                    attitude: null,
+                    reviewCount: 0,
+                  },
+                },
+              },
+            },
+          }),
+          { status: 201, headers: { "content-type": "application/json" } },
+        ),
+      ),
+    );
 
     const response = await handleRegisterRequest(
       jsonRequest("http://localhost/api/auth/register", {
-        email: "taken@dolan.test",
+        email: "newbie@dolan.test",
         password: "rahasia8",
         confirmPassword: "rahasia8",
+        username: "newbie",
+        displayName: "Newbie",
       }),
     );
-    const json = (await response.json()) as {
-      success: false;
-      error: { code: string };
-    };
-    expect(json.error.code).toBe("EMAIL_TAKEN");
-  });
-
-  it("exchanges a callback code for a session cookie", async () => {
-    vi.stubEnv("NEXT_PUBLIC_USE_MOCK_API", "false");
-    vi.stubEnv("EXPRESS_ORIGIN", "");
-    exchangeCodeForSession.mockResolvedValue({
-      data: {
-        session: { access_token: "sb-callback-token" },
-        user: {
-          id: "user-2",
-          email_confirmed_at: "2026-01-01T00:00:00.000Z",
-          user_metadata: {},
-        },
-      },
-      error: null,
-    });
-
-    const response = await handleCallbackRequest(
-      new Request("http://localhost/api/auth/callback?code=ok&next=/profil"),
-    );
-    expect(response.status).toBe(302);
-    expect(response.headers.get("set-cookie")).toContain("dolan_session=sb-callback-token");
-    expect(response.headers.get("set-cookie")).toContain("HttpOnly");
+    expect(response.status).toBe(200);
+    expect(response.headers.get("set-cookie")).toContain("dolan_session=new-session");
   });
 });

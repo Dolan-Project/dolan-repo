@@ -21,26 +21,12 @@ export function SiteFooter() {
             Temukan tujuan, susun itinerary, dan kenalan dengan traveler yang
             punya rencana perjalanan serupa.
           </p>
-          <div className="mt-5 flex gap-2">
-            {["photo_camera", "smart_display", "alternate_email"].map(
-              (icon) => (
-                <a
-                  key={icon}
-                  href="#"
-                  aria-label={`Media sosial ${icon}`}
-                  className="grid h-10 w-10 place-items-center rounded-full border border-sky-100 bg-white/80 text-sky-700 shadow-sm transition hover:-translate-y-1 hover:bg-white"
-                >
-                  <Icon name={icon} />
-                </a>
-              ),
-            )}
-          </div>
         </div>
         <div>
           <h3 className="text-sm font-extrabold">Jelajahi</h3>
           <div className="mt-4 grid gap-3 text-sm text-slate-600">
             <Link href={ROUTES.jelajah}>Destinasi</Link>
-            <Link href={ROUTES.jelajah}>Trip publik</Link>
+            <Link href={`${ROUTES.jelajah}?tab=trip`}>Trip publik</Link>
             <Link href={ROUTES.tripSaya}>Trip Saya</Link>
             <Link href={ROUTES.buatTrip}>Buat itinerary</Link>
             <Link href={ROUTES.profil}>Komunitas</Link>
@@ -49,10 +35,8 @@ export function SiteFooter() {
         <div>
           <h3 className="text-sm font-extrabold">Dukungan</h3>
           <div className="mt-4 grid gap-3 text-sm text-slate-600">
-            <a href="#faq">FAQ</a>
-            <a href="#">Pusat bantuan</a>
-            <a href="#">Keamanan</a>
-            <a href="#">Privasi</a>
+            <Link href="/#faq">FAQ</Link>
+            <Link href={ROUTES.notifikasi}>Notifikasi</Link>
           </div>
         </div>
         <div>

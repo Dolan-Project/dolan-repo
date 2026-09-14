@@ -219,32 +219,91 @@ export class TripService {
   }
 
   async complete(actor: SessionActor, tripId: string) {
-    return this.transition(actor, tripId, "COMPLETED", ["ONGOING"]);
+    const detail = await this.transition(actor, tripId, "COMPLETED", ["ONGOING"]);
+    const user = requireUser(actor);
+    const members = await this.store.listMembers(tripId);
+    for (const member of members) {
+      if (member.membershipStatus !== "ACTIVE") continue;
+      if (member.userId === user.id) continue;
+      await this.store.createNotification({
+        recipientUserId: member.userId,
+        actorUserId: user.id,
+        type: "feedback.invite",
+        targetType: "trip",
+        targetId: tripId,
+      });
+    }
+    return detail;
   }
 
-  async confirmAttendance(actor: SessionActor, tripId: string, confirmed: boolean) {
+  async notifyUser(
+    recipientUserId: string,
+    actorUserId: string,
+    type: string,
+    targetType: string,
+    targetId: string,
+  ) {
+    if (recipientUserId === actorUserId) return;
+    await this.store.createNotification({
+      recipientUserId,
+      actorUserId,
+      type,
+      targetType,
+      targetId,
+    });
+  }
+
+  async publishAsTemplate(actor: SessionActor, tripId: string) {
+    const user = requireUser(actor);
+    const trip = await this.requireVisibleTrip(actor, tripId);
+    if (trip.hostUserId !== user.id) {
+      throw forbidden(AuthErrorCode.NOT_HOST, "Only the host can publish a template");
+    }
+    return this.store.publishTripAsTemplate(tripId, user.id);
+  }
+
+  async confirmAttendance(
+    actor: SessionActor,
+    tripId: string,
+    input: { confirmed: boolean; targetUserId?: string },
+  ) {
     const user = requireUser(actor);
     const trip = await this.store.getTrip(tripId);
     if (!trip) throw hiddenTrip();
     if (trip.status !== "COMPLETED") {
       throw badRequest("NOT_ELIGIBLE", "Attendance can only be confirmed on a completed trip");
     }
-    const member = await this.store.confirmAttendance(tripId, user.id, confirmed);
+    const member = await this.store.confirmAttendance(tripId, user.id, input);
     if (!member) {
       throw forbidden("NOT_ELIGIBLE", "Only trip participants can confirm attendance");
     }
-    return { tripId, confirmed: member.attendanceConfirmed };
+    return {
+      tripId,
+      confirmed: member.attendanceConfirmed,
+      disputed: member.attendanceDisputed,
+      hostAttendance: member.hostAttendance,
+      selfAttendance: member.selfAttendance,
+    };
   }
 
   async reviewEligibility(tripId: string, reviewerId: string, revieweeId: string) {
     const trip = await this.store.getTrip(tripId);
     if (!trip || trip.status !== "COMPLETED") return { allowed: false as const };
+    const windowMs = 30 * 24 * 60 * 60 * 1000;
+    if (Date.now() - new Date(trip.updatedAt).getTime() > windowMs) {
+      return { allowed: false as const };
+    }
     const members = await this.store.listMembers(tripId);
     const reviewer = members.find((row) => row.userId === reviewerId && row.membershipStatus === "ACTIVE");
     const reviewee = members.find((row) => row.userId === revieweeId && row.membershipStatus === "ACTIVE");
     if (!reviewer || !reviewee) return { allowed: false as const };
+    if (reviewer.attendanceDisputed || reviewee.attendanceDisputed) return { allowed: false as const };
     if (!reviewer.attendanceConfirmed || !reviewee.attendanceConfirmed) return { allowed: false as const };
     return { allowed: true as const, trip };
+  }
+
+  async profileTripCounts(userId: string) {
+    return this.store.profileTripCounts(userId);
   }
 
   async historyFor(targetUserId: string, viewerUserId: string | null) {
@@ -788,6 +847,7 @@ export class TripService {
     for (const member of members) {
       if (member.membershipStatus === "ACTIVE") recipients.add(member.userId);
     }
+    recipients.delete(actor.id);
     for (const recipientUserId of recipients) {
       await this.store.createNotification({
         recipientUserId,

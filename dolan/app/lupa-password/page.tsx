@@ -6,20 +6,24 @@ import { ROUTES } from "@/lib/routes";
 
 export default function LupaPasswordPage() {
   return (
-    <AuthShell>
-      <div>
-        <Link
-          href={ROUTES.masuk}
-          className="mb-2 inline-flex items-center gap-1 type-micro text-on-surface-variant hover:text-on-surface"
-        >
-          <Icon name="arrow_back" className="text-[16px]" /> Kembali ke Masuk
-        </Link>
-        <h1 className="type-title text-on-surface">Pulihkan Akses Akun</h1>
-        <p className="type-body mt-1 text-on-surface-variant">
-          Masukkan email terdaftar untuk menerima tautan pembaruan kata sandi
-          aman.
-        </p>
-      </div>
+    <AuthShell
+      mode="utility"
+      sideHref={ROUTES.masuk}
+      sideLabel="Masuk"
+      eyebrow={
+        <>
+          <Icon name="lock" className="text-[15px]" /> Pulihkan akses
+        </>
+      }
+      title="Lupa kata sandi?"
+      description="Masukkan email terdaftar. Kami kirim tautan pembaruan kata sandi yang aman."
+    >
+      <Link
+        href={ROUTES.masuk}
+        className="mb-1 inline-flex items-center gap-1 type-micro text-on-surface-variant hover:text-on-surface"
+      >
+        <Icon name="arrow_back" className="text-[16px]" /> Kembali ke masuk
+      </Link>
       <ForgotPasswordForm />
     </AuthShell>
   );

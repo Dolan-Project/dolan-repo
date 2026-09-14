@@ -3,6 +3,9 @@ export const AUTH_PATHS = {
   login: "/api/auth/login",
   logout: "/api/auth/logout",
   callback: "/api/auth/callback",
+  google: "/api/auth/google",
   forgotPassword: "/api/auth/forgot-password",
   resetPassword: "/api/auth/reset-password",
+  verifyEmail: "/api/auth/verify-email",
+  resendVerification: "/api/auth/resend-verification",
 } as const;

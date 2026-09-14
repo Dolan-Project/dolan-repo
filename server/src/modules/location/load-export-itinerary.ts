@@ -2,7 +2,7 @@ import { getModels } from "@dolan/database";
 import type { ExportItinerary } from "./itinerary-export.ts";
 
 export async function loadExportItinerary(tripId: string, versionId?: string): Promise<ExportItinerary | null> {
-  const { Trip, ItineraryVersion, ItineraryDay, ItineraryStop, Place } = getModels();
+  const { Trip, ItineraryVersion, ItineraryDay, ItineraryStop, Place, TripChecklistItem } = getModels();
   const trip = await Trip.findByPk(tripId);
   if (!trip) return null;
   const selectedId = versionId ?? trip.currentItineraryVersionId;
@@ -28,11 +28,23 @@ export async function loadExportItinerary(tripId: string, versionId?: string): P
       ),
     });
   }
+  const checklist = await TripChecklistItem.findAll({
+    where: { tripId },
+    order: [["createdAt", "ASC"]],
+    limit: 12,
+  });
+  const budgetAmount = trip.budgetAmount != null ? Number(trip.budgetAmount) : null;
+  const budgetLine =
+    budgetAmount != null && Number.isFinite(budgetAmount)
+      ? `Budget: Rp ${budgetAmount.toLocaleString("id-ID")} (${trip.budgetBasis === "PER_PERSON" ? "per orang" : "grup"})`
+      : null;
   return {
     tripId,
     versionId: version.id,
     title: trip.title,
     summary: version.summary,
+    budgetLine,
+    checklistLines: checklist.map((item) => `${item.isCompleted ? "[x]" : "[ ]"} ${item.title}`),
     days: exportDays,
   };
 }

@@ -2,15 +2,20 @@ import { initModels } from "@dolan/database";
 import { env } from "./config/env.ts";
 import { FakePlacesClient } from "./integrations/google/fake-places-client.ts";
 import { GooglePlacesClient, type PlacesProvider } from "./integrations/google/places-client.ts";
-import type { AuthAdapter } from "./integrations/supabase/auth-adapter.ts";
-import { MockAuthAdapter } from "./integrations/supabase/mock-auth-adapter.ts";
-import { SupabaseAuthAdapter } from "./integrations/supabase/supabase-auth-adapter.ts";
+import type { AuthAdapter } from "./modules/auth/auth-adapter.ts";
+import { MockAuthAdapter } from "./modules/auth/mock-auth-adapter.ts";
 import { AuthService } from "./modules/auth/auth-service.ts";
+import { LocalSessionAuthAdapter } from "./modules/auth/local-auth-adapter.ts";
 import { ChatService } from "./modules/chat/chat-service.ts";
 import { MemoryChatStore } from "./modules/chat/memory-chat-store.ts";
 import { SequelizeChatStore } from "./modules/chat/sequelize-chat-store.ts";
 import { SequelizeUserRepository } from "./modules/auth/sequelize-user-repository.ts";
 import { MemoryUserRepository, type UserRepository } from "./modules/auth/user-repository.ts";
+import {
+  MemorySessionStore,
+  SequelizeSessionStore,
+  type SessionStore,
+} from "./modules/auth/session-store.ts";
 import { MockGeminiAdapter } from "./modules/jobs/gemini-adapter.ts";
 import { GroqAdapter } from "./modules/jobs/groq-adapter.ts";
 import { MemoryJobRepository } from "./modules/jobs/job-repository.ts";
@@ -37,19 +42,27 @@ import { MemoryTripStore } from "./modules/trips/memory-store.ts";
 import { SequelizeTripStore } from "./modules/trips/sequelize-store.ts";
 import { TripService, type TripBlockLookup, type TripRealtime } from "./modules/trips/trip-service.ts";
 
-export function createAuthAdapter(): AuthAdapter {
-  if (env.authAdapter === "supabase" && env.supabaseUrl && env.supabaseServiceRoleKey) {
-    return new SupabaseAuthAdapter();
+export function createSessionStore(useDatabase: boolean): SessionStore {
+  return useDatabase ? new SequelizeSessionStore() : new MemorySessionStore();
+}
+
+export function createAuthAdapter(users?: UserRepository, sessions?: SessionStore): AuthAdapter {
+  if (env.authAdapter === "mock") {
+    return new MockAuthAdapter();
   }
-  return new MockAuthAdapter();
+  const userRepo = users ?? new MemoryUserRepository();
+  const sessionStore = sessions ?? new MemorySessionStore();
+  return new LocalSessionAuthAdapter(sessionStore, userRepo);
 }
 
 export function createUserRepository(useDatabase: boolean): UserRepository {
   return useDatabase ? new SequelizeUserRepository() : new MemoryUserRepository();
 }
 
-export function createAuthService(users?: UserRepository) {
-  return new AuthService(createAuthAdapter(), users ?? new MemoryUserRepository());
+export function createAuthService(users?: UserRepository, sessions?: SessionStore) {
+  const userRepo = users ?? new MemoryUserRepository();
+  const sessionStore = sessions ?? new MemorySessionStore();
+  return new AuthService(createAuthAdapter(userRepo, sessionStore), userRepo, sessionStore);
 }
 
 export function createChatService(useDatabase: boolean) {
@@ -57,31 +70,41 @@ export function createChatService(useDatabase: boolean) {
 }
 
 export function createJobService(onJobUpdated?: JobServiceOptions["onJobUpdated"]) {
+  const aiQuota = new QuotaService(new MemoryQuotaStore(), env.placesMaxRequestsPerUserPerDay);
   return new GenerationJobService(new MemoryJobRepository(), new MockGeminiAdapter(), {
     routes: new MockRoutesClient(),
     onJobUpdated,
+    consumeAi: (userId) => aiQuota.consumeAi(userId),
+    consumeRoutes: (userId) => aiQuota.consumeRoutes(userId),
   });
 }
 
 export function createProductionJobService(onJobUpdated?: JobServiceOptions["onJobUpdated"]) {
   initModels();
-  const places = env.googleMapsServerKey
-    ? new GooglePlacesClient(env.googleMapsServerKey)
-    : new FakePlacesClient();
-  const lookup = createPlaceLookup(places, { requireKnownPlace: Boolean(env.googleMapsServerKey) });
+  if (!env.googleMapsServerKey) {
+    throw new Error("GOOGLE_MAPS_SERVER_KEY is required for production job service");
+  }
+  if (!env.groqApiKey) {
+    throw new Error("GROQ_API_KEY is required for production job service");
+  }
+  const places = new GooglePlacesClient(env.googleMapsServerKey);
+  const lookup = createPlaceLookup(places, { requireKnownPlace: true });
+  const aiQuota = new QuotaService(new SequelizeQuotaStore(), env.placesMaxRequestsPerUserPerDay);
   return new GenerationJobService(
     new SequelizeJobRepository(),
-    env.groqApiKey ? new GroqAdapter(env.groqApiKey, env.groqModel) : new MockGeminiAdapter(),
+    new GroqAdapter(env.groqApiKey, env.groqModel),
     {
       loadTrip: loadDraftTrip,
       savePreferences: saveTripPreferences,
       loadLockedStops,
       persistVersion: persistGeneratedVersion,
-      routes: env.googleMapsServerKey ? new GoogleRoutesClient(env.googleMapsServerKey) : new MockRoutesClient(),
+      routes: new GoogleRoutesClient(env.googleMapsServerKey),
       resolveCoords: lookup.resolveCoords,
       verifyPlaces: lookup.verifyPlaces,
       requireDatabaseTrip: true,
       onJobUpdated,
+      consumeAi: (userId) => aiQuota.consumeAi(userId),
+      consumeRoutes: (userId) => aiQuota.consumeRoutes(userId),
     },
   );
 }
@@ -124,6 +147,9 @@ export function createMemorySearchService(options?: {
 
 export function createProductionSearchService() {
   initModels();
+  if (!env.googleMapsServerKey) {
+    throw new Error("GOOGLE_MAPS_SERVER_KEY is required for production search service");
+  }
   return new SearchService(
     new GooglePlacesClient(env.googleMapsServerKey),
     new SequelizeSearchStore(),

@@ -3,6 +3,7 @@ import {
   checklistMutationSchema,
   saveItineraryVersionSchema,
   selectItineraryVersionSchema,
+  type BudgetItemInput,
   type EditableItineraryDay,
   type EditableItineraryStop,
   type EditableItineraryVersion,
@@ -100,7 +101,7 @@ async function mapVersion(version: {
   const budgetRows = await BudgetItem.findAll({ where: { itineraryVersionId: version.id } });
   const budget = buildBudgetSummary(
     budgetRows.map((item) => ({
-      category: item.category,
+      category: item.category as BudgetItemInput["category"],
       label: item.label,
       quantity: item.quantity,
       unit: item.unit,
@@ -336,9 +337,14 @@ export async function upsertChecklist(tripId: string, actorId: string, body: unk
       isCompleted: parsed.isCompleted,
       completedAt: parsed.isCompleted ? new Date() : null,
     });
-    return item;
+    return {
+      id: item.id,
+      title: item.title,
+      dueDate: item.dueDate,
+      isCompleted: item.isCompleted,
+    };
   }
-  return TripChecklistItem.create({
+  const created = await TripChecklistItem.create({
     tripId,
     userId: actorId,
     title: parsed.title,
@@ -346,6 +352,12 @@ export async function upsertChecklist(tripId: string, actorId: string, body: unk
     isCompleted: parsed.isCompleted,
     completedAt: parsed.isCompleted ? new Date() : null,
   });
+  return {
+    id: created.id,
+    title: created.title,
+    dueDate: created.dueDate,
+    isCompleted: created.isCompleted,
+  };
 }
 
 export async function deleteChecklist(tripId: string, actorId: string, itemId: string) {

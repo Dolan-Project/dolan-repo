@@ -25,7 +25,7 @@ export function toApiError(error: HttpError, requestId: string): ApiErrorBody {
   };
 }
 
-export function unauthorized(code = AuthErrorCode.UNAUTHENTICATED, message = "Authentication required") {
+export function unauthorized(code: string = AuthErrorCode.UNAUTHENTICATED, message = "Authentication required") {
   return new HttpError(401, code, message);
 }
 

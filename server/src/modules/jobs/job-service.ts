@@ -1,4 +1,10 @@
-import { AuthErrorCode, enqueueGenerationSchema, type GeminiItinerary, type GenerationJob } from "@dolan/shared";
+import {
+  AuthErrorCode,
+  destinationRecommendationsSchema,
+  enqueueGenerationSchema,
+  type GeminiItinerary,
+  type GenerationJob,
+} from "@dolan/shared";
 import { ZodError } from "zod";
 import { env } from "../../config/env.ts";
 import { HttpError } from "../../lib/api-error.ts";
@@ -40,7 +46,11 @@ export type JobServiceOptions = {
   verifyPlaces?: (itinerary: GeminiItinerary) => Promise<void>;
   requireDatabaseTrip?: boolean;
   onJobUpdated?: (job: GenerationJob) => void | Promise<void>;
+  consumeAi?: (userId: string) => Promise<void>;
+  consumeRoutes?: (userId: string) => Promise<void>;
 };
+
+const CHIJ_PLACE_ID = /^ChIJ/;
 
 export class GenerationJobService {
   private readonly versions = new Map<string, ItineraryVersionRecord[]>();
@@ -79,6 +89,8 @@ export class GenerationJobService {
       throw new HttpError(409, AuthErrorCode.JOB_ALREADY_ACTIVE, "A generation job is already running");
     }
 
+    await this.options.consumeAi?.(input.actorId);
+
     const created = await this.jobs.createOrGetIdempotent({
       tripId: trip.id,
       requestedBy: input.actorId,
@@ -106,50 +118,19 @@ export class GenerationJobService {
     await this.jobs.recoverStale(env.jobLockTimeoutMs, now);
     const claimed = await this.jobs.claimNextQueued(workerId, now);
     if (!claimed) return null;
-    if (claimed.resultVersionId) {
-      const replayed = await this.jobs.markSucceeded(claimed.id, claimed.resultVersionId);
+    if (claimed.resultVersionId || (claimed.resultCandidates && claimed.resultCandidates.length > 0)) {
+      const replayed = await this.jobs.markSucceeded(claimed.id, claimed.resultVersionId, {
+        resultCandidates: claimed.resultCandidates ?? undefined,
+      });
       await this.options.onJobUpdated?.(publicJob(replayed));
       return replayed;
     }
 
     try {
-      const trip = await this.options.loadTrip?.(claimed.tripId);
-      const raw = await this.model.generate({
-        tripId: claimed.tripId,
-        preferences: trip?.preferences ?? undefined,
-      });
-      let itinerary = parseGeminiItinerary(raw);
-      assertRealPlaces(itinerary);
-      await this.options.verifyPlaces?.(itinerary);
-      const locked = (await this.options.loadLockedStops?.(claimed.selectedVersionId)) ?? [];
-      itinerary = applyLockedStops(itinerary, locked);
-      if (this.options.routes) {
-        const coords = (await this.options.resolveCoords?.(itinerary)) ?? itinerary.days.flatMap((day) =>
-          day.stops.map(() => null),
-        );
-        itinerary = await applyRouteLegs(itinerary, coords, this.options.routes);
+      if (claimed.type === "RECOMMEND_DESTINATIONS") {
+        return await this.processRecommend(claimed);
       }
-
-      const budget = buildBudgetSummary(itinerary.budgetItems);
-      const versionId = this.options.persistVersion
-        ? await this.options.persistVersion({
-            jobId: claimed.id,
-            tripId: claimed.tripId,
-            requestedBy: claimed.requestedBy,
-            itinerary,
-            source: claimed.type === "REGENERATE_ITINERARY" ? "REGENERATED" : "AI",
-          })
-        : crypto.randomUUID();
-
-      if (!this.options.persistVersion) {
-        this.versions.set(claimed.tripId, [
-          ...(this.versions.get(claimed.tripId) ?? []),
-          { id: versionId, tripId: claimed.tripId, source: "AI", budget },
-        ]);
-      }
-      const succeeded = await this.jobs.markSucceeded(claimed.id, versionId);
-      await this.options.onJobUpdated?.(publicJob(succeeded));
-      return succeeded;
+      return await this.processItinerary(claimed);
     } catch (error) {
       const message = error instanceof Error ? error.message : "";
       const code =
@@ -167,6 +148,66 @@ export class GenerationJobService {
       await this.options.onJobUpdated?.(publicJob(failed));
       return failed;
     }
+  }
+
+  private async processRecommend(claimed: JobRecord): Promise<JobRecord> {
+    const trip = await this.options.loadTrip?.(claimed.tripId);
+    const preferences = trip?.preferences ?? undefined;
+    const raw = this.model.recommend
+      ? await this.model.recommend({ tripId: claimed.tripId, preferences })
+      : await this.model.generate({
+          tripId: claimed.tripId,
+          preferences: { ...(preferences ?? {}), recommendDestinations: true },
+        });
+    const parsed = destinationRecommendationsSchema.parse(raw);
+    const candidates = parsed.candidates.filter((candidate) => CHIJ_PLACE_ID.test(candidate.googlePlaceId));
+    if (candidates.length === 0) {
+      throw new Error("INVALID_GENERATION");
+    }
+    const succeeded = await this.jobs.markSucceeded(claimed.id, null, { resultCandidates: candidates });
+    await this.options.onJobUpdated?.(publicJob(succeeded));
+    return succeeded;
+  }
+
+  private async processItinerary(claimed: JobRecord): Promise<JobRecord> {
+    const trip = await this.options.loadTrip?.(claimed.tripId);
+    const raw = await this.model.generate({
+      tripId: claimed.tripId,
+      preferences: trip?.preferences ?? undefined,
+    });
+    let itinerary = parseGeminiItinerary(raw);
+    assertRealPlaces(itinerary);
+    await this.options.verifyPlaces?.(itinerary);
+    const locked = (await this.options.loadLockedStops?.(claimed.selectedVersionId)) ?? [];
+    itinerary = applyLockedStops(itinerary, locked);
+    if (this.options.routes) {
+      await this.options.consumeRoutes?.(claimed.requestedBy);
+      const coords = (await this.options.resolveCoords?.(itinerary)) ?? itinerary.days.flatMap((day) =>
+        day.stops.map(() => null),
+      );
+      itinerary = await applyRouteLegs(itinerary, coords, this.options.routes);
+    }
+
+    const budget = buildBudgetSummary(itinerary.budgetItems);
+    const versionId = this.options.persistVersion
+      ? await this.options.persistVersion({
+          jobId: claimed.id,
+          tripId: claimed.tripId,
+          requestedBy: claimed.requestedBy,
+          itinerary,
+          source: claimed.type === "REGENERATE_ITINERARY" ? "REGENERATED" : "AI",
+        })
+      : crypto.randomUUID();
+
+    if (!this.options.persistVersion) {
+      this.versions.set(claimed.tripId, [
+        ...(this.versions.get(claimed.tripId) ?? []),
+        { id: versionId, tripId: claimed.tripId, source: "AI", budget },
+      ]);
+    }
+    const succeeded = await this.jobs.markSucceeded(claimed.id, versionId);
+    await this.options.onJobUpdated?.(publicJob(succeeded));
+    return succeeded;
   }
 
   private async resolveTrip(input: { tripId?: string; trip?: DraftTrip; actorId: string }): Promise<DraftTrip> {
@@ -224,6 +265,7 @@ function publicJob(job: JobRecord): GenerationJob {
     attemptCount: job.attemptCount,
     resultVersionId: job.resultVersionId,
     selectedVersionId: job.selectedVersionId,
+    resultCandidates: job.resultCandidates ?? null,
     errorCode: job.errorCode,
     createdAt: job.createdAt,
     updatedAt: job.updatedAt,

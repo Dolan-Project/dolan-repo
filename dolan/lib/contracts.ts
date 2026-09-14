@@ -41,6 +41,7 @@ export {
   registerSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
+  verifyEmailSchema,
   profileUpdateSchema,
   joinRequestBodySchema,
   joinReviewBodySchema,

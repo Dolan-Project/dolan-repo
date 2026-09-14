@@ -27,6 +27,7 @@ export const MEMORY_PLACE_MALIOBORO: PlaceSummary = {
   rating: 4.6,
   userRatingCount: 12000,
   photoName: "places/ChIJxYBx6Da5eY4R2lX2sQ0oYkA/photos/demo",
+  photoUri: "https://images.unsplash.com/photo-1588668214407-6ea9a6d8c272?auto=format&fit=crop&w=1200&q=80",
   googleMapsUrl: "https://maps.google.com/?q=Malioboro",
   types: ["tourist_attraction", "point_of_interest"],
 };
@@ -71,6 +72,7 @@ function cachedPlaceSummary(place: MemoryPlace): PlaceSummary {
     rating: place.rating,
     userRatingCount: place.userRatingCount,
     photoName: place.photoName,
+    photoUri: place.photoUri ?? null,
     googleMapsUrl: place.googleMapsUrl,
     types: place.types ?? [],
   };
@@ -99,12 +101,59 @@ export class MemorySearchStore implements SearchStore {
       longitude: 110.4915,
       rating: 4.7,
       userRatingCount: 8000,
-      photoName: null,
+      photoName: "places/ChIJf5UqGYeXeY4RwZVQ9n0s7oE/photos/seed",
+      photoUri: "https://images.unsplash.com/photo-1584810359583-96fc3448beaa?auto=format&fit=crop&w=1200&q=80",
       googleMapsUrl: null,
       types: ["tourist_attraction"],
     };
-    this.places.set(malioboro.googlePlaceId, malioboro);
-    this.places.set(prambanan.googlePlaceId, prambanan);
+    const bromo: MemoryPlace = {
+      id: "place-bromo",
+      googlePlaceId: "seed_bromo",
+      name: "Gunung Bromo",
+      formattedAddress: "Probolinggo, Jawa Timur",
+      city: "Probolinggo",
+      latitude: -7.9425,
+      longitude: 112.953,
+      rating: 4.8,
+      userRatingCount: 15000,
+      photoName: "places/seed_bromo/photos/seed",
+      photoUri: "https://images.unsplash.com/photo-1501785888041-af3ee95bd4e8?auto=format&fit=crop&w=1200&q=80",
+      googleMapsUrl: null,
+      types: ["natural_feature", "tourist_attraction"],
+    };
+    const ubud: MemoryPlace = {
+      id: "place-ubud",
+      googlePlaceId: "seed_ubud",
+      name: "Ubud Monkey Forest",
+      formattedAddress: "Ubud, Bali",
+      city: "Ubud",
+      latitude: -8.5189,
+      longitude: 115.2592,
+      rating: 4.5,
+      userRatingCount: 22000,
+      photoName: "places/seed_ubud/photos/seed",
+      photoUri: "https://images.unsplash.com/photo-1537996194471-e657df975ab4?auto=format&fit=crop&w=1200&q=80",
+      googleMapsUrl: null,
+      types: ["park", "tourist_attraction"],
+    };
+    const labuan: MemoryPlace = {
+      id: "place-labuan",
+      googlePlaceId: "seed_labuan_bajo",
+      name: "Labuan Bajo Harbor",
+      formattedAddress: "Labuan Bajo, Flores",
+      city: "Labuan Bajo",
+      latitude: -8.496,
+      longitude: 119.887,
+      rating: 4.6,
+      userRatingCount: 9000,
+      photoName: "places/seed_labuan_bajo/photos/seed",
+      photoUri: "https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&w=1200&q=80",
+      googleMapsUrl: null,
+      types: ["tourist_attraction"],
+    };
+    for (const place of [malioboro, prambanan, bromo, ubud, labuan]) {
+      this.places.set(place.googlePlaceId, place);
+    }
 
     this.templates.push({
       id: MEMORY_TEMPLATE_ID,
@@ -136,7 +185,22 @@ export class MemorySearchStore implements SearchStore {
         },
       ],
     });
+    this.templates.push({
+      id: "memory-template-bali",
+      title: "Bali Ubud Ringkas",
+      description: "Template memory fallback Bali.",
+      city: "Ubud",
+      durationDays: 3,
+      source: "CURATED",
+      publicationStatus: "PUBLISHED",
+      transportMode: "MIXED",
+      usageCount: 41,
+      coverPlaceId: ubud.id,
+      createdAt: "2026-09-02T00:00:00.000Z",
+      days: [],
+    });
 
+    // Keep a single Yogyakarta public trip so D2 popularity/soonest tests stay deterministic.
     this.trips.push({
       id: "public-trip-1",
       title: "Eksplor Malioboro",
@@ -154,6 +218,28 @@ export class MemorySearchStore implements SearchStore {
       hostUserId: "host-1",
       visitingGooglePlaceIds: [malioboro.googlePlaceId],
     });
+
+    const extraCovers = [bromo, ubud, labuan];
+    for (let i = 0; i < 10; i += 1) {
+      const cover = extraCovers[i % extraCovers.length]!;
+      this.trips.push({
+        id: `public-trip-extra-${i + 1}`,
+        title: `Open trip ${cover.name}`,
+        destinationCity: cover.city,
+        visibility: "PUBLIC",
+        status: i % 4 === 0 ? "ONGOING" : "OPEN",
+        startDate: `2026-11-${String((i % 20) + 1).padStart(2, "0")}`,
+        endDate: `2026-11-${String((i % 20) + 3).padStart(2, "0")}`,
+        participantCount: 2 + (i % 5),
+        pendingRequestCount: i % 3,
+        coverPlace: cachedPlaceSummary(cover),
+        publicMeetingPointLabel: cover.name,
+        publicMeetingPointLatitude: cover.latitude,
+        publicMeetingPointLongitude: cover.longitude,
+        hostUserId: `host-${(i % 4) + 1}`,
+        visitingGooglePlaceIds: [cover.googlePlaceId],
+      });
+    }
     this.trips.push({
       id: "private-trip-1",
       title: "Private Yogyakarta",

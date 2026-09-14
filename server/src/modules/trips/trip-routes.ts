@@ -212,7 +212,25 @@ export function createTripRouter(trips: TripService) {
         tripId: param(req.params.id), invitedByUserId: req.authUser!.id, invitedUserId,
         tokenHash, channel, status: "PENDING", expiresAt: new Date(Date.now() + 7 * 86_400_000),
       });
-      if (invitedUserId) await Notification.create({ recipientUserId: invitedUserId, actorUserId: req.authUser!.id, type: "trip.invited", targetType: "trip", targetId: param(req.params.id), data: { invitationId: invitation.id, invitePath: `/undangan/${token}` } });
+      if (invitedUserId) {
+        await Notification.create({
+          recipientUserId: invitedUserId,
+          actorUserId: req.authUser!.id,
+          type: "trip.invited",
+          targetType: "trip",
+          targetId: param(req.params.id),
+          data: { invitationId: invitation.id, invitePath: `/undangan/${token}` },
+        });
+        void import("../push/push-delivery.ts").then(({ deliverPushNotification }) =>
+          deliverPushNotification({
+            recipientUserId: invitedUserId,
+            type: "trip.invited",
+            targetType: "trip",
+            targetId: param(req.params.id),
+            data: { invitationId: invitation.id, invitePath: `/undangan/${token}` },
+          }),
+        );
+      }
       res.status(201).json(apiSuccess({ id: invitation.id, channel, invitePath: `/undangan/${token}`, expiresAt: invitation.expiresAt?.toISOString() ?? null }));
     } catch (error) { next(error); }
   });
@@ -258,6 +276,16 @@ export function createTripRouter(trips: TripService) {
         apiSuccess(
           await trips.publish(req.actor ?? { kind: "guest" }, param(req.params.id), parsed.data, req.header("idempotency-key")),
         ),
+      );
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.post("/trips/:id/publish-as-template", requireCapability("publish_trip"), withTripContext, async (req, res, next) => {
+    try {
+      res.status(201).json(
+        apiSuccess(await trips.publishAsTemplate(req.actor ?? { kind: "guest" }, param(req.params.id))),
       );
     } catch (error) {
       next(error);

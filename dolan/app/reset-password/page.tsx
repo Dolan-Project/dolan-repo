@@ -12,16 +12,14 @@ export default async function ResetPasswordPage({ searchParams }: PageProps) {
   const { token } = await searchParams;
   if (!token) {
     return (
-      <AuthShell>
-        <div>
-          <h1 className="type-title text-on-surface">
-            Tautan tidak valid atau kedaluwarsa
-          </h1>
-          <p className="type-body mt-2 text-on-surface-variant">
-            Minta tautan reset yang baru.
-          </p>
-        </div>
-        <Link href={ROUTES.lupaPassword} className="btn-brand">
+      <AuthShell
+        mode="utility"
+        sideHref={ROUTES.lupaPassword}
+        sideLabel="Kirim ulang"
+        title="Tautan tidak valid"
+        description="Minta tautan reset yang baru dari halaman lupa password."
+      >
+        <Link href={ROUTES.lupaPassword} className="btn-primary w-full !min-h-12">
           Kirim tautan baru
         </Link>
       </AuthShell>
@@ -29,19 +27,24 @@ export default async function ResetPasswordPage({ searchParams }: PageProps) {
   }
 
   return (
-    <AuthShell>
-      <div>
-        <Link
-          href={ROUTES.lupaPassword}
-          className="mb-2 inline-flex items-center gap-1 type-micro text-on-surface-variant hover:text-on-surface"
-        >
-          <Icon name="arrow_back" className="text-[16px]" /> Kembali
-        </Link>
-        <h1 className="type-title text-on-surface">Atur Kata Sandi Baru</h1>
-        <p className="type-body mt-1 text-on-surface-variant">
-          Masukkan kata sandi baru untuk akun Dolan kamu.
-        </p>
-      </div>
+    <AuthShell
+      mode="utility"
+      sideHref={ROUTES.masuk}
+      sideLabel="Masuk"
+      eyebrow={
+        <>
+          <Icon name="lock" className="text-[15px]" /> Keamanan akun
+        </>
+      }
+      title="Atur kata sandi baru"
+      description="Masukkan kata sandi baru untuk akun Dolan kamu."
+    >
+      <Link
+        href={ROUTES.lupaPassword}
+        className="mb-1 inline-flex items-center gap-1 type-micro text-on-surface-variant hover:text-on-surface"
+      >
+        <Icon name="arrow_back" className="text-[16px]" /> Kembali
+      </Link>
       <ResetPasswordForm token={token} />
     </AuthShell>
   );

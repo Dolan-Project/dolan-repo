@@ -1,10 +1,10 @@
 import {
-  AUTH_ERROR_CODES,
   forgotPasswordSchema,
   isProfileComplete,
   loginSchema,
   registerSchema,
   resetPasswordSchema,
+  verifyEmailSchema,
   type AuthSession,
   type PublicUser,
 } from "@/lib/contracts";
@@ -19,10 +19,9 @@ import { samplePublicUser } from "@/mocks/fixtures";
 import { clearOfflineForSessionId } from "@/mocks/community-store";
 import { createApiError } from "@/mocks/scenarios";
 import { jsonResult, statusForCode, validationError } from "./api-response";
-import { proxyToExpress } from "./express-proxy";
+import { extractAccessToken, proxyToExpress } from "./express-proxy";
 import { resolveAfterAuth } from "./post-auth-path";
 import { readSessionId, sessionCookieHeader } from "./session-cookie";
-import { getSupabaseAnon } from "./supabase-anon";
 import { shouldUseMockApi } from "./use-mock";
 
 const TAKEN_EMAIL = "taken@dolan.test";
@@ -56,72 +55,6 @@ function loginSession(): AuthSession {
   };
 }
 
-function sessionFromAuthUser(user: {
-  id: string;
-  email_confirmed_at?: string | null;
-  user_metadata?: Record<string, unknown>;
-}): AuthSession {
-  const meta = user.user_metadata ?? {};
-  const publicUser: PublicUser = {
-    id: user.id,
-    username: String(meta.username ?? ""),
-    displayName: String(meta.display_name ?? meta.displayName ?? ""),
-    avatarUrl: typeof meta.avatar_url === "string" ? meta.avatar_url : null,
-    coverUrl: typeof meta.cover_url === "string" ? meta.cover_url : null,
-    bio: typeof meta.bio === "string" ? meta.bio : null,
-    domicile: typeof meta.domicile === "string" ? meta.domicile : null,
-    followersCount: 0,
-    followingCount: 0,
-    hostTripCount: 0,
-    participantTripCount: 0,
-    rating: {
-      overall: null,
-      communication: null,
-      attitude: null,
-      reviewCount: 0,
-    },
-  };
-  return {
-    user: publicUser,
-    emailVerified: Boolean(user.email_confirmed_at),
-    profileComplete: isProfileComplete(publicUser),
-  };
-}
-
-async function sessionAfterAccessToken(
-  accessToken: string,
-  user: {
-    id: string;
-    email_confirmed_at?: string | null;
-    user_metadata?: Record<string, unknown>;
-  },
-): Promise<AuthSession> {
-  try {
-    const me = await proxyToExpress(
-      new Request("http://localhost/api/v1/users/me", {
-        headers: { authorization: `Bearer ${accessToken}` },
-      }),
-      "/api/v1/users/me",
-    );
-    if (me.ok) {
-      const json = (await me.json()) as
-        | { success: true; data: AuthSession }
-        | { success: false };
-      if (json.success) return json.data;
-    }
-  } catch {
-    // Express down or malformed — fall back to Supabase metadata.
-  }
-  return sessionFromAuthUser(user);
-}
-
-function providerUnavailable() {
-  return jsonResult(
-    createApiError("PROVIDER_UNAVAILABLE", "Layanan auth tidak tersedia"),
-    statusForCode("PROVIDER_UNAVAILABLE"),
-  );
-}
-
 async function readBody(request: Request): Promise<unknown> {
   try {
     return await request.json();
@@ -130,40 +63,69 @@ async function readBody(request: Request): Promise<unknown> {
   }
 }
 
+type LocalAuthPayload = {
+  success: true;
+  data: {
+    session?: AuthSession;
+    accessToken?: string;
+    message?: string;
+    debugResetToken?: string;
+    debugVerifyToken?: string;
+    reset?: boolean;
+    loggedOut?: boolean;
+    verified?: boolean;
+    alreadyVerified?: boolean;
+  };
+};
+
+async function proxyAuthJson(
+  request: Request,
+  path: string,
+  body: unknown,
+): Promise<Response> {
+  const upstream = await proxyToExpress(request, path, { method: "POST", json: body });
+  if (!upstream.ok) {
+    const text = await upstream.text();
+    try {
+      const parsed = JSON.parse(text) as { success: false; error?: { code?: string; message?: string } };
+      return jsonResult(
+        createApiError(
+          parsed.error?.code ?? "VALIDATION_ERROR",
+          parsed.error?.message ?? "Permintaan auth gagal",
+        ),
+        upstream.status,
+      );
+    } catch {
+      return jsonResult(
+        createApiError("PROVIDER_UNAVAILABLE", "Layanan auth tidak tersedia"),
+        statusForCode("PROVIDER_UNAVAILABLE"),
+      );
+    }
+  }
+  return upstream;
+}
+
 export async function handleRegisterRequest(request: Request): Promise<Response> {
   const parsed = registerSchema.safeParse(await readBody(request));
   if (!parsed.success) return validationError(parsed.error);
 
   if (!shouldUseMockApi()) {
-    const client = getSupabaseAnon();
-    if (!client) return providerUnavailable();
-    const { data, error } = await client.auth.signUp({
-      email: parsed.data.email,
-      password: parsed.data.password,
-      options: {
+    const upstream = await proxyAuthJson(request, "/api/v1/auth/register", parsed.data);
+    if (!upstream.ok) return upstream;
+    const json = (await upstream.json()) as LocalAuthPayload;
+    const token = json.data.accessToken;
+    const session = json.data.session ?? registerSession();
+    return jsonResult(
+      {
+        success: true,
         data: {
-          username: parsed.data.username ?? "",
-          display_name: parsed.data.displayName ?? "",
+          ...session,
+          ...(json.data.debugVerifyToken ? { debugVerifyToken: json.data.debugVerifyToken } : {}),
         },
       },
-    });
-    if (error?.message.toLowerCase().includes("already")) {
-      return jsonResult(
-        createApiError(AUTH_ERROR_CODES.EMAIL_TAKEN, "Email sudah terdaftar"),
-        statusForCode(AUTH_ERROR_CODES.EMAIL_TAKEN),
-      );
-    }
-    if (error || !data.user) {
-      return jsonResult(
-        createApiError(AUTH_ERROR_CODES.VALIDATION_ERROR, "Pendaftaran gagal"),
-        400,
-      );
-    }
-    const token = data.session?.access_token;
-    const session = token
-      ? await sessionAfterAccessToken(token, data.user)
-      : sessionFromAuthUser(data.user);
-    return jsonResult({ success: true, data: session }, 200, token ?? undefined);
+      200,
+      token ?? undefined,
+    );
   }
 
   const mock = mockRegister(
@@ -181,23 +143,12 @@ export async function handleLoginRequest(request: Request): Promise<Response> {
   if (!parsed.success) return validationError(parsed.error);
 
   if (!shouldUseMockApi()) {
-    const client = getSupabaseAnon();
-    if (!client) return providerUnavailable();
-    const { data, error } = await client.auth.signInWithPassword({
-      email: parsed.data.email,
-      password: parsed.data.password,
-    });
-    if (error || !data.session || !data.user) {
-      return jsonResult(
-        createApiError(
-          AUTH_ERROR_CODES.INVALID_CREDENTIALS,
-          "Email atau password salah",
-        ),
-        statusForCode(AUTH_ERROR_CODES.INVALID_CREDENTIALS),
-      );
-    }
-    const session = await sessionAfterAccessToken(data.session.access_token, data.user);
-    return jsonResult({ success: true, data: session }, 200, data.session.access_token);
+    const upstream = await proxyAuthJson(request, "/api/v1/auth/login", parsed.data);
+    if (!upstream.ok) return upstream;
+    const json = (await upstream.json()) as LocalAuthPayload;
+    const token = json.data.accessToken;
+    const session = json.data.session ?? loginSession();
+    return jsonResult({ success: true, data: session }, 200, token ?? undefined);
   }
 
   if (parsed.data.email === RATE_EMAIL) {
@@ -217,12 +168,8 @@ export async function handleLoginRequest(request: Request): Promise<Response> {
 
 export async function handleLogoutRequest(request: Request): Promise<Response> {
   if (!shouldUseMockApi()) {
-    const client = getSupabaseAnon();
-    await client?.auth.signOut();
-    const tokenHeader = request.headers.get("authorization") ?? request.headers.get("cookie");
-    if (tokenHeader) {
-      await proxyToExpress(request, "/api/v1/auth/disconnect-sockets");
-    }
+    await proxyToExpress(request, "/api/v1/auth/logout", { method: "POST", json: {} });
+    await proxyToExpress(request, "/api/v1/auth/disconnect-sockets", { method: "POST", json: {} });
     return jsonResult({ success: true, data: { loggedOut: true } }, 200, null);
   }
   const mock = mockLogout("success");
@@ -237,13 +184,10 @@ export async function handleForgotPasswordRequest(
   const parsed = forgotPasswordSchema.safeParse(await readBody(request));
   if (!parsed.success) return validationError(parsed.error);
   if (!shouldUseMockApi()) {
-    const client = getSupabaseAnon();
-    if (!client) return providerUnavailable();
-    await client.auth.resetPasswordForEmail(parsed.data.email);
-    return jsonResult({
-      success: true,
-      data: { message: "Jika email terdaftar, tautan reset telah dikirim." },
-    }, 200);
+    const upstream = await proxyAuthJson(request, "/api/v1/auth/forgot-password", parsed.data);
+    if (!upstream.ok) return upstream;
+    const json = (await upstream.json()) as LocalAuthPayload;
+    return jsonResult({ success: true, data: json.data }, 200);
   }
   const mock = mockForgotPassword("success");
   if (!mock.success) return jsonResult(mock, statusForCode(mock.error.code));
@@ -256,25 +200,8 @@ export async function handleResetPasswordRequest(
   const parsed = resetPasswordSchema.safeParse(await readBody(request));
   if (!parsed.success) return validationError(parsed.error);
   if (!shouldUseMockApi()) {
-    const client = getSupabaseAnon();
-    if (!client) return providerUnavailable();
-    const { data, error } = await client.auth.verifyOtp({
-      token_hash: parsed.data.token,
-      type: "recovery",
-    });
-    if (error || !data.session) {
-      return jsonResult(
-        createApiError(AUTH_ERROR_CODES.UNAUTHORIZED, "Tautan reset tidak valid"),
-        statusForCode(AUTH_ERROR_CODES.UNAUTHORIZED),
-      );
-    }
-    const updated = await client.auth.updateUser({ password: parsed.data.password });
-    if (updated.error) {
-      return jsonResult(
-        createApiError(AUTH_ERROR_CODES.UNAUTHORIZED, "Tautan reset tidak valid"),
-        statusForCode(AUTH_ERROR_CODES.UNAUTHORIZED),
-      );
-    }
+    const upstream = await proxyAuthJson(request, "/api/v1/auth/reset-password", parsed.data);
+    if (!upstream.ok) return upstream;
     return jsonResult({ success: true, data: { reset: true } }, 200);
   }
   const mock = mockResetPassword(
@@ -282,6 +209,97 @@ export async function handleResetPasswordRequest(
   );
   if (!mock.success) return jsonResult(mock, statusForCode(mock.error.code));
   return jsonResult(mock, 200);
+}
+
+export async function handleVerifyEmailRequest(request: Request): Promise<Response> {
+  const url = new URL(request.url);
+  const tokenFromQuery = url.searchParams.get("token");
+  const next = url.searchParams.get("next");
+  const body =
+    request.method === "GET"
+      ? { token: tokenFromQuery ?? "" }
+      : await readBody(request);
+  const parsed = verifyEmailSchema.safeParse(body);
+  if (!parsed.success) {
+    if (request.method === "GET") {
+      const dest = new URL("/cek-email", url.origin);
+      dest.searchParams.set("error", "invalid");
+      return Response.redirect(dest, 302);
+    }
+    return validationError(parsed.error);
+  }
+
+  if (!shouldUseMockApi()) {
+    const upstream = await proxyAuthJson(request, "/api/v1/auth/verify-email", parsed.data);
+    if (!upstream.ok) {
+      if (request.method === "GET") {
+        const dest = new URL("/cek-email", url.origin);
+        dest.searchParams.set("error", "invalid");
+        return Response.redirect(dest, 302);
+      }
+      return upstream;
+    }
+    const json = (await upstream.json()) as LocalAuthPayload & {
+      data: { session?: AuthSession; verified?: boolean };
+    };
+    const session = json.data.session ?? {
+      ...registerSession(),
+      emailVerified: true,
+    };
+    if (request.method === "GET") {
+      const dest = new URL(resolveAfterAuth(session, next), url.origin);
+      const headers = new Headers({ Location: dest.toString() });
+      const cookie = extractAccessToken(request);
+      if (cookie) headers.set("Set-Cookie", sessionCookieHeader(cookie));
+      return new Response(null, { status: 302, headers });
+    }
+    return jsonResult({ success: true, data: session }, 200);
+  }
+
+  if (parsed.data.token === "expired") {
+    if (request.method === "GET") {
+      const dest = new URL("/cek-email", url.origin);
+      dest.searchParams.set("error", "invalid");
+      return Response.redirect(dest, 302);
+    }
+    return jsonResult(
+      createApiError("INVALID_TOKEN", "Tautan verifikasi tidak valid"),
+      statusForCode("UNAUTHORIZED"),
+    );
+  }
+
+  const session: AuthSession = {
+    user: incompleteUser(),
+    emailVerified: true,
+    profileComplete: false,
+  };
+  if (request.method === "GET") {
+    const dest = new URL(resolveAfterAuth(session, next), url.origin);
+    return new Response(null, {
+      status: 302,
+      headers: {
+        Location: dest.toString(),
+        "Set-Cookie": sessionCookieHeader("pending"),
+      },
+    });
+  }
+  return jsonResult({ success: true, data: session }, 200, "pending");
+}
+
+export async function handleResendVerificationRequest(request: Request): Promise<Response> {
+  const body = (await readBody(request)) as { next?: string };
+  if (!shouldUseMockApi()) {
+    const upstream = await proxyAuthJson(request, "/api/v1/auth/resend-verification", body ?? {});
+    if (!upstream.ok) return upstream;
+    const json = (await upstream.json()) as LocalAuthPayload & {
+      data: { message?: string; alreadyVerified?: boolean; debugVerifyToken?: string };
+    };
+    return jsonResult({ success: true, data: json.data }, 200);
+  }
+  return jsonResult({
+    success: true,
+    data: { message: "Tautan verifikasi telah dikirim ulang." },
+  }, 200);
 }
 
 export async function handleCallbackRequest(request: Request): Promise<Response> {
@@ -295,25 +313,8 @@ export async function handleCallbackRequest(request: Request): Promise<Response>
   }
 
   if (!shouldUseMockApi()) {
-    const client = getSupabaseAnon();
-    if (!client) {
-      const dest = new URL("/cek-email", url.origin);
-      dest.searchParams.set("error", "invalid");
-      return Response.redirect(dest, 302);
-    }
-    const code = url.searchParams.get("code");
-    const exchanged = code
-      ? await client.auth.exchangeCodeForSession(code)
-      : await client.auth.verifyOtp({ token_hash: token, type: "email" });
-    const accessToken = exchanged.data.session?.access_token;
-    const user = exchanged.data.user;
-    if (exchanged.error || !accessToken || !user) {
-      const dest = new URL("/cek-email", url.origin);
-      dest.searchParams.set("error", "invalid");
-      return Response.redirect(dest, 302);
-    }
-    const session = await sessionAfterAccessToken(accessToken, user);
-    const dest = new URL(resolveAfterAuth(session, next), url.origin);
+    const accessToken = extractAccessToken(request) ?? token;
+    const dest = new URL(resolveAfterAuth(loginSession(), next), url.origin);
     return new Response(null, {
       status: 302,
       headers: {
@@ -337,3 +338,4 @@ export async function handleCallbackRequest(request: Request): Promise<Response>
     },
   });
 }
+

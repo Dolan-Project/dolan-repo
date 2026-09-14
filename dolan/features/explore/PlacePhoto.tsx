@@ -7,6 +7,8 @@ import { getPlacePhoto } from "./api";
 type PlacePhotoProps = {
   googlePlaceId: string;
   photoName: string | null;
+  /** Seeded / cached permanent URL — skip Google Places media request. */
+  photoUri?: string | null;
   alt: string;
   className?: string;
   eager?: boolean;
@@ -15,14 +17,23 @@ type PlacePhotoProps = {
 export function PlacePhoto({
   googlePlaceId,
   photoName,
+  photoUri = null,
   alt,
   className = "",
   eager = false,
 }: PlacePhotoProps) {
-  const requestKey = `${googlePlaceId}:${photoName ?? "fallback"}`;
-  const [photo, setPhoto] = useState<{ key: string; src: string | null; failed: boolean }>({ key: "", src: null, failed: false });
+  const requestKey = `${googlePlaceId}:${photoUri ?? photoName ?? "fallback"}`;
+  const [photo, setPhoto] = useState<{ key: string; src: string | null; failed: boolean }>({
+    key: photoUri ? requestKey : "",
+    src: photoUri,
+    failed: false,
+  });
 
   useEffect(() => {
+    if (photoUri) {
+      setPhoto({ key: requestKey, src: photoUri, failed: false });
+      return;
+    }
     if (!photoName) return;
     let active = true;
     getPlacePhoto(googlePlaceId, photoName)
@@ -31,10 +42,10 @@ export function PlacePhoto({
     return () => {
       active = false;
     };
-  }, [googlePlaceId, photoName, requestKey]);
+  }, [googlePlaceId, photoName, photoUri, requestKey]);
 
   const src = photo.key === requestKey ? photo.src : null;
-  const failed = !photoName || (photo.key === requestKey && photo.failed);
+  const failed = (!photoName && !photoUri) || (photo.key === requestKey && photo.failed);
 
   return (
     <div

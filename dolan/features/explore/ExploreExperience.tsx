@@ -59,7 +59,6 @@ export function ExploreExperience() {
   const [pendingMapCenter, setPendingMapCenter] = useState<{ lat: number; lng: number } | null>(null);
   const [locationMessage, setLocationMessage] = useState<string | null>(null);
   const [mapType, setMapType] = useState<"roadmap" | "satellite">("roadmap");
-  const [mapLayer, setMapLayer] = useState<"destinations" | "friends">("destinations");
   const [zoomCommand, setZoomCommand] = useState<{ id: number; delta: 1 | -1 } | null>(null);
   const dragStartY = useRef<number | null>(null);
   const cardRefs = useRef(new Map<string, HTMLElement>());
@@ -77,7 +76,7 @@ export function ExploreExperience() {
         sort,
         page,
         dateFrom: tab === "trip" ? dateFrom || undefined : undefined,
-        center: tab === "wisata" ? mapCenter : null,
+        center: tab === "wisata" || (tab === "trip" && sort === "nearest") ? mapCenter : null,
       });
       if (sequence !== requestSequence.current) return;
       setResult(next);
@@ -112,7 +111,7 @@ export function ExploreExperience() {
   function changeTab(next: ExploreTab) {
     setTab(next);
     setCategory("");
-    setSort(next === "wisata" ? "relevance" : next === "trip" ? "recent" : "popular");
+    setSort(next === "wisata" ? "relevance" : next === "trip" ? "soonest" : "popular");
   }
 
   function changeSort(next: ExploreSort) {
@@ -121,8 +120,14 @@ export function ExploreExperience() {
       setSort(next);
       return;
     }
+    const fallbackSort: ExploreSort = tab === "trip" ? "soonest" : "relevance";
     if (!navigator.geolocation) {
-      setLocationMessage("Perangkat ini tidak menyediakan lokasi. Urutan relevan tetap digunakan.");
+      setLocationMessage(
+        tab === "trip"
+          ? "Perangkat ini tidak menyediakan lokasi. Urutan berangkat terdekat tetap digunakan."
+          : "Perangkat ini tidak menyediakan lokasi. Urutan relevan tetap digunakan.",
+      );
+      setSort(fallbackSort);
       return;
     }
     navigator.geolocation.getCurrentPosition(
@@ -131,8 +136,12 @@ export function ExploreExperience() {
         setSort("nearest");
       },
       () => {
-        setSort("relevance");
-        setLocationMessage("Izin lokasi ditolak. Kamu tetap bisa mencari berdasarkan nama kota.");
+        setSort(fallbackSort);
+        setLocationMessage(
+          tab === "trip"
+            ? "Izin lokasi ditolak. Menampilkan trip berdasarkan tanggal berangkat terdekat."
+            : "Izin lokasi ditolak. Kamu tetap bisa mencari berdasarkan nama kota.",
+        );
       },
       { enableHighAccuracy: false, timeout: 8000 },
     );
@@ -173,7 +182,7 @@ export function ExploreExperience() {
         </div>
         <div className="absolute inset-0 lg:left-[clamp(480px,46vw,640px)]">
           <GoogleMap points={points} selectedId={selectedId} onSelect={handleSelect} onViewportChanged={setPendingMapCenter} mapType={mapType} focusCenter={focusCenter} zoomCommand={zoomCommand} searchOverlay className="h-full w-full" />
-          <MapTools mapType={mapType} mapLayer={mapLayer} onMapType={() => setMapType((current) => current === "roadmap" ? "satellite" : "roadmap")} onLocation={focusCurrentLocation} onMapLayer={setMapLayer} onZoom={(delta) => setZoomCommand({ id: Date.now(), delta })} />
+          <MapTools mapType={mapType} onMapType={() => setMapType((current) => current === "roadmap" ? "satellite" : "roadmap")} onLocation={focusCurrentLocation} onZoom={(delta) => setZoomCommand({ id: Date.now(), delta })} />
         </div>
         {pendingMapCenter && tab === "wisata" ? <button type="button" onClick={() => { setMapCenter(pendingMapCenter); setPendingMapCenter(null); }} className="absolute left-1/2 top-4 z-20 flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-primary/15 bg-white px-4 py-2 type-label text-primary shadow-lg lg:left-[72%]"><Icon name="refresh" className="text-[18px]" /> Cari di area ini</button> : null}
 
@@ -213,20 +222,18 @@ function SearchField({ draftQuery, onDraftQuery, onSubmit, compact = false }: { 
 
 type MapToolsProps = {
   mapType: "roadmap" | "satellite";
-  mapLayer: "destinations" | "friends";
   onMapType: () => void;
   onLocation: () => void;
-  onMapLayer: (layer: "destinations" | "friends") => void;
   onZoom: (delta: 1 | -1) => void;
 };
 
-function MapTools({ mapType, mapLayer, onMapType, onLocation, onMapLayer, onZoom }: MapToolsProps) {
+function MapTools({ mapType, onMapType, onLocation, onZoom }: MapToolsProps) {
   return (
     <>
       <div className="absolute left-3 top-20 z-30 flex items-center rounded-xl border border-outline-variant/35 bg-white/95 p-1 shadow-lg backdrop-blur-md lg:left-4 lg:top-4">
-        <span className="hidden items-center gap-1.5 px-2 type-caption font-semibold text-on-surface lg:flex"><Icon name="layers" className="text-[17px] text-secondary-container" />Filter peta</span>
-        <button type="button" onClick={() => onMapLayer("destinations")} className={`rounded-lg px-3 py-1.5 type-caption font-semibold transition ${mapLayer === "destinations" ? "bg-secondary-container text-white shadow-sm" : "text-on-surface-variant"}`}><span className={`mr-1.5 inline-block h-2 w-2 rounded-full ${mapLayer === "destinations" ? "bg-white" : "bg-orange-500"}`} />Destinasi</button>
-        <button type="button" onClick={() => onMapLayer("friends")} className={`rounded-lg px-3 py-1.5 type-caption font-semibold transition ${mapLayer === "friends" ? "bg-primary text-white shadow-sm" : "text-on-surface-variant"}`}><span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-emerald-500" />Teman</button>
+        <span className="flex items-center gap-1.5 px-2 type-caption font-semibold text-on-surface">
+          <Icon name="layers" className="text-[17px] text-secondary-container" /> Destinasi di peta
+        </span>
       </div>
       <div className="absolute right-3 top-52 z-30 flex flex-col gap-1.5 lg:bottom-6 lg:right-5 lg:top-auto">
         <button type="button" onClick={onMapType} aria-label={mapType === "roadmap" ? "Tampilkan peta satelit" : "Tampilkan peta biasa"} title={mapType === "roadmap" ? "Tampilan satelit" : "Tampilan peta"} className="grid h-11 w-11 place-items-center rounded-xl border border-outline-variant/30 bg-white text-on-surface shadow-lg transition hover:text-primary">
@@ -263,8 +270,8 @@ function ExploreFilters({ tab, category, dateFrom, sort, onTab, onCategory, onDa
       </div>
       <label className="flex min-w-0 items-center gap-1.5 rounded-xl border border-outline-variant/40 bg-white px-2.5 py-1.5 text-on-surface-variant">
         <Icon name="tune" className="text-[17px]" />
-        <select value={sort} onChange={(event) => onSort(event.target.value as ExploreSort)} aria-label="Urutkan hasil" className="max-w-[8.5rem] bg-transparent type-caption font-semibold text-on-surface outline-none">
-          {tab === "wisata" ? <><option value="relevance">Relevan</option><option value="popular">Populer</option><option value="nearest">Terdekat</option></> : <><option value="recent">Terbaru</option><option value="popular">Populer</option></>}
+        <select value={sort} onChange={(event) => onSort(event.target.value as ExploreSort)} aria-label="Urutkan hasil" className="max-w-[11rem] bg-transparent type-caption font-semibold text-on-surface outline-none">
+          {tab === "wisata" ? <><option value="relevance">Relevan</option><option value="popular">Populer</option><option value="nearest">Terdekat</option></> : tab === "trip" ? <><option value="soonest">Berangkat terdekat</option><option value="popular">Populer</option><option value="nearest">Titik mulai terdekat</option></> : <><option value="recent">Terbaru</option><option value="popular">Populer</option></>}
         </select>
       </label>
     </div>
@@ -299,7 +306,7 @@ function ResultContent({ tab, items, selectedId, status, error, locationMessage,
 
 function PlaceCard({ place, onSelect }: { place: PlaceSummary; onSelect: () => void }) {
   return <div className="flex gap-3" onClick={onSelect}>
-    <PlacePhoto googlePlaceId={place.googlePlaceId} photoName={place.photoName} alt={place.name} className="h-24 w-28 shrink-0 rounded-xl" />
+    <PlacePhoto googlePlaceId={place.googlePlaceId} photoName={place.photoName} photoUri={place.photoUri} alt={place.name} className="h-24 w-28 shrink-0 rounded-xl" />
     <div className="min-w-0 flex-1 py-0.5"><div className="flex items-start justify-between gap-2"><div className="min-w-0">{place.visitCount ? <span className="chip mb-1 bg-secondary-fixed text-on-secondary-container">{place.visitCount} trip Dolan</span> : null}<h2 className="type-label-lg line-clamp-2 text-on-surface">{place.name}</h2></div><Icon name="bookmark_border" className="shrink-0 text-[20px] text-on-surface-variant" /></div>
       <p className="mt-1 flex items-center gap-1 type-caption text-on-surface-variant"><Icon name="location_on" className="text-[15px] text-primary" /><span className="line-clamp-1">{place.city ?? place.formattedAddress ?? "Lokasi tersedia di peta"}</span></p>
       <div className="mt-2 flex items-center justify-between gap-2"><span className="type-caption font-semibold text-on-surface"><span className="text-amber-500">★</span> {place.rating?.toFixed(1) ?? "—"} <span className="font-normal text-on-surface-variant">({place.userRatingCount?.toLocaleString("id-ID") ?? 0})</span></span><Link href={`/wisata/${encodeURIComponent(place.googlePlaceId)}`} className="rounded-full bg-primary px-3 py-1.5 type-micro text-white">Lihat detail</Link></div>
@@ -311,7 +318,7 @@ function TripCard({ trip, onSelect }: { trip: TripSummary; onSelect: () => void 
   const place = trip.coverPlace;
   return <div onClick={onSelect}>
     <div className="relative h-36 overflow-hidden bg-gradient-to-br from-primary to-tertiary">
-      {place ? <PlacePhoto googlePlaceId={place.googlePlaceId} photoName={place.photoName} alt={trip.title} className="absolute inset-0 h-full w-full" /> : <div className="grid h-full place-items-center text-white/80"><Icon name="landscape" className="text-[44px]" /></div>}
+      {place ? <PlacePhoto googlePlaceId={place.googlePlaceId} photoName={place.photoName} photoUri={place.photoUri} alt={trip.title} className="absolute inset-0 h-full w-full" /> : <div className="grid h-full place-items-center text-white/80"><Icon name="landscape" className="text-[44px]" /></div>}
       <div className="absolute inset-0 bg-gradient-to-t from-[#071c32]/80 via-transparent to-[#071c32]/20" />
       <div className="absolute inset-x-3 top-3 flex items-center justify-between gap-2"><span className="chip bg-secondary-container text-white shadow-sm">Trip publik</span><span className="chip bg-white/90 text-success shadow-sm">Join gratis</span></div>
       <p className="absolute bottom-3 left-3 flex items-center gap-1.5 type-caption font-semibold text-white"><Icon name="calendar_month" className="text-[16px] text-secondary-fixed" />{formatDateRange(trip.startDate, trip.endDate)}</p>
@@ -328,26 +335,36 @@ function TemplateCard({ template, onSelect }: { template: ItineraryTemplateSumma
   const province = findProvinceForTemplate({ templateId: template.id, city: template.city });
   const href = provinceDetailHref({ templateId: template.id, city: template.city }) ?? `/buat-trip?templateId=${encodeURIComponent(template.id)}`;
   const cover = province ? provinceCoverUrl(province) : null;
+  const place = template.coverPlace;
   return (
-    <Link href={href} className="flex gap-3" onClick={onSelect}>
-      {cover ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={cover} alt="" className="h-24 w-28 shrink-0 rounded-xl object-cover" />
-      ) : template.coverPlace ? (
-        <PlacePhoto googlePlaceId={template.coverPlace.googlePlaceId} photoName={template.coverPlace.photoName} alt={template.title} className="h-24 w-28 shrink-0 rounded-xl" />
-      ) : (
-        <div className="flex h-24 w-28 shrink-0 items-center justify-center rounded-xl bg-tertiary-fixed text-tertiary"><Icon name="route" className="text-[30px]" /></div>
-      )}
+    <div className="flex gap-3">
+      <Link href={href} className="contents" onClick={onSelect}>
+        {cover ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={cover} alt="" className="h-24 w-28 shrink-0 rounded-xl object-cover" />
+        ) : place ? (
+          <PlacePhoto googlePlaceId={place.googlePlaceId} photoName={place.photoName} photoUri={place.photoUri} alt={template.title} className="h-24 w-28 shrink-0 rounded-xl" />
+        ) : (
+          <div className="flex h-24 w-28 shrink-0 items-center justify-center rounded-xl bg-tertiary-fixed text-tertiary"><Icon name="route" className="text-[30px]" /></div>
+        )}
+      </Link>
       <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap gap-1">
-          <span className="chip bg-tertiary-fixed text-tertiary">{template.sourceLabel}</span>
-          {template.popularityLabel ? <span className="chip bg-secondary-fixed text-on-secondary-container">{template.popularityLabel}</span> : null}
+        <Link href={href} className="block" onClick={onSelect}>
+          <div className="flex flex-wrap gap-1">
+            <span className="chip bg-tertiary-fixed text-tertiary">{template.sourceLabel}</span>
+            {template.popularityLabel ? <span className="chip bg-secondary-fixed text-on-secondary-container">{template.popularityLabel}</span> : null}
+          </div>
+          <h2 className="type-label-lg mt-1 line-clamp-2 text-on-surface">{template.title}</h2>
+          <p className="mt-1 type-caption text-on-surface-variant">{template.city} · {template.durationDays} hari</p>
+        </Link>
+        <div className="mt-2 flex items-center justify-between gap-2">
+          <span className="type-micro text-on-surface-variant">Dipakai {template.usageCount} traveler</span>
+          <Link href={`/buat-trip?templateId=${encodeURIComponent(template.id)}`} className="rounded-full bg-primary px-3 py-1.5 type-micro text-white" onClick={onSelect}>
+            Pakai rute
+          </Link>
         </div>
-        <h2 className="type-label-lg mt-1 line-clamp-2 text-on-surface">{template.title}</h2>
-        <p className="mt-1 type-caption text-on-surface-variant">{template.city} · {template.durationDays} hari</p>
-        <p className="mt-2 type-micro text-primary">Lihat rute di {province?.name ?? "halaman provinsi"}</p>
       </div>
-    </Link>
+    </div>
   );
 }
 
