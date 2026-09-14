@@ -9,6 +9,7 @@ import { INITIAL_BUDGET_ITEMS, PLACE_CANDIDATES } from "./mock-data";
 import { RoutePreview } from "./RoutePreview";
 import { SaveOfflineItineraryButton } from "@/components/offline/SaveOfflineItineraryButton";
 import { ROUTES, tripItineraryPath } from "@/lib/routes";
+import { ItineraryStopPin } from "@/components/trip/ItineraryTimeline";
 
 type Tab = "itinerary" | "budget" | "checklist";
 type Notice = { tone: "success" | "error" | "info"; text: string } | null;
@@ -100,7 +101,15 @@ export function ItineraryEditorExperience({ tripId }: { tripId: string }) {
       const next = await saveItineraryVersion(snapshot, {
         baseVersionId: selectedVersionId,
         summary: "Perubahan itinerary dari editor My Trip",
-        days: days.map((day) => ({ ...day, stops: day.stops.map((stop) => ({ ...stop, googlePlaceId: stop.place?.googlePlaceId ?? null })) })),
+        days: days.map((day) => ({
+          ...day,
+          stops: day.stops.map((stop) => ({
+            ...stop,
+            googlePlaceId: stop.place?.googlePlaceId ?? null,
+            latitude: stop.place?.latitude,
+            longitude: stop.place?.longitude,
+          })),
+        })),
         budgetItems,
       });
       setSnapshot(next);
@@ -284,7 +293,9 @@ function DayEditor({ day, conflicts, onChangeTitle, onUpdateStop, onMove, onRemo
   return <article className="rounded-[1.5rem] border border-outline-variant/70 bg-white p-4 shadow-sm md:p-5">
     <div className="flex items-start gap-3"><div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-primary text-white"><span className="type-micro">HARI</span><strong className="-mt-1">{day.dayNumber}</strong></div><div className="min-w-0 flex-1"><input aria-label={`Judul hari ${day.dayNumber}`} value={day.title ?? ""} onChange={(e) => onChangeTitle(e.target.value)} className="w-full border-b border-transparent bg-transparent type-subtitle outline-none hover:border-outline-variant focus:border-primary" /><p className="type-caption mt-1 text-on-surface-variant">{day.date} · {day.stops.length} destinasi</p></div><button type="button" onClick={onDeleteDay} className="rounded-full p-2 text-on-surface-variant hover:bg-error-container hover:text-error" aria-label={`Hapus hari ${day.dayNumber}`}><Icon name="close" /></button></div>
     <div className="mt-4 space-y-3">{day.stops.map((stop, index) => <div key={stop.id} className={`rounded-2xl border p-3 transition ${conflicts[stop.id] ? "border-error bg-error-container/25" : stop.isLocked ? "border-secondary-container/50 bg-secondary-fixed/20" : "border-outline-variant/70 bg-surface-container-low/45"}`}>
-      <div className="flex items-start gap-3"><div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-secondary-container type-label text-white">{index + 1}</div><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><h3 className="type-label-lg">{stop.place?.name ?? stop.customTitle}</h3>{stop.isLocked && <span className="chip bg-secondary-fixed text-secondary"><Icon name="lock" /> Dikunci</span>}</div><p className="type-caption text-on-surface-variant">{stop.place?.formattedAddress}</p></div><div className="flex"><button type="button" onClick={() => onMove(index, -1)} disabled={index === 0} className="rounded-lg px-2 py-1 text-primary disabled:opacity-25" aria-label="Pindah ke atas">↑</button><button type="button" onClick={() => onMove(index, 1)} disabled={index === day.stops.length - 1} className="rounded-lg px-2 py-1 text-primary disabled:opacity-25" aria-label="Pindah ke bawah">↓</button></div></div>
+      <div className="relative flex items-start gap-3">
+        {index < day.stops.length - 1 ? <span className="absolute bottom-0 left-[15px] top-10 w-0.5 bg-slate-300" aria-hidden="true" /> : null}
+        <ItineraryStopPin index={index} sequence={index + 1} /><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><h3 className="type-label-lg">{stop.place?.name ?? stop.customTitle}</h3>{stop.isLocked && <span className="chip bg-secondary-fixed text-secondary"><Icon name="lock" /> Dikunci</span>}</div><p className="type-caption text-on-surface-variant">{stop.place?.formattedAddress}</p></div><div className="flex"><button type="button" onClick={() => onMove(index, -1)} disabled={index === 0} className="rounded-lg px-2 py-1 text-primary disabled:opacity-25" aria-label="Pindah ke atas">↑</button><button type="button" onClick={() => onMove(index, 1)} disabled={index === day.stops.length - 1} className="rounded-lg px-2 py-1 text-primary disabled:opacity-25" aria-label="Pindah ke bawah">↓</button></div></div>
       <div className="mt-3 grid grid-cols-2 gap-2 md:grid-cols-4"><label className="type-caption text-on-surface-variant">Mulai<input type="time" value={stop.startTime ?? ""} onChange={(e) => onUpdateStop(stop.id, { startTime: e.target.value })} className="mt-1 w-full rounded-xl border border-outline-variant bg-white px-3 py-2 text-on-surface" /></label><label className="type-caption text-on-surface-variant">Durasi (menit)<input type="number" min="15" step="15" value={stop.durationMinutes} onChange={(e) => onUpdateStop(stop.id, { durationMinutes: Number(e.target.value) })} className="mt-1 w-full rounded-xl border border-outline-variant bg-white px-3 py-2 text-on-surface" /></label><label className="type-caption text-on-surface-variant">Perjalanan<input type="number" min="0" step="5" value={stop.travelDurationMinutes ?? 0} onChange={(e) => onUpdateStop(stop.id, { travelDurationMinutes: Number(e.target.value) })} className="mt-1 w-full rounded-xl border border-outline-variant bg-white px-3 py-2 text-on-surface" /></label><label className="type-caption text-on-surface-variant">Aktivitas<input value={stop.activityType} onChange={(e) => onUpdateStop(stop.id, { activityType: e.target.value })} className="mt-1 w-full rounded-xl border border-outline-variant bg-white px-3 py-2 text-on-surface" /></label></div>
       <textarea aria-label={`Catatan ${stop.place?.name}`} placeholder="Catatan aktivitas…" value={stop.notes ?? ""} onChange={(e) => onUpdateStop(stop.id, { notes: e.target.value || null })} className="mt-2 min-h-16 w-full resize-y rounded-xl border border-outline-variant bg-white px-3 py-2 type-body outline-none focus:border-primary" />
       {conflicts[stop.id] && <p className="mt-1 type-caption font-semibold text-error">{conflicts[stop.id]}</p>}

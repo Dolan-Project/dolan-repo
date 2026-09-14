@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { findScheduleConflicts, generateAlternative } from "./api";
 import { createEditorSnapshot, INITIAL_BUDGET_ITEMS } from "./mock-data";
+import { buildDestinationItinerary } from "@/lib/destination-itinerary";
+import { packItinerarySchedule, toItinerarySaveDays } from "@/lib/template-itinerary";
+import { saveItineraryVersionSchema } from "@dolan/shared";
 
 describe("itinerary editor adapter", () => {
   it("detects an overlap including travel time", () => {
@@ -8,6 +11,32 @@ describe("itinerary editor adapter", () => {
     const days = structuredClone(snapshot.versions[0].days);
     days[0].stops[1].startTime = "10:00";
     expect(findScheduleConflicts(days)[days[0].stops[1].id]).toContain("paling awal");
+  });
+
+  it("treats a stop after midnight as continuation, not an overlap", () => {
+    const days = structuredClone(createEditorSnapshot("komodo-4d3n").versions[0].days).slice(0, 1);
+    days[0].stops[0].startTime = "22:00";
+    days[0].stops[0].durationMinutes = 120;
+    days[0].stops[1].travelDurationMinutes = 30;
+    days[0].stops[1].startTime = "00:30";
+    expect(findScheduleConflicts(days)[days[0].stops[1].id]).toBeUndefined();
+  });
+
+  it("packs a destination itinerary into a payload the save schema accepts", () => {
+    const days = packItinerarySchedule(buildDestinationItinerary({
+      destination: "Bromo",
+      startDate: "2026-10-01",
+      endDate: "2026-10-03",
+    }));
+    expect(findScheduleConflicts(days)).toEqual({});
+    const parsed = saveItineraryVersionSchema.safeParse({
+      baseVersionId: "wizard-v1",
+      summary: "Rute Bromo",
+      days: toItinerarySaveDays(days),
+      budgetItems: [],
+    });
+    expect(parsed.success).toBe(true);
+    expect(parsed.data?.days[0].stops[0].latitude).toBeTypeOf("number");
   });
 
   it("keeps the active version and locked stops while generating an alternative", async () => {

@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { Icon } from "@/components/ui/Icon";
 import { ROUTES } from "@/lib/routes";
+import { findProvinceForTemplate, provinceDetailHref } from "@/lib/provinces";
+import { provinceCoverUrl } from "@/lib/province-cover";
 import type { ItineraryTemplateResult, PlaceResult, TripResult } from "../types";
 
 function Cover({ src, alt }: { src: string; alt: string }) {
@@ -27,5 +29,23 @@ export function TripCard({ trip }: { trip: TripResult }) {
 }
 
 export function ItineraryTemplateCard({ template }: { template: ItineraryTemplateResult }) {
-  return <Link href={`${ROUTES.buatTrip}?templateId=${encodeURIComponent(template.id)}`} className="group overflow-hidden rounded-3xl border border-sky-100 bg-white shadow-sm"><div className="relative h-36 overflow-hidden"><Cover src={template.imageUrl} alt={template.title} /><span className="absolute left-3 top-3 rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-extrabold text-sky-800 shadow-sm backdrop-blur">{template.curated ? "Kurasi Dolan" : "Populer di Dolan"}</span></div><div className="p-4"><h3 className="font-bold text-slate-900">{template.title}</h3><p className="mt-1 text-xs text-slate-500">{template.durationDays} hari · Dipakai {template.usageCount.toLocaleString("id-ID")} pejalan</p></div></Link>;
+  const href = provinceDetailHref({ templateId: template.id, city: template.city }) ?? `${ROUTES.buatTrip}?templateId=${encodeURIComponent(template.id)}`;
+  const cover = findProvinceForTemplate({ templateId: template.id, city: template.city });
+  const useHref = `${ROUTES.buatTrip}?templateId=${encodeURIComponent(template.id)}`;
+  return (
+    <article className="overflow-hidden rounded-3xl border border-sky-100 bg-white shadow-sm">
+      <div className="relative h-36 overflow-hidden">
+        <Cover src={cover ? provinceCoverUrl(cover) : template.imageUrl} alt={cover?.name ?? template.title} />
+        <span className="absolute left-3 top-3 rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-extrabold text-sky-800 shadow-sm backdrop-blur">{template.curated ? "Kurasi Dolan" : "Populer di Dolan"}</span>
+      </div>
+      <div className="p-4">
+        <h3 className="font-bold text-slate-900">{template.title}</h3>
+        <p className="mt-1 text-xs text-slate-500">{template.durationDays} hari · Dipakai {template.usageCount.toLocaleString("id-ID")} pejalan</p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <Link href={useHref} className="rounded-full bg-blue-600 px-3 py-2 text-xs font-extrabold text-white">Pakai template</Link>
+          <Link href={href} className="rounded-full bg-sky-100 px-3 py-2 text-xs font-extrabold text-sky-800">Lihat detail</Link>
+        </div>
+      </div>
+    </article>
+  );
 }

@@ -2,6 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "@/components/ui/Icon";
+import { decodePolyline } from "./map-route";
+import { itineraryPinSvg, ITINERARY_ROUTE_COLOR } from "@/lib/itinerary-style";
+import { ItineraryStopPin } from "@/components/trip/ItineraryTimeline";
 
 export type MapPoint = {
   id: string;
@@ -22,6 +25,9 @@ type GoogleMapProps = {
   className?: string;
   showRoute?: boolean;
   routePolylines?: string[];
+  routeColor?: string;
+  numberedBadges?: boolean;
+  routeGroups?: MapPoint[][];
 };
 
 declare global {
@@ -34,7 +40,13 @@ declare global {
         Polyline: new (options: Record<string, unknown>) => GooglePolyline;
         LatLngBounds: new () => GoogleBounds;
         Point: new (x: number, y: number) => object;
-        event: { clearInstanceListeners(instance: object): void };
+        TravelMode?: { DRIVING: string; WALKING: string };
+        DirectionsService?: new () => GoogleDirectionsService;
+        importLibrary?: (name: string) => Promise<{
+          DirectionsService?: new () => GoogleDirectionsService;
+          TravelMode?: { DRIVING: string };
+        }>;
+        event: { clearInstanceListeners(instance: object): void; trigger(instance: object, eventName: string): void };
       };
     };
   }
@@ -59,6 +71,59 @@ type GooglePolyline = { setMap(map: GoogleMapInstance | null): void };
 type GoogleBounds = {
   extend(position: { lat: number; lng: number }): void;
 };
+type GoogleDirectionsService = {
+  route(
+    request: {
+      origin: { lat: number; lng: number };
+      destination: { lat: number; lng: number };
+      travelMode: string;
+      provideRouteAlternatives?: boolean;
+    },
+    callback: (
+      result: { routes?: Array<{ overview_path?: Array<{ lat(): number; lng(): number }> }> } | null,
+      status: string,
+    ) => void,
+  ): void;
+};
+
+function requestDrivingPath(
+  maps: NonNullable<Window["google"]>["maps"],
+  origin: { lat: number; lng: number },
+  destination: { lat: number; lng: number },
+) {
+  return new Promise<Array<{ lat: number; lng: number }>>((resolve) => {
+    const finish = (serviceCtor: (new () => GoogleDirectionsService) | undefined, travelMode: string | undefined) => {
+      if (!serviceCtor || !travelMode) {
+        resolve([origin, destination]);
+        return;
+      }
+      const service = new serviceCtor();
+      service.route(
+        {
+          origin,
+          destination,
+          travelMode,
+          provideRouteAlternatives: false,
+        },
+        (result, status) => {
+          const path = result?.routes?.[0]?.overview_path;
+          if (status === "OK" && path && path.length >= 2) {
+            resolve(path.map((point) => ({ lat: point.lat(), lng: point.lng() })));
+            return;
+          }
+          resolve([origin, destination]);
+        },
+      );
+    };
+    if (maps.importLibrary) {
+      void maps.importLibrary("routes").then((library) => {
+        finish(library.DirectionsService ?? maps.DirectionsService, library.TravelMode?.DRIVING ?? maps.TravelMode?.DRIVING);
+      }).catch(() => finish(maps.DirectionsService, maps.TravelMode?.DRIVING));
+      return;
+    }
+    finish(maps.DirectionsService, maps.TravelMode?.DRIVING);
+  });
+}
 
 function loadGoogleMaps(apiKey: string) {
   if (window.google?.maps) return Promise.resolve();
@@ -79,9 +144,9 @@ function loadGoogleMaps(apiKey: string) {
   return window.__dolanGoogleMaps;
 }
 
-function destinationPin(selected: boolean, maps: NonNullable<Window["google"]>["maps"]) {
-  const color = selected ? "#ef3b69" : "#1688f8";
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="42" viewBox="0 0 32 42"><filter id="s" x="-35%" y="-20%" width="170%" height="170%"><feDropShadow dx="0" dy="2" stdDeviation="1.8" flood-opacity=".3"/></filter><path filter="url(#s)" d="M16 1.5C8.27 1.5 2 7.77 2 15.5 2 26.1 16 40 16 40s14-13.9 14-24.5c0-7.73-6.27-14-14-14Z" fill="${color}" stroke="white" stroke-width="2"/><circle cx="16" cy="15.5" r="5.25" fill="white"/><circle cx="16" cy="15.5" r="2.35" fill="${color}"/></svg>`;
+function destinationPin(selected: boolean, maps: NonNullable<Window["google"]>["maps"], sequence?: number) {
+  const index = Math.max(0, (sequence ?? 1) - 1);
+  const svg = itineraryPinSvg(index, sequence ?? index + 1, selected);
   return {
     url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
     anchor: new maps.Point(16, 40),
@@ -100,12 +165,15 @@ export function GoogleMap({
   className = "",
   showRoute = false,
   routePolylines = [],
+  routeColor = ITINERARY_ROUTE_COLOR,
+  numberedBadges = false,
+  routeGroups,
 }: GoogleMapProps) {
   const nodeRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<GoogleMapInstance | null>(null);
   const markersRef = useRef(new Map<string, GoogleMarker>());
   const locationMarkerRef = useRef<GoogleMarker | null>(null);
-  const routeRef = useRef<GooglePolyline | null>(null);
+  const routeLinesRef = useRef<GooglePolyline[]>([]);
   const [mapReady, setMapReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_KEY ?? "";
@@ -147,12 +215,25 @@ export function GoogleMap({
       }
       locationMarkerRef.current?.setMap(null);
       locationMarkerRef.current = null;
-      routeRef.current?.setMap(null);
-      routeRef.current = null;
+      routeLinesRef.current.forEach((line) => line.setMap(null));
+      routeLinesRef.current = [];
       mapRef.current = null;
       setMapReady(false);
     };
   }, [apiKey, onViewportChanged]);
+
+  useEffect(() => {
+    const node = nodeRef.current;
+    const map = mapRef.current;
+    if (!node || !map || !mapReady || !window.google) return;
+    const resize = () => {
+      window.google?.maps.event.trigger(map, "resize");
+    };
+    resize();
+    const observer = new ResizeObserver(resize);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [mapReady]);
 
   useEffect(() => {
     mapRef.current?.setMapTypeId(mapType);
@@ -190,15 +271,16 @@ export function GoogleMap({
     const map = mapRef.current;
     const maps = window.google?.maps;
     if (!map || !maps) return;
+    let cancelled = false;
     markersRef.current.forEach((marker) => marker.setMap(null));
     markersRef.current.clear();
     const bounds = new maps.LatLngBounds();
-    points.forEach((point) => {
+    points.forEach((point, index) => {
       const marker = new maps.Marker({
         map,
         position: { lat: point.lat, lng: point.lng },
         title: point.label,
-        icon: destinationPin(false, maps),
+        icon: destinationPin(false, maps, index + 1),
         zIndex: 1,
       });
       marker.addListener("click", () => onSelect(point.id));
@@ -210,30 +292,74 @@ export function GoogleMap({
       map.panTo({ lat: points[0]!.lat, lng: points[0]!.lng });
       map.setZoom(14);
     }
-    routeRef.current?.setMap(null);
-    const routedPath = routePolylines.flatMap(decodePolyline);
-    routeRef.current = showRoute && routedPath.length > 1 ? new maps.Polyline({
-      map,
-      path: routedPath,
-      geodesic: false,
-      strokeColor: "#fe893c",
-      strokeOpacity: 0.95,
-      strokeWeight: 5,
-    }) : null;
-  }, [mapReady, onSelect, points, routePolylines, showRoute]);
+    routeLinesRef.current.forEach((line) => line.setMap(null));
+    routeLinesRef.current = [];
+    const addRoadPath = (path: Array<{ lat: number; lng: number }>, geodesic = false) => {
+      if (path.length < 2 || cancelled) return;
+      const casing = new maps.Polyline({
+        map,
+        path,
+        geodesic,
+        strokeColor: "#00174b",
+        strokeOpacity: 0.9,
+        strokeWeight: 8,
+        zIndex: 1,
+      });
+      const line = new maps.Polyline({
+        map,
+        path,
+        geodesic,
+        strokeColor: routeColor,
+        strokeOpacity: 1,
+        strokeWeight: 5,
+        zIndex: 2,
+      });
+      routeLinesRef.current.push(casing, line);
+    };
+    const encodedAvailable = routePolylines.length > 0;
+    if (encodedAvailable) {
+      routePolylines.forEach((encoded) => addRoadPath(decodePolyline(encoded)));
+      return () => {
+        cancelled = true;
+        routeLinesRef.current.forEach((line) => line.setMap(null));
+        routeLinesRef.current = [];
+      };
+    }
+    const groups = (routeGroups?.length ? routeGroups : showRoute ? [points] : []).filter((group) => group.length >= 2);
+    void (async () => {
+      for (const group of groups) {
+        for (let index = 1; index < group.length; index += 1) {
+          if (cancelled) return;
+          const origin = { lat: group[index - 1]!.lat, lng: group[index - 1]!.lng };
+          const destination = { lat: group[index]!.lat, lng: group[index]!.lng };
+          const path = await requestDrivingPath(maps, origin, destination);
+          if (cancelled) return;
+          addRoadPath(path, path.length < 3);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+      routeLinesRef.current.forEach((line) => line.setMap(null));
+      routeLinesRef.current = [];
+    };
+  }, [mapReady, numberedBadges, onSelect, points, routeColor, routeGroups, routePolylines, showRoute]);
 
   useEffect(() => {
     const point = points.find((item) => item.id === selectedId);
     const map = mapRef.current;
     const maps = window.google?.maps;
     if (!point || !map || !maps) return;
-    map.panTo({ lat: point.lat, lng: point.lng });
+    if (!(showRoute && points.length > 1)) {
+      map.panTo({ lat: point.lat, lng: point.lng });
+    }
     markersRef.current.forEach((marker, id) => {
       const selected = id === selectedId;
-      marker.setIcon(destinationPin(selected, maps));
+      const sequence = points.findIndex((item) => item.id === id) + 1;
+      marker.setIcon(destinationPin(selected, maps, sequence > 0 ? sequence : undefined));
       marker.setZIndex(selected ? 1000 : null);
     });
-  }, [mapReady, points, selectedId]);
+  }, [mapReady, numberedBadges, points, selectedId, showRoute]);
 
   if (!apiKey || error) {
     return (
@@ -244,11 +370,11 @@ export function GoogleMap({
             key={point.id}
             type="button"
             onClick={() => onSelect(point.id)}
-            className={`absolute z-10 flex h-10 w-10 items-center justify-center rounded-full border-2 border-white shadow-lg ${point.id === selectedId ? "bg-secondary-container text-white" : "bg-primary text-white"}`}
-            style={{ left: `${20 + ((index * 17) % 60)}%`, top: `${20 + ((index * 21) % 55)}%` }}
+            className="absolute z-10"
+            style={{ left: `${18 + ((index * 17) % 60)}%`, top: `${18 + ((index * 21) % 55)}%` }}
             aria-label={`Pilih ${point.label}`}
           >
-            <Icon name="location_on" className="text-[22px]" />
+            <ItineraryStopPin index={index} sequence={index + 1} selected={point.id === selectedId} />
           </button>
         ))}
         <div className={`absolute z-10 rounded-2xl border border-white/70 bg-white/90 p-3 text-center shadow-lg backdrop-blur ${searchOverlay ? "left-4 right-20 top-20 lg:inset-x-4 lg:top-4" : "inset-x-4 top-4"}`}>
@@ -260,19 +386,4 @@ export function GoogleMap({
   }
 
   return <div ref={nodeRef} className={className} aria-label="Peta lokasi wisata" />;
-}
-
-function decodePolyline(encoded: string) {
-  const path: Array<{ lat: number; lng: number }> = [];
-  let index = 0, lat = 0, lng = 0;
-  while (index < encoded.length) {
-    let result = 0, shift = 0, byte: number;
-    do { byte = encoded.charCodeAt(index++) - 63; result |= (byte & 0x1f) << shift; shift += 5; } while (byte >= 0x20 && index < encoded.length);
-    lat += result & 1 ? ~(result >> 1) : result >> 1;
-    result = 0; shift = 0;
-    do { byte = encoded.charCodeAt(index++) - 63; result |= (byte & 0x1f) << shift; shift += 5; } while (byte >= 0x20 && index < encoded.length);
-    lng += result & 1 ? ~(result >> 1) : result >> 1;
-    path.push({ lat: lat / 1e5, lng: lng / 1e5 });
-  }
-  return path;
 }

@@ -18,13 +18,6 @@ const activities = [
   "Satwa Liar",
 ] as const;
 
-const transports = [
-  "Kapal Phinisi",
-  "Pesawat + sewa mobil",
-  "Kereta",
-  "Kendaraan pribadi",
-] as const;
-
 const lodgings = [
   "Homestay / Guesthouse Lokal",
   "Homestay",
@@ -208,9 +201,6 @@ export function TripEditForm({ tripId }: { tripId: string }) {
     );
   }
 
-  const transportOptions = transports.includes(transport as (typeof transports)[number])
-    ? transports
-    : ([transport, ...transports] as const);
   const lodgingOptions = lodgings.includes(lodgingPref as (typeof lodgings)[number])
     ? lodgings
     : ([lodgingPref, ...lodgings] as const);
@@ -286,20 +276,7 @@ export function TripEditForm({ tripId }: { tripId: string }) {
             />
           </Field>
         </div>
-        <div className="grid gap-4 md:grid-cols-2">
-          <Field id="transport" label="Moda transportasi">
-            <select
-              id="transport"
-              className="field-input"
-              value={transport}
-              onChange={(e) => setTransport(e.target.value)}
-            >
-              {transportOptions.map((item) => (
-                <option key={item}>{item}</option>
-              ))}
-            </select>
-          </Field>
-          <Field
+        <Field
             id="planningPartySize"
             label="Jumlah orang untuk estimasi biaya"
             hint="Bukan kuota publik."
@@ -314,7 +291,6 @@ export function TripEditForm({ tripId }: { tripId: string }) {
               onChange={(e) => setPlanningPartySize(Number(e.target.value))}
             />
           </Field>
-        </div>
         <div className="rounded-xl bg-surface-container-low p-4">
           <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
             <span className="type-label text-on-surface">Target budget</span>
