@@ -20,6 +20,8 @@ export const ROUTES = {
   itineraryBali: "/itinerary/bali-3h2m",
   notifikasi: "/notifikasi",
   trip: (tripId: string) => `/trip/${tripId}`,
+  tripChat: (tripId: string) => `/trip/${tripId}/chat`,
+  province: (slug: string) => `/provinsi/${slug}`,
 } as const;
 
 export function tripDetailHref(tripId: string) {

@@ -40,6 +40,8 @@ export type StoredTrip = {
   currency: string;
   planningPartySize: number;
   maxParticipants: number | null;
+  genderRule?: "ALL_GENDERS" | "FEMALE_ONLY" | "MALE_ONLY";
+  communityRules?: string | null;
   currentItineraryVersionId: string | null;
   preferences: Record<string, unknown> | null;
   createdAt: string;

@@ -73,9 +73,9 @@ export function ProfileView({ user, action }: ProfileViewProps) {
                   </Link>
                   <LogoutButton />
                 </>
-              ) : (
+              ) : user.username ? (
                 <FollowButton username={user.username} />
-              )}
+              ) : null}
             </div>
           </div>
 
@@ -95,8 +95,8 @@ export function ProfileView({ user, action }: ProfileViewProps) {
               href={user.username ? ROUTES.profilPengikut(user.username) : undefined}
               icon="groups"
               iconClass="bg-primary-fixed text-primary"
-              title={`${user.followersCount} Pengikut`}
-              subtitle={`${user.followingCount} mengikuti · lihat daftar`}
+              title={`${user.followersCount + user.followingCount} Teman`}
+              subtitle={`${user.followersCount} Pengikut · ${user.followingCount} Mengikuti`}
             />
             <StatTile
               href={user.username ? ROUTES.profilUlasan(user.username) : undefined}

@@ -7,6 +7,8 @@ export {
   User,
   UserProfile,
   Place,
+  Province,
+  ProvincePlace,
   ItineraryTemplate,
   TemplateDay,
   TemplateStop,

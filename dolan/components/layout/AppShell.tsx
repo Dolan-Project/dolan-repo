@@ -38,8 +38,11 @@ export async function AppShell({
 
   return (
     <div className="flex min-h-full flex-col bg-surface text-on-surface">
+      <a href="#main-content" className="fixed left-3 top-3 z-[100] -translate-y-24 rounded-full bg-primary px-4 py-2 font-semibold text-white shadow-lg transition focus:translate-y-0">Lewati ke konten utama</a>
       <SiteHeader session={session} unreadCount={unreadCount} />
       <main
+        id="main-content"
+        tabIndex={-1}
         className={`flex-1 ${flushHeader ? "pt-0" : "pt-14 md:pt-16"} ${withBottomNavPad ? "pb-20 md:pb-0" : ""}`}
       >
         {children}

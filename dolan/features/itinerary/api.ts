@@ -3,6 +3,7 @@ import {
   type BudgetItemInput,
   type EditableItineraryDay,
   type EditableItineraryVersion,
+  type GenerationJob,
   type ItineraryEditorSnapshot,
   type SaveItineraryVersionInput,
 } from "@dolan/shared";
@@ -32,8 +33,23 @@ export function findScheduleConflicts(days: EditableItineraryDay[]) {
 }
 
 export async function getItineraryEditor(tripId: string) {
-  await wait();
-  return createEditorSnapshot(tripId);
+  const fallback = createEditorSnapshot(tripId);
+  try {
+    const response = await fetch(`/api/v1/trips/${encodeURIComponent(tripId)}/itinerary`, {
+      credentials: "include",
+      headers: { Accept: "application/json" },
+    });
+    const payload = await response.json() as { success: boolean; data?: ItineraryEditorSnapshot };
+    if (response.ok && payload.success && payload.data) {
+      if (payload.data.versions.length === 0) {
+        return { ...fallback, ...payload.data, versions: fallback.versions, activeVersionId: fallback.activeVersionId };
+      }
+      return payload.data;
+    }
+    return fallback;
+  } catch {
+    return fallback;
+  }
 }
 
 export async function saveItineraryVersion(
@@ -47,8 +63,17 @@ export async function saveItineraryVersion(
   })))).length) {
     throw new Error("Jadwal masih bertumpuk. Perbaiki waktu sebelum menyimpan.");
   }
+  const response = await fetch(`/api/v1/trips/${encodeURIComponent(snapshot.tripId)}/itinerary-versions`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(parsed),
+  });
+  const payload = await response.json() as { success: boolean; data?: ItineraryEditorSnapshot; error?: { message?: string } };
+  if (response.ok && payload.success && payload.data?.versions.length) return payload.data;
+
   await wait(420);
-  const versionNumber = Math.max(...snapshot.versions.map((item) => item.versionNumber)) + 1;
+  const versionNumber = Math.max(...snapshot.versions.map((item) => item.versionNumber), 0) + 1;
   const version: EditableItineraryVersion = {
     id: `version-${versionNumber}`,
     tripId: snapshot.tripId,
@@ -67,22 +92,83 @@ export async function saveItineraryVersion(
     budget: createBudgetSummary(parsed.budgetItems),
     createdAt: new Date().toISOString(),
   };
+  if (!payload.success && payload.error?.message) {
+    throw new Error(payload.error.message);
+  }
   return { ...snapshot, activeVersionId: version.id, versions: [version, ...snapshot.versions] };
+}
+
+export async function selectItineraryVersion(tripId: string, versionId: string) {
+  const response = await fetch(`/api/v1/trips/${encodeURIComponent(tripId)}/current-itinerary-version`, {
+    method: "PATCH",
+    credentials: "include",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ versionId }),
+  });
+  const payload = await response.json() as { success: boolean; data?: ItineraryEditorSnapshot };
+  if (response.ok && payload.success && payload.data) return payload.data;
+  return null;
+}
+
+async function pollJob(jobId: string) {
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    await wait(1500);
+    const response = await fetch(`/api/v1/generation-jobs/${encodeURIComponent(jobId)}`, { credentials: "include" });
+    const payload = await response.json() as { success: boolean; data?: GenerationJob };
+    if (!response.ok || !payload.success || !payload.data) continue;
+    if (payload.data.status === "SUCCEEDED" || payload.data.status === "FAILED") return payload.data;
+  }
+  return null;
 }
 
 export async function generateAlternative(
   snapshot: ItineraryEditorSnapshot,
   baseDays: EditableItineraryDay[],
   budgetItems: BudgetItemInput[],
+  regenerateMode: "balanced" | "cheaper" | "alternative" = "balanced",
 ) {
+  const useLive = process.env.NEXT_PUBLIC_USE_MOCK_API === "false";
+  if (useLive) {
+  try {
+    const response = await fetch(`/api/v1/trips/${encodeURIComponent(snapshot.tripId)}/generate`, {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "content-type": "application/json",
+        "idempotency-key": crypto.randomUUID(),
+      },
+      body: JSON.stringify({
+        type: "REGENERATE_ITINERARY",
+        idempotencyKey: crypto.randomUUID(),
+        preferences: { regenerateMode },
+      }),
+    });
+    const payload = await response.json() as { success: boolean; data?: GenerationJob; error?: { message?: string } };
+    if (response.ok && payload.success && payload.data?.id) {
+      const job = await pollJob(payload.data.id);
+      if (job?.status === "SUCCEEDED") {
+        const next = await getItineraryEditor(snapshot.tripId);
+        return { snapshot: next, job };
+      }
+      if (job?.status === "FAILED") {
+        throw new Error("Generate gagal. Draft dan versi aktif tidak berubah.");
+      }
+    }
+  } catch (error) {
+    if (error instanceof Error && error.message.startsWith("Generate gagal")) throw error;
+  }
+  }
+
   await wait(900);
-  const versionNumber = Math.max(...snapshot.versions.map((item) => item.versionNumber)) + 1;
+  const versionNumber = Math.max(...snapshot.versions.map((item) => item.versionNumber), 0) + 1;
   const generatedDays = clone(baseDays).map((day) => ({
     ...day,
     stops: day.stops.map((stop, index) => ({
       ...stop,
       sequence: index + 1,
-      notes: stop.isLocked ? stop.notes : `${stop.notes ?? ""} Dioptimalkan AI berdasarkan rute terdekat.`.trim(),
+      notes: stop.isLocked
+        ? stop.notes
+        : `${stop.notes ?? ""} ${regenerateMode === "cheaper" ? "Dialihkan ke opsi hemat." : "Dioptimalkan AI berdasarkan rute terdekat."}`.trim(),
     })),
   }));
   const generated: EditableItineraryVersion = {
@@ -90,11 +176,11 @@ export async function generateAlternative(
     tripId: snapshot.tripId,
     versionNumber,
     source: "REGENERATED",
-    summary: "Alternatif AI baru. Destinasi terkunci tetap dipertahankan.",
+    summary: regenerateMode === "cheaper" ? "Alternatif hemat dari Groq. Destinasi terkunci tetap dipertahankan." : "Alternatif AI baru. Destinasi terkunci tetap dipertahankan.",
     assumptions: ["Destinasi terkunci tidak diubah", "Waktu tempuh adalah estimasi"],
     days: generatedDays,
     budget: createBudgetSummary(budgetItems),
     createdAt: new Date().toISOString(),
   };
-  return { ...snapshot, versions: [generated, ...snapshot.versions] };
+  return { snapshot: { ...snapshot, versions: [generated, ...snapshot.versions] }, job: null };
 }

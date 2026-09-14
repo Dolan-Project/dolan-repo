@@ -14,6 +14,7 @@ import {
 } from "@/lib/auth/handle-profile";
 import {
   handleCreateTripRequest,
+  handleDeleteTripRequest,
   handleGetTripRequest,
   handleLeaveTripRequest,
   handleListMyTripsRequest,
@@ -23,6 +24,7 @@ import {
 } from "@/lib/auth/handle-trip";
 import {
   proxyCreateTrip,
+  proxyDeleteTrip,
   proxyGetTrip,
   proxyLeaveTrip,
   proxyListMyTrips,
@@ -32,7 +34,7 @@ import {
 } from "@/lib/auth/handle-trip-live";
 import { jsonResult, statusForCode } from "@/lib/auth/api-response";
 import { proxyToExpress } from "@/lib/auth/express-proxy";
-import { useMockApi } from "@/lib/auth/use-mock";
+import { shouldUseMockApi } from "@/lib/auth/use-mock";
 import { createApiError } from "@/mocks/scenarios";
 
 export async function withMockOrUnavailable(
@@ -40,7 +42,7 @@ export async function withMockOrUnavailable(
   handle: (request: Request) => Promise<Response> | Response,
   expressPath?: string,
 ): Promise<Response> {
-  if (useMockApi()) {
+  if (shouldUseMockApi()) {
     return handle(request);
   }
   if (expressPath) {
@@ -60,7 +62,7 @@ async function withMockOrExpress(
   mock: (request: Request) => Promise<Response> | Response,
   live: (request: Request) => Promise<Response>,
 ): Promise<Response> {
-  if (useMockApi()) return mock(request);
+  if (shouldUseMockApi()) return mock(request);
   return live(request);
 }
 
@@ -109,6 +111,8 @@ export const tripRouteHandlers = {
       (req) => handleUpdateTripRequest(req, tripId),
       (req) => proxyUpdateTrip(req, tripId),
     ),
+  delete: (request: Request, tripId: string) =>
+    withMockOrExpress(request, handleDeleteTripRequest, (req) => proxyDeleteTrip(req, tripId)),
   publish: (request: Request, tripId: string) =>
     withMockOrExpress(
       request,

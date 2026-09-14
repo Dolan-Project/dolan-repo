@@ -88,6 +88,12 @@ export async function handleUpdateTripRequest(
   return jsonResult(mock, 200);
 }
 
+export async function handleDeleteTripRequest(request: Request): Promise<Response> {
+  const sessionId = requireSession(request);
+  if (!sessionId) return jsonResult(createApiError("UNAUTHORIZED", "Tidak sah"), statusForCode("UNAUTHORIZED"));
+  return jsonResult({ success: true, data: { deleted: true } }, 200);
+}
+
 export async function handlePublishTripRequest(
   request: Request,
   tripId: string,

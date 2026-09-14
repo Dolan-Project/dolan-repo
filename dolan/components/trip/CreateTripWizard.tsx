@@ -1,14 +1,16 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Field } from "@/components/auth/Field";
 import { Icon } from "@/components/ui/Icon";
 import { PlacePicker } from "@/components/trip/PlacePicker";
 import { TripBoardMap } from "@/components/trip/TripBoardMap";
+import type { ItineraryTemplateDetail, UseTemplateResult } from "@dolan/shared";
 import type { ApiError, CreateTripInput, TripDetail } from "@/lib/contracts";
 import { ASSETS } from "@/lib/assets";
-import { tripDetailHref } from "@/lib/routes";
+import { tripDetailHref, tripItineraryPath } from "@/lib/routes";
+import { INDONESIA_PROVINCES, searchProvinces } from "@/lib/provinces";
 import { meetingPointFor, resolveGeoPlace } from "@/mocks/geo";
 
 const steps = [
@@ -34,7 +36,7 @@ const aiPicks = [
   { city: "Raja Ampat", region: "Papua Barat Daya", cover: ASSETS.nusaPenida },
 ] as const;
 
-type Path = "known" | "ai";
+type Path = "manual" | "ai-route" | "ai-discovery" | "template";
 
 function newKey() {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -43,15 +45,22 @@ function newKey() {
   return `trip-${Date.now()}`;
 }
 
-export function CreateTripWizard() {
+type CreateTripWizardProps = {
+  templateId?: string;
+  initialPlaceId?: string;
+  initialDestination?: string;
+};
+
+export function CreateTripWizard({ templateId, initialPlaceId, initialDestination }: CreateTripWizardProps) {
   const router = useRouter();
-  const idempotencyKey = useMemo(newKey, []);
+  const idempotencyKey = useMemo(() => newKey(), []);
+  const publishIdempotencyKey = useMemo(() => newKey(), []);
   const [step, setStep] = useState(1);
-  const [path, setPath] = useState<Path>("known");
+  const [path, setPath] = useState<Path>(templateId ? "template" : "manual");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [origin, setOrigin] = useState("");
-  const [destinationCity, setDestinationCity] = useState("");
+  const [destinationCity, setDestinationCity] = useState(initialDestination ?? "");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [transport, setTransport] = useState("Kapal Phinisi");
@@ -66,12 +75,67 @@ export function CreateTripWizard() {
   const [maxParticipants, setMaxParticipants] = useState(7);
   const [meetingPoint, setMeetingPoint] = useState("");
   const [companionNote, setCompanionNote] = useState("");
+  const [pace, setPace] = useState<"SANTAI" | "SEIMBANG" | "PADAT">("SEIMBANG");
+  const [accessibilityNeeds, setAccessibilityNeeds] = useState("");
+  const [genderRule, setGenderRule] = useState<"ALL_GENDERS" | "FEMALE_ONLY" | "MALE_ONLY">("ALL_GENDERS");
+  const [communityRules, setCommunityRules] = useState("");
+  const [privateInvite, setPrivateInvite] = useState("");
   const [confirmPublish, setConfirmPublish] = useState(false);
   const [pending, setPending] = useState(false);
   const [formError, setFormError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [templateTitle, setTemplateTitle] = useState("");
+  const [templateLoading, setTemplateLoading] = useState(Boolean(templateId));
+  const [selectedTemplateId, setSelectedTemplateId] = useState(templateId ?? "");
+  const [templateQuery, setTemplateQuery] = useState("");
+  const [regenerateMode, setRegenerateMode] = useState<"balanced" | "cheaper" | "alternative">("balanced");
+  const [connections, setConnections] = useState<Array<{ username: string; displayName: string }>>([]);
 
-  const visualStep = step === 4 && path === "known" ? 5 : step;
+  useEffect(() => {
+    if (!templateId) return;
+    const controller = new AbortController();
+    fetch(`/api/v1/templates/${encodeURIComponent(templateId)}`, {
+      credentials: "include",
+      headers: { Accept: "application/json" },
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        const payload = await response.json() as { success: boolean; data?: ItineraryTemplateDetail; error?: { message?: string } };
+        if (!response.ok || !payload.success || !payload.data) throw new Error(payload.error?.message ?? "Template tidak tersedia.");
+        setTemplateTitle(payload.data.title);
+        setTitle((current) => current || payload.data!.title);
+        setDestinationCity((current) => current || payload.data!.city);
+        setTransport((current) => payload.data!.transportMode || current);
+        setPath("template");
+      })
+      .catch((error) => {
+        if (controller.signal.aborted) return;
+        setFormError(error instanceof Error ? error.message : "Template tidak dapat dimuat.");
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setTemplateLoading(false);
+      });
+    return () => controller.abort();
+  }, [templateId]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void fetch("/api/v1/users/me", { credentials: "include", signal: controller.signal })
+      .then(async (response) => response.ok ? response.json() : null)
+      .then((payload: { success?: boolean; data?: { user?: { username?: string } } } | null) => {
+        const username = payload?.data?.user?.username;
+        if (!username) return null;
+        return fetch(`/api/v1/users/${encodeURIComponent(username)}/following`, { credentials: "include", signal: controller.signal });
+      })
+      .then(async (response) => response && response.ok ? response.json() : null)
+      .then((payload: { success?: boolean; data?: { items?: Array<{ username: string; displayName: string }> } } | null) => {
+        if (!controller.signal.aborted) setConnections(payload?.data?.items ?? []);
+      })
+      .catch(() => undefined);
+    return () => controller.abort();
+  }, []);
+
+  const visualStep = step === 4 && (path === "manual" || path === "template") ? 5 : step;
 
   const previewMarkers = useMemo(() => {
     const markers: {
@@ -125,6 +189,12 @@ export function CreateTripWizard() {
       maxParticipants: visibility === "PUBLIC" ? maxParticipants : undefined,
       meetingPoint: visibility === "PUBLIC" ? meetingPoint : "",
       companionNote,
+      pace,
+      accessibilityNeeds,
+      genderRule,
+      communityRules,
+      privateInvite,
+      regenerateMode,
     };
   }
 
@@ -138,6 +208,11 @@ export function CreateTripWizard() {
 
   function goNext() {
     if (step === 1) {
+      if (path === "template" && !selectedTemplateId) {
+        setFormError("Pilih salah satu template provinsi dulu.");
+        return;
+      }
+      setFormError("");
       setStep(2);
       return;
     }
@@ -146,27 +221,39 @@ export function CreateTripWizard() {
       return;
     }
     if (step === 3) {
-      setStep(path === "ai" && !destinationCity.trim() ? 4 : 5);
+      setStep(path === "ai-discovery" || path === "ai-route" ? 4 : 5);
       return;
     }
     if (step === 4) setStep(5);
   }
 
   async function submit(mode: "draft" | "publish") {
+    if (pending || templateLoading) return;
     setPending(true);
     setFormError("");
     setFieldErrors({});
-    const created = await fetch("/api/v1/trips", {
+    const activeTemplateId = selectedTemplateId || templateId;
+    const created = await fetch(activeTemplateId ? `/api/v1/templates/${encodeURIComponent(activeTemplateId)}/use` : "/api/v1/trips", {
       method: "POST",
       credentials: "include",
       headers: {
         "content-type": "application/json",
         "idempotency-key": idempotencyKey,
       },
-      body: JSON.stringify(payload()),
+      body: JSON.stringify(activeTemplateId ? {
+        templateTitle: templateTitle || title,
+        destinationCity,
+        originLabel: origin || undefined,
+        startDate,
+        endDate: endDate || undefined,
+        transportMode: transport || undefined,
+        planningPartySize,
+        budgetAmount: String(budgetAmount),
+        budgetBasis,
+      } : payload()),
     });
     const json = (await created.json()) as
-      | { success: true; data: TripDetail }
+      | { success: true; data: TripDetail | UseTemplateResult }
       | ApiError;
     if (!json.success) {
       setPending(false);
@@ -174,11 +261,31 @@ export function CreateTripWizard() {
       setFieldErrors(json.error.fields ?? {});
       return;
     }
+    const createdTripId = "tripId" in json.data ? json.data.tripId : json.data.id;
+    if (visibility === "PRIVATE" && privateInvite.trim()) {
+      const entries = privateInvite.split(",").map((item) => item.trim()).filter(Boolean);
+      for (const entry of entries) {
+        const isDolan = entry.startsWith("@");
+        const invitationResponse = await fetch(`/api/v1/trips/${createdTripId}/invitations`, {
+          method: "POST", credentials: "include", headers: { "content-type": "application/json" },
+          body: JSON.stringify(isDolan ? { channel: "DOLAN", username: entry } : { channel: "WHATSAPP" }),
+        });
+        const invitation = await invitationResponse.json() as { success: boolean; data?: { invitePath: string } };
+        if (invitation.success && invitation.data && !isDolan) {
+          const phone = entry.replace(/\D/g, "").replace(/^0/, "62");
+          const inviteUrl = `${window.location.origin}${invitation.data.invitePath}`;
+          window.open(`https://wa.me/${phone}?text=${encodeURIComponent(`Yuk ikut trip DOLAN saya. Biaya perjalanan ditanggung masing-masing: ${inviteUrl}`)}`, "_blank", "noopener,noreferrer");
+        }
+      }
+    }
+    if (path === "ai-route" || path === "ai-discovery") {
+      await fetch(`/api/v1/trips/${createdTripId}/generate`, { method: "POST", credentials: "include", headers: { "content-type": "application/json", "idempotency-key": newKey() }, body: JSON.stringify({ type: path === "ai-discovery" ? "RECOMMEND_DESTINATIONS" : "GENERATE_ITINERARY", idempotencyKey: newKey(), preferences: { mode: path, regenerateMode } }) }).catch(() => undefined);
+    }
     if (mode === "publish") {
-      const published = await fetch(`/api/v1/trips/${json.data.id}/publish`, {
+      const published = await fetch(`/api/v1/trips/${createdTripId}/publish`, {
         method: "POST",
         credentials: "include",
-        headers: { "content-type": "application/json" },
+        headers: { "content-type": "application/json", "idempotency-key": publishIdempotencyKey },
         body: JSON.stringify({ confirmPublish: true, visibility }),
       });
       const pubJson = (await published.json()) as
@@ -194,12 +301,13 @@ export function CreateTripWizard() {
       return;
     }
     setPending(false);
-    router.push(tripDetailHref(json.data.id));
+    router.push(tripItineraryPath(createdTripId));
     router.refresh();
   }
 
   return (
     <div className="mx-auto max-w-3xl px-margin py-8 md:px-margin-desktop md:py-12">
+      {templateId || selectedTemplateId ? <div className="mb-5 rounded-2xl border border-primary/15 bg-primary-fixed/45 px-4 py-3" role="status"><p className="type-label font-extrabold text-primary">{templateLoading ? "Memuat template itinerary…" : `Template dipilih: ${templateTitle || "Rute traveler"}`}</p><p className="mt-1 type-caption text-on-surface-variant">Tanggal, titik awal, dan budget tetap bisa kamu sesuaikan. Setelah disimpan, rute akan terbuka di editor.</p></div> : initialPlaceId ? <p className="mb-5 rounded-2xl bg-primary-fixed/45 px-4 py-3 type-caption text-on-surface-variant">Destinasi dari halaman wisata sudah dimasukkan. Lengkapi tanggal dan budget untuk melanjutkan.</p> : null}
       <div className="mb-8 hidden items-center justify-between sm:flex">
         {steps.map((label, i) => {
           const n = i + 1;
@@ -229,18 +337,58 @@ export function CreateTripWizard() {
           <Header n={1} title="Bagaimana kamu ingin memulai rencana ini?" />
           <div className="grid gap-4 md:grid-cols-2">
             <PathCard
-              selected={path === "known"}
-              title="Aku sudah punya tujuan"
-              desc="Isi destinasi, tanggal, dan budget. Itinerary AI lengkap menyusul."
-              onClick={() => setPath("known")}
+              selected={path === "manual"}
+              title="Punya rencana sendiri"
+              desc="Tentukan tujuan dan susun aktivitas manual di editor itinerary."
+              onClick={() => setPath("manual")}
             />
             <PathCard
-              selected={path === "ai"}
+              selected={path === "ai-route"}
+              title="Optimalkan rute dengan AI"
+              desc="Kamu sudah tahu tujuannya; Groq menyusun urutan, jadwal, dan estimasi budget."
+              onClick={() => setPath("ai-route")}
+            />
+            <PathCard
+              selected={path === "ai-discovery"}
               title="Bantu AI pilih tujuan"
-              desc="Tujuan boleh kosong. Pilih dari rekomendasi mock, generator 6 langkah Alya menyusul."
-              onClick={() => setPath("ai")}
+              desc="Belum tahu mau ke mana? Isi waktu, asal, budget, dan preferensi untuk mendapat rekomendasi."
+              onClick={() => setPath("ai-discovery")}
+            />
+            <PathCard
+              selected={path === "template"}
+              title="Pakai itinerary populer"
+              desc="Mulai dari salah satu dari 38 template provinsi DOLAN lalu edit sesuai kebutuhanmu."
+              onClick={() => setPath("template")}
             />
           </div>
+          {path === "template" ? (
+            <div className="mt-5 rounded-[1.75rem] border border-primary/15 bg-white p-5">
+              <Field id="templateQuery" label="Cari template provinsi" hint="Kalau dikosongkan, urutan mengikuti 38 kurasi DOLAN.">
+                <input id="templateQuery" className="field-input" value={templateQuery} onChange={(event) => setTemplateQuery(event.target.value)} placeholder="Jawa Barat, Bali, Aceh…" />
+              </Field>
+              <div className="mt-4 grid gap-3 md:grid-cols-2">
+                {(templateQuery.trim() ? searchProvinces(templateQuery) : INDONESIA_PROVINCES.slice(0, 8)).map((province) => (
+                  <button
+                    type="button"
+                    key={province.slug}
+                    onClick={() => {
+                      setSelectedTemplateId(province.template.id);
+                      setTemplateTitle(province.template.title);
+                      setTitle((current) => current || province.template.title);
+                      setDestinationCity(province.name);
+                      setTransport(province.template.transportMode);
+                    }}
+                    className={`rounded-2xl border p-4 text-left ${selectedTemplateId === province.template.id ? "border-primary bg-primary-fixed/40" : "border-outline-variant bg-surface-container-low"}`}
+                  >
+                    <p className="type-label text-primary">{province.name}</p>
+                    <p className="type-subtitle mt-1 text-on-surface">{province.template.title}</p>
+                    <p className="type-caption mt-1 text-on-surface-variant">{province.template.durationDays} hari · backpacker</p>
+                  </button>
+                ))}
+              </div>
+              {!templateQuery.trim() ? <p className="mt-3 type-caption text-on-surface-variant">Menampilkan 8 template pertama. Ketik nama provinsi untuk mencari 38 rute kurasi.</p> : null}
+            </div>
+          ) : null}
           <Nav nextLabel="Lanjut" onNext={goNext} />
         </>
       ) : null}
@@ -280,7 +428,7 @@ export function CreateTripWizard() {
                 id="destinationCity"
                 label="Destinasi utama"
                 error={fieldErrors.destinationCity}
-                hint={path === "ai" ? "Boleh kosong di jalur Bantu AI" : undefined}
+                hint={path === "ai-discovery" ? "Boleh kosong; AI akan merekomendasikan tujuan" : undefined}
               >
                 <input
                   id="destinationCity"
@@ -402,6 +550,7 @@ export function CreateTripWizard() {
                 <option>Camping</option>
               </select>
             </Field>
+            <div className="grid gap-4 md:grid-cols-2"><Field id="pace" label="Tempo perjalanan"><select id="pace" className="field-input" value={pace} onChange={(event) => setPace(event.target.value as typeof pace)}><option value="SANTAI">Santai</option><option value="SEIMBANG">Seimbang</option><option value="PADAT">Padat</option></select></Field><Field id="accessibilityNeeds" label="Aksesibilitas / kebutuhan khusus" hint="Opsional"><input id="accessibilityNeeds" className="field-input" value={accessibilityNeeds} onChange={(event) => setAccessibilityNeeds(event.target.value)} placeholder="Contoh: hindari banyak tangga" /></Field></div>
             <div>
               <p className="type-label mb-2 text-on-surface">Aktivitas prioritas</p>
               <div className="flex flex-wrap gap-2">
@@ -475,11 +624,37 @@ export function CreateTripWizard() {
                     onChange={(e) => setCompanionNote(e.target.value)}
                   />
                 </Field>
+                <div className="grid gap-3 md:grid-cols-2"><Field id="genderRule" label="Aturan peserta"><select id="genderRule" className="field-input" value={genderRule} onChange={(event) => setGenderRule(event.target.value as typeof genderRule)}><option value="ALL_GENDERS">Semua gender</option><option value="FEMALE_ONLY">Female only</option><option value="MALE_ONLY">Male only</option></select></Field><Field id="communityRules" label="Aturan grup"><textarea id="communityRules" className="field-input min-h-20" value={communityRules} onChange={(event) => setCommunityRules(event.target.value)} placeholder="Ketepatan waktu, pembagian biaya, barang wajib…" /></Field></div>
                 <p className="type-caption text-primary">
                   Join gratis — biaya perjalanan ditanggung masing-masing. Tidak ada deposit.
                 </p>
               </div>
-            ) : null}
+            ) : <div className="rounded-xl bg-primary-fixed/35 p-4">
+              <Field id="privateInvite" label="Undang teman (opsional)" hint="Pilih teman yang sudah saling follow, atau masukkan username/@ dan nomor WhatsApp dipisah koma.">
+                <input id="privateInvite" className="field-input" value={privateInvite} onChange={(event) => setPrivateInvite(event.target.value)} placeholder="@sinta, @dimas, 0812…" />
+              </Field>
+              {connections.length > 0 ? (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {connections.map((person) => {
+                    const tag = `@${person.username}`;
+                    const selected = privateInvite.split(",").map((item) => item.trim()).includes(tag);
+                    return (
+                      <button
+                        type="button"
+                        key={person.username}
+                        className={`rounded-full px-3 py-2 type-label ${selected ? "bg-primary text-white" : "bg-white text-on-surface"}`}
+                        onClick={() => {
+                          const current = privateInvite.split(",").map((item) => item.trim()).filter(Boolean);
+                          setPrivateInvite((selected ? current.filter((item) => item !== tag) : [...current, tag]).join(", "));
+                        }}
+                      >
+                        {tag} · {person.displayName}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : <p className="mt-2 type-caption text-on-surface-variant">Belum ada koneksi DOLAN. Follow balik dulu, atau undang lewat WhatsApp.</p>}
+            </div>}
           </div>
           <Nav onBack={() => setStep(2)} onNext={goNext} nextLabel="Lanjut ke review" />
         </>
@@ -487,10 +662,23 @@ export function CreateTripWizard() {
 
       {step === 4 ? (
         <>
-          <Header n={4} title="Pilih destinasi rekomendasi (mock)" />
+          <Header n={4} title={path === "ai-discovery" ? "Pilih arah rekomendasi AI" : "Atur cara Groq menyusun rute"} />
           <p className="type-body mb-4 text-on-surface-variant">
-            Ini daftar contoh, bukan hasil job AI Alya. Pilih satu supaya draft punya tujuan.
+            Setelah draft disimpan, Groq membuat versi itinerary baru. Kalau hasilnya kurang cocok, kamu bisa regenerate biasa, hemat, atau rute alternatif dari editor.
           </p>
+          <div className="mb-5 grid gap-3 md:grid-cols-3">
+            {([
+              ["balanced", "Regenerate biasa", "Seimbang antara waktu, biaya, dan destinasi populer."],
+              ["cheaper", "Alternatif hemat", "Transport umum, makan kaki lima, dan jarak tempuh lebih pendek."],
+              ["alternative", "Rute alternatif", "Urutan dan tempat berbeda dari rute umum backpacker."],
+            ] as const).map(([id, title, desc]) => (
+              <button key={id} type="button" onClick={() => setRegenerateMode(id)} className={`card-surface p-4 text-left ${regenerateMode === id ? "ring-2 ring-primary" : ""}`}>
+                <p className="type-subtitle text-on-surface">{title}</p>
+                <p className="type-caption mt-1 text-on-surface-variant">{desc}</p>
+              </button>
+            ))}
+          </div>
+          {path === "ai-discovery" ? (
           <div className="grid gap-3 md:grid-cols-3">
             {aiPicks.map((pick) => (
               <button
@@ -510,10 +698,11 @@ export function CreateTripWizard() {
               </button>
             ))}
           </div>
+          ) : null}
           <Nav
             onBack={() => setStep(3)}
             onNext={goNext}
-            nextLabel="Pakai destinasi ini"
+            nextLabel={path === "ai-discovery" ? "Pakai destinasi ini" : "Lanjut review"}
           />
         </>
       ) : null}
@@ -571,7 +760,7 @@ export function CreateTripWizard() {
             <button
               type="button"
               className="btn-ghost"
-              onClick={() => setStep(path === "ai" && !destinationCity ? 4 : 3)}
+              onClick={() => setStep(path === "ai-discovery" || path === "ai-route" ? 4 : 3)}
             >
               Kembali
             </button>

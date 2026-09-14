@@ -62,7 +62,7 @@ describe("tripRouteHandlers live proxy", () => {
     );
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
     expect(url).toBe("http://localhost:4000/api/v1/trips");
     expect(init.method).toBe("POST");
     const headers = new Headers(init.headers);
@@ -98,7 +98,7 @@ describe("tripRouteHandlers live proxy", () => {
       "t1",
     );
 
-    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
     expect(url).toBe("http://localhost:4000/api/v1/trips/t1/close");
     expect(init.method).toBe("POST");
   });

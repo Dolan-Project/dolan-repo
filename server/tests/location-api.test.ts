@@ -28,7 +28,7 @@ function setup() {
     createJobService(),
     undefined,
     chat,
-    undefined,
+    false,
     undefined,
     locations,
   );

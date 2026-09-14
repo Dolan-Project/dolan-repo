@@ -25,6 +25,8 @@ export class GenerationJob extends Model<
   declare startedAt: CreationOptional<Date | null>;
   declare finishedAt: CreationOptional<Date | null>;
   declare errorCode: CreationOptional<string | null>;
+  declare requestPayload: CreationOptional<Record<string, unknown>>;
+  declare resultPayload: CreationOptional<Record<string, unknown> | null>;
   declare createdAt: CreationOptional<Date>;
   declare updatedAt: CreationOptional<Date>;
 }
@@ -75,7 +77,40 @@ export class IdempotencyKey extends Model<
   declare updatedAt: CreationOptional<Date>;
 }
 
+export class TripInvitation extends Model<
+  InferAttributes<TripInvitation>,
+  InferCreationAttributes<TripInvitation>
+> {
+  declare id: CreationOptional<string>;
+  declare tripId: string;
+  declare invitedByUserId: string;
+  declare invitedUserId: CreationOptional<string | null>;
+  declare tokenHash: CreationOptional<string | null>;
+  declare channel: "DOLAN" | "WHATSAPP";
+  declare status: CreationOptional<"PENDING" | "ACCEPTED" | "REVOKED" | "EXPIRED">;
+  declare expiresAt: CreationOptional<Date | null>;
+  declare acceptedAt: CreationOptional<Date | null>;
+  declare createdAt: CreationOptional<Date>;
+  declare updatedAt: CreationOptional<Date>;
+}
+
 export function initSupportModels(sequelize: Sequelize) {
+  TripInvitation.init(
+    {
+      id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
+      tripId: { type: DataTypes.UUID, allowNull: false, field: "trip_id" },
+      invitedByUserId: { type: DataTypes.UUID, allowNull: false, field: "invited_by_user_id" },
+      invitedUserId: { type: DataTypes.UUID, allowNull: true, field: "invited_user_id" },
+      tokenHash: { type: DataTypes.STRING(128), allowNull: true, unique: true, field: "token_hash" },
+      channel: { type: DataTypes.STRING(20), allowNull: false },
+      status: { type: DataTypes.STRING(20), allowNull: false, defaultValue: "PENDING" },
+      expiresAt: { type: DataTypes.DATE, allowNull: true, field: "expires_at" },
+      acceptedAt: { type: DataTypes.DATE, allowNull: true, field: "accepted_at" },
+      createdAt: DataTypes.DATE,
+      updatedAt: DataTypes.DATE,
+    },
+    { sequelize, tableName: "trip_invitations", modelName: "TripInvitation", underscored: true },
+  );
   GenerationJob.init(
     {
       id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
@@ -113,6 +148,8 @@ export function initSupportModels(sequelize: Sequelize) {
       startedAt: { type: DataTypes.DATE, allowNull: true, field: "started_at" },
       finishedAt: { type: DataTypes.DATE, allowNull: true, field: "finished_at" },
       errorCode: { type: DataTypes.STRING(64), allowNull: true, field: "error_code" },
+      requestPayload: { type: DataTypes.JSONB, allowNull: false, defaultValue: {}, field: "request_payload" },
+      resultPayload: { type: DataTypes.JSONB, allowNull: true, field: "result_payload" },
       createdAt: DataTypes.DATE,
       updatedAt: DataTypes.DATE,
     },
@@ -212,5 +249,5 @@ export function initSupportModels(sequelize: Sequelize) {
     },
   );
 
-  return { GenerationJob, TripShareLink, ApiUsageCounter, IdempotencyKey };
+  return { GenerationJob, TripShareLink, ApiUsageCounter, IdempotencyKey, TripInvitation };
 }

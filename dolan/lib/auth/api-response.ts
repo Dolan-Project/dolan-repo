@@ -56,19 +56,19 @@ export function statusForCode(code: string): number {
     case "PENDING_MEMBER":
     case "FORBIDDEN":
       return 403;
-    case "SELF_FOLLOW":
-    case "SELF_REVIEW":
-    case "SELF_BLOCK":
-    case "DUPLICATE_REVIEW":
-    case "ALREADY_FOLLOWING":
-    case "NOT_ELIGIBLE":
-    case "BLOCKED_RELATION":
     case "TRIP_FULL":
     case "DUPLICATE_REQUEST":
+    case "ALREADY_FOLLOWING":
+    case "DUPLICATE_REVIEW":
       return 409;
     case "CAPACITY_BELOW_MEMBERS":
     case "LEAVE_CONFIRM_REQUIRED":
     case "INVALID_TRANSITION":
+    case "SELF_FOLLOW":
+    case "SELF_REVIEW":
+    case "SELF_BLOCK":
+    case "NOT_ELIGIBLE":
+    case "BLOCKED_RELATION":
       return 400;
     default:
       return 400;

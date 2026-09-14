@@ -1,0 +1,3650 @@
+[
+  {
+    "slug": "aceh",
+    "name": "Aceh",
+    "capital": "Banda Aceh",
+    "description": "Aceh menawarkan perpaduan alam, budaya, dan kuliner lokal. Kurasi DOLAN ini menjadi titik awal perjalanan backpacker dan tetap perlu disesuaikan dengan cuaca, jam operasional, serta kondisi transportasi terbaru.",
+    "heroQuery": "Masjid Raya Baiturrahman, Aceh, Indonesia",
+    "featuredRank": 1,
+    "places": [
+      {
+        "name": "Masjid Raya Baiturrahman",
+        "city": "Banda Aceh",
+        "rank": 1,
+        "description": "Masjid Raya Baiturrahman adalah salah satu destinasi populer di Aceh. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Masjid Raya Baiturrahman, Aceh, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Masjid%20Raya%20Baiturrahman%2C%20Aceh%2C%20Indonesia"
+      },
+      {
+        "name": "Museum Tsunami Aceh",
+        "city": "Banda Aceh",
+        "rank": 2,
+        "description": "Museum Tsunami Aceh adalah salah satu destinasi populer di Aceh. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Museum Tsunami Aceh, Aceh, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Museum%20Tsunami%20Aceh%2C%20Aceh%2C%20Indonesia"
+      },
+      {
+        "name": "Pantai Lampuuk",
+        "city": "Banda Aceh",
+        "rank": 3,
+        "description": "Pantai Lampuuk adalah salah satu destinasi populer di Aceh. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Pantai Lampuuk, Aceh, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Pantai%20Lampuuk%2C%20Aceh%2C%20Indonesia"
+      },
+      {
+        "name": "Pulau Weh",
+        "city": "Banda Aceh",
+        "rank": 4,
+        "description": "Pulau Weh adalah salah satu destinasi populer di Aceh. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Pulau Weh, Aceh, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Pulau%20Weh%2C%20Aceh%2C%20Indonesia"
+      },
+      {
+        "name": "Danau Laut Tawar",
+        "city": "Banda Aceh",
+        "rank": 5,
+        "description": "Danau Laut Tawar adalah salah satu destinasi populer di Aceh. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Danau Laut Tawar, Aceh, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Danau%20Laut%20Tawar%2C%20Aceh%2C%20Indonesia"
+      }
+    ],
+    "template": {
+      "id": "a8bacd19-8b09-4c25-ad55-4436547c783b",
+      "title": "Rute Backpacker Aceh",
+      "description": "Rute awal DOLAN untuk mengenal destinasi unggulan Aceh secara efisien.",
+      "durationDays": 3,
+      "transportMode": "Transportasi umum + sewa lokal",
+      "budgetLow": 750000,
+      "budgetHigh": 3500000,
+      "stops": [
+        {
+          "day": 1,
+          "sequence": 1,
+          "name": "Masjid Raya Baiturrahman",
+          "durationMinutes": 150,
+          "notes": "Mulai pagi untuk menghindari antrean dan cuaca terik."
+        },
+        {
+          "day": 1,
+          "sequence": 2,
+          "name": "Museum Tsunami Aceh",
+          "durationMinutes": 120,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 2,
+          "sequence": 1,
+          "name": "Pantai Lampuuk",
+          "durationMinutes": 150,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 2,
+          "sequence": 2,
+          "name": "Pulau Weh",
+          "durationMinutes": 120,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 3,
+          "sequence": 1,
+          "name": "Danau Laut Tawar",
+          "durationMinutes": 150,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        }
+      ]
+    }
+  },
+  {
+    "slug": "sumatera-utara",
+    "name": "Sumatera Utara",
+    "capital": "Medan",
+    "description": "Sumatera Utara menawarkan perpaduan alam, budaya, dan kuliner lokal. Kurasi DOLAN ini menjadi titik awal perjalanan backpacker dan tetap perlu disesuaikan dengan cuaca, jam operasional, serta kondisi transportasi terbaru.",
+    "heroQuery": "Danau Toba, Sumatera Utara, Indonesia",
+    "featuredRank": 2,
+    "places": [
+      {
+        "name": "Danau Toba",
+        "city": "Medan",
+        "rank": 1,
+        "description": "Danau Toba adalah salah satu destinasi populer di Sumatera Utara. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Danau Toba, Sumatera Utara, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Danau%20Toba%2C%20Sumatera%20Utara%2C%20Indonesia"
+      },
+      {
+        "name": "Pulau Samosir",
+        "city": "Medan",
+        "rank": 2,
+        "description": "Pulau Samosir adalah salah satu destinasi populer di Sumatera Utara. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Pulau Samosir, Sumatera Utara, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Pulau%20Samosir%2C%20Sumatera%20Utara%2C%20Indonesia"
+      },
+      {
+        "name": "Istana Maimun",
+        "city": "Medan",
+        "rank": 3,
+        "description": "Istana Maimun adalah salah satu destinasi populer di Sumatera Utara. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Istana Maimun, Sumatera Utara, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Istana%20Maimun%2C%20Sumatera%20Utara%2C%20Indonesia"
+      },
+      {
+        "name": "Air Terjun Sipiso-piso",
+        "city": "Medan",
+        "rank": 4,
+        "description": "Air Terjun Sipiso-piso adalah salah satu destinasi populer di Sumatera Utara. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Air Terjun Sipiso-piso, Sumatera Utara, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Air%20Terjun%20Sipiso-piso%2C%20Sumatera%20Utara%2C%20Indonesia"
+      },
+      {
+        "name": "Bukit Lawang",
+        "city": "Medan",
+        "rank": 5,
+        "description": "Bukit Lawang adalah salah satu destinasi populer di Sumatera Utara. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Bukit Lawang, Sumatera Utara, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Bukit%20Lawang%2C%20Sumatera%20Utara%2C%20Indonesia"
+      }
+    ],
+    "template": {
+      "id": "e8420ecb-f360-46c0-9ac6-16e462759c2e",
+      "title": "Rute Backpacker Sumatera Utara",
+      "description": "Rute awal DOLAN untuk mengenal destinasi unggulan Sumatera Utara secara efisien.",
+      "durationDays": 3,
+      "transportMode": "Transportasi umum + sewa lokal",
+      "budgetLow": 750000,
+      "budgetHigh": 3500000,
+      "stops": [
+        {
+          "day": 1,
+          "sequence": 1,
+          "name": "Danau Toba",
+          "durationMinutes": 150,
+          "notes": "Mulai pagi untuk menghindari antrean dan cuaca terik."
+        },
+        {
+          "day": 1,
+          "sequence": 2,
+          "name": "Pulau Samosir",
+          "durationMinutes": 120,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 2,
+          "sequence": 1,
+          "name": "Istana Maimun",
+          "durationMinutes": 150,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 2,
+          "sequence": 2,
+          "name": "Air Terjun Sipiso-piso",
+          "durationMinutes": 120,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 3,
+          "sequence": 1,
+          "name": "Bukit Lawang",
+          "durationMinutes": 150,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        }
+      ]
+    }
+  },
+  {
+    "slug": "sumatera-barat",
+    "name": "Sumatera Barat",
+    "capital": "Padang",
+    "description": "Sumatera Barat menawarkan perpaduan alam, budaya, dan kuliner lokal. Kurasi DOLAN ini menjadi titik awal perjalanan backpacker dan tetap perlu disesuaikan dengan cuaca, jam operasional, serta kondisi transportasi terbaru.",
+    "heroQuery": "Jam Gadang, Sumatera Barat, Indonesia",
+    "featuredRank": 3,
+    "places": [
+      {
+        "name": "Jam Gadang",
+        "city": "Padang",
+        "rank": 1,
+        "description": "Jam Gadang adalah salah satu destinasi populer di Sumatera Barat. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Jam Gadang, Sumatera Barat, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Jam%20Gadang%2C%20Sumatera%20Barat%2C%20Indonesia"
+      },
+      {
+        "name": "Ngarai Sianok",
+        "city": "Padang",
+        "rank": 2,
+        "description": "Ngarai Sianok adalah salah satu destinasi populer di Sumatera Barat. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Ngarai Sianok, Sumatera Barat, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Ngarai%20Sianok%2C%20Sumatera%20Barat%2C%20Indonesia"
+      },
+      {
+        "name": "Lembah Harau",
+        "city": "Padang",
+        "rank": 3,
+        "description": "Lembah Harau adalah salah satu destinasi populer di Sumatera Barat. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Lembah Harau, Sumatera Barat, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Lembah%20Harau%2C%20Sumatera%20Barat%2C%20Indonesia"
+      },
+      {
+        "name": "Istano Basa Pagaruyung",
+        "city": "Padang",
+        "rank": 4,
+        "description": "Istano Basa Pagaruyung adalah salah satu destinasi populer di Sumatera Barat. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Istano Basa Pagaruyung, Sumatera Barat, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Istano%20Basa%20Pagaruyung%2C%20Sumatera%20Barat%2C%20Indonesia"
+      },
+      {
+        "name": "Kepulauan Mentawai",
+        "city": "Padang",
+        "rank": 5,
+        "description": "Kepulauan Mentawai adalah salah satu destinasi populer di Sumatera Barat. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Kepulauan Mentawai, Sumatera Barat, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Kepulauan%20Mentawai%2C%20Sumatera%20Barat%2C%20Indonesia"
+      }
+    ],
+    "template": {
+      "id": "15d232b9-5cc9-484c-b784-a202538bb4a6",
+      "title": "Rute Backpacker Sumatera Barat",
+      "description": "Rute awal DOLAN untuk mengenal destinasi unggulan Sumatera Barat secara efisien.",
+      "durationDays": 3,
+      "transportMode": "Transportasi umum + sewa lokal",
+      "budgetLow": 750000,
+      "budgetHigh": 3500000,
+      "stops": [
+        {
+          "day": 1,
+          "sequence": 1,
+          "name": "Jam Gadang",
+          "durationMinutes": 150,
+          "notes": "Mulai pagi untuk menghindari antrean dan cuaca terik."
+        },
+        {
+          "day": 1,
+          "sequence": 2,
+          "name": "Ngarai Sianok",
+          "durationMinutes": 120,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 2,
+          "sequence": 1,
+          "name": "Lembah Harau",
+          "durationMinutes": 150,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 2,
+          "sequence": 2,
+          "name": "Istano Basa Pagaruyung",
+          "durationMinutes": 120,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 3,
+          "sequence": 1,
+          "name": "Kepulauan Mentawai",
+          "durationMinutes": 150,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        }
+      ]
+    }
+  },
+  {
+    "slug": "riau",
+    "name": "Riau",
+    "capital": "Pekanbaru",
+    "description": "Riau menawarkan perpaduan alam, budaya, dan kuliner lokal. Kurasi DOLAN ini menjadi titik awal perjalanan backpacker dan tetap perlu disesuaikan dengan cuaca, jam operasional, serta kondisi transportasi terbaru.",
+    "heroQuery": "Istana Siak Sri Indrapura, Riau, Indonesia",
+    "featuredRank": 4,
+    "places": [
+      {
+        "name": "Istana Siak Sri Indrapura",
+        "city": "Pekanbaru",
+        "rank": 1,
+        "description": "Istana Siak Sri Indrapura adalah salah satu destinasi populer di Riau. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Istana Siak Sri Indrapura, Riau, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Istana%20Siak%20Sri%20Indrapura%2C%20Riau%2C%20Indonesia"
+      },
+      {
+        "name": "Candi Muara Takus",
+        "city": "Pekanbaru",
+        "rank": 2,
+        "description": "Candi Muara Takus adalah salah satu destinasi populer di Riau. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Candi Muara Takus, Riau, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Candi%20Muara%20Takus%2C%20Riau%2C%20Indonesia"
+      },
+      {
+        "name": "Danau Raja",
+        "city": "Pekanbaru",
+        "rank": 3,
+        "description": "Danau Raja adalah salah satu destinasi populer di Riau. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Danau Raja, Riau, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Danau%20Raja%2C%20Riau%2C%20Indonesia"
+      },
+      {
+        "name": "Taman Nasional Tesso Nilo",
+        "city": "Pekanbaru",
+        "rank": 4,
+        "description": "Taman Nasional Tesso Nilo adalah salah satu destinasi populer di Riau. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Taman Nasional Tesso Nilo, Riau, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Taman%20Nasional%20Tesso%20Nilo%2C%20Riau%2C%20Indonesia"
+      },
+      {
+        "name": "Riau Fantasi",
+        "city": "Pekanbaru",
+        "rank": 5,
+        "description": "Riau Fantasi adalah salah satu destinasi populer di Riau. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Riau Fantasi, Riau, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Riau%20Fantasi%2C%20Riau%2C%20Indonesia"
+      }
+    ],
+    "template": {
+      "id": "15659998-b8ee-4cf6-933b-5b53026374ac",
+      "title": "Rute Backpacker Riau",
+      "description": "Rute awal DOLAN untuk mengenal destinasi unggulan Riau secara efisien.",
+      "durationDays": 3,
+      "transportMode": "Transportasi umum + sewa lokal",
+      "budgetLow": 750000,
+      "budgetHigh": 3500000,
+      "stops": [
+        {
+          "day": 1,
+          "sequence": 1,
+          "name": "Istana Siak Sri Indrapura",
+          "durationMinutes": 150,
+          "notes": "Mulai pagi untuk menghindari antrean dan cuaca terik."
+        },
+        {
+          "day": 1,
+          "sequence": 2,
+          "name": "Candi Muara Takus",
+          "durationMinutes": 120,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 2,
+          "sequence": 1,
+          "name": "Danau Raja",
+          "durationMinutes": 150,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 2,
+          "sequence": 2,
+          "name": "Taman Nasional Tesso Nilo",
+          "durationMinutes": 120,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 3,
+          "sequence": 1,
+          "name": "Riau Fantasi",
+          "durationMinutes": 150,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        }
+      ]
+    }
+  },
+  {
+    "slug": "kepulauan-riau",
+    "name": "Kepulauan Riau",
+    "capital": "Tanjungpinang",
+    "description": "Kepulauan Riau menawarkan perpaduan alam, budaya, dan kuliner lokal. Kurasi DOLAN ini menjadi titik awal perjalanan backpacker dan tetap perlu disesuaikan dengan cuaca, jam operasional, serta kondisi transportasi terbaru.",
+    "heroQuery": "Pulau Penyengat, Kepulauan Riau, Indonesia",
+    "featuredRank": 5,
+    "places": [
+      {
+        "name": "Pulau Penyengat",
+        "city": "Tanjungpinang",
+        "rank": 1,
+        "description": "Pulau Penyengat adalah salah satu destinasi populer di Kepulauan Riau. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Pulau Penyengat, Kepulauan Riau, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Pulau%20Penyengat%2C%20Kepulauan%20Riau%2C%20Indonesia"
+      },
+      {
+        "name": "Lagoi Bay",
+        "city": "Tanjungpinang",
+        "rank": 2,
+        "description": "Lagoi Bay adalah salah satu destinasi populer di Kepulauan Riau. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Lagoi Bay, Kepulauan Riau, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Lagoi%20Bay%2C%20Kepulauan%20Riau%2C%20Indonesia"
+      },
+      {
+        "name": "Pantai Trikora",
+        "city": "Tanjungpinang",
+        "rank": 3,
+        "description": "Pantai Trikora adalah salah satu destinasi populer di Kepulauan Riau. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Pantai Trikora, Kepulauan Riau, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Pantai%20Trikora%2C%20Kepulauan%20Riau%2C%20Indonesia"
+      },
+      {
+        "name": "Gurun Pasir Busung",
+        "city": "Tanjungpinang",
+        "rank": 4,
+        "description": "Gurun Pasir Busung adalah salah satu destinasi populer di Kepulauan Riau. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Gurun Pasir Busung, Kepulauan Riau, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Gurun%20Pasir%20Busung%2C%20Kepulauan%20Riau%2C%20Indonesia"
+      },
+      {
+        "name": "Jembatan Barelang",
+        "city": "Tanjungpinang",
+        "rank": 5,
+        "description": "Jembatan Barelang adalah salah satu destinasi populer di Kepulauan Riau. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Jembatan Barelang, Kepulauan Riau, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Jembatan%20Barelang%2C%20Kepulauan%20Riau%2C%20Indonesia"
+      }
+    ],
+    "template": {
+      "id": "97930e7f-42ad-4034-a428-3718c334fcb2",
+      "title": "Rute Backpacker Kepulauan Riau",
+      "description": "Rute awal DOLAN untuk mengenal destinasi unggulan Kepulauan Riau secara efisien.",
+      "durationDays": 3,
+      "transportMode": "Transportasi umum + sewa lokal",
+      "budgetLow": 750000,
+      "budgetHigh": 3500000,
+      "stops": [
+        {
+          "day": 1,
+          "sequence": 1,
+          "name": "Pulau Penyengat",
+          "durationMinutes": 150,
+          "notes": "Mulai pagi untuk menghindari antrean dan cuaca terik."
+        },
+        {
+          "day": 1,
+          "sequence": 2,
+          "name": "Lagoi Bay",
+          "durationMinutes": 120,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 2,
+          "sequence": 1,
+          "name": "Pantai Trikora",
+          "durationMinutes": 150,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 2,
+          "sequence": 2,
+          "name": "Gurun Pasir Busung",
+          "durationMinutes": 120,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 3,
+          "sequence": 1,
+          "name": "Jembatan Barelang",
+          "durationMinutes": 150,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        }
+      ]
+    }
+  },
+  {
+    "slug": "jambi",
+    "name": "Jambi",
+    "capital": "Jambi",
+    "description": "Jambi menawarkan perpaduan alam, budaya, dan kuliner lokal. Kurasi DOLAN ini menjadi titik awal perjalanan backpacker dan tetap perlu disesuaikan dengan cuaca, jam operasional, serta kondisi transportasi terbaru.",
+    "heroQuery": "Candi Muaro Jambi, Jambi, Indonesia",
+    "featuredRank": 6,
+    "places": [
+      {
+        "name": "Candi Muaro Jambi",
+        "city": "Jambi",
+        "rank": 1,
+        "description": "Candi Muaro Jambi adalah salah satu destinasi populer di Jambi. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Candi Muaro Jambi, Jambi, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Candi%20Muaro%20Jambi%2C%20Jambi%2C%20Indonesia"
+      },
+      {
+        "name": "Gunung Kerinci",
+        "city": "Jambi",
+        "rank": 2,
+        "description": "Gunung Kerinci adalah salah satu destinasi populer di Jambi. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Gunung Kerinci, Jambi, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Gunung%20Kerinci%2C%20Jambi%2C%20Indonesia"
+      },
+      {
+        "name": "Danau Kaco",
+        "city": "Jambi",
+        "rank": 3,
+        "description": "Danau Kaco adalah salah satu destinasi populer di Jambi. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Danau Kaco, Jambi, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Danau%20Kaco%2C%20Jambi%2C%20Indonesia"
+      },
+      {
+        "name": "Geopark Merangin",
+        "city": "Jambi",
+        "rank": 4,
+        "description": "Geopark Merangin adalah salah satu destinasi populer di Jambi. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Geopark Merangin, Jambi, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Geopark%20Merangin%2C%20Jambi%2C%20Indonesia"
+      },
+      {
+        "name": "Danau Gunung Tujuh",
+        "city": "Jambi",
+        "rank": 5,
+        "description": "Danau Gunung Tujuh adalah salah satu destinasi populer di Jambi. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Danau Gunung Tujuh, Jambi, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Danau%20Gunung%20Tujuh%2C%20Jambi%2C%20Indonesia"
+      }
+    ],
+    "template": {
+      "id": "9d5725d4-1848-44ef-9d3a-44ec9aec0eae",
+      "title": "Rute Backpacker Jambi",
+      "description": "Rute awal DOLAN untuk mengenal destinasi unggulan Jambi secara efisien.",
+      "durationDays": 3,
+      "transportMode": "Transportasi umum + sewa lokal",
+      "budgetLow": 750000,
+      "budgetHigh": 3500000,
+      "stops": [
+        {
+          "day": 1,
+          "sequence": 1,
+          "name": "Candi Muaro Jambi",
+          "durationMinutes": 150,
+          "notes": "Mulai pagi untuk menghindari antrean dan cuaca terik."
+        },
+        {
+          "day": 1,
+          "sequence": 2,
+          "name": "Gunung Kerinci",
+          "durationMinutes": 120,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 2,
+          "sequence": 1,
+          "name": "Danau Kaco",
+          "durationMinutes": 150,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 2,
+          "sequence": 2,
+          "name": "Geopark Merangin",
+          "durationMinutes": 120,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 3,
+          "sequence": 1,
+          "name": "Danau Gunung Tujuh",
+          "durationMinutes": 150,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        }
+      ]
+    }
+  },
+  {
+    "slug": "sumatera-selatan",
+    "name": "Sumatera Selatan",
+    "capital": "Palembang",
+    "description": "Sumatera Selatan menawarkan perpaduan alam, budaya, dan kuliner lokal. Kurasi DOLAN ini menjadi titik awal perjalanan backpacker dan tetap perlu disesuaikan dengan cuaca, jam operasional, serta kondisi transportasi terbaru.",
+    "heroQuery": "Jembatan Ampera, Sumatera Selatan, Indonesia",
+    "featuredRank": 7,
+    "places": [
+      {
+        "name": "Jembatan Ampera",
+        "city": "Palembang",
+        "rank": 1,
+        "description": "Jembatan Ampera adalah salah satu destinasi populer di Sumatera Selatan. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Jembatan Ampera, Sumatera Selatan, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Jembatan%20Ampera%2C%20Sumatera%20Selatan%2C%20Indonesia"
+      },
+      {
+        "name": "Pulau Kemaro",
+        "city": "Palembang",
+        "rank": 2,
+        "description": "Pulau Kemaro adalah salah satu destinasi populer di Sumatera Selatan. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Pulau Kemaro, Sumatera Selatan, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Pulau%20Kemaro%2C%20Sumatera%20Selatan%2C%20Indonesia"
+      },
+      {
+        "name": "Benteng Kuto Besak",
+        "city": "Palembang",
+        "rank": 3,
+        "description": "Benteng Kuto Besak adalah salah satu destinasi populer di Sumatera Selatan. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Benteng Kuto Besak, Sumatera Selatan, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Benteng%20Kuto%20Besak%2C%20Sumatera%20Selatan%2C%20Indonesia"
+      },
+      {
+        "name": "Gunung Dempo",
+        "city": "Palembang",
+        "rank": 4,
+        "description": "Gunung Dempo adalah salah satu destinasi populer di Sumatera Selatan. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Gunung Dempo, Sumatera Selatan, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Gunung%20Dempo%2C%20Sumatera%20Selatan%2C%20Indonesia"
+      },
+      {
+        "name": "Danau Ranau",
+        "city": "Palembang",
+        "rank": 5,
+        "description": "Danau Ranau adalah salah satu destinasi populer di Sumatera Selatan. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Danau Ranau, Sumatera Selatan, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Danau%20Ranau%2C%20Sumatera%20Selatan%2C%20Indonesia"
+      }
+    ],
+    "template": {
+      "id": "40b434ca-a96d-4db6-9caf-a27fb88998dc",
+      "title": "Rute Backpacker Sumatera Selatan",
+      "description": "Rute awal DOLAN untuk mengenal destinasi unggulan Sumatera Selatan secara efisien.",
+      "durationDays": 3,
+      "transportMode": "Transportasi umum + sewa lokal",
+      "budgetLow": 750000,
+      "budgetHigh": 3500000,
+      "stops": [
+        {
+          "day": 1,
+          "sequence": 1,
+          "name": "Jembatan Ampera",
+          "durationMinutes": 150,
+          "notes": "Mulai pagi untuk menghindari antrean dan cuaca terik."
+        },
+        {
+          "day": 1,
+          "sequence": 2,
+          "name": "Pulau Kemaro",
+          "durationMinutes": 120,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 2,
+          "sequence": 1,
+          "name": "Benteng Kuto Besak",
+          "durationMinutes": 150,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 2,
+          "sequence": 2,
+          "name": "Gunung Dempo",
+          "durationMinutes": 120,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 3,
+          "sequence": 1,
+          "name": "Danau Ranau",
+          "durationMinutes": 150,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        }
+      ]
+    }
+  },
+  {
+    "slug": "kepulauan-bangka-belitung",
+    "name": "Kepulauan Bangka Belitung",
+    "capital": "Pangkalpinang",
+    "description": "Kepulauan Bangka Belitung menawarkan perpaduan alam, budaya, dan kuliner lokal. Kurasi DOLAN ini menjadi titik awal perjalanan backpacker dan tetap perlu disesuaikan dengan cuaca, jam operasional, serta kondisi transportasi terbaru.",
+    "heroQuery": "Pantai Tanjung Tinggi, Kepulauan Bangka Belitung, Indonesia",
+    "featuredRank": 8,
+    "places": [
+      {
+        "name": "Pantai Tanjung Tinggi",
+        "city": "Pangkalpinang",
+        "rank": 1,
+        "description": "Pantai Tanjung Tinggi adalah salah satu destinasi populer di Kepulauan Bangka Belitung. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Pantai Tanjung Tinggi, Kepulauan Bangka Belitung, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Pantai%20Tanjung%20Tinggi%2C%20Kepulauan%20Bangka%20Belitung%2C%20Indonesia"
+      },
+      {
+        "name": "Pulau Lengkuas",
+        "city": "Pangkalpinang",
+        "rank": 2,
+        "description": "Pulau Lengkuas adalah salah satu destinasi populer di Kepulauan Bangka Belitung. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Pulau Lengkuas, Kepulauan Bangka Belitung, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Pulau%20Lengkuas%2C%20Kepulauan%20Bangka%20Belitung%2C%20Indonesia"
+      },
+      {
+        "name": "Danau Kaolin",
+        "city": "Pangkalpinang",
+        "rank": 3,
+        "description": "Danau Kaolin adalah salah satu destinasi populer di Kepulauan Bangka Belitung. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Danau Kaolin, Kepulauan Bangka Belitung, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Danau%20Kaolin%2C%20Kepulauan%20Bangka%20Belitung%2C%20Indonesia"
+      },
+      {
+        "name": "Pantai Parai Tenggiri",
+        "city": "Pangkalpinang",
+        "rank": 4,
+        "description": "Pantai Parai Tenggiri adalah salah satu destinasi populer di Kepulauan Bangka Belitung. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Pantai Parai Tenggiri, Kepulauan Bangka Belitung, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Pantai%20Parai%20Tenggiri%2C%20Kepulauan%20Bangka%20Belitung%2C%20Indonesia"
+      },
+      {
+        "name": "Museum Kata Andrea Hirata",
+        "city": "Pangkalpinang",
+        "rank": 5,
+        "description": "Museum Kata Andrea Hirata adalah salah satu destinasi populer di Kepulauan Bangka Belitung. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Museum Kata Andrea Hirata, Kepulauan Bangka Belitung, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Museum%20Kata%20Andrea%20Hirata%2C%20Kepulauan%20Bangka%20Belitung%2C%20Indonesia"
+      }
+    ],
+    "template": {
+      "id": "032f69c0-6d98-46d1-8539-e4e34aac1875",
+      "title": "Rute Backpacker Kepulauan Bangka Belitung",
+      "description": "Rute awal DOLAN untuk mengenal destinasi unggulan Kepulauan Bangka Belitung secara efisien.",
+      "durationDays": 3,
+      "transportMode": "Transportasi umum + sewa lokal",
+      "budgetLow": 750000,
+      "budgetHigh": 3500000,
+      "stops": [
+        {
+          "day": 1,
+          "sequence": 1,
+          "name": "Pantai Tanjung Tinggi",
+          "durationMinutes": 150,
+          "notes": "Mulai pagi untuk menghindari antrean dan cuaca terik."
+        },
+        {
+          "day": 1,
+          "sequence": 2,
+          "name": "Pulau Lengkuas",
+          "durationMinutes": 120,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 2,
+          "sequence": 1,
+          "name": "Danau Kaolin",
+          "durationMinutes": 150,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 2,
+          "sequence": 2,
+          "name": "Pantai Parai Tenggiri",
+          "durationMinutes": 120,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 3,
+          "sequence": 1,
+          "name": "Museum Kata Andrea Hirata",
+          "durationMinutes": 150,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        }
+      ]
+    }
+  },
+  {
+    "slug": "bengkulu",
+    "name": "Bengkulu",
+    "capital": "Bengkulu",
+    "description": "Bengkulu menawarkan perpaduan alam, budaya, dan kuliner lokal. Kurasi DOLAN ini menjadi titik awal perjalanan backpacker dan tetap perlu disesuaikan dengan cuaca, jam operasional, serta kondisi transportasi terbaru.",
+    "heroQuery": "Benteng Marlborough, Bengkulu, Indonesia",
+    "featuredRank": 9,
+    "places": [
+      {
+        "name": "Benteng Marlborough",
+        "city": "Bengkulu",
+        "rank": 1,
+        "description": "Benteng Marlborough adalah salah satu destinasi populer di Bengkulu. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Benteng Marlborough, Bengkulu, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Benteng%20Marlborough%2C%20Bengkulu%2C%20Indonesia"
+      },
+      {
+        "name": "Pantai Panjang",
+        "city": "Bengkulu",
+        "rank": 2,
+        "description": "Pantai Panjang adalah salah satu destinasi populer di Bengkulu. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Pantai Panjang, Bengkulu, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Pantai%20Panjang%2C%20Bengkulu%2C%20Indonesia"
+      },
+      {
+        "name": "Rumah Pengasingan Bung Karno",
+        "city": "Bengkulu",
+        "rank": 3,
+        "description": "Rumah Pengasingan Bung Karno adalah salah satu destinasi populer di Bengkulu. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Rumah Pengasingan Bung Karno, Bengkulu, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Rumah%20Pengasingan%20Bung%20Karno%2C%20Bengkulu%2C%20Indonesia"
+      },
+      {
+        "name": "Danau Dendam Tak Sudah",
+        "city": "Bengkulu",
+        "rank": 4,
+        "description": "Danau Dendam Tak Sudah adalah salah satu destinasi populer di Bengkulu. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Danau Dendam Tak Sudah, Bengkulu, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Danau%20Dendam%20Tak%20Sudah%2C%20Bengkulu%2C%20Indonesia"
+      },
+      {
+        "name": "Pulau Enggano",
+        "city": "Bengkulu",
+        "rank": 5,
+        "description": "Pulau Enggano adalah salah satu destinasi populer di Bengkulu. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Pulau Enggano, Bengkulu, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Pulau%20Enggano%2C%20Bengkulu%2C%20Indonesia"
+      }
+    ],
+    "template": {
+      "id": "778fb227-75ce-46b3-9592-a0cb0dae82ab",
+      "title": "Rute Backpacker Bengkulu",
+      "description": "Rute awal DOLAN untuk mengenal destinasi unggulan Bengkulu secara efisien.",
+      "durationDays": 3,
+      "transportMode": "Transportasi umum + sewa lokal",
+      "budgetLow": 750000,
+      "budgetHigh": 3500000,
+      "stops": [
+        {
+          "day": 1,
+          "sequence": 1,
+          "name": "Benteng Marlborough",
+          "durationMinutes": 150,
+          "notes": "Mulai pagi untuk menghindari antrean dan cuaca terik."
+        },
+        {
+          "day": 1,
+          "sequence": 2,
+          "name": "Pantai Panjang",
+          "durationMinutes": 120,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 2,
+          "sequence": 1,
+          "name": "Rumah Pengasingan Bung Karno",
+          "durationMinutes": 150,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 2,
+          "sequence": 2,
+          "name": "Danau Dendam Tak Sudah",
+          "durationMinutes": 120,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 3,
+          "sequence": 1,
+          "name": "Pulau Enggano",
+          "durationMinutes": 150,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        }
+      ]
+    }
+  },
+  {
+    "slug": "lampung",
+    "name": "Lampung",
+    "capital": "Bandar Lampung",
+    "description": "Lampung menawarkan perpaduan alam, budaya, dan kuliner lokal. Kurasi DOLAN ini menjadi titik awal perjalanan backpacker dan tetap perlu disesuaikan dengan cuaca, jam operasional, serta kondisi transportasi terbaru.",
+    "heroQuery": "Taman Nasional Way Kambas, Lampung, Indonesia",
+    "featuredRank": 10,
+    "places": [
+      {
+        "name": "Taman Nasional Way Kambas",
+        "city": "Bandar Lampung",
+        "rank": 1,
+        "description": "Taman Nasional Way Kambas adalah salah satu destinasi populer di Lampung. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Taman Nasional Way Kambas, Lampung, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Taman%20Nasional%20Way%20Kambas%2C%20Lampung%2C%20Indonesia"
+      },
+      {
+        "name": "Pulau Pahawang",
+        "city": "Bandar Lampung",
+        "rank": 2,
+        "description": "Pulau Pahawang adalah salah satu destinasi populer di Lampung. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Pulau Pahawang, Lampung, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Pulau%20Pahawang%2C%20Lampung%2C%20Indonesia"
+      },
+      {
+        "name": "Teluk Kiluan",
+        "city": "Bandar Lampung",
+        "rank": 3,
+        "description": "Teluk Kiluan adalah salah satu destinasi populer di Lampung. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Teluk Kiluan, Lampung, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Teluk%20Kiluan%2C%20Lampung%2C%20Indonesia"
+      },
+      {
+        "name": "Pantai Gigi Hiu",
+        "city": "Bandar Lampung",
+        "rank": 4,
+        "description": "Pantai Gigi Hiu adalah salah satu destinasi populer di Lampung. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Pantai Gigi Hiu, Lampung, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Pantai%20Gigi%20Hiu%2C%20Lampung%2C%20Indonesia"
+      },
+      {
+        "name": "Gunung Anak Krakatau",
+        "city": "Bandar Lampung",
+        "rank": 5,
+        "description": "Gunung Anak Krakatau adalah salah satu destinasi populer di Lampung. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Gunung Anak Krakatau, Lampung, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Gunung%20Anak%20Krakatau%2C%20Lampung%2C%20Indonesia"
+      }
+    ],
+    "template": {
+      "id": "99c0744c-330c-4105-900a-c2a6a7fb1a55",
+      "title": "Rute Backpacker Lampung",
+      "description": "Rute awal DOLAN untuk mengenal destinasi unggulan Lampung secara efisien.",
+      "durationDays": 3,
+      "transportMode": "Transportasi umum + sewa lokal",
+      "budgetLow": 750000,
+      "budgetHigh": 3500000,
+      "stops": [
+        {
+          "day": 1,
+          "sequence": 1,
+          "name": "Taman Nasional Way Kambas",
+          "durationMinutes": 150,
+          "notes": "Mulai pagi untuk menghindari antrean dan cuaca terik."
+        },
+        {
+          "day": 1,
+          "sequence": 2,
+          "name": "Pulau Pahawang",
+          "durationMinutes": 120,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 2,
+          "sequence": 1,
+          "name": "Teluk Kiluan",
+          "durationMinutes": 150,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 2,
+          "sequence": 2,
+          "name": "Pantai Gigi Hiu",
+          "durationMinutes": 120,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 3,
+          "sequence": 1,
+          "name": "Gunung Anak Krakatau",
+          "durationMinutes": 150,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        }
+      ]
+    }
+  },
+  {
+    "slug": "dki-jakarta",
+    "name": "DKI Jakarta",
+    "capital": "Jakarta",
+    "description": "DKI Jakarta menawarkan perpaduan alam, budaya, dan kuliner lokal. Kurasi DOLAN ini menjadi titik awal perjalanan backpacker dan tetap perlu disesuaikan dengan cuaca, jam operasional, serta kondisi transportasi terbaru.",
+    "heroQuery": "Monumen Nasional, DKI Jakarta, Indonesia",
+    "featuredRank": 11,
+    "places": [
+      {
+        "name": "Monumen Nasional",
+        "city": "Jakarta",
+        "rank": 1,
+        "description": "Monumen Nasional adalah salah satu destinasi populer di DKI Jakarta. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Monumen Nasional, DKI Jakarta, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Monumen%20Nasional%2C%20DKI%20Jakarta%2C%20Indonesia"
+      },
+      {
+        "name": "Kota Tua Jakarta",
+        "city": "Jakarta",
+        "rank": 2,
+        "description": "Kota Tua Jakarta adalah salah satu destinasi populer di DKI Jakarta. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Kota Tua Jakarta, DKI Jakarta, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Kota%20Tua%20Jakarta%2C%20DKI%20Jakarta%2C%20Indonesia"
+      },
+      {
+        "name": "Museum MACAN",
+        "city": "Jakarta",
+        "rank": 3,
+        "description": "Museum MACAN adalah salah satu destinasi populer di DKI Jakarta. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Museum MACAN, DKI Jakarta, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Museum%20MACAN%2C%20DKI%20Jakarta%2C%20Indonesia"
+      },
+      {
+        "name": "Taman Mini Indonesia Indah",
+        "city": "Jakarta",
+        "rank": 4,
+        "description": "Taman Mini Indonesia Indah adalah salah satu destinasi populer di DKI Jakarta. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Taman Mini Indonesia Indah, DKI Jakarta, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Taman%20Mini%20Indonesia%20Indah%2C%20DKI%20Jakarta%2C%20Indonesia"
+      },
+      {
+        "name": "Kepulauan Seribu",
+        "city": "Jakarta",
+        "rank": 5,
+        "description": "Kepulauan Seribu adalah salah satu destinasi populer di DKI Jakarta. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Kepulauan Seribu, DKI Jakarta, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Kepulauan%20Seribu%2C%20DKI%20Jakarta%2C%20Indonesia"
+      }
+    ],
+    "template": {
+      "id": "6cbfc5b3-5344-4388-b8b7-658b69d7e5ef",
+      "title": "Rute Backpacker DKI Jakarta",
+      "description": "Rute awal DOLAN untuk mengenal destinasi unggulan DKI Jakarta secara efisien.",
+      "durationDays": 3,
+      "transportMode": "Transportasi umum + sewa lokal",
+      "budgetLow": 750000,
+      "budgetHigh": 3500000,
+      "stops": [
+        {
+          "day": 1,
+          "sequence": 1,
+          "name": "Monumen Nasional",
+          "durationMinutes": 150,
+          "notes": "Mulai pagi untuk menghindari antrean dan cuaca terik."
+        },
+        {
+          "day": 1,
+          "sequence": 2,
+          "name": "Kota Tua Jakarta",
+          "durationMinutes": 120,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 2,
+          "sequence": 1,
+          "name": "Museum MACAN",
+          "durationMinutes": 150,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 2,
+          "sequence": 2,
+          "name": "Taman Mini Indonesia Indah",
+          "durationMinutes": 120,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 3,
+          "sequence": 1,
+          "name": "Kepulauan Seribu",
+          "durationMinutes": 150,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        }
+      ]
+    }
+  },
+  {
+    "slug": "jawa-barat",
+    "name": "Jawa Barat",
+    "capital": "Bandung",
+    "description": "Jawa Barat menawarkan perpaduan alam, budaya, dan kuliner lokal. Kurasi DOLAN ini menjadi titik awal perjalanan backpacker dan tetap perlu disesuaikan dengan cuaca, jam operasional, serta kondisi transportasi terbaru.",
+    "heroQuery": "Kawah Putih, Jawa Barat, Indonesia",
+    "featuredRank": 12,
+    "places": [
+      {
+        "name": "Kawah Putih",
+        "city": "Bandung",
+        "rank": 1,
+        "description": "Kawah Putih adalah salah satu destinasi populer di Jawa Barat. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Kawah Putih, Jawa Barat, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Kawah%20Putih%2C%20Jawa%20Barat%2C%20Indonesia"
+      },
+      {
+        "name": "Tangkuban Perahu",
+        "city": "Bandung",
+        "rank": 2,
+        "description": "Tangkuban Perahu adalah salah satu destinasi populer di Jawa Barat. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Tangkuban Perahu, Jawa Barat, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Tangkuban%20Perahu%2C%20Jawa%20Barat%2C%20Indonesia"
+      },
+      {
+        "name": "Kebun Raya Bogor",
+        "city": "Bandung",
+        "rank": 3,
+        "description": "Kebun Raya Bogor adalah salah satu destinasi populer di Jawa Barat. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Kebun Raya Bogor, Jawa Barat, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Kebun%20Raya%20Bogor%2C%20Jawa%20Barat%2C%20Indonesia"
+      },
+      {
+        "name": "Green Canyon Pangandaran",
+        "city": "Bandung",
+        "rank": 4,
+        "description": "Green Canyon Pangandaran adalah salah satu destinasi populer di Jawa Barat. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Green Canyon Pangandaran, Jawa Barat, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Green%20Canyon%20Pangandaran%2C%20Jawa%20Barat%2C%20Indonesia"
+      },
+      {
+        "name": "Situ Patenggang",
+        "city": "Bandung",
+        "rank": 5,
+        "description": "Situ Patenggang adalah salah satu destinasi populer di Jawa Barat. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Situ Patenggang, Jawa Barat, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Situ%20Patenggang%2C%20Jawa%20Barat%2C%20Indonesia"
+      }
+    ],
+    "template": {
+      "id": "91241335-b4c4-4981-a6b6-69e644c88322",
+      "title": "Rute Backpacker Jawa Barat",
+      "description": "Rute awal DOLAN untuk mengenal destinasi unggulan Jawa Barat secara efisien.",
+      "durationDays": 3,
+      "transportMode": "Transportasi umum + sewa lokal",
+      "budgetLow": 750000,
+      "budgetHigh": 3500000,
+      "stops": [
+        {
+          "day": 1,
+          "sequence": 1,
+          "name": "Kawah Putih",
+          "durationMinutes": 150,
+          "notes": "Mulai pagi untuk menghindari antrean dan cuaca terik."
+        },
+        {
+          "day": 1,
+          "sequence": 2,
+          "name": "Tangkuban Perahu",
+          "durationMinutes": 120,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 2,
+          "sequence": 1,
+          "name": "Kebun Raya Bogor",
+          "durationMinutes": 150,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 2,
+          "sequence": 2,
+          "name": "Green Canyon Pangandaran",
+          "durationMinutes": 120,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 3,
+          "sequence": 1,
+          "name": "Situ Patenggang",
+          "durationMinutes": 150,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        }
+      ]
+    }
+  },
+  {
+    "slug": "banten",
+    "name": "Banten",
+    "capital": "Serang",
+    "description": "Banten menawarkan perpaduan alam, budaya, dan kuliner lokal. Kurasi DOLAN ini menjadi titik awal perjalanan backpacker dan tetap perlu disesuaikan dengan cuaca, jam operasional, serta kondisi transportasi terbaru.",
+    "heroQuery": "Taman Nasional Ujung Kulon, Banten, Indonesia",
+    "featuredRank": 13,
+    "places": [
+      {
+        "name": "Taman Nasional Ujung Kulon",
+        "city": "Serang",
+        "rank": 1,
+        "description": "Taman Nasional Ujung Kulon adalah salah satu destinasi populer di Banten. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Taman Nasional Ujung Kulon, Banten, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Taman%20Nasional%20Ujung%20Kulon%2C%20Banten%2C%20Indonesia"
+      },
+      {
+        "name": "Pantai Anyer",
+        "city": "Serang",
+        "rank": 2,
+        "description": "Pantai Anyer adalah salah satu destinasi populer di Banten. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Pantai Anyer, Banten, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Pantai%20Anyer%2C%20Banten%2C%20Indonesia"
+      },
+      {
+        "name": "Pulau Peucang",
+        "city": "Serang",
+        "rank": 3,
+        "description": "Pulau Peucang adalah salah satu destinasi populer di Banten. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Pulau Peucang, Banten, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Pulau%20Peucang%2C%20Banten%2C%20Indonesia"
+      },
+      {
+        "name": "Baduy Dalam",
+        "city": "Serang",
+        "rank": 4,
+        "description": "Baduy Dalam adalah salah satu destinasi populer di Banten. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Baduy Dalam, Banten, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Baduy%20Dalam%2C%20Banten%2C%20Indonesia"
+      },
+      {
+        "name": "Tanjung Lesung",
+        "city": "Serang",
+        "rank": 5,
+        "description": "Tanjung Lesung adalah salah satu destinasi populer di Banten. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Tanjung Lesung, Banten, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Tanjung%20Lesung%2C%20Banten%2C%20Indonesia"
+      }
+    ],
+    "template": {
+      "id": "5f6e1fa1-32e5-415f-be08-ab76505139c5",
+      "title": "Rute Backpacker Banten",
+      "description": "Rute awal DOLAN untuk mengenal destinasi unggulan Banten secara efisien.",
+      "durationDays": 3,
+      "transportMode": "Transportasi umum + sewa lokal",
+      "budgetLow": 750000,
+      "budgetHigh": 3500000,
+      "stops": [
+        {
+          "day": 1,
+          "sequence": 1,
+          "name": "Taman Nasional Ujung Kulon",
+          "durationMinutes": 150,
+          "notes": "Mulai pagi untuk menghindari antrean dan cuaca terik."
+        },
+        {
+          "day": 1,
+          "sequence": 2,
+          "name": "Pantai Anyer",
+          "durationMinutes": 120,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 2,
+          "sequence": 1,
+          "name": "Pulau Peucang",
+          "durationMinutes": 150,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 2,
+          "sequence": 2,
+          "name": "Baduy Dalam",
+          "durationMinutes": 120,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 3,
+          "sequence": 1,
+          "name": "Tanjung Lesung",
+          "durationMinutes": 150,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        }
+      ]
+    }
+  },
+  {
+    "slug": "jawa-tengah",
+    "name": "Jawa Tengah",
+    "capital": "Semarang",
+    "description": "Jawa Tengah menawarkan perpaduan alam, budaya, dan kuliner lokal. Kurasi DOLAN ini menjadi titik awal perjalanan backpacker dan tetap perlu disesuaikan dengan cuaca, jam operasional, serta kondisi transportasi terbaru.",
+    "heroQuery": "Candi Borobudur, Jawa Tengah, Indonesia",
+    "featuredRank": 14,
+    "places": [
+      {
+        "name": "Candi Borobudur",
+        "city": "Semarang",
+        "rank": 1,
+        "description": "Candi Borobudur adalah salah satu destinasi populer di Jawa Tengah. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Candi Borobudur, Jawa Tengah, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Candi%20Borobudur%2C%20Jawa%20Tengah%2C%20Indonesia"
+      },
+      {
+        "name": "Dataran Tinggi Dieng",
+        "city": "Semarang",
+        "rank": 2,
+        "description": "Dataran Tinggi Dieng adalah salah satu destinasi populer di Jawa Tengah. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Dataran Tinggi Dieng, Jawa Tengah, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Dataran%20Tinggi%20Dieng%2C%20Jawa%20Tengah%2C%20Indonesia"
+      },
+      {
+        "name": "Lawang Sewu",
+        "city": "Semarang",
+        "rank": 3,
+        "description": "Lawang Sewu adalah salah satu destinasi populer di Jawa Tengah. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Lawang Sewu, Jawa Tengah, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Lawang%20Sewu%2C%20Jawa%20Tengah%2C%20Indonesia"
+      },
+      {
+        "name": "Karimunjawa",
+        "city": "Semarang",
+        "rank": 4,
+        "description": "Karimunjawa adalah salah satu destinasi populer di Jawa Tengah. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Karimunjawa, Jawa Tengah, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Karimunjawa%2C%20Jawa%20Tengah%2C%20Indonesia"
+      },
+      {
+        "name": "Candi Prambanan",
+        "city": "Semarang",
+        "rank": 5,
+        "description": "Candi Prambanan adalah salah satu destinasi populer di Jawa Tengah. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Candi Prambanan, Jawa Tengah, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Candi%20Prambanan%2C%20Jawa%20Tengah%2C%20Indonesia"
+      }
+    ],
+    "template": {
+      "id": "9e94e2c2-8ec0-4aa6-9fc8-38bd6bfa7424",
+      "title": "Rute Backpacker Jawa Tengah",
+      "description": "Rute awal DOLAN untuk mengenal destinasi unggulan Jawa Tengah secara efisien.",
+      "durationDays": 3,
+      "transportMode": "Transportasi umum + sewa lokal",
+      "budgetLow": 750000,
+      "budgetHigh": 3500000,
+      "stops": [
+        {
+          "day": 1,
+          "sequence": 1,
+          "name": "Candi Borobudur",
+          "durationMinutes": 150,
+          "notes": "Mulai pagi untuk menghindari antrean dan cuaca terik."
+        },
+        {
+          "day": 1,
+          "sequence": 2,
+          "name": "Dataran Tinggi Dieng",
+          "durationMinutes": 120,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 2,
+          "sequence": 1,
+          "name": "Lawang Sewu",
+          "durationMinutes": 150,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 2,
+          "sequence": 2,
+          "name": "Karimunjawa",
+          "durationMinutes": 120,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 3,
+          "sequence": 1,
+          "name": "Candi Prambanan",
+          "durationMinutes": 150,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        }
+      ]
+    }
+  },
+  {
+    "slug": "di-yogyakarta",
+    "name": "DI Yogyakarta",
+    "capital": "Yogyakarta",
+    "description": "DI Yogyakarta menawarkan perpaduan alam, budaya, dan kuliner lokal. Kurasi DOLAN ini menjadi titik awal perjalanan backpacker dan tetap perlu disesuaikan dengan cuaca, jam operasional, serta kondisi transportasi terbaru.",
+    "heroQuery": "Jalan Malioboro, DI Yogyakarta, Indonesia",
+    "featuredRank": 15,
+    "places": [
+      {
+        "name": "Jalan Malioboro",
+        "city": "Yogyakarta",
+        "rank": 1,
+        "description": "Jalan Malioboro adalah salah satu destinasi populer di DI Yogyakarta. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Jalan Malioboro, DI Yogyakarta, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Jalan%20Malioboro%2C%20DI%20Yogyakarta%2C%20Indonesia"
+      },
+      {
+        "name": "Keraton Yogyakarta",
+        "city": "Yogyakarta",
+        "rank": 2,
+        "description": "Keraton Yogyakarta adalah salah satu destinasi populer di DI Yogyakarta. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Keraton Yogyakarta, DI Yogyakarta, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Keraton%20Yogyakarta%2C%20DI%20Yogyakarta%2C%20Indonesia"
+      },
+      {
+        "name": "Taman Sari",
+        "city": "Yogyakarta",
+        "rank": 3,
+        "description": "Taman Sari adalah salah satu destinasi populer di DI Yogyakarta. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Taman Sari, DI Yogyakarta, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Taman%20Sari%2C%20DI%20Yogyakarta%2C%20Indonesia"
+      },
+      {
+        "name": "Pantai Parangtritis",
+        "city": "Yogyakarta",
+        "rank": 4,
+        "description": "Pantai Parangtritis adalah salah satu destinasi populer di DI Yogyakarta. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Pantai Parangtritis, DI Yogyakarta, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Pantai%20Parangtritis%2C%20DI%20Yogyakarta%2C%20Indonesia"
+      },
+      {
+        "name": "Tebing Breksi",
+        "city": "Yogyakarta",
+        "rank": 5,
+        "description": "Tebing Breksi adalah salah satu destinasi populer di DI Yogyakarta. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Tebing Breksi, DI Yogyakarta, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Tebing%20Breksi%2C%20DI%20Yogyakarta%2C%20Indonesia"
+      }
+    ],
+    "template": {
+      "id": "ec148724-1b85-44ea-a083-3c12eb62706c",
+      "title": "Rute Backpacker DI Yogyakarta",
+      "description": "Rute awal DOLAN untuk mengenal destinasi unggulan DI Yogyakarta secara efisien.",
+      "durationDays": 3,
+      "transportMode": "Transportasi umum + sewa lokal",
+      "budgetLow": 750000,
+      "budgetHigh": 3500000,
+      "stops": [
+        {
+          "day": 1,
+          "sequence": 1,
+          "name": "Jalan Malioboro",
+          "durationMinutes": 150,
+          "notes": "Mulai pagi untuk menghindari antrean dan cuaca terik."
+        },
+        {
+          "day": 1,
+          "sequence": 2,
+          "name": "Keraton Yogyakarta",
+          "durationMinutes": 120,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 2,
+          "sequence": 1,
+          "name": "Taman Sari",
+          "durationMinutes": 150,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 2,
+          "sequence": 2,
+          "name": "Pantai Parangtritis",
+          "durationMinutes": 120,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 3,
+          "sequence": 1,
+          "name": "Tebing Breksi",
+          "durationMinutes": 150,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        }
+      ]
+    }
+  },
+  {
+    "slug": "jawa-timur",
+    "name": "Jawa Timur",
+    "capital": "Surabaya",
+    "description": "Jawa Timur menawarkan perpaduan alam, budaya, dan kuliner lokal. Kurasi DOLAN ini menjadi titik awal perjalanan backpacker dan tetap perlu disesuaikan dengan cuaca, jam operasional, serta kondisi transportasi terbaru.",
+    "heroQuery": "Gunung Bromo, Jawa Timur, Indonesia",
+    "featuredRank": 16,
+    "places": [
+      {
+        "name": "Gunung Bromo",
+        "city": "Surabaya",
+        "rank": 1,
+        "description": "Gunung Bromo adalah salah satu destinasi populer di Jawa Timur. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Gunung Bromo, Jawa Timur, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Gunung%20Bromo%2C%20Jawa%20Timur%2C%20Indonesia"
+      },
+      {
+        "name": "Kawah Ijen",
+        "city": "Surabaya",
+        "rank": 2,
+        "description": "Kawah Ijen adalah salah satu destinasi populer di Jawa Timur. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Kawah Ijen, Jawa Timur, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Kawah%20Ijen%2C%20Jawa%20Timur%2C%20Indonesia"
+      },
+      {
+        "name": "Tumpak Sewu",
+        "city": "Surabaya",
+        "rank": 3,
+        "description": "Tumpak Sewu adalah salah satu destinasi populer di Jawa Timur. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Tumpak Sewu, Jawa Timur, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Tumpak%20Sewu%2C%20Jawa%20Timur%2C%20Indonesia"
+      },
+      {
+        "name": "Taman Nasional Baluran",
+        "city": "Surabaya",
+        "rank": 4,
+        "description": "Taman Nasional Baluran adalah salah satu destinasi populer di Jawa Timur. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Taman Nasional Baluran, Jawa Timur, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Taman%20Nasional%20Baluran%2C%20Jawa%20Timur%2C%20Indonesia"
+      },
+      {
+        "name": "Pantai Papuma",
+        "city": "Surabaya",
+        "rank": 5,
+        "description": "Pantai Papuma adalah salah satu destinasi populer di Jawa Timur. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Pantai Papuma, Jawa Timur, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Pantai%20Papuma%2C%20Jawa%20Timur%2C%20Indonesia"
+      }
+    ],
+    "template": {
+      "id": "c9fe1ea7-b59f-435a-b891-e34aba2c968f",
+      "title": "Rute Backpacker Jawa Timur",
+      "description": "Rute awal DOLAN untuk mengenal destinasi unggulan Jawa Timur secara efisien.",
+      "durationDays": 3,
+      "transportMode": "Transportasi umum + sewa lokal",
+      "budgetLow": 750000,
+      "budgetHigh": 3500000,
+      "stops": [
+        {
+          "day": 1,
+          "sequence": 1,
+          "name": "Gunung Bromo",
+          "durationMinutes": 150,
+          "notes": "Mulai pagi untuk menghindari antrean dan cuaca terik."
+        },
+        {
+          "day": 1,
+          "sequence": 2,
+          "name": "Kawah Ijen",
+          "durationMinutes": 120,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 2,
+          "sequence": 1,
+          "name": "Tumpak Sewu",
+          "durationMinutes": 150,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 2,
+          "sequence": 2,
+          "name": "Taman Nasional Baluran",
+          "durationMinutes": 120,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 3,
+          "sequence": 1,
+          "name": "Pantai Papuma",
+          "durationMinutes": 150,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        }
+      ]
+    }
+  },
+  {
+    "slug": "bali",
+    "name": "Bali",
+    "capital": "Denpasar",
+    "description": "Bali menawarkan perpaduan alam, budaya, dan kuliner lokal. Kurasi DOLAN ini menjadi titik awal perjalanan backpacker dan tetap perlu disesuaikan dengan cuaca, jam operasional, serta kondisi transportasi terbaru.",
+    "heroQuery": "Pura Tanah Lot, Bali, Indonesia",
+    "featuredRank": 17,
+    "places": [
+      {
+        "name": "Pura Tanah Lot",
+        "city": "Denpasar",
+        "rank": 1,
+        "description": "Pura Tanah Lot adalah salah satu destinasi populer di Bali. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Pura Tanah Lot, Bali, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Pura%20Tanah%20Lot%2C%20Bali%2C%20Indonesia"
+      },
+      {
+        "name": "Tegallalang Rice Terrace",
+        "city": "Denpasar",
+        "rank": 2,
+        "description": "Tegallalang Rice Terrace adalah salah satu destinasi populer di Bali. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Tegallalang Rice Terrace, Bali, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Tegallalang%20Rice%20Terrace%2C%20Bali%2C%20Indonesia"
+      },
+      {
+        "name": "Pura Uluwatu",
+        "city": "Denpasar",
+        "rank": 3,
+        "description": "Pura Uluwatu adalah salah satu destinasi populer di Bali. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Pura Uluwatu, Bali, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Pura%20Uluwatu%2C%20Bali%2C%20Indonesia"
+      },
+      {
+        "name": "Nusa Penida",
+        "city": "Denpasar",
+        "rank": 4,
+        "description": "Nusa Penida adalah salah satu destinasi populer di Bali. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Nusa Penida, Bali, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Nusa%20Penida%2C%20Bali%2C%20Indonesia"
+      },
+      {
+        "name": "Gunung Batur",
+        "city": "Denpasar",
+        "rank": 5,
+        "description": "Gunung Batur adalah salah satu destinasi populer di Bali. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Gunung Batur, Bali, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Gunung%20Batur%2C%20Bali%2C%20Indonesia"
+      }
+    ],
+    "template": {
+      "id": "fc02b73b-20b5-4db9-a559-39280cbac02a",
+      "title": "Rute Backpacker Bali",
+      "description": "Rute awal DOLAN untuk mengenal destinasi unggulan Bali secara efisien.",
+      "durationDays": 3,
+      "transportMode": "Transportasi umum + sewa lokal",
+      "budgetLow": 750000,
+      "budgetHigh": 3500000,
+      "stops": [
+        {
+          "day": 1,
+          "sequence": 1,
+          "name": "Pura Tanah Lot",
+          "durationMinutes": 150,
+          "notes": "Mulai pagi untuk menghindari antrean dan cuaca terik."
+        },
+        {
+          "day": 1,
+          "sequence": 2,
+          "name": "Tegallalang Rice Terrace",
+          "durationMinutes": 120,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 2,
+          "sequence": 1,
+          "name": "Pura Uluwatu",
+          "durationMinutes": 150,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 2,
+          "sequence": 2,
+          "name": "Nusa Penida",
+          "durationMinutes": 120,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 3,
+          "sequence": 1,
+          "name": "Gunung Batur",
+          "durationMinutes": 150,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        }
+      ]
+    }
+  },
+  {
+    "slug": "nusa-tenggara-barat",
+    "name": "Nusa Tenggara Barat",
+    "capital": "Mataram",
+    "description": "Nusa Tenggara Barat menawarkan perpaduan alam, budaya, dan kuliner lokal. Kurasi DOLAN ini menjadi titik awal perjalanan backpacker dan tetap perlu disesuaikan dengan cuaca, jam operasional, serta kondisi transportasi terbaru.",
+    "heroQuery": "Gunung Rinjani, Nusa Tenggara Barat, Indonesia",
+    "featuredRank": 18,
+    "places": [
+      {
+        "name": "Gunung Rinjani",
+        "city": "Mataram",
+        "rank": 1,
+        "description": "Gunung Rinjani adalah salah satu destinasi populer di Nusa Tenggara Barat. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Gunung Rinjani, Nusa Tenggara Barat, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Gunung%20Rinjani%2C%20Nusa%20Tenggara%20Barat%2C%20Indonesia"
+      },
+      {
+        "name": "Gili Trawangan",
+        "city": "Mataram",
+        "rank": 2,
+        "description": "Gili Trawangan adalah salah satu destinasi populer di Nusa Tenggara Barat. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Gili Trawangan, Nusa Tenggara Barat, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Gili%20Trawangan%2C%20Nusa%20Tenggara%20Barat%2C%20Indonesia"
+      },
+      {
+        "name": "Pantai Kuta Mandalika",
+        "city": "Mataram",
+        "rank": 3,
+        "description": "Pantai Kuta Mandalika adalah salah satu destinasi populer di Nusa Tenggara Barat. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Pantai Kuta Mandalika, Nusa Tenggara Barat, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Pantai%20Kuta%20Mandalika%2C%20Nusa%20Tenggara%20Barat%2C%20Indonesia"
+      },
+      {
+        "name": "Desa Sade",
+        "city": "Mataram",
+        "rank": 4,
+        "description": "Desa Sade adalah salah satu destinasi populer di Nusa Tenggara Barat. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Desa Sade, Nusa Tenggara Barat, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Desa%20Sade%2C%20Nusa%20Tenggara%20Barat%2C%20Indonesia"
+      },
+      {
+        "name": "Air Terjun Tiu Kelep",
+        "city": "Mataram",
+        "rank": 5,
+        "description": "Air Terjun Tiu Kelep adalah salah satu destinasi populer di Nusa Tenggara Barat. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Air Terjun Tiu Kelep, Nusa Tenggara Barat, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Air%20Terjun%20Tiu%20Kelep%2C%20Nusa%20Tenggara%20Barat%2C%20Indonesia"
+      }
+    ],
+    "template": {
+      "id": "eb02d94e-12a2-4a19-bc63-c316eae7a40d",
+      "title": "Rute Backpacker Nusa Tenggara Barat",
+      "description": "Rute awal DOLAN untuk mengenal destinasi unggulan Nusa Tenggara Barat secara efisien.",
+      "durationDays": 3,
+      "transportMode": "Transportasi umum + sewa lokal",
+      "budgetLow": 750000,
+      "budgetHigh": 3500000,
+      "stops": [
+        {
+          "day": 1,
+          "sequence": 1,
+          "name": "Gunung Rinjani",
+          "durationMinutes": 150,
+          "notes": "Mulai pagi untuk menghindari antrean dan cuaca terik."
+        },
+        {
+          "day": 1,
+          "sequence": 2,
+          "name": "Gili Trawangan",
+          "durationMinutes": 120,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 2,
+          "sequence": 1,
+          "name": "Pantai Kuta Mandalika",
+          "durationMinutes": 150,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 2,
+          "sequence": 2,
+          "name": "Desa Sade",
+          "durationMinutes": 120,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 3,
+          "sequence": 1,
+          "name": "Air Terjun Tiu Kelep",
+          "durationMinutes": 150,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        }
+      ]
+    }
+  },
+  {
+    "slug": "nusa-tenggara-timur",
+    "name": "Nusa Tenggara Timur",
+    "capital": "Kupang",
+    "description": "Nusa Tenggara Timur menawarkan perpaduan alam, budaya, dan kuliner lokal. Kurasi DOLAN ini menjadi titik awal perjalanan backpacker dan tetap perlu disesuaikan dengan cuaca, jam operasional, serta kondisi transportasi terbaru.",
+    "heroQuery": "Pulau Padar, Nusa Tenggara Timur, Indonesia",
+    "featuredRank": 19,
+    "places": [
+      {
+        "name": "Pulau Padar",
+        "city": "Kupang",
+        "rank": 1,
+        "description": "Pulau Padar adalah salah satu destinasi populer di Nusa Tenggara Timur. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Pulau Padar, Nusa Tenggara Timur, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Pulau%20Padar%2C%20Nusa%20Tenggara%20Timur%2C%20Indonesia"
+      },
+      {
+        "name": "Taman Nasional Komodo",
+        "city": "Kupang",
+        "rank": 2,
+        "description": "Taman Nasional Komodo adalah salah satu destinasi populer di Nusa Tenggara Timur. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Taman Nasional Komodo, Nusa Tenggara Timur, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Taman%20Nasional%20Komodo%2C%20Nusa%20Tenggara%20Timur%2C%20Indonesia"
+      },
+      {
+        "name": "Danau Kelimutu",
+        "city": "Kupang",
+        "rank": 3,
+        "description": "Danau Kelimutu adalah salah satu destinasi populer di Nusa Tenggara Timur. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Danau Kelimutu, Nusa Tenggara Timur, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Danau%20Kelimutu%2C%20Nusa%20Tenggara%20Timur%2C%20Indonesia"
+      },
+      {
+        "name": "Desa Wae Rebo",
+        "city": "Kupang",
+        "rank": 4,
+        "description": "Desa Wae Rebo adalah salah satu destinasi populer di Nusa Tenggara Timur. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Desa Wae Rebo, Nusa Tenggara Timur, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Desa%20Wae%20Rebo%2C%20Nusa%20Tenggara%20Timur%2C%20Indonesia"
+      },
+      {
+        "name": "Pantai Pink Labuan Bajo",
+        "city": "Kupang",
+        "rank": 5,
+        "description": "Pantai Pink Labuan Bajo adalah salah satu destinasi populer di Nusa Tenggara Timur. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Pantai Pink Labuan Bajo, Nusa Tenggara Timur, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Pantai%20Pink%20Labuan%20Bajo%2C%20Nusa%20Tenggara%20Timur%2C%20Indonesia"
+      }
+    ],
+    "template": {
+      "id": "311fd5a4-54c0-41a9-b4ed-c2278de4e642",
+      "title": "Rute Backpacker Nusa Tenggara Timur",
+      "description": "Rute awal DOLAN untuk mengenal destinasi unggulan Nusa Tenggara Timur secara efisien.",
+      "durationDays": 3,
+      "transportMode": "Transportasi umum + sewa lokal",
+      "budgetLow": 750000,
+      "budgetHigh": 3500000,
+      "stops": [
+        {
+          "day": 1,
+          "sequence": 1,
+          "name": "Pulau Padar",
+          "durationMinutes": 150,
+          "notes": "Mulai pagi untuk menghindari antrean dan cuaca terik."
+        },
+        {
+          "day": 1,
+          "sequence": 2,
+          "name": "Taman Nasional Komodo",
+          "durationMinutes": 120,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 2,
+          "sequence": 1,
+          "name": "Danau Kelimutu",
+          "durationMinutes": 150,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 2,
+          "sequence": 2,
+          "name": "Desa Wae Rebo",
+          "durationMinutes": 120,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 3,
+          "sequence": 1,
+          "name": "Pantai Pink Labuan Bajo",
+          "durationMinutes": 150,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        }
+      ]
+    }
+  },
+  {
+    "slug": "kalimantan-barat",
+    "name": "Kalimantan Barat",
+    "capital": "Pontianak",
+    "description": "Kalimantan Barat menawarkan perpaduan alam, budaya, dan kuliner lokal. Kurasi DOLAN ini menjadi titik awal perjalanan backpacker dan tetap perlu disesuaikan dengan cuaca, jam operasional, serta kondisi transportasi terbaru.",
+    "heroQuery": "Tugu Khatulistiwa, Kalimantan Barat, Indonesia",
+    "featuredRank": 20,
+    "places": [
+      {
+        "name": "Tugu Khatulistiwa",
+        "city": "Pontianak",
+        "rank": 1,
+        "description": "Tugu Khatulistiwa adalah salah satu destinasi populer di Kalimantan Barat. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Tugu Khatulistiwa, Kalimantan Barat, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Tugu%20Khatulistiwa%2C%20Kalimantan%20Barat%2C%20Indonesia"
+      },
+      {
+        "name": "Danau Sentarum",
+        "city": "Pontianak",
+        "rank": 2,
+        "description": "Danau Sentarum adalah salah satu destinasi populer di Kalimantan Barat. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Danau Sentarum, Kalimantan Barat, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Danau%20Sentarum%2C%20Kalimantan%20Barat%2C%20Indonesia"
+      },
+      {
+        "name": "Bukit Kelam",
+        "city": "Pontianak",
+        "rank": 3,
+        "description": "Bukit Kelam adalah salah satu destinasi populer di Kalimantan Barat. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Bukit Kelam, Kalimantan Barat, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Bukit%20Kelam%2C%20Kalimantan%20Barat%2C%20Indonesia"
+      },
+      {
+        "name": "Pantai Temajuk",
+        "city": "Pontianak",
+        "rank": 4,
+        "description": "Pantai Temajuk adalah salah satu destinasi populer di Kalimantan Barat. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Pantai Temajuk, Kalimantan Barat, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Pantai%20Temajuk%2C%20Kalimantan%20Barat%2C%20Indonesia"
+      },
+      {
+        "name": "Keraton Kadriah",
+        "city": "Pontianak",
+        "rank": 5,
+        "description": "Keraton Kadriah adalah salah satu destinasi populer di Kalimantan Barat. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Keraton Kadriah, Kalimantan Barat, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Keraton%20Kadriah%2C%20Kalimantan%20Barat%2C%20Indonesia"
+      }
+    ],
+    "template": {
+      "id": "4e5db807-75e6-470b-b332-4188b323a60f",
+      "title": "Rute Backpacker Kalimantan Barat",
+      "description": "Rute awal DOLAN untuk mengenal destinasi unggulan Kalimantan Barat secara efisien.",
+      "durationDays": 3,
+      "transportMode": "Transportasi umum + sewa lokal",
+      "budgetLow": 750000,
+      "budgetHigh": 3500000,
+      "stops": [
+        {
+          "day": 1,
+          "sequence": 1,
+          "name": "Tugu Khatulistiwa",
+          "durationMinutes": 150,
+          "notes": "Mulai pagi untuk menghindari antrean dan cuaca terik."
+        },
+        {
+          "day": 1,
+          "sequence": 2,
+          "name": "Danau Sentarum",
+          "durationMinutes": 120,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 2,
+          "sequence": 1,
+          "name": "Bukit Kelam",
+          "durationMinutes": 150,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 2,
+          "sequence": 2,
+          "name": "Pantai Temajuk",
+          "durationMinutes": 120,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 3,
+          "sequence": 1,
+          "name": "Keraton Kadriah",
+          "durationMinutes": 150,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        }
+      ]
+    }
+  },
+  {
+    "slug": "kalimantan-tengah",
+    "name": "Kalimantan Tengah",
+    "capital": "Palangka Raya",
+    "description": "Kalimantan Tengah menawarkan perpaduan alam, budaya, dan kuliner lokal. Kurasi DOLAN ini menjadi titik awal perjalanan backpacker dan tetap perlu disesuaikan dengan cuaca, jam operasional, serta kondisi transportasi terbaru.",
+    "heroQuery": "Taman Nasional Tanjung Puting, Kalimantan Tengah, Indonesia",
+    "featuredRank": 21,
+    "places": [
+      {
+        "name": "Taman Nasional Tanjung Puting",
+        "city": "Palangka Raya",
+        "rank": 1,
+        "description": "Taman Nasional Tanjung Puting adalah salah satu destinasi populer di Kalimantan Tengah. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Taman Nasional Tanjung Puting, Kalimantan Tengah, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Taman%20Nasional%20Tanjung%20Puting%2C%20Kalimantan%20Tengah%2C%20Indonesia"
+      },
+      {
+        "name": "Bukit Tangkiling",
+        "city": "Palangka Raya",
+        "rank": 2,
+        "description": "Bukit Tangkiling adalah salah satu destinasi populer di Kalimantan Tengah. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Bukit Tangkiling, Kalimantan Tengah, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Bukit%20Tangkiling%2C%20Kalimantan%20Tengah%2C%20Indonesia"
+      },
+      {
+        "name": "Danau Tahai",
+        "city": "Palangka Raya",
+        "rank": 3,
+        "description": "Danau Tahai adalah salah satu destinasi populer di Kalimantan Tengah. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Danau Tahai, Kalimantan Tengah, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Danau%20Tahai%2C%20Kalimantan%20Tengah%2C%20Indonesia"
+      },
+      {
+        "name": "Taman Nasional Sebangau",
+        "city": "Palangka Raya",
+        "rank": 4,
+        "description": "Taman Nasional Sebangau adalah salah satu destinasi populer di Kalimantan Tengah. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Taman Nasional Sebangau, Kalimantan Tengah, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Taman%20Nasional%20Sebangau%2C%20Kalimantan%20Tengah%2C%20Indonesia"
+      },
+      {
+        "name": "Sungai Kahayan",
+        "city": "Palangka Raya",
+        "rank": 5,
+        "description": "Sungai Kahayan adalah salah satu destinasi populer di Kalimantan Tengah. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Sungai Kahayan, Kalimantan Tengah, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Sungai%20Kahayan%2C%20Kalimantan%20Tengah%2C%20Indonesia"
+      }
+    ],
+    "template": {
+      "id": "116b6849-11d9-413e-a022-b61cb4ffc444",
+      "title": "Rute Backpacker Kalimantan Tengah",
+      "description": "Rute awal DOLAN untuk mengenal destinasi unggulan Kalimantan Tengah secara efisien.",
+      "durationDays": 3,
+      "transportMode": "Transportasi umum + sewa lokal",
+      "budgetLow": 750000,
+      "budgetHigh": 3500000,
+      "stops": [
+        {
+          "day": 1,
+          "sequence": 1,
+          "name": "Taman Nasional Tanjung Puting",
+          "durationMinutes": 150,
+          "notes": "Mulai pagi untuk menghindari antrean dan cuaca terik."
+        },
+        {
+          "day": 1,
+          "sequence": 2,
+          "name": "Bukit Tangkiling",
+          "durationMinutes": 120,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 2,
+          "sequence": 1,
+          "name": "Danau Tahai",
+          "durationMinutes": 150,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 2,
+          "sequence": 2,
+          "name": "Taman Nasional Sebangau",
+          "durationMinutes": 120,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 3,
+          "sequence": 1,
+          "name": "Sungai Kahayan",
+          "durationMinutes": 150,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        }
+      ]
+    }
+  },
+  {
+    "slug": "kalimantan-selatan",
+    "name": "Kalimantan Selatan",
+    "capital": "Banjarmasin",
+    "description": "Kalimantan Selatan menawarkan perpaduan alam, budaya, dan kuliner lokal. Kurasi DOLAN ini menjadi titik awal perjalanan backpacker dan tetap perlu disesuaikan dengan cuaca, jam operasional, serta kondisi transportasi terbaru.",
+    "heroQuery": "Pasar Terapung Lok Baintan, Kalimantan Selatan, Indonesia",
+    "featuredRank": 22,
+    "places": [
+      {
+        "name": "Pasar Terapung Lok Baintan",
+        "city": "Banjarmasin",
+        "rank": 1,
+        "description": "Pasar Terapung Lok Baintan adalah salah satu destinasi populer di Kalimantan Selatan. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Pasar Terapung Lok Baintan, Kalimantan Selatan, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Pasar%20Terapung%20Lok%20Baintan%2C%20Kalimantan%20Selatan%2C%20Indonesia"
+      },
+      {
+        "name": "Bukit Matang Kaladan",
+        "city": "Banjarmasin",
+        "rank": 2,
+        "description": "Bukit Matang Kaladan adalah salah satu destinasi populer di Kalimantan Selatan. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Bukit Matang Kaladan, Kalimantan Selatan, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Bukit%20Matang%20Kaladan%2C%20Kalimantan%20Selatan%2C%20Indonesia"
+      },
+      {
+        "name": "Loksado",
+        "city": "Banjarmasin",
+        "rank": 3,
+        "description": "Loksado adalah salah satu destinasi populer di Kalimantan Selatan. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Loksado, Kalimantan Selatan, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Loksado%2C%20Kalimantan%20Selatan%2C%20Indonesia"
+      },
+      {
+        "name": "Pulau Kembang",
+        "city": "Banjarmasin",
+        "rank": 4,
+        "description": "Pulau Kembang adalah salah satu destinasi populer di Kalimantan Selatan. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Pulau Kembang, Kalimantan Selatan, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Pulau%20Kembang%2C%20Kalimantan%20Selatan%2C%20Indonesia"
+      },
+      {
+        "name": "Tahura Sultan Adam",
+        "city": "Banjarmasin",
+        "rank": 5,
+        "description": "Tahura Sultan Adam adalah salah satu destinasi populer di Kalimantan Selatan. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Tahura Sultan Adam, Kalimantan Selatan, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Tahura%20Sultan%20Adam%2C%20Kalimantan%20Selatan%2C%20Indonesia"
+      }
+    ],
+    "template": {
+      "id": "cc42271a-55cc-4b66-8034-06b6d6c272fd",
+      "title": "Rute Backpacker Kalimantan Selatan",
+      "description": "Rute awal DOLAN untuk mengenal destinasi unggulan Kalimantan Selatan secara efisien.",
+      "durationDays": 3,
+      "transportMode": "Transportasi umum + sewa lokal",
+      "budgetLow": 750000,
+      "budgetHigh": 3500000,
+      "stops": [
+        {
+          "day": 1,
+          "sequence": 1,
+          "name": "Pasar Terapung Lok Baintan",
+          "durationMinutes": 150,
+          "notes": "Mulai pagi untuk menghindari antrean dan cuaca terik."
+        },
+        {
+          "day": 1,
+          "sequence": 2,
+          "name": "Bukit Matang Kaladan",
+          "durationMinutes": 120,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 2,
+          "sequence": 1,
+          "name": "Loksado",
+          "durationMinutes": 150,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 2,
+          "sequence": 2,
+          "name": "Pulau Kembang",
+          "durationMinutes": 120,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 3,
+          "sequence": 1,
+          "name": "Tahura Sultan Adam",
+          "durationMinutes": 150,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        }
+      ]
+    }
+  },
+  {
+    "slug": "kalimantan-timur",
+    "name": "Kalimantan Timur",
+    "capital": "Samarinda",
+    "description": "Kalimantan Timur menawarkan perpaduan alam, budaya, dan kuliner lokal. Kurasi DOLAN ini menjadi titik awal perjalanan backpacker dan tetap perlu disesuaikan dengan cuaca, jam operasional, serta kondisi transportasi terbaru.",
+    "heroQuery": "Kepulauan Derawan, Kalimantan Timur, Indonesia",
+    "featuredRank": 23,
+    "places": [
+      {
+        "name": "Kepulauan Derawan",
+        "city": "Samarinda",
+        "rank": 1,
+        "description": "Kepulauan Derawan adalah salah satu destinasi populer di Kalimantan Timur. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Kepulauan Derawan, Kalimantan Timur, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Kepulauan%20Derawan%2C%20Kalimantan%20Timur%2C%20Indonesia"
+      },
+      {
+        "name": "Pulau Maratua",
+        "city": "Samarinda",
+        "rank": 2,
+        "description": "Pulau Maratua adalah salah satu destinasi populer di Kalimantan Timur. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Pulau Maratua, Kalimantan Timur, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Pulau%20Maratua%2C%20Kalimantan%20Timur%2C%20Indonesia"
+      },
+      {
+        "name": "Danau Labuan Cermin",
+        "city": "Samarinda",
+        "rank": 3,
+        "description": "Danau Labuan Cermin adalah salah satu destinasi populer di Kalimantan Timur. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Danau Labuan Cermin, Kalimantan Timur, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Danau%20Labuan%20Cermin%2C%20Kalimantan%20Timur%2C%20Indonesia"
+      },
+      {
+        "name": "Desa Budaya Pampang",
+        "city": "Samarinda",
+        "rank": 4,
+        "description": "Desa Budaya Pampang adalah salah satu destinasi populer di Kalimantan Timur. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Desa Budaya Pampang, Kalimantan Timur, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Desa%20Budaya%20Pampang%2C%20Kalimantan%20Timur%2C%20Indonesia"
+      },
+      {
+        "name": "Bukit Bangkirai",
+        "city": "Samarinda",
+        "rank": 5,
+        "description": "Bukit Bangkirai adalah salah satu destinasi populer di Kalimantan Timur. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Bukit Bangkirai, Kalimantan Timur, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Bukit%20Bangkirai%2C%20Kalimantan%20Timur%2C%20Indonesia"
+      }
+    ],
+    "template": {
+      "id": "c0ba33f0-e813-43dd-b1d6-1f34f6c9c6c7",
+      "title": "Rute Backpacker Kalimantan Timur",
+      "description": "Rute awal DOLAN untuk mengenal destinasi unggulan Kalimantan Timur secara efisien.",
+      "durationDays": 3,
+      "transportMode": "Transportasi umum + sewa lokal",
+      "budgetLow": 750000,
+      "budgetHigh": 3500000,
+      "stops": [
+        {
+          "day": 1,
+          "sequence": 1,
+          "name": "Kepulauan Derawan",
+          "durationMinutes": 150,
+          "notes": "Mulai pagi untuk menghindari antrean dan cuaca terik."
+        },
+        {
+          "day": 1,
+          "sequence": 2,
+          "name": "Pulau Maratua",
+          "durationMinutes": 120,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 2,
+          "sequence": 1,
+          "name": "Danau Labuan Cermin",
+          "durationMinutes": 150,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 2,
+          "sequence": 2,
+          "name": "Desa Budaya Pampang",
+          "durationMinutes": 120,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 3,
+          "sequence": 1,
+          "name": "Bukit Bangkirai",
+          "durationMinutes": 150,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        }
+      ]
+    }
+  },
+  {
+    "slug": "kalimantan-utara",
+    "name": "Kalimantan Utara",
+    "capital": "Tanjung Selor",
+    "description": "Kalimantan Utara menawarkan perpaduan alam, budaya, dan kuliner lokal. Kurasi DOLAN ini menjadi titik awal perjalanan backpacker dan tetap perlu disesuaikan dengan cuaca, jam operasional, serta kondisi transportasi terbaru.",
+    "heroQuery": "Taman Nasional Kayan Mentarang, Kalimantan Utara, Indonesia",
+    "featuredRank": 24,
+    "places": [
+      {
+        "name": "Taman Nasional Kayan Mentarang",
+        "city": "Tanjung Selor",
+        "rank": 1,
+        "description": "Taman Nasional Kayan Mentarang adalah salah satu destinasi populer di Kalimantan Utara. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Taman Nasional Kayan Mentarang, Kalimantan Utara, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Taman%20Nasional%20Kayan%20Mentarang%2C%20Kalimantan%20Utara%2C%20Indonesia"
+      },
+      {
+        "name": "Pulau Bunyu",
+        "city": "Tanjung Selor",
+        "rank": 2,
+        "description": "Pulau Bunyu adalah salah satu destinasi populer di Kalimantan Utara. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Pulau Bunyu, Kalimantan Utara, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Pulau%20Bunyu%2C%20Kalimantan%20Utara%2C%20Indonesia"
+      },
+      {
+        "name": "Pantai Amal",
+        "city": "Tanjung Selor",
+        "rank": 3,
+        "description": "Pantai Amal adalah salah satu destinasi populer di Kalimantan Utara. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Pantai Amal, Kalimantan Utara, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Pantai%20Amal%2C%20Kalimantan%20Utara%2C%20Indonesia"
+      },
+      {
+        "name": "Air Terjun Semolon",
+        "city": "Tanjung Selor",
+        "rank": 4,
+        "description": "Air Terjun Semolon adalah salah satu destinasi populer di Kalimantan Utara. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Air Terjun Semolon, Kalimantan Utara, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Air%20Terjun%20Semolon%2C%20Kalimantan%20Utara%2C%20Indonesia"
+      },
+      {
+        "name": "Hutan Mangrove Tarakan",
+        "city": "Tanjung Selor",
+        "rank": 5,
+        "description": "Hutan Mangrove Tarakan adalah salah satu destinasi populer di Kalimantan Utara. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Hutan Mangrove Tarakan, Kalimantan Utara, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Hutan%20Mangrove%20Tarakan%2C%20Kalimantan%20Utara%2C%20Indonesia"
+      }
+    ],
+    "template": {
+      "id": "a957492e-ada0-47ba-9a30-d6b5a39716e9",
+      "title": "Rute Backpacker Kalimantan Utara",
+      "description": "Rute awal DOLAN untuk mengenal destinasi unggulan Kalimantan Utara secara efisien.",
+      "durationDays": 3,
+      "transportMode": "Transportasi umum + sewa lokal",
+      "budgetLow": 750000,
+      "budgetHigh": 3500000,
+      "stops": [
+        {
+          "day": 1,
+          "sequence": 1,
+          "name": "Taman Nasional Kayan Mentarang",
+          "durationMinutes": 150,
+          "notes": "Mulai pagi untuk menghindari antrean dan cuaca terik."
+        },
+        {
+          "day": 1,
+          "sequence": 2,
+          "name": "Pulau Bunyu",
+          "durationMinutes": 120,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 2,
+          "sequence": 1,
+          "name": "Pantai Amal",
+          "durationMinutes": 150,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 2,
+          "sequence": 2,
+          "name": "Air Terjun Semolon",
+          "durationMinutes": 120,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 3,
+          "sequence": 1,
+          "name": "Hutan Mangrove Tarakan",
+          "durationMinutes": 150,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        }
+      ]
+    }
+  },
+  {
+    "slug": "sulawesi-utara",
+    "name": "Sulawesi Utara",
+    "capital": "Manado",
+    "description": "Sulawesi Utara menawarkan perpaduan alam, budaya, dan kuliner lokal. Kurasi DOLAN ini menjadi titik awal perjalanan backpacker dan tetap perlu disesuaikan dengan cuaca, jam operasional, serta kondisi transportasi terbaru.",
+    "heroQuery": "Taman Nasional Bunaken, Sulawesi Utara, Indonesia",
+    "featuredRank": 25,
+    "places": [
+      {
+        "name": "Taman Nasional Bunaken",
+        "city": "Manado",
+        "rank": 1,
+        "description": "Taman Nasional Bunaken adalah salah satu destinasi populer di Sulawesi Utara. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Taman Nasional Bunaken, Sulawesi Utara, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Taman%20Nasional%20Bunaken%2C%20Sulawesi%20Utara%2C%20Indonesia"
+      },
+      {
+        "name": "Likupang",
+        "city": "Manado",
+        "rank": 2,
+        "description": "Likupang adalah salah satu destinasi populer di Sulawesi Utara. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Likupang, Sulawesi Utara, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Likupang%2C%20Sulawesi%20Utara%2C%20Indonesia"
+      },
+      {
+        "name": "Danau Linow",
+        "city": "Manado",
+        "rank": 3,
+        "description": "Danau Linow adalah salah satu destinasi populer di Sulawesi Utara. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Danau Linow, Sulawesi Utara, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Danau%20Linow%2C%20Sulawesi%20Utara%2C%20Indonesia"
+      },
+      {
+        "name": "Gunung Lokon",
+        "city": "Manado",
+        "rank": 4,
+        "description": "Gunung Lokon adalah salah satu destinasi populer di Sulawesi Utara. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Gunung Lokon, Sulawesi Utara, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Gunung%20Lokon%2C%20Sulawesi%20Utara%2C%20Indonesia"
+      },
+      {
+        "name": "Pulau Siladen",
+        "city": "Manado",
+        "rank": 5,
+        "description": "Pulau Siladen adalah salah satu destinasi populer di Sulawesi Utara. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Pulau Siladen, Sulawesi Utara, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Pulau%20Siladen%2C%20Sulawesi%20Utara%2C%20Indonesia"
+      }
+    ],
+    "template": {
+      "id": "56981c32-5e2d-43c4-8fc7-15ce64656d59",
+      "title": "Rute Backpacker Sulawesi Utara",
+      "description": "Rute awal DOLAN untuk mengenal destinasi unggulan Sulawesi Utara secara efisien.",
+      "durationDays": 3,
+      "transportMode": "Transportasi umum + sewa lokal",
+      "budgetLow": 750000,
+      "budgetHigh": 3500000,
+      "stops": [
+        {
+          "day": 1,
+          "sequence": 1,
+          "name": "Taman Nasional Bunaken",
+          "durationMinutes": 150,
+          "notes": "Mulai pagi untuk menghindari antrean dan cuaca terik."
+        },
+        {
+          "day": 1,
+          "sequence": 2,
+          "name": "Likupang",
+          "durationMinutes": 120,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 2,
+          "sequence": 1,
+          "name": "Danau Linow",
+          "durationMinutes": 150,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 2,
+          "sequence": 2,
+          "name": "Gunung Lokon",
+          "durationMinutes": 120,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 3,
+          "sequence": 1,
+          "name": "Pulau Siladen",
+          "durationMinutes": 150,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        }
+      ]
+    }
+  },
+  {
+    "slug": "gorontalo",
+    "name": "Gorontalo",
+    "capital": "Gorontalo",
+    "description": "Gorontalo menawarkan perpaduan alam, budaya, dan kuliner lokal. Kurasi DOLAN ini menjadi titik awal perjalanan backpacker dan tetap perlu disesuaikan dengan cuaca, jam operasional, serta kondisi transportasi terbaru.",
+    "heroQuery": "Taman Laut Olele, Gorontalo, Indonesia",
+    "featuredRank": 26,
+    "places": [
+      {
+        "name": "Taman Laut Olele",
+        "city": "Gorontalo",
+        "rank": 1,
+        "description": "Taman Laut Olele adalah salah satu destinasi populer di Gorontalo. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Taman Laut Olele, Gorontalo, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Taman%20Laut%20Olele%2C%20Gorontalo%2C%20Indonesia"
+      },
+      {
+        "name": "Pulau Saronde",
+        "city": "Gorontalo",
+        "rank": 2,
+        "description": "Pulau Saronde adalah salah satu destinasi populer di Gorontalo. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Pulau Saronde, Gorontalo, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Pulau%20Saronde%2C%20Gorontalo%2C%20Indonesia"
+      },
+      {
+        "name": "Benteng Otanaha",
+        "city": "Gorontalo",
+        "rank": 3,
+        "description": "Benteng Otanaha adalah salah satu destinasi populer di Gorontalo. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Benteng Otanaha, Gorontalo, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Benteng%20Otanaha%2C%20Gorontalo%2C%20Indonesia"
+      },
+      {
+        "name": "Hiu Paus Botubarani",
+        "city": "Gorontalo",
+        "rank": 4,
+        "description": "Hiu Paus Botubarani adalah salah satu destinasi populer di Gorontalo. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Hiu Paus Botubarani, Gorontalo, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Hiu%20Paus%20Botubarani%2C%20Gorontalo%2C%20Indonesia"
+      },
+      {
+        "name": "Pantai Dunu",
+        "city": "Gorontalo",
+        "rank": 5,
+        "description": "Pantai Dunu adalah salah satu destinasi populer di Gorontalo. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Pantai Dunu, Gorontalo, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Pantai%20Dunu%2C%20Gorontalo%2C%20Indonesia"
+      }
+    ],
+    "template": {
+      "id": "14304153-b8b3-4121-9e16-dd3907b33fec",
+      "title": "Rute Backpacker Gorontalo",
+      "description": "Rute awal DOLAN untuk mengenal destinasi unggulan Gorontalo secara efisien.",
+      "durationDays": 3,
+      "transportMode": "Transportasi umum + sewa lokal",
+      "budgetLow": 750000,
+      "budgetHigh": 3500000,
+      "stops": [
+        {
+          "day": 1,
+          "sequence": 1,
+          "name": "Taman Laut Olele",
+          "durationMinutes": 150,
+          "notes": "Mulai pagi untuk menghindari antrean dan cuaca terik."
+        },
+        {
+          "day": 1,
+          "sequence": 2,
+          "name": "Pulau Saronde",
+          "durationMinutes": 120,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 2,
+          "sequence": 1,
+          "name": "Benteng Otanaha",
+          "durationMinutes": 150,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 2,
+          "sequence": 2,
+          "name": "Hiu Paus Botubarani",
+          "durationMinutes": 120,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 3,
+          "sequence": 1,
+          "name": "Pantai Dunu",
+          "durationMinutes": 150,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        }
+      ]
+    }
+  },
+  {
+    "slug": "sulawesi-tengah",
+    "name": "Sulawesi Tengah",
+    "capital": "Palu",
+    "description": "Sulawesi Tengah menawarkan perpaduan alam, budaya, dan kuliner lokal. Kurasi DOLAN ini menjadi titik awal perjalanan backpacker dan tetap perlu disesuaikan dengan cuaca, jam operasional, serta kondisi transportasi terbaru.",
+    "heroQuery": "Kepulauan Togean, Sulawesi Tengah, Indonesia",
+    "featuredRank": 27,
+    "places": [
+      {
+        "name": "Kepulauan Togean",
+        "city": "Palu",
+        "rank": 1,
+        "description": "Kepulauan Togean adalah salah satu destinasi populer di Sulawesi Tengah. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Kepulauan Togean, Sulawesi Tengah, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Kepulauan%20Togean%2C%20Sulawesi%20Tengah%2C%20Indonesia"
+      },
+      {
+        "name": "Danau Poso",
+        "city": "Palu",
+        "rank": 2,
+        "description": "Danau Poso adalah salah satu destinasi populer di Sulawesi Tengah. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Danau Poso, Sulawesi Tengah, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Danau%20Poso%2C%20Sulawesi%20Tengah%2C%20Indonesia"
+      },
+      {
+        "name": "Taman Nasional Lore Lindu",
+        "city": "Palu",
+        "rank": 3,
+        "description": "Taman Nasional Lore Lindu adalah salah satu destinasi populer di Sulawesi Tengah. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Taman Nasional Lore Lindu, Sulawesi Tengah, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Taman%20Nasional%20Lore%20Lindu%2C%20Sulawesi%20Tengah%2C%20Indonesia"
+      },
+      {
+        "name": "Pantai Tanjung Karang",
+        "city": "Palu",
+        "rank": 4,
+        "description": "Pantai Tanjung Karang adalah salah satu destinasi populer di Sulawesi Tengah. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Pantai Tanjung Karang, Sulawesi Tengah, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Pantai%20Tanjung%20Karang%2C%20Sulawesi%20Tengah%2C%20Indonesia"
+      },
+      {
+        "name": "Air Terjun Saluopa",
+        "city": "Palu",
+        "rank": 5,
+        "description": "Air Terjun Saluopa adalah salah satu destinasi populer di Sulawesi Tengah. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Air Terjun Saluopa, Sulawesi Tengah, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Air%20Terjun%20Saluopa%2C%20Sulawesi%20Tengah%2C%20Indonesia"
+      }
+    ],
+    "template": {
+      "id": "81f39b3a-19c1-4848-bb59-7ef247bf90bd",
+      "title": "Rute Backpacker Sulawesi Tengah",
+      "description": "Rute awal DOLAN untuk mengenal destinasi unggulan Sulawesi Tengah secara efisien.",
+      "durationDays": 3,
+      "transportMode": "Transportasi umum + sewa lokal",
+      "budgetLow": 750000,
+      "budgetHigh": 3500000,
+      "stops": [
+        {
+          "day": 1,
+          "sequence": 1,
+          "name": "Kepulauan Togean",
+          "durationMinutes": 150,
+          "notes": "Mulai pagi untuk menghindari antrean dan cuaca terik."
+        },
+        {
+          "day": 1,
+          "sequence": 2,
+          "name": "Danau Poso",
+          "durationMinutes": 120,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 2,
+          "sequence": 1,
+          "name": "Taman Nasional Lore Lindu",
+          "durationMinutes": 150,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 2,
+          "sequence": 2,
+          "name": "Pantai Tanjung Karang",
+          "durationMinutes": 120,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 3,
+          "sequence": 1,
+          "name": "Air Terjun Saluopa",
+          "durationMinutes": 150,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        }
+      ]
+    }
+  },
+  {
+    "slug": "sulawesi-barat",
+    "name": "Sulawesi Barat",
+    "capital": "Mamuju",
+    "description": "Sulawesi Barat menawarkan perpaduan alam, budaya, dan kuliner lokal. Kurasi DOLAN ini menjadi titik awal perjalanan backpacker dan tetap perlu disesuaikan dengan cuaca, jam operasional, serta kondisi transportasi terbaru.",
+    "heroQuery": "Pulau Karampuang, Sulawesi Barat, Indonesia",
+    "featuredRank": 28,
+    "places": [
+      {
+        "name": "Pulau Karampuang",
+        "city": "Mamuju",
+        "rank": 1,
+        "description": "Pulau Karampuang adalah salah satu destinasi populer di Sulawesi Barat. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Pulau Karampuang, Sulawesi Barat, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Pulau%20Karampuang%2C%20Sulawesi%20Barat%2C%20Indonesia"
+      },
+      {
+        "name": "Pantai Dato",
+        "city": "Mamuju",
+        "rank": 2,
+        "description": "Pantai Dato adalah salah satu destinasi populer di Sulawesi Barat. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Pantai Dato, Sulawesi Barat, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Pantai%20Dato%2C%20Sulawesi%20Barat%2C%20Indonesia"
+      },
+      {
+        "name": "Air Terjun Tamasapi",
+        "city": "Mamuju",
+        "rank": 3,
+        "description": "Air Terjun Tamasapi adalah salah satu destinasi populer di Sulawesi Barat. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Air Terjun Tamasapi, Sulawesi Barat, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Air%20Terjun%20Tamasapi%2C%20Sulawesi%20Barat%2C%20Indonesia"
+      },
+      {
+        "name": "Puncak Mamuju City",
+        "city": "Mamuju",
+        "rank": 4,
+        "description": "Puncak Mamuju City adalah salah satu destinasi populer di Sulawesi Barat. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Puncak Mamuju City, Sulawesi Barat, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Puncak%20Mamuju%20City%2C%20Sulawesi%20Barat%2C%20Indonesia"
+      },
+      {
+        "name": "Desa Adat Rambu Saratu",
+        "city": "Mamuju",
+        "rank": 5,
+        "description": "Desa Adat Rambu Saratu adalah salah satu destinasi populer di Sulawesi Barat. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Desa Adat Rambu Saratu, Sulawesi Barat, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Desa%20Adat%20Rambu%20Saratu%2C%20Sulawesi%20Barat%2C%20Indonesia"
+      }
+    ],
+    "template": {
+      "id": "d7b34a9b-8fbc-4272-9ce6-f1b00a8d5d7a",
+      "title": "Rute Backpacker Sulawesi Barat",
+      "description": "Rute awal DOLAN untuk mengenal destinasi unggulan Sulawesi Barat secara efisien.",
+      "durationDays": 3,
+      "transportMode": "Transportasi umum + sewa lokal",
+      "budgetLow": 750000,
+      "budgetHigh": 3500000,
+      "stops": [
+        {
+          "day": 1,
+          "sequence": 1,
+          "name": "Pulau Karampuang",
+          "durationMinutes": 150,
+          "notes": "Mulai pagi untuk menghindari antrean dan cuaca terik."
+        },
+        {
+          "day": 1,
+          "sequence": 2,
+          "name": "Pantai Dato",
+          "durationMinutes": 120,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 2,
+          "sequence": 1,
+          "name": "Air Terjun Tamasapi",
+          "durationMinutes": 150,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 2,
+          "sequence": 2,
+          "name": "Puncak Mamuju City",
+          "durationMinutes": 120,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 3,
+          "sequence": 1,
+          "name": "Desa Adat Rambu Saratu",
+          "durationMinutes": 150,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        }
+      ]
+    }
+  },
+  {
+    "slug": "sulawesi-selatan",
+    "name": "Sulawesi Selatan",
+    "capital": "Makassar",
+    "description": "Sulawesi Selatan menawarkan perpaduan alam, budaya, dan kuliner lokal. Kurasi DOLAN ini menjadi titik awal perjalanan backpacker dan tetap perlu disesuaikan dengan cuaca, jam operasional, serta kondisi transportasi terbaru.",
+    "heroQuery": "Tana Toraja, Sulawesi Selatan, Indonesia",
+    "featuredRank": 29,
+    "places": [
+      {
+        "name": "Tana Toraja",
+        "city": "Makassar",
+        "rank": 1,
+        "description": "Tana Toraja adalah salah satu destinasi populer di Sulawesi Selatan. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Tana Toraja, Sulawesi Selatan, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Tana%20Toraja%2C%20Sulawesi%20Selatan%2C%20Indonesia"
+      },
+      {
+        "name": "Pantai Losari",
+        "city": "Makassar",
+        "rank": 2,
+        "description": "Pantai Losari adalah salah satu destinasi populer di Sulawesi Selatan. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Pantai Losari, Sulawesi Selatan, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Pantai%20Losari%2C%20Sulawesi%20Selatan%2C%20Indonesia"
+      },
+      {
+        "name": "Rammang-Rammang",
+        "city": "Makassar",
+        "rank": 3,
+        "description": "Rammang-Rammang adalah salah satu destinasi populer di Sulawesi Selatan. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Rammang-Rammang, Sulawesi Selatan, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Rammang-Rammang%2C%20Sulawesi%20Selatan%2C%20Indonesia"
+      },
+      {
+        "name": "Tanjung Bira",
+        "city": "Makassar",
+        "rank": 4,
+        "description": "Tanjung Bira adalah salah satu destinasi populer di Sulawesi Selatan. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Tanjung Bira, Sulawesi Selatan, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Tanjung%20Bira%2C%20Sulawesi%20Selatan%2C%20Indonesia"
+      },
+      {
+        "name": "Benteng Rotterdam",
+        "city": "Makassar",
+        "rank": 5,
+        "description": "Benteng Rotterdam adalah salah satu destinasi populer di Sulawesi Selatan. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Benteng Rotterdam, Sulawesi Selatan, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Benteng%20Rotterdam%2C%20Sulawesi%20Selatan%2C%20Indonesia"
+      }
+    ],
+    "template": {
+      "id": "2bd7219b-8034-4e47-a0c6-ed9c8b0df15e",
+      "title": "Rute Backpacker Sulawesi Selatan",
+      "description": "Rute awal DOLAN untuk mengenal destinasi unggulan Sulawesi Selatan secara efisien.",
+      "durationDays": 3,
+      "transportMode": "Transportasi umum + sewa lokal",
+      "budgetLow": 750000,
+      "budgetHigh": 3500000,
+      "stops": [
+        {
+          "day": 1,
+          "sequence": 1,
+          "name": "Tana Toraja",
+          "durationMinutes": 150,
+          "notes": "Mulai pagi untuk menghindari antrean dan cuaca terik."
+        },
+        {
+          "day": 1,
+          "sequence": 2,
+          "name": "Pantai Losari",
+          "durationMinutes": 120,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 2,
+          "sequence": 1,
+          "name": "Rammang-Rammang",
+          "durationMinutes": 150,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 2,
+          "sequence": 2,
+          "name": "Tanjung Bira",
+          "durationMinutes": 120,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 3,
+          "sequence": 1,
+          "name": "Benteng Rotterdam",
+          "durationMinutes": 150,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        }
+      ]
+    }
+  },
+  {
+    "slug": "sulawesi-tenggara",
+    "name": "Sulawesi Tenggara",
+    "capital": "Kendari",
+    "description": "Sulawesi Tenggara menawarkan perpaduan alam, budaya, dan kuliner lokal. Kurasi DOLAN ini menjadi titik awal perjalanan backpacker dan tetap perlu disesuaikan dengan cuaca, jam operasional, serta kondisi transportasi terbaru.",
+    "heroQuery": "Wakatobi, Sulawesi Tenggara, Indonesia",
+    "featuredRank": 30,
+    "places": [
+      {
+        "name": "Wakatobi",
+        "city": "Kendari",
+        "rank": 1,
+        "description": "Wakatobi adalah salah satu destinasi populer di Sulawesi Tenggara. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Wakatobi, Sulawesi Tenggara, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Wakatobi%2C%20Sulawesi%20Tenggara%2C%20Indonesia"
+      },
+      {
+        "name": "Pulau Labengki",
+        "city": "Kendari",
+        "rank": 2,
+        "description": "Pulau Labengki adalah salah satu destinasi populer di Sulawesi Tenggara. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Pulau Labengki, Sulawesi Tenggara, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Pulau%20Labengki%2C%20Sulawesi%20Tenggara%2C%20Indonesia"
+      },
+      {
+        "name": "Pantai Nambo",
+        "city": "Kendari",
+        "rank": 3,
+        "description": "Pantai Nambo adalah salah satu destinasi populer di Sulawesi Tenggara. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Pantai Nambo, Sulawesi Tenggara, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Pantai%20Nambo%2C%20Sulawesi%20Tenggara%2C%20Indonesia"
+      },
+      {
+        "name": "Air Terjun Moramo",
+        "city": "Kendari",
+        "rank": 4,
+        "description": "Air Terjun Moramo adalah salah satu destinasi populer di Sulawesi Tenggara. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Air Terjun Moramo, Sulawesi Tenggara, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Air%20Terjun%20Moramo%2C%20Sulawesi%20Tenggara%2C%20Indonesia"
+      },
+      {
+        "name": "Benteng Keraton Buton",
+        "city": "Kendari",
+        "rank": 5,
+        "description": "Benteng Keraton Buton adalah salah satu destinasi populer di Sulawesi Tenggara. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Benteng Keraton Buton, Sulawesi Tenggara, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Benteng%20Keraton%20Buton%2C%20Sulawesi%20Tenggara%2C%20Indonesia"
+      }
+    ],
+    "template": {
+      "id": "4f0f776d-5ba2-4526-a023-537297caa237",
+      "title": "Rute Backpacker Sulawesi Tenggara",
+      "description": "Rute awal DOLAN untuk mengenal destinasi unggulan Sulawesi Tenggara secara efisien.",
+      "durationDays": 3,
+      "transportMode": "Transportasi umum + sewa lokal",
+      "budgetLow": 750000,
+      "budgetHigh": 3500000,
+      "stops": [
+        {
+          "day": 1,
+          "sequence": 1,
+          "name": "Wakatobi",
+          "durationMinutes": 150,
+          "notes": "Mulai pagi untuk menghindari antrean dan cuaca terik."
+        },
+        {
+          "day": 1,
+          "sequence": 2,
+          "name": "Pulau Labengki",
+          "durationMinutes": 120,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 2,
+          "sequence": 1,
+          "name": "Pantai Nambo",
+          "durationMinutes": 150,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 2,
+          "sequence": 2,
+          "name": "Air Terjun Moramo",
+          "durationMinutes": 120,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 3,
+          "sequence": 1,
+          "name": "Benteng Keraton Buton",
+          "durationMinutes": 150,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        }
+      ]
+    }
+  },
+  {
+    "slug": "maluku",
+    "name": "Maluku",
+    "capital": "Ambon",
+    "description": "Maluku menawarkan perpaduan alam, budaya, dan kuliner lokal. Kurasi DOLAN ini menjadi titik awal perjalanan backpacker dan tetap perlu disesuaikan dengan cuaca, jam operasional, serta kondisi transportasi terbaru.",
+    "heroQuery": "Pantai Ora, Maluku, Indonesia",
+    "featuredRank": 31,
+    "places": [
+      {
+        "name": "Pantai Ora",
+        "city": "Ambon",
+        "rank": 1,
+        "description": "Pantai Ora adalah salah satu destinasi populer di Maluku. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Pantai Ora, Maluku, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Pantai%20Ora%2C%20Maluku%2C%20Indonesia"
+      },
+      {
+        "name": "Kepulauan Banda",
+        "city": "Ambon",
+        "rank": 2,
+        "description": "Kepulauan Banda adalah salah satu destinasi populer di Maluku. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Kepulauan Banda, Maluku, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Kepulauan%20Banda%2C%20Maluku%2C%20Indonesia"
+      },
+      {
+        "name": "Pantai Natsepa",
+        "city": "Ambon",
+        "rank": 3,
+        "description": "Pantai Natsepa adalah salah satu destinasi populer di Maluku. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Pantai Natsepa, Maluku, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Pantai%20Natsepa%2C%20Maluku%2C%20Indonesia"
+      },
+      {
+        "name": "Benteng Amsterdam",
+        "city": "Ambon",
+        "rank": 4,
+        "description": "Benteng Amsterdam adalah salah satu destinasi populer di Maluku. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Benteng Amsterdam, Maluku, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Benteng%20Amsterdam%2C%20Maluku%2C%20Indonesia"
+      },
+      {
+        "name": "Pulau Kei",
+        "city": "Ambon",
+        "rank": 5,
+        "description": "Pulau Kei adalah salah satu destinasi populer di Maluku. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Pulau Kei, Maluku, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Pulau%20Kei%2C%20Maluku%2C%20Indonesia"
+      }
+    ],
+    "template": {
+      "id": "43783781-fa93-441c-aabc-197cf66ea021",
+      "title": "Rute Backpacker Maluku",
+      "description": "Rute awal DOLAN untuk mengenal destinasi unggulan Maluku secara efisien.",
+      "durationDays": 3,
+      "transportMode": "Transportasi umum + sewa lokal",
+      "budgetLow": 750000,
+      "budgetHigh": 3500000,
+      "stops": [
+        {
+          "day": 1,
+          "sequence": 1,
+          "name": "Pantai Ora",
+          "durationMinutes": 150,
+          "notes": "Mulai pagi untuk menghindari antrean dan cuaca terik."
+        },
+        {
+          "day": 1,
+          "sequence": 2,
+          "name": "Kepulauan Banda",
+          "durationMinutes": 120,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 2,
+          "sequence": 1,
+          "name": "Pantai Natsepa",
+          "durationMinutes": 150,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 2,
+          "sequence": 2,
+          "name": "Benteng Amsterdam",
+          "durationMinutes": 120,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 3,
+          "sequence": 1,
+          "name": "Pulau Kei",
+          "durationMinutes": 150,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        }
+      ]
+    }
+  },
+  {
+    "slug": "maluku-utara",
+    "name": "Maluku Utara",
+    "capital": "Sofifi",
+    "description": "Maluku Utara menawarkan perpaduan alam, budaya, dan kuliner lokal. Kurasi DOLAN ini menjadi titik awal perjalanan backpacker dan tetap perlu disesuaikan dengan cuaca, jam operasional, serta kondisi transportasi terbaru.",
+    "heroQuery": "Pulau Morotai, Maluku Utara, Indonesia",
+    "featuredRank": 32,
+    "places": [
+      {
+        "name": "Pulau Morotai",
+        "city": "Sofifi",
+        "rank": 1,
+        "description": "Pulau Morotai adalah salah satu destinasi populer di Maluku Utara. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Pulau Morotai, Maluku Utara, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Pulau%20Morotai%2C%20Maluku%20Utara%2C%20Indonesia"
+      },
+      {
+        "name": "Danau Tolire",
+        "city": "Sofifi",
+        "rank": 2,
+        "description": "Danau Tolire adalah salah satu destinasi populer di Maluku Utara. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Danau Tolire, Maluku Utara, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Danau%20Tolire%2C%20Maluku%20Utara%2C%20Indonesia"
+      },
+      {
+        "name": "Gunung Gamalama",
+        "city": "Sofifi",
+        "rank": 3,
+        "description": "Gunung Gamalama adalah salah satu destinasi populer di Maluku Utara. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Gunung Gamalama, Maluku Utara, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Gunung%20Gamalama%2C%20Maluku%20Utara%2C%20Indonesia"
+      },
+      {
+        "name": "Pantai Sulamadaha",
+        "city": "Sofifi",
+        "rank": 4,
+        "description": "Pantai Sulamadaha adalah salah satu destinasi populer di Maluku Utara. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Pantai Sulamadaha, Maluku Utara, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Pantai%20Sulamadaha%2C%20Maluku%20Utara%2C%20Indonesia"
+      },
+      {
+        "name": "Benteng Oranje",
+        "city": "Sofifi",
+        "rank": 5,
+        "description": "Benteng Oranje adalah salah satu destinasi populer di Maluku Utara. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Benteng Oranje, Maluku Utara, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Benteng%20Oranje%2C%20Maluku%20Utara%2C%20Indonesia"
+      }
+    ],
+    "template": {
+      "id": "085aa361-83e1-4eb0-ae1a-30e404befed6",
+      "title": "Rute Backpacker Maluku Utara",
+      "description": "Rute awal DOLAN untuk mengenal destinasi unggulan Maluku Utara secara efisien.",
+      "durationDays": 3,
+      "transportMode": "Transportasi umum + sewa lokal",
+      "budgetLow": 750000,
+      "budgetHigh": 3500000,
+      "stops": [
+        {
+          "day": 1,
+          "sequence": 1,
+          "name": "Pulau Morotai",
+          "durationMinutes": 150,
+          "notes": "Mulai pagi untuk menghindari antrean dan cuaca terik."
+        },
+        {
+          "day": 1,
+          "sequence": 2,
+          "name": "Danau Tolire",
+          "durationMinutes": 120,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 2,
+          "sequence": 1,
+          "name": "Gunung Gamalama",
+          "durationMinutes": 150,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 2,
+          "sequence": 2,
+          "name": "Pantai Sulamadaha",
+          "durationMinutes": 120,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 3,
+          "sequence": 1,
+          "name": "Benteng Oranje",
+          "durationMinutes": 150,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        }
+      ]
+    }
+  },
+  {
+    "slug": "papua-barat",
+    "name": "Papua Barat",
+    "capital": "Manokwari",
+    "description": "Papua Barat menawarkan perpaduan alam, budaya, dan kuliner lokal. Kurasi DOLAN ini menjadi titik awal perjalanan backpacker dan tetap perlu disesuaikan dengan cuaca, jam operasional, serta kondisi transportasi terbaru.",
+    "heroQuery": "Pegunungan Arfak, Papua Barat, Indonesia",
+    "featuredRank": 33,
+    "places": [
+      {
+        "name": "Pegunungan Arfak",
+        "city": "Manokwari",
+        "rank": 1,
+        "description": "Pegunungan Arfak adalah salah satu destinasi populer di Papua Barat. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Pegunungan Arfak, Papua Barat, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Pegunungan%20Arfak%2C%20Papua%20Barat%2C%20Indonesia"
+      },
+      {
+        "name": "Pulau Mansinam",
+        "city": "Manokwari",
+        "rank": 2,
+        "description": "Pulau Mansinam adalah salah satu destinasi populer di Papua Barat. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Pulau Mansinam, Papua Barat, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Pulau%20Mansinam%2C%20Papua%20Barat%2C%20Indonesia"
+      },
+      {
+        "name": "Pantai Pasir Putih Manokwari",
+        "city": "Manokwari",
+        "rank": 3,
+        "description": "Pantai Pasir Putih Manokwari adalah salah satu destinasi populer di Papua Barat. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Pantai Pasir Putih Manokwari, Papua Barat, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Pantai%20Pasir%20Putih%20Manokwari%2C%20Papua%20Barat%2C%20Indonesia"
+      },
+      {
+        "name": "Danau Anggi",
+        "city": "Manokwari",
+        "rank": 4,
+        "description": "Danau Anggi adalah salah satu destinasi populer di Papua Barat. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Danau Anggi, Papua Barat, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Danau%20Anggi%2C%20Papua%20Barat%2C%20Indonesia"
+      },
+      {
+        "name": "Teluk Doreri",
+        "city": "Manokwari",
+        "rank": 5,
+        "description": "Teluk Doreri adalah salah satu destinasi populer di Papua Barat. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Teluk Doreri, Papua Barat, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Teluk%20Doreri%2C%20Papua%20Barat%2C%20Indonesia"
+      }
+    ],
+    "template": {
+      "id": "c6855af6-e695-4d25-8788-938ea51d2143",
+      "title": "Rute Backpacker Papua Barat",
+      "description": "Rute awal DOLAN untuk mengenal destinasi unggulan Papua Barat secara efisien.",
+      "durationDays": 3,
+      "transportMode": "Transportasi umum + sewa lokal",
+      "budgetLow": 750000,
+      "budgetHigh": 3500000,
+      "stops": [
+        {
+          "day": 1,
+          "sequence": 1,
+          "name": "Pegunungan Arfak",
+          "durationMinutes": 150,
+          "notes": "Mulai pagi untuk menghindari antrean dan cuaca terik."
+        },
+        {
+          "day": 1,
+          "sequence": 2,
+          "name": "Pulau Mansinam",
+          "durationMinutes": 120,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 2,
+          "sequence": 1,
+          "name": "Pantai Pasir Putih Manokwari",
+          "durationMinutes": 150,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 2,
+          "sequence": 2,
+          "name": "Danau Anggi",
+          "durationMinutes": 120,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 3,
+          "sequence": 1,
+          "name": "Teluk Doreri",
+          "durationMinutes": 150,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        }
+      ]
+    }
+  },
+  {
+    "slug": "papua-barat-daya",
+    "name": "Papua Barat Daya",
+    "capital": "Sorong",
+    "description": "Papua Barat Daya menawarkan perpaduan alam, budaya, dan kuliner lokal. Kurasi DOLAN ini menjadi titik awal perjalanan backpacker dan tetap perlu disesuaikan dengan cuaca, jam operasional, serta kondisi transportasi terbaru.",
+    "heroQuery": "Raja Ampat, Papua Barat Daya, Indonesia",
+    "featuredRank": 34,
+    "places": [
+      {
+        "name": "Raja Ampat",
+        "city": "Sorong",
+        "rank": 1,
+        "description": "Raja Ampat adalah salah satu destinasi populer di Papua Barat Daya. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Raja Ampat, Papua Barat Daya, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Raja%20Ampat%2C%20Papua%20Barat%20Daya%2C%20Indonesia"
+      },
+      {
+        "name": "Piaynemo",
+        "city": "Sorong",
+        "rank": 2,
+        "description": "Piaynemo adalah salah satu destinasi populer di Papua Barat Daya. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Piaynemo, Papua Barat Daya, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Piaynemo%2C%20Papua%20Barat%20Daya%2C%20Indonesia"
+      },
+      {
+        "name": "Wayag",
+        "city": "Sorong",
+        "rank": 3,
+        "description": "Wayag adalah salah satu destinasi populer di Papua Barat Daya. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Wayag, Papua Barat Daya, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Wayag%2C%20Papua%20Barat%20Daya%2C%20Indonesia"
+      },
+      {
+        "name": "Desa Wisata Arborek",
+        "city": "Sorong",
+        "rank": 4,
+        "description": "Desa Wisata Arborek adalah salah satu destinasi populer di Papua Barat Daya. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Desa Wisata Arborek, Papua Barat Daya, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Desa%20Wisata%20Arborek%2C%20Papua%20Barat%20Daya%2C%20Indonesia"
+      },
+      {
+        "name": "Pulau Misool",
+        "city": "Sorong",
+        "rank": 5,
+        "description": "Pulau Misool adalah salah satu destinasi populer di Papua Barat Daya. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Pulau Misool, Papua Barat Daya, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Pulau%20Misool%2C%20Papua%20Barat%20Daya%2C%20Indonesia"
+      }
+    ],
+    "template": {
+      "id": "0983c88b-76cd-4872-bb44-c80f552b181f",
+      "title": "Rute Backpacker Papua Barat Daya",
+      "description": "Rute awal DOLAN untuk mengenal destinasi unggulan Papua Barat Daya secara efisien.",
+      "durationDays": 3,
+      "transportMode": "Transportasi umum + sewa lokal",
+      "budgetLow": 750000,
+      "budgetHigh": 3500000,
+      "stops": [
+        {
+          "day": 1,
+          "sequence": 1,
+          "name": "Raja Ampat",
+          "durationMinutes": 150,
+          "notes": "Mulai pagi untuk menghindari antrean dan cuaca terik."
+        },
+        {
+          "day": 1,
+          "sequence": 2,
+          "name": "Piaynemo",
+          "durationMinutes": 120,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 2,
+          "sequence": 1,
+          "name": "Wayag",
+          "durationMinutes": 150,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 2,
+          "sequence": 2,
+          "name": "Desa Wisata Arborek",
+          "durationMinutes": 120,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 3,
+          "sequence": 1,
+          "name": "Pulau Misool",
+          "durationMinutes": 150,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        }
+      ]
+    }
+  },
+  {
+    "slug": "papua",
+    "name": "Papua",
+    "capital": "Jayapura",
+    "description": "Papua menawarkan perpaduan alam, budaya, dan kuliner lokal. Kurasi DOLAN ini menjadi titik awal perjalanan backpacker dan tetap perlu disesuaikan dengan cuaca, jam operasional, serta kondisi transportasi terbaru.",
+    "heroQuery": "Danau Sentani, Papua, Indonesia",
+    "featuredRank": 35,
+    "places": [
+      {
+        "name": "Danau Sentani",
+        "city": "Jayapura",
+        "rank": 1,
+        "description": "Danau Sentani adalah salah satu destinasi populer di Papua. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Danau Sentani, Papua, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Danau%20Sentani%2C%20Papua%2C%20Indonesia"
+      },
+      {
+        "name": "Pantai Base-G",
+        "city": "Jayapura",
+        "rank": 2,
+        "description": "Pantai Base-G adalah salah satu destinasi populer di Papua. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Pantai Base-G, Papua, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Pantai%20Base-G%2C%20Papua%2C%20Indonesia"
+      },
+      {
+        "name": "Bukit Teletubbies Jayapura",
+        "city": "Jayapura",
+        "rank": 3,
+        "description": "Bukit Teletubbies Jayapura adalah salah satu destinasi populer di Papua. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Bukit Teletubbies Jayapura, Papua, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Bukit%20Teletubbies%20Jayapura%2C%20Papua%2C%20Indonesia"
+      },
+      {
+        "name": "Desa Wisata Asei",
+        "city": "Jayapura",
+        "rank": 4,
+        "description": "Desa Wisata Asei adalah salah satu destinasi populer di Papua. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Desa Wisata Asei, Papua, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Desa%20Wisata%20Asei%2C%20Papua%2C%20Indonesia"
+      },
+      {
+        "name": "Pegunungan Cycloop",
+        "city": "Jayapura",
+        "rank": 5,
+        "description": "Pegunungan Cycloop adalah salah satu destinasi populer di Papua. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Pegunungan Cycloop, Papua, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Pegunungan%20Cycloop%2C%20Papua%2C%20Indonesia"
+      }
+    ],
+    "template": {
+      "id": "06563cd6-d2f9-4393-b8ac-5cb232fae485",
+      "title": "Rute Backpacker Papua",
+      "description": "Rute awal DOLAN untuk mengenal destinasi unggulan Papua secara efisien.",
+      "durationDays": 3,
+      "transportMode": "Transportasi umum + sewa lokal",
+      "budgetLow": 750000,
+      "budgetHigh": 3500000,
+      "stops": [
+        {
+          "day": 1,
+          "sequence": 1,
+          "name": "Danau Sentani",
+          "durationMinutes": 150,
+          "notes": "Mulai pagi untuk menghindari antrean dan cuaca terik."
+        },
+        {
+          "day": 1,
+          "sequence": 2,
+          "name": "Pantai Base-G",
+          "durationMinutes": 120,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 2,
+          "sequence": 1,
+          "name": "Bukit Teletubbies Jayapura",
+          "durationMinutes": 150,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 2,
+          "sequence": 2,
+          "name": "Desa Wisata Asei",
+          "durationMinutes": 120,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 3,
+          "sequence": 1,
+          "name": "Pegunungan Cycloop",
+          "durationMinutes": 150,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        }
+      ]
+    }
+  },
+  {
+    "slug": "papua-selatan",
+    "name": "Papua Selatan",
+    "capital": "Merauke",
+    "description": "Papua Selatan menawarkan perpaduan alam, budaya, dan kuliner lokal. Kurasi DOLAN ini menjadi titik awal perjalanan backpacker dan tetap perlu disesuaikan dengan cuaca, jam operasional, serta kondisi transportasi terbaru.",
+    "heroQuery": "Taman Nasional Wasur, Papua Selatan, Indonesia",
+    "featuredRank": 36,
+    "places": [
+      {
+        "name": "Taman Nasional Wasur",
+        "city": "Merauke",
+        "rank": 1,
+        "description": "Taman Nasional Wasur adalah salah satu destinasi populer di Papua Selatan. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Taman Nasional Wasur, Papua Selatan, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Taman%20Nasional%20Wasur%2C%20Papua%20Selatan%2C%20Indonesia"
+      },
+      {
+        "name": "Pantai Lampu Satu",
+        "city": "Merauke",
+        "rank": 2,
+        "description": "Pantai Lampu Satu adalah salah satu destinasi populer di Papua Selatan. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Pantai Lampu Satu, Papua Selatan, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Pantai%20Lampu%20Satu%2C%20Papua%20Selatan%2C%20Indonesia"
+      },
+      {
+        "name": "Monumen Kapsul Waktu",
+        "city": "Merauke",
+        "rank": 3,
+        "description": "Monumen Kapsul Waktu adalah salah satu destinasi populer di Papua Selatan. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Monumen Kapsul Waktu, Papua Selatan, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Monumen%20Kapsul%20Waktu%2C%20Papua%20Selatan%2C%20Indonesia"
+      },
+      {
+        "name": "Musamus Merauke",
+        "city": "Merauke",
+        "rank": 4,
+        "description": "Musamus Merauke adalah salah satu destinasi populer di Papua Selatan. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Musamus Merauke, Papua Selatan, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Musamus%20Merauke%2C%20Papua%20Selatan%2C%20Indonesia"
+      },
+      {
+        "name": "Sota Perbatasan RI-PNG",
+        "city": "Merauke",
+        "rank": 5,
+        "description": "Sota Perbatasan RI-PNG adalah salah satu destinasi populer di Papua Selatan. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Sota Perbatasan RI-PNG, Papua Selatan, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Sota%20Perbatasan%20RI-PNG%2C%20Papua%20Selatan%2C%20Indonesia"
+      }
+    ],
+    "template": {
+      "id": "689685d0-d02a-4707-bdfe-46176d2f6acc",
+      "title": "Rute Backpacker Papua Selatan",
+      "description": "Rute awal DOLAN untuk mengenal destinasi unggulan Papua Selatan secara efisien.",
+      "durationDays": 3,
+      "transportMode": "Transportasi umum + sewa lokal",
+      "budgetLow": 750000,
+      "budgetHigh": 3500000,
+      "stops": [
+        {
+          "day": 1,
+          "sequence": 1,
+          "name": "Taman Nasional Wasur",
+          "durationMinutes": 150,
+          "notes": "Mulai pagi untuk menghindari antrean dan cuaca terik."
+        },
+        {
+          "day": 1,
+          "sequence": 2,
+          "name": "Pantai Lampu Satu",
+          "durationMinutes": 120,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 2,
+          "sequence": 1,
+          "name": "Monumen Kapsul Waktu",
+          "durationMinutes": 150,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 2,
+          "sequence": 2,
+          "name": "Musamus Merauke",
+          "durationMinutes": 120,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 3,
+          "sequence": 1,
+          "name": "Sota Perbatasan RI-PNG",
+          "durationMinutes": 150,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        }
+      ]
+    }
+  },
+  {
+    "slug": "papua-tengah",
+    "name": "Papua Tengah",
+    "capital": "Nabire",
+    "description": "Papua Tengah menawarkan perpaduan alam, budaya, dan kuliner lokal. Kurasi DOLAN ini menjadi titik awal perjalanan backpacker dan tetap perlu disesuaikan dengan cuaca, jam operasional, serta kondisi transportasi terbaru.",
+    "heroQuery": "Taman Nasional Teluk Cenderawasih, Papua Tengah, Indonesia",
+    "featuredRank": 37,
+    "places": [
+      {
+        "name": "Taman Nasional Teluk Cenderawasih",
+        "city": "Nabire",
+        "rank": 1,
+        "description": "Taman Nasional Teluk Cenderawasih adalah salah satu destinasi populer di Papua Tengah. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Taman Nasional Teluk Cenderawasih, Papua Tengah, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Taman%20Nasional%20Teluk%20Cenderawasih%2C%20Papua%20Tengah%2C%20Indonesia"
+      },
+      {
+        "name": "Pantai Nabire",
+        "city": "Nabire",
+        "rank": 2,
+        "description": "Pantai Nabire adalah salah satu destinasi populer di Papua Tengah. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Pantai Nabire, Papua Tengah, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Pantai%20Nabire%2C%20Papua%20Tengah%2C%20Indonesia"
+      },
+      {
+        "name": "Danau Paniai",
+        "city": "Nabire",
+        "rank": 3,
+        "description": "Danau Paniai adalah salah satu destinasi populer di Papua Tengah. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Danau Paniai, Papua Tengah, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Danau%20Paniai%2C%20Papua%20Tengah%2C%20Indonesia"
+      },
+      {
+        "name": "Air Terjun Bihewa",
+        "city": "Nabire",
+        "rank": 4,
+        "description": "Air Terjun Bihewa adalah salah satu destinasi populer di Papua Tengah. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Air Terjun Bihewa, Papua Tengah, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Air%20Terjun%20Bihewa%2C%20Papua%20Tengah%2C%20Indonesia"
+      },
+      {
+        "name": "Pulau Ahe",
+        "city": "Nabire",
+        "rank": 5,
+        "description": "Pulau Ahe adalah salah satu destinasi populer di Papua Tengah. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Pulau Ahe, Papua Tengah, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Pulau%20Ahe%2C%20Papua%20Tengah%2C%20Indonesia"
+      }
+    ],
+    "template": {
+      "id": "4dfa2c5b-53d9-4f6c-bc80-8cc4ac16a2fc",
+      "title": "Rute Backpacker Papua Tengah",
+      "description": "Rute awal DOLAN untuk mengenal destinasi unggulan Papua Tengah secara efisien.",
+      "durationDays": 3,
+      "transportMode": "Transportasi umum + sewa lokal",
+      "budgetLow": 750000,
+      "budgetHigh": 3500000,
+      "stops": [
+        {
+          "day": 1,
+          "sequence": 1,
+          "name": "Taman Nasional Teluk Cenderawasih",
+          "durationMinutes": 150,
+          "notes": "Mulai pagi untuk menghindari antrean dan cuaca terik."
+        },
+        {
+          "day": 1,
+          "sequence": 2,
+          "name": "Pantai Nabire",
+          "durationMinutes": 120,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 2,
+          "sequence": 1,
+          "name": "Danau Paniai",
+          "durationMinutes": 150,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 2,
+          "sequence": 2,
+          "name": "Air Terjun Bihewa",
+          "durationMinutes": 120,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 3,
+          "sequence": 1,
+          "name": "Pulau Ahe",
+          "durationMinutes": 150,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        }
+      ]
+    }
+  },
+  {
+    "slug": "papua-pegunungan",
+    "name": "Papua Pegunungan",
+    "capital": "Wamena",
+    "description": "Papua Pegunungan menawarkan perpaduan alam, budaya, dan kuliner lokal. Kurasi DOLAN ini menjadi titik awal perjalanan backpacker dan tetap perlu disesuaikan dengan cuaca, jam operasional, serta kondisi transportasi terbaru.",
+    "heroQuery": "Lembah Baliem, Papua Pegunungan, Indonesia",
+    "featuredRank": 38,
+    "places": [
+      {
+        "name": "Lembah Baliem",
+        "city": "Wamena",
+        "rank": 1,
+        "description": "Lembah Baliem adalah salah satu destinasi populer di Papua Pegunungan. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Lembah Baliem, Papua Pegunungan, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Lembah%20Baliem%2C%20Papua%20Pegunungan%2C%20Indonesia"
+      },
+      {
+        "name": "Danau Habema",
+        "city": "Wamena",
+        "rank": 2,
+        "description": "Danau Habema adalah salah satu destinasi populer di Papua Pegunungan. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Danau Habema, Papua Pegunungan, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Danau%20Habema%2C%20Papua%20Pegunungan%2C%20Indonesia"
+      },
+      {
+        "name": "Pasir Putih Aikima",
+        "city": "Wamena",
+        "rank": 3,
+        "description": "Pasir Putih Aikima adalah salah satu destinasi populer di Papua Pegunungan. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Pasir Putih Aikima, Papua Pegunungan, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Pasir%20Putih%20Aikima%2C%20Papua%20Pegunungan%2C%20Indonesia"
+      },
+      {
+        "name": "Desa Wamena",
+        "city": "Wamena",
+        "rank": 4,
+        "description": "Desa Wamena adalah salah satu destinasi populer di Papua Pegunungan. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Desa Wamena, Papua Pegunungan, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Desa%20Wamena%2C%20Papua%20Pegunungan%2C%20Indonesia"
+      },
+      {
+        "name": "Goa Kontilola",
+        "city": "Wamena",
+        "rank": 5,
+        "description": "Goa Kontilola adalah salah satu destinasi populer di Papua Pegunungan. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "searchQuery": "Goa Kontilola, Papua Pegunungan, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Goa%20Kontilola%2C%20Papua%20Pegunungan%2C%20Indonesia"
+      }
+    ],
+    "template": {
+      "id": "7f0eaa20-d57f-4f75-90af-82c9db157f44",
+      "title": "Rute Backpacker Papua Pegunungan",
+      "description": "Rute awal DOLAN untuk mengenal destinasi unggulan Papua Pegunungan secara efisien.",
+      "durationDays": 3,
+      "transportMode": "Transportasi umum + sewa lokal",
+      "budgetLow": 750000,
+      "budgetHigh": 3500000,
+      "stops": [
+        {
+          "day": 1,
+          "sequence": 1,
+          "name": "Lembah Baliem",
+          "durationMinutes": 150,
+          "notes": "Mulai pagi untuk menghindari antrean dan cuaca terik."
+        },
+        {
+          "day": 1,
+          "sequence": 2,
+          "name": "Danau Habema",
+          "durationMinutes": 120,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 2,
+          "sequence": 1,
+          "name": "Pasir Putih Aikima",
+          "durationMinutes": 150,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 2,
+          "sequence": 2,
+          "name": "Desa Wamena",
+          "durationMinutes": 120,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        },
+        {
+          "day": 3,
+          "sequence": 1,
+          "name": "Goa Kontilola",
+          "durationMinutes": 150,
+          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+        }
+      ]
+    }
+  }
+]

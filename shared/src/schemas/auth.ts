@@ -18,6 +18,14 @@ export const registerSchema = z
     email: emailField,
     password: passwordField,
     confirmPassword: z.string().min(1, "Ulangi kata sandi"),
+    username: z
+      .string()
+      .trim()
+      .optional()
+      .refine((value) => !value || (/^[a-z0-9._]+$/i.test(value) && value.length >= 3 && value.length <= 30), {
+        message: "Username 3–30 karakter, hanya huruf, angka, titik, atau underscore",
+      }),
+    displayName: z.string().trim().max(80).optional(),
     next: z.string().optional(),
   })
   .refine((value) => value.password === value.confirmPassword, {

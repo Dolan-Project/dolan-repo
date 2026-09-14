@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import { ServiceWorkerRegister } from "@/components/pwa/ServiceWorkerRegister";
 import "./globals.css";
@@ -14,12 +14,15 @@ export const metadata: Metadata = {
   description:
     "Rencanakan trip sesuai budget, lalu ajukan join trip publik — gratis. Biaya perjalanan ditanggung masing-masing.",
   manifest: "/manifest.webmanifest",
-  themeColor: "#004ac6",
   appleWebApp: {
     capable: true,
     title: "Dolan",
     statusBarStyle: "default",
   },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#004ac6",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

@@ -32,6 +32,8 @@ export class Trip extends Model<InferAttributes<Trip>, InferCreationAttributes<T
   declare currency: CreationOptional<string>;
   declare planningPartySize: CreationOptional<number>;
   declare maxParticipants: CreationOptional<number | null>;
+  declare genderRule: CreationOptional<"ALL_GENDERS" | "FEMALE_ONLY" | "MALE_ONLY">;
+  declare communityRules: CreationOptional<string | null>;
   declare currentItineraryVersionId: CreationOptional<string | null>;
   declare preferences: CreationOptional<Record<string, unknown> | null>;
   declare createdAt: CreationOptional<Date>;
@@ -138,6 +140,8 @@ export function initTripModels(sequelize: Sequelize) {
         allowNull: true,
         field: "max_participants",
       },
+      genderRule: { type: DataTypes.STRING(32), allowNull: false, defaultValue: "ALL_GENDERS", field: "gender_rule" },
+      communityRules: { type: DataTypes.TEXT, allowNull: true, field: "community_rules" },
       currentItineraryVersionId: {
         type: DataTypes.UUID,
         allowNull: true,

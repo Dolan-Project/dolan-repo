@@ -37,6 +37,8 @@ export const createTripBodySchema = z
     budgetAmount: money.optional(),
     budgetBasis: z.enum(["PER_PERSON", "GROUP"]).optional(),
     maxParticipants: z.number().int().min(1).max(50).optional(),
+    genderRule: z.enum(["ALL_GENDERS", "FEMALE_ONLY", "MALE_ONLY"]).default("ALL_GENDERS"),
+    communityRules: z.string().trim().max(2000).optional(),
     publicMeetingPointLabel: z.string().trim().max(255).optional(),
     publicMeetingPointLatitude: optionalCoordLat,
     publicMeetingPointLongitude: optionalCoordLng,
@@ -60,6 +62,8 @@ export const updateTripBodySchema = z
     budgetAmount: money.nullable().optional(),
     budgetBasis: z.enum(["PER_PERSON", "GROUP"]).optional(),
     maxParticipants: z.number().int().min(1).max(50).nullable().optional(),
+    genderRule: z.enum(["ALL_GENDERS", "FEMALE_ONLY", "MALE_ONLY"]).optional(),
+    communityRules: z.string().trim().max(2000).nullable().optional(),
     publicMeetingPointLabel: z.string().trim().max(255).nullable().optional(),
     publicMeetingPointLatitude: z.number().min(-90).max(90).nullable().optional(),
     publicMeetingPointLongitude: z.number().min(-180).max(180).nullable().optional(),
@@ -72,6 +76,8 @@ export const publishTripBodySchema = z.object({
   visibility: z.enum(["PRIVATE", "PUBLIC"]).optional(),
   destinationCity: z.string().trim().max(120).optional(),
   maxParticipants: z.number().int().min(1).max(50).optional(),
+  genderRule: z.enum(["ALL_GENDERS", "FEMALE_ONLY", "MALE_ONLY"]).optional(),
+  communityRules: z.string().trim().max(2000).optional(),
   publicMeetingPointLabel: z.string().trim().max(255).optional(),
   publicMeetingPointLatitude: optionalCoordLat,
   publicMeetingPointLongitude: optionalCoordLng,
@@ -129,7 +135,7 @@ const dateField = z
 
 export const createTripSchema = z
   .object({
-    path: z.enum(["known", "ai"]),
+    path: z.enum(["manual", "ai-route", "ai-discovery", "template", "known", "ai"]),
     title: z.string().trim().min(3, "Judul minimal 3 karakter"),
     description: z.string().trim().max(2000).optional().default(""),
     origin: z.string().trim().min(1, "Asal wajib diisi"),
@@ -146,13 +152,19 @@ export const createTripSchema = z
     maxParticipants: z.coerce.number().int().optional(),
     meetingPoint: z.string().trim().optional().default(""),
     companionNote: z.string().trim().max(500).optional().default(""),
+    pace: z.enum(["SANTAI", "SEIMBANG", "PADAT"]).optional(),
+    accessibilityNeeds: z.string().trim().max(500).optional(),
+    genderRule: z.enum(["ALL_GENDERS", "FEMALE_ONLY", "MALE_ONLY"]).optional(),
+    communityRules: z.string().trim().max(2000).optional(),
+    privateInvite: z.string().trim().max(1000).optional(),
+    regenerateMode: z.enum(["balanced", "cheaper", "alternative"]).optional(),
   })
   .superRefine((value, ctx) => {
-    if (value.path === "known" && !value.destinationCity) {
+    if (["manual", "ai-route", "template", "known"].includes(value.path) && !value.destinationCity) {
       ctx.addIssue({
         code: "custom",
         path: ["destinationCity"],
-        message: "Tujuan wajib diisi kecuali jalur Bantu AI",
+        message: "Tujuan wajib diisi pada jalur ini",
       });
     }
     if (value.endDate < value.startDate) {

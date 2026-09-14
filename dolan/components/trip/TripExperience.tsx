@@ -1,15 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type {
   ApiError,
-  ChatMessage,
   JoinRequest,
   TripComment,
   TripDetail,
 } from "@/lib/contracts";
-import { Icon } from "@/components/ui/Icon";
 import { ROUTES } from "@/lib/routes";
 
 type TripExperienceProps = {
@@ -34,16 +32,11 @@ export function TripExperience({
   const [trip, setTrip] = useState<TripDetail | null>(null);
   const [comments, setComments] = useState<TripComment[]>([]);
   const [queue, setQueue] = useState<JoinRequest[]>([]);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [chatError, setChatError] = useState("");
-  const [reconnecting, setReconnecting] = useState(false);
   const [error, setError] = useState("");
   const [commentBody, setCommentBody] = useState("");
   const [replyTo, setReplyTo] = useState<string | null>(null);
   const [joinMessage, setJoinMessage] = useState("");
-  const [chatBody, setChatBody] = useState("");
   const [pending, setPending] = useState(false);
-  const chatAttempt = useRef(0);
 
   async function loadAll() {
     const tripRes = await readJson<TripDetail>(
@@ -66,39 +59,14 @@ export function TripExperience({
       if (queueRes.success) setQueue(queueRes.data);
     }
 
-    if (tripRes.data.viewerRole === "host" || tripRes.data.viewerRole === "participant") {
-      setReconnecting(false);
-      chatAttempt.current += 1;
-      const query = chatAttempt.current === 1 ? "?simulate=disconnect" : "";
-      const chatRes = await readJson<ChatMessage[]>(
-        await fetch(`/api/v1/trips/${tripId}/messages${query}`, { credentials: "include" }),
-      );
-      if (chatRes.success) {
-        setMessages(chatRes.data);
-        setChatError("");
-      } else {
-        setReconnecting(true);
-        setChatError(chatRes.error.message);
-      }
-    } else if (tripRes.data.viewerRole === "pending") {
-      setChatError("Pengajuan masih ditinjau. Chat hanya untuk host dan peserta.");
-    }
   }
 
   useEffect(() => {
-    chatAttempt.current = 0;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadAll();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- reload when trip changes
   }, [tripId]);
 
-  useEffect(() => {
-    if (!reconnecting) return;
-    const timer = window.setTimeout(() => {
-      void loadAll();
-    }, 1500);
-    return () => window.clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reconnecting, tripId]);
 
   const threads = useMemo(() => {
     const roots = comments.filter((row) => row.parentId === null);
@@ -165,29 +133,6 @@ export function TripExperience({
     await loadAll();
   }
 
-  async function onSendChat(event: React.FormEvent) {
-    event.preventDefault();
-    setPending(true);
-    setChatError("");
-    const response = await readJson<ChatMessage>(
-      await fetch(`/api/v1/trips/${tripId}/messages`, {
-        method: "POST",
-        credentials: "include",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          clientMessageId: crypto.randomUUID(),
-          body: chatBody,
-        }),
-      }),
-    );
-    setPending(false);
-    if (!response.success) {
-      setChatError(response.error.message);
-      return;
-    }
-    setChatBody("");
-    await loadAll();
-  }
 
   async function onReview(requestId: string, decision: "accept" | "reject") {
     setPending(true);
@@ -293,9 +238,6 @@ export function TripExperience({
         {joinCta === "ACCEPTED" || joinCta === "member" ? (
           <p className="type-body mt-3">Kamu sudah jadi peserta trip ini.</p>
         ) : null}
-        {joinCta === "WITHDRAWN" ? (
-          <p className="type-body mt-3">Pengajuan sudah ditarik.</p>
-        ) : null}
         {joinCta === "host" ? (
           <p className="type-body mt-3">Kamu host trip ini.</p>
         ) : null}
@@ -396,52 +338,6 @@ export function TripExperience({
               ? "Verifikasi email dulu untuk menulis komentar."
               : "Masuk dan verifikasi email untuk menulis komentar."}
           </p>
-        )}
-      </section>
-
-      <section className="card-surface p-4 md:p-5">
-        <h2 className="type-subtitle flex items-center gap-2">
-          <Icon name="forum" className="text-[20px]" />
-          Chat trip
-        </h2>
-        {reconnecting ? (
-          <div className="mt-2 flex flex-col gap-2">
-            <p className="type-body text-primary">Menyambungkan ulang…</p>
-            <button type="button" className="btn-secondary !min-h-10" onClick={() => void loadAll()}>
-              Coba lagi
-            </button>
-          </div>
-        ) : null}
-        {trip.viewerRole === "pending" ||
-        trip.viewerRole === "none" ||
-        trip.viewerRole === "visitor" ||
-        !isLoggedIn ? (
-          <p className="type-body mt-2 text-on-surface-variant">
-            {chatError || "Chat hanya untuk host dan peserta yang sudah diterima."}
-          </p>
-        ) : (
-          <>
-            <ul className="mt-3 flex flex-col gap-2">
-              {messages.map((message) => (
-                <li key={message.id} className="rounded-xl bg-surface-container-low p-3">
-                  <p className="type-label">@{message.sender.username}</p>
-                  <p className="type-body">{message.body}</p>
-                </li>
-              ))}
-            </ul>
-            <form className="mt-4 flex flex-col gap-3" onSubmit={onSendChat}>
-              <textarea
-                className="field-input min-h-20"
-                required
-                value={chatBody}
-                onChange={(event) => setChatBody(event.target.value)}
-                placeholder="Tulis pesan ke rombongan…"
-              />
-              <button type="submit" className="btn-primary" disabled={pending || reconnecting}>
-                Kirim pesan
-              </button>
-            </form>
-          </>
         )}
       </section>
     </div>

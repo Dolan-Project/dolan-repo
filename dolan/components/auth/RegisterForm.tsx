@@ -28,6 +28,8 @@ function passwordScore(value: string): number {
 export function RegisterForm({ next }: RegisterFormProps) {
   const router = useRouter();
   const [email, setEmail] = useState("");
+  const [displayName, setDisplayName] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [agreed, setAgreed] = useState(false);
@@ -49,7 +51,7 @@ export function RegisterForm({ next }: RegisterFormProps) {
       method: "POST",
       credentials: "include",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ email, password, confirmPassword, next }),
+      body: JSON.stringify({ email, password, confirmPassword, displayName, username, next }),
     });
     const json = (await response.json()) as
       | { success: true; data: AuthSession }
@@ -85,6 +87,28 @@ export function RegisterForm({ next }: RegisterFormProps) {
           value={email}
           aria-invalid={Boolean(fieldErrors.email)}
           onChange={(event) => setEmail(event.target.value)}
+        />
+      </Field>
+      <Field id="displayName" label="Nama tampilan" error={fieldErrors.displayName}>
+        <input
+          id="displayName"
+          name="displayName"
+          className="field-input"
+          placeholder="Contoh: Rani Explorer"
+          value={displayName}
+          aria-invalid={Boolean(fieldErrors.displayName)}
+          onChange={(event) => setDisplayName(event.target.value)}
+        />
+      </Field>
+      <Field id="username" label="Username" error={fieldErrors.username} hint="Huruf, angka, titik, atau underscore. Bisa dilengkapi nanti di profil.">
+        <input
+          id="username"
+          name="username"
+          className="field-input"
+          placeholder="rani.explorer"
+          value={username}
+          aria-invalid={Boolean(fieldErrors.username)}
+          onChange={(event) => setUsername(event.target.value)}
         />
       </Field>
       <Field id="password" label="Kata Sandi Baru" error={fieldErrors.password}>

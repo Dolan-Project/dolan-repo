@@ -57,7 +57,7 @@ function setup() {
     createJobService(),
     undefined,
     chat,
-    undefined,
+    false,
     undefined,
     new LocationService(new MemoryLocationStore(), chat),
     shares,

@@ -92,6 +92,10 @@ export async function proxyUpdateTrip(
   );
 }
 
+export async function proxyDeleteTrip(request: Request, tripId: string): Promise<Response> {
+  return proxyToExpress(request, `${API_V1_PREFIX}${tripPath(tripId)}`, { method: "DELETE" });
+}
+
 export async function proxyPublishTrip(
   request: Request,
   tripId: string,

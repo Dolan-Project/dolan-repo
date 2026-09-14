@@ -21,6 +21,7 @@ type GoogleMapProps = {
   searchOverlay?: boolean;
   className?: string;
   showRoute?: boolean;
+  routePolylines?: string[];
 };
 
 declare global {
@@ -98,6 +99,7 @@ export function GoogleMap({
   searchOverlay = false,
   className = "",
   showRoute = false,
+  routePolylines = [],
 }: GoogleMapProps) {
   const nodeRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<GoogleMapInstance | null>(null);
@@ -209,15 +211,16 @@ export function GoogleMap({
       map.setZoom(14);
     }
     routeRef.current?.setMap(null);
-    routeRef.current = showRoute && points.length > 1 ? new maps.Polyline({
+    const routedPath = routePolylines.flatMap(decodePolyline);
+    routeRef.current = showRoute && routedPath.length > 1 ? new maps.Polyline({
       map,
-      path: points.map((point) => ({ lat: point.lat, lng: point.lng })),
-      geodesic: true,
+      path: routedPath,
+      geodesic: false,
       strokeColor: "#fe893c",
       strokeOpacity: 0.95,
       strokeWeight: 5,
     }) : null;
-  }, [mapReady, onSelect, points, showRoute]);
+  }, [mapReady, onSelect, points, routePolylines, showRoute]);
 
   useEffect(() => {
     const point = points.find((item) => item.id === selectedId);
@@ -257,4 +260,19 @@ export function GoogleMap({
   }
 
   return <div ref={nodeRef} className={className} aria-label="Peta lokasi wisata" />;
+}
+
+function decodePolyline(encoded: string) {
+  const path: Array<{ lat: number; lng: number }> = [];
+  let index = 0, lat = 0, lng = 0;
+  while (index < encoded.length) {
+    let result = 0, shift = 0, byte: number;
+    do { byte = encoded.charCodeAt(index++) - 63; result |= (byte & 0x1f) << shift; shift += 5; } while (byte >= 0x20 && index < encoded.length);
+    lat += result & 1 ? ~(result >> 1) : result >> 1;
+    result = 0; shift = 0;
+    do { byte = encoded.charCodeAt(index++) - 63; result |= (byte & 0x1f) << shift; shift += 5; } while (byte >= 0x20 && index < encoded.length);
+    lng += result & 1 ? ~(result >> 1) : result >> 1;
+    path.push({ lat: lat / 1e5, lng: lng / 1e5 });
+  }
+  return path;
 }
