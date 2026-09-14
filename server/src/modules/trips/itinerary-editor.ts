@@ -319,9 +319,14 @@ export async function upsertChecklist(tripId: string, actorId: string, body: unk
       isCompleted: parsed.isCompleted,
       completedAt: parsed.isCompleted ? new Date() : null,
     });
-    return item;
+    return {
+      id: item.id,
+      title: item.title,
+      dueDate: item.dueDate,
+      isCompleted: item.isCompleted,
+    };
   }
-  return TripChecklistItem.create({
+  const created = await TripChecklistItem.create({
     tripId,
     userId: actorId,
     title: parsed.title,
@@ -329,6 +334,12 @@ export async function upsertChecklist(tripId: string, actorId: string, body: unk
     isCompleted: parsed.isCompleted,
     completedAt: parsed.isCompleted ? new Date() : null,
   });
+  return {
+    id: created.id,
+    title: created.title,
+    dueDate: created.dueDate,
+    isCompleted: created.isCompleted,
+  };
 }
 
 export async function deleteChecklist(tripId: string, actorId: string, itemId: string) {

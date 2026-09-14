@@ -33,6 +33,7 @@ export interface UserRepository {
   createOAuthUser(input: CreateOAuthUserInput): Promise<AuthIdentity>;
   getPasswordHash(userId: string): Promise<string | null>;
   setPasswordHash(userId: string, passwordHash: string): Promise<void>;
+  markEmailVerified(userId: string): Promise<AuthIdentity>;
   updateProfile(userId: string, input: ProfileUpdateInput): Promise<AuthIdentity>;
 }
 
@@ -158,7 +159,7 @@ export class MemoryUserRepository implements UserRepository {
       email,
       role: "USER" satisfies UserRole,
       status: "ACTIVE" satisfies UserStatus,
-      emailVerifiedAt: input.emailVerifiedAt ?? new Date().toISOString(),
+      emailVerifiedAt: input.emailVerifiedAt !== undefined ? input.emailVerifiedAt : new Date().toISOString(),
       username: input.username ?? null,
       displayName: input.displayName ?? null,
       domicile: null,
@@ -211,6 +212,17 @@ export class MemoryUserRepository implements UserRepository {
 
   async setPasswordHash(userId: string, passwordHash: string): Promise<void> {
     this.passwordHashes.set(userId, passwordHash);
+  }
+
+  async markEmailVerified(userId: string): Promise<AuthIdentity> {
+    const existing = await this.findById(userId);
+    if (!existing) throw new Error("USER_NOT_FOUND");
+    const next: AuthIdentity = {
+      ...existing,
+      emailVerifiedAt: new Date().toISOString(),
+    };
+    this.users.set(existing.authReference, next);
+    return next;
   }
 
   async updateProfile(userId: string, input: ProfileUpdateInput): Promise<AuthIdentity> {

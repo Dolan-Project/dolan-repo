@@ -2,12 +2,12 @@ import {
   saveItineraryVersionSchema,
   type BudgetItemInput,
   type EditableItineraryDay,
-  type EditableItineraryVersion,
   type GenerationJob,
   type ItineraryEditorSnapshot,
   type SaveItineraryVersionInput,
+  type TripChecklistItem,
 } from "@dolan/shared";
-import { createBudgetSummary, createEditorSnapshot, PLACE_CANDIDATES } from "./mock-data";
+import { createBudgetSummary } from "./mock-data";
 
 const wait = (ms = 260) => new Promise((resolve) => setTimeout(resolve, ms));
 const clone = <T,>(value: T): T => structuredClone(value);
@@ -32,24 +32,20 @@ export function findScheduleConflicts(days: EditableItineraryDay[]) {
   return conflicts;
 }
 
-export async function getItineraryEditor(tripId: string) {
-  const fallback = createEditorSnapshot(tripId);
-  try {
-    const response = await fetch(`/api/v1/trips/${encodeURIComponent(tripId)}/itinerary`, {
-      credentials: "include",
-      headers: { Accept: "application/json" },
-    });
-    const payload = await response.json() as { success: boolean; data?: ItineraryEditorSnapshot };
-    if (response.ok && payload.success && payload.data) {
-      if (payload.data.versions.length === 0) {
-        return { ...fallback, ...payload.data, versions: fallback.versions, activeVersionId: fallback.activeVersionId };
-      }
-      return payload.data;
-    }
-    return fallback;
-  } catch {
-    return fallback;
+export async function getItineraryEditor(tripId: string): Promise<ItineraryEditorSnapshot> {
+  const response = await fetch(`/api/v1/trips/${encodeURIComponent(tripId)}/itinerary`, {
+    credentials: "include",
+    headers: { Accept: "application/json" },
+  });
+  const payload = (await response.json()) as {
+    success: boolean;
+    data?: ItineraryEditorSnapshot;
+    error?: { message?: string };
+  };
+  if (response.ok && payload.success && payload.data) {
+    return payload.data;
   }
+  throw new Error(payload.error?.message ?? "Gagal memuat itinerary dari server.");
 }
 
 export async function saveItineraryVersion(
@@ -57,10 +53,16 @@ export async function saveItineraryVersion(
   input: SaveItineraryVersionInput,
 ): Promise<ItineraryEditorSnapshot> {
   const parsed = saveItineraryVersionSchema.parse(input);
-  if (Object.keys(findScheduleConflicts(parsed.days.map((day) => ({
-    ...day,
-    stops: day.stops.map((stop) => ({ ...stop, place: null })),
-  })))).length) {
+  if (
+    Object.keys(
+      findScheduleConflicts(
+        parsed.days.map((day) => ({
+          ...day,
+          stops: day.stops.map((stop) => ({ ...stop, place: null })),
+        })),
+      ),
+    ).length
+  ) {
     throw new Error("Jadwal masih bertumpuk. Perbaiki waktu sebelum menyimpan.");
   }
   const response = await fetch(`/api/v1/trips/${encodeURIComponent(snapshot.tripId)}/itinerary-versions`, {
@@ -69,33 +71,13 @@ export async function saveItineraryVersion(
     headers: { "content-type": "application/json" },
     body: JSON.stringify(parsed),
   });
-  const payload = await response.json() as { success: boolean; data?: ItineraryEditorSnapshot; error?: { message?: string } };
-  if (response.ok && payload.success && payload.data?.versions.length) return payload.data;
-
-  await wait(420);
-  const versionNumber = Math.max(...snapshot.versions.map((item) => item.versionNumber), 0) + 1;
-  const version: EditableItineraryVersion = {
-    id: `version-${versionNumber}`,
-    tripId: snapshot.tripId,
-    versionNumber,
-    source: "MANUAL",
-    summary: parsed.summary,
-    assumptions: ["Perubahan dibuat melalui editor", "Budget dihitung ulang oleh server"],
-    days: clone(parsed.days).map((day) => ({
-      ...day,
-      stops: day.stops.map((stop) => {
-        const original = snapshot.versions.flatMap((item) => item.days).flatMap((dayItem) => dayItem.stops).find((item) => item.id === stop.id);
-        const candidate = PLACE_CANDIDATES.find((item) => item.googlePlaceId === stop.googlePlaceId);
-        return { ...stop, place: original?.place ?? candidate ?? null };
-      }),
-    })),
-    budget: createBudgetSummary(parsed.budgetItems),
-    createdAt: new Date().toISOString(),
+  const payload = (await response.json()) as {
+    success: boolean;
+    data?: ItineraryEditorSnapshot;
+    error?: { message?: string };
   };
-  if (!payload.success && payload.error?.message) {
-    throw new Error(payload.error.message);
-  }
-  return { ...snapshot, activeVersionId: version.id, versions: [version, ...snapshot.versions] };
+  if (response.ok && payload.success && payload.data) return payload.data;
+  throw new Error(payload.error?.message ?? "Gagal menyimpan versi itinerary.");
 }
 
 export async function selectItineraryVersion(tripId: string, versionId: string) {
@@ -105,16 +87,63 @@ export async function selectItineraryVersion(tripId: string, versionId: string) 
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ versionId }),
   });
-  const payload = await response.json() as { success: boolean; data?: ItineraryEditorSnapshot };
+  const payload = (await response.json()) as {
+    success: boolean;
+    data?: ItineraryEditorSnapshot;
+    error?: { message?: string };
+  };
   if (response.ok && payload.success && payload.data) return payload.data;
-  return null;
+  throw new Error(payload.error?.message ?? "Gagal memilih versi itinerary.");
+}
+
+export async function upsertChecklistItem(
+  tripId: string,
+  input: { id?: string; title: string; dueDate?: string | null; isCompleted?: boolean },
+): Promise<TripChecklistItem> {
+  const response = await fetch(`/api/v1/trips/${encodeURIComponent(tripId)}/checklist`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      id: input.id,
+      title: input.title,
+      dueDate: input.dueDate ?? null,
+      isCompleted: input.isCompleted ?? false,
+    }),
+  });
+  const payload = (await response.json()) as {
+    success: boolean;
+    data?: TripChecklistItem & { dueDate?: string | null; isCompleted?: boolean };
+    error?: { message?: string };
+  };
+  if (response.ok && payload.success && payload.data) {
+    return {
+      id: payload.data.id,
+      title: payload.data.title,
+      dueDate: payload.data.dueDate ?? null,
+      isCompleted: Boolean(payload.data.isCompleted),
+    };
+  }
+  throw new Error(payload.error?.message ?? "Gagal menyimpan checklist.");
+}
+
+export async function deleteChecklistItem(tripId: string, itemId: string) {
+  const response = await fetch(
+    `/api/v1/trips/${encodeURIComponent(tripId)}/checklist/${encodeURIComponent(itemId)}`,
+    { method: "DELETE", credentials: "include" },
+  );
+  const payload = (await response.json()) as { success: boolean; error?: { message?: string } };
+  if (response.ok && payload.success) return;
+  throw new Error(payload.error?.message ?? "Gagal menghapus checklist.");
 }
 
 async function pollJob(jobId: string) {
   for (let attempt = 0; attempt < 20; attempt += 1) {
     await wait(1500);
-    const response = await fetch(`/api/v1/generation-jobs/${encodeURIComponent(jobId)}`, { credentials: "include" });
-    const payload = await response.json() as { success: boolean; data?: GenerationJob };
+    const response = await fetch(`/api/v1/generation-jobs/${encodeURIComponent(jobId)}`, {
+      credentials: "include",
+    });
+    const payload = (await response.json()) as { success: boolean; data?: GenerationJob };
     if (!response.ok || !payload.success || !payload.data) continue;
     if (payload.data.status === "SUCCEEDED" || payload.data.status === "FAILED") return payload.data;
   }
@@ -129,7 +158,6 @@ export async function generateAlternative(
 ) {
   const useLive = process.env.NEXT_PUBLIC_USE_MOCK_API === "false";
   if (useLive) {
-  try {
     const response = await fetch(`/api/v1/trips/${encodeURIComponent(snapshot.tripId)}/generate`, {
       method: "POST",
       credentials: "include",
@@ -143,20 +171,23 @@ export async function generateAlternative(
         preferences: { regenerateMode },
       }),
     });
-    const payload = await response.json() as { success: boolean; data?: GenerationJob; error?: { message?: string } };
-    if (response.ok && payload.success && payload.data?.id) {
-      const job = await pollJob(payload.data.id);
-      if (job?.status === "SUCCEEDED") {
-        const next = await getItineraryEditor(snapshot.tripId);
-        return { snapshot: next, job };
-      }
-      if (job?.status === "FAILED") {
-        throw new Error("Generate gagal. Draft dan versi aktif tidak berubah.");
-      }
+    const payload = (await response.json()) as {
+      success: boolean;
+      data?: GenerationJob;
+      error?: { message?: string };
+    };
+    if (!response.ok || !payload.success || !payload.data?.id) {
+      throw new Error(payload.error?.message ?? "Gagal memulai generate itinerary.");
     }
-  } catch (error) {
-    if (error instanceof Error && error.message.startsWith("Generate gagal")) throw error;
-  }
+    const job = await pollJob(payload.data.id);
+    if (job?.status === "SUCCEEDED") {
+      const next = await getItineraryEditor(snapshot.tripId);
+      return { snapshot: next, job };
+    }
+    if (job?.status === "FAILED") {
+      throw new Error("Generate gagal. Draft dan versi aktif tidak berubah.");
+    }
+    throw new Error("Generate masih berjalan terlalu lama. Muat ulang halaman lalu cek versi itinerary.");
   }
 
   await wait(900);
@@ -171,16 +202,27 @@ export async function generateAlternative(
         : `${stop.notes ?? ""} ${regenerateMode === "cheaper" ? "Dialihkan ke opsi hemat." : "Dioptimalkan AI berdasarkan rute terdekat."}`.trim(),
     })),
   }));
-  const generated: EditableItineraryVersion = {
-    id: `version-${versionNumber}`,
-    tripId: snapshot.tripId,
-    versionNumber,
-    source: "REGENERATED",
-    summary: regenerateMode === "cheaper" ? "Alternatif hemat dari Groq. Destinasi terkunci tetap dipertahankan." : "Alternatif AI baru. Destinasi terkunci tetap dipertahankan.",
-    assumptions: ["Destinasi terkunci tidak diubah", "Waktu tempuh adalah estimasi"],
-    days: generatedDays,
-    budget: createBudgetSummary(budgetItems),
-    createdAt: new Date().toISOString(),
+  return {
+    snapshot: {
+      ...snapshot,
+      versions: [
+        {
+          id: `version-${versionNumber}`,
+          tripId: snapshot.tripId,
+          versionNumber,
+          source: "REGENERATED" as const,
+          summary:
+            regenerateMode === "cheaper"
+              ? "Alternatif hemat (mock). Destinasi terkunci tetap dipertahankan."
+              : "Alternatif AI (mock). Destinasi terkunci tetap dipertahankan.",
+          assumptions: ["Mode mock — bukan hasil Groq"],
+          days: generatedDays,
+          budget: createBudgetSummary(budgetItems),
+          createdAt: new Date().toISOString(),
+        },
+        ...snapshot.versions,
+      ],
+    },
+    job: null,
   };
-  return { snapshot: { ...snapshot, versions: [generated, ...snapshot.versions] }, job: null };
 }

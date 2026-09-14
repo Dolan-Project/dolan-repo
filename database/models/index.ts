@@ -6,6 +6,7 @@ import {
   AuthSession,
   initAuthSessionModels,
   PasswordResetToken,
+  EmailVerificationToken,
 } from "./auth-session.ts";
 import { initPlaceModel, Place } from "./place.ts";
 import { initProvinceModels, Province, ProvincePlace } from "./province.ts";
@@ -63,6 +64,8 @@ function applyAssociations() {
   AuthSession.belongsTo(User, { foreignKey: "userId", as: "user" });
   User.hasMany(PasswordResetToken, { foreignKey: "userId", as: "passwordResetTokens" });
   PasswordResetToken.belongsTo(User, { foreignKey: "userId", as: "user" });
+  User.hasMany(EmailVerificationToken, { foreignKey: "userId", as: "emailVerificationTokens" });
+  EmailVerificationToken.belongsTo(User, { foreignKey: "userId", as: "user" });
 
   User.hasMany(Trip, { foreignKey: "hostUserId", as: "hostedTrips" });
   Trip.belongsTo(User, { foreignKey: "hostUserId", as: "host" });
@@ -267,6 +270,7 @@ export function getModels() {
     UserProfile,
     AuthSession,
     PasswordResetToken,
+    EmailVerificationToken,
     Place,
     Province,
     ProvincePlace,
@@ -308,6 +312,7 @@ export {
   UserProfile,
   AuthSession,
   PasswordResetToken,
+  EmailVerificationToken,
   Place,
   Province,
   ProvincePlace,

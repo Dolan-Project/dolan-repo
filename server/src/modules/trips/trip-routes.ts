@@ -212,7 +212,25 @@ export function createTripRouter(trips: TripService) {
         tripId: param(req.params.id), invitedByUserId: req.authUser!.id, invitedUserId,
         tokenHash, channel, status: "PENDING", expiresAt: new Date(Date.now() + 7 * 86_400_000),
       });
-      if (invitedUserId) await Notification.create({ recipientUserId: invitedUserId, actorUserId: req.authUser!.id, type: "trip.invited", targetType: "trip", targetId: param(req.params.id), data: { invitationId: invitation.id, invitePath: `/undangan/${token}` } });
+      if (invitedUserId) {
+        await Notification.create({
+          recipientUserId: invitedUserId,
+          actorUserId: req.authUser!.id,
+          type: "trip.invited",
+          targetType: "trip",
+          targetId: param(req.params.id),
+          data: { invitationId: invitation.id, invitePath: `/undangan/${token}` },
+        });
+        void import("../push/push-delivery.ts").then(({ deliverPushNotification }) =>
+          deliverPushNotification({
+            recipientUserId: invitedUserId,
+            type: "trip.invited",
+            targetType: "trip",
+            targetId: param(req.params.id),
+            data: { invitationId: invitation.id, invitePath: `/undangan/${token}` },
+          }),
+        );
+      }
       res.status(201).json(apiSuccess({ id: invitation.id, channel, invitePath: `/undangan/${token}`, expiresAt: invitation.expiresAt?.toISOString() ?? null }));
     } catch (error) { next(error); }
   });

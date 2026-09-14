@@ -302,6 +302,10 @@ export class TripService {
     return { allowed: true as const, trip };
   }
 
+  async profileTripCounts(userId: string) {
+    return this.store.profileTripCounts(userId);
+  }
+
   async historyFor(targetUserId: string, viewerUserId: string | null) {
     const hosted = await this.store.listHosted(targetUserId, 1, 50);
     const joined = await this.store.listJoined(targetUserId, 1, 50);

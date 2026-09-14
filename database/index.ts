@@ -8,6 +8,7 @@ export {
   UserProfile,
   AuthSession,
   PasswordResetToken,
+  EmailVerificationToken,
   Place,
   Province,
   ProvincePlace,

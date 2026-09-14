@@ -51,6 +51,7 @@ export function createApp(
   itineraryExport?: ItineraryExportService,
   provinces: ProvinceService = new ProvinceService(false),
   routesQuota?: QuotaService,
+  databaseReady = false,
 ) {
   const memoryChat = new MemoryChatStore();
   const chat = chatService ?? new ChatService(memoryChat);
@@ -95,8 +96,12 @@ export function createApp(
   });
 
   app.use("/api/v1/auth", createAuthRouter(authService, disconnectUser));
-  app.get("/api/v1/users/me", requireLogin, (req, res) => {
-    res.json(apiSuccess(authService.toMeSession(req.authUser!)));
+  app.get("/api/v1/users/me", requireLogin, async (req, res, next) => {
+    try {
+      res.json(apiSuccess(await authService.toMeSession(req.authUser!)));
+    } catch (error) {
+      next(error);
+    }
   });
   app.patch("/api/v1/users/me", requireLogin, async (req, res, next) => {
     try {
@@ -127,7 +132,7 @@ export function createApp(
   app.use("/api/v1", createChatRouter(chat));
   app.use("/api/v1", createLocationRouter(locations, shares, itinerary));
   app.use("/api/v1", createSocialRouter(authService, social, tripService));
-  app.use("/api/v1", createPushRouter());
+  app.use("/api/v1", createPushRouter(databaseReady));
   app.use("/api/v1", createHomeRouter(home));
 
   app.get("/api/v1/public/ping", requireCapability("read_public"), (_req, res) => {

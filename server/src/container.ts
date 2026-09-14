@@ -81,20 +81,24 @@ export function createJobService(onJobUpdated?: JobServiceOptions["onJobUpdated"
 
 export function createProductionJobService(onJobUpdated?: JobServiceOptions["onJobUpdated"]) {
   initModels();
-  const places = env.googleMapsServerKey
-    ? new GooglePlacesClient(env.googleMapsServerKey)
-    : new FakePlacesClient();
-  const lookup = createPlaceLookup(places, { requireKnownPlace: Boolean(env.googleMapsServerKey) });
+  if (!env.googleMapsServerKey) {
+    throw new Error("GOOGLE_MAPS_SERVER_KEY is required for production job service");
+  }
+  if (!env.groqApiKey) {
+    throw new Error("GROQ_API_KEY is required for production job service");
+  }
+  const places = new GooglePlacesClient(env.googleMapsServerKey);
+  const lookup = createPlaceLookup(places, { requireKnownPlace: true });
   const aiQuota = new QuotaService(new SequelizeQuotaStore(), env.placesMaxRequestsPerUserPerDay);
   return new GenerationJobService(
     new SequelizeJobRepository(),
-    env.groqApiKey ? new GroqAdapter(env.groqApiKey, env.groqModel) : new MockGeminiAdapter(),
+    new GroqAdapter(env.groqApiKey, env.groqModel),
     {
       loadTrip: loadDraftTrip,
       savePreferences: saveTripPreferences,
       loadLockedStops,
       persistVersion: persistGeneratedVersion,
-      routes: env.googleMapsServerKey ? new GoogleRoutesClient(env.googleMapsServerKey) : new MockRoutesClient(),
+      routes: new GoogleRoutesClient(env.googleMapsServerKey),
       resolveCoords: lookup.resolveCoords,
       verifyPlaces: lookup.verifyPlaces,
       requireDatabaseTrip: true,
@@ -143,6 +147,9 @@ export function createMemorySearchService(options?: {
 
 export function createProductionSearchService() {
   initModels();
+  if (!env.googleMapsServerKey) {
+    throw new Error("GOOGLE_MAPS_SERVER_KEY is required for production search service");
+  }
   return new SearchService(
     new GooglePlacesClient(env.googleMapsServerKey),
     new SequelizeSearchStore(),

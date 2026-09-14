@@ -15,11 +15,13 @@ Base: `/api/v1`
 
 | Method | Path | Keterangan |
 |---|---|---|
-| POST | `/auth/register` | Email + password (scrypt) → session token |
+| POST | `/auth/register` | Email + password (scrypt) → session; kirim email verifikasi (belum verified) |
 | POST | `/auth/login` | Email + password → session token |
 | POST | `/auth/logout` | Revoke session |
-| POST | `/auth/forgot-password` | Buat reset token (dev: `debugResetToken`) |
+| POST | `/auth/forgot-password` | Buat reset token + kirim email (dev tanpa provider: `debugResetToken`) |
 | POST | `/auth/reset-password` | Set password baru |
+| POST | `/auth/verify-email` | Consume token verifikasi → set `email_verified_at` |
+| POST | `/auth/resend-verification` | Bearer wajib; kirim ulang email verifikasi |
 | GET | `/auth/google` | Redirect ke Google OAuth (`?next=/jelajah`) |
 | GET | `/auth/google/callback` | Tukar `code`, buat/link user, redirect ke Next `/api/auth/callback?token=…` |
 | GET | `/auth/session` | Bearer wajib |
@@ -44,6 +46,16 @@ WEB_URL=http://localhost:3000
 Di Google Cloud Console, daftarkan redirect URI yang sama. Alur UI: tombol **Akun Google** → Next `/api/auth/google` → Express → Google → Express callback → Next `/api/auth/callback` set cookie.
 
 User baru: `auth_reference = google:{sub}`. Jika email sudah ada (akun password), Google login **mengaitkan ke akun yang sama** tanpa mengubah `auth_reference`.
+
+## Email (Resend)
+
+```bash
+EMAIL_PROVIDER_API_KEY=re_...
+EMAIL_FROM=noreply@your-verified-domain.com
+WEB_URL=http://localhost:3000
+```
+
+Register mengirim tautan ke `{WEB_URL}/api/auth/verify-email?token=…`. Forgot password mengirim `{WEB_URL}/reset-password?token=…`. Domain pengirim harus terverifikasi di Resend.
 
 ## Guards
 

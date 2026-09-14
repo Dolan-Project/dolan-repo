@@ -11,37 +11,45 @@ type SaveOfflineItineraryButtonProps = {
   path?: string;
 };
 
+/** Persists chosen itinerary in IndexedDB for offline reading. Server sync is optional. */
 export function SaveOfflineItineraryButton({
-  id = "bali-3h2m",
-  title = "Trip ke Bali 3H2M",
-  path = ROUTES.itineraryBali,
+  id,
+  title,
+  path = ROUTES.tripSaya,
 }: SaveOfflineItineraryButtonProps) {
   const [message, setMessage] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
   async function onClick() {
+    if (!id || !title) {
+      setMessage("Data itinerary belum lengkap untuk disimpan offline.");
+      return;
+    }
     setPending(true);
     setMessage(null);
     const payload = { id, title, path };
-    const response = await fetch("/api/v1/offline/itineraries", {
-      method: "POST",
-      credentials: "include",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    const json = (await response.json()) as {
-      success: boolean;
-      error?: { message: string };
-    };
-    if (!json.success) {
+    try {
+      await putOfflineItinerary(payload);
+      await cacheChosenItinerary(payload.path);
+    } catch {
       setPending(false);
-      setMessage(json.error?.message ?? "Tidak bisa menyimpan offline");
+      setMessage("Browser menolak penyimpanan offline.");
       return;
     }
-    await putOfflineItinerary(payload);
-    await cacheChosenItinerary(payload.path);
+
+    try {
+      await fetch("/api/v1/offline/itineraries", {
+        method: "POST",
+        credentials: "include",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+    } catch {
+      /* local cache is enough for offline reading */
+    }
+
     setPending(false);
-    setMessage("Itinerary ini disimpan untuk dibaca offline.");
+    setMessage("Itinerary disimpan di perangkat untuk dibaca offline.");
   }
 
   return (

@@ -203,6 +203,19 @@ export class SequelizeTripStore implements TripStore {
     return this.pageTrips({ id: members.map((row) => row.tripId) }, page, limit);
   }
 
+  async profileTripCounts(userId: string) {
+    const hostTripCount = await Trip.count({
+      where: { hostUserId: userId, status: "COMPLETED" },
+      transaction: this.tx(),
+    });
+    const participantTripCount = await TripMember.count({
+      where: { userId, role: "PARTICIPANT", membershipStatus: "ACTIVE" },
+      include: [{ model: Trip, as: "trip", required: true, where: { status: "COMPLETED" } }],
+      transaction: this.tx(),
+    });
+    return { hostTripCount, participantTripCount };
+  }
+
   async listPending(userId: string, page: number, limit: number) {
     const joins = await TripJoinRequest.findAll({
       where: { userId, status: "PENDING" },
@@ -536,6 +549,9 @@ export class SequelizeTripStore implements TripStore {
         data: input.data ?? {},
       },
       { transaction: this.tx() },
+    );
+    void import("../push/push-delivery.ts").then(({ deliverPushNotification }) =>
+      deliverPushNotification(input),
     );
   }
 

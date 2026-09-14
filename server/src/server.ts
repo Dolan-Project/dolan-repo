@@ -42,11 +42,6 @@ async function main() {
 
   const authUsers = createUserRepository(databaseReady);
   const authSessions = createSessionStore(databaseReady);
-  const authService = new AuthService(
-    createAuthAdapter(authUsers, authSessions),
-    authUsers,
-    authSessions,
-  );
   const chatService = createChatService(databaseReady);
   const onJobUpdated = (job: {
     id: string;
@@ -57,11 +52,26 @@ async function main() {
   }) => {
     void chatService.emitGenerationUpdated(job);
   };
-  const jobService = databaseReady ? createProductionJobService(onJobUpdated) : createJobService(onJobUpdated);
+  let jobService;
+  try {
+    jobService = databaseReady ? createProductionJobService(onJobUpdated) : createJobService(onJobUpdated);
+  } catch (error) {
+    logger.error("Production job service unavailable", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw error;
+  }
   const social = databaseReady ? createProductionSocialStore() : createMemorySocialStore();
   const trips = databaseReady
     ? createProductionTripService(chatService)
     : createMemoryTripService(undefined, chatService, social);
+  const authService = new AuthService(
+    createAuthAdapter(authUsers, authSessions),
+    authUsers,
+    authSessions,
+    social,
+    (userId) => trips.profileTripCounts(userId),
+  );
   const httpServer = createServer();
   const sockets = createSocketServer(httpServer, authService, chatService);
   const routesQuota = new QuotaService(
@@ -82,6 +92,7 @@ async function main() {
     createItineraryExportService(chatService, databaseReady),
     new ProvinceService(databaseReady),
     routesQuota,
+    databaseReady,
   );
 
   httpServer.on("request", app);

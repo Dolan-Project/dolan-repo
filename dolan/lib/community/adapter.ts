@@ -82,7 +82,11 @@ export const communityRouteHandlers = {
       `/api/v1/trips/${encodeURIComponent(tripId)}/attendance`,
     ),
   join: (request: Request, tripId: string) =>
-    withMockOrUnavailable(request, (req) => handleAttemptJoinRequest(req, tripId)),
+    withMockOrUnavailable(
+      request,
+      (req) => handleAttemptJoinRequest(req, tripId),
+      `/api/v1/trips/${encodeURIComponent(tripId)}/join-requests`,
+    ),
   reports: (request: Request) =>
     withMockOrUnavailable(request, handleCreateReportRequest, "/api/v1/reports"),
   adminReports: (request: Request) =>

@@ -56,6 +56,23 @@ export function createAuthRouter(
     }
   });
 
+  router.post("/verify-email", async (req, res, next) => {
+    try {
+      res.json(apiSuccess(await authService.verifyEmail(req.body)));
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.post("/resend-verification", requireLogin, async (req, res, next) => {
+    try {
+      const nextPath = typeof req.body?.next === "string" ? req.body.next : undefined;
+      res.json(apiSuccess(await authService.resendVerification(req.authUser!.id, nextPath)));
+    } catch (error) {
+      next(error);
+    }
+  });
+
   router.get("/google", (req, res, next) => {
     try {
       const nextPath = typeof req.query.next === "string" ? req.query.next : undefined;
@@ -80,8 +97,12 @@ export function createAuthRouter(
     res.json(apiSuccess(authService.toSessionResponse(req.authUser!)));
   });
 
-  router.get("/me", requireLogin, (req, res) => {
-    res.json(apiSuccess(authService.toMeSession(req.authUser!)));
+  router.get("/me", requireLogin, async (req, res, next) => {
+    try {
+      res.json(apiSuccess(await authService.toMeSession(req.authUser!)));
+    } catch (error) {
+      next(error);
+    }
   });
 
   router.post("/disconnect-sockets", requireLogin, (req, res) => {
