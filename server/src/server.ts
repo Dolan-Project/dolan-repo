@@ -7,13 +7,13 @@ import {
   createChatService,
   createItineraryExportService,
   createJobService,
+  createLocationService,
   createMemorySocialStore,
   createMemoryTripService,
   createProductionJobService,
   createProductionSocialStore,
   createProductionTripService,
   createRuntimeSearchService,
-  createLocationService,
   createShareLinkService,
   createUserRepository,
 } from "./container.ts";
@@ -39,11 +39,20 @@ async function main() {
 
   const authService = new AuthService(createAuthAdapter(), createUserRepository(databaseReady));
   const chatService = createChatService(databaseReady);
-  const trips = databaseReady ? createProductionTripService(chatService) : createMemoryTripService(undefined, chatService);
-  const onJobUpdated = (job: { id: string; tripId: string; status: string; resultVersionId: string | null; errorCode: string | null }) => {
+  const onJobUpdated = (job: {
+    id: string;
+    tripId: string;
+    status: string;
+    resultVersionId: string | null;
+    errorCode: string | null;
+  }) => {
     void chatService.emitGenerationUpdated(job);
   };
   const jobService = databaseReady ? createProductionJobService(onJobUpdated) : createJobService(onJobUpdated);
+  const social = databaseReady ? createProductionSocialStore() : createMemorySocialStore();
+  const trips = databaseReady
+    ? createProductionTripService(chatService)
+    : createMemoryTripService(undefined, chatService, social);
   const httpServer = createServer();
   const sockets = createSocketServer(httpServer, authService, chatService);
   const app = createApp(
@@ -54,7 +63,7 @@ async function main() {
     trips,
     chatService,
     envRateLimit(),
-    databaseReady ? createProductionSocialStore() : createMemorySocialStore(),
+    social,
     createLocationService(chatService, databaseReady),
     createShareLinkService(chatService, databaseReady),
     createItineraryExportService(chatService, databaseReady),

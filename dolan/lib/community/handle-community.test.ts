@@ -57,6 +57,16 @@ describe("follow", () => {
     expect(body.error?.code).toBe("SELF_FOLLOW");
   });
 
+  it("rejects follow when email is not verified", async () => {
+    const response = await handleFollowRequest(
+      authed("http://localhost/api/v1/users/wayan/follow", { cookie: "unverified" }),
+      "wayan",
+    );
+    const body = await json(response);
+    expect(body.success).toBe(false);
+    expect(body.error?.code).toBe("EMAIL_UNVERIFIED");
+  });
+
   it("follows, lists followers and following, then unfollows", async () => {
     const follow = await handleFollowRequest(authed("http://localhost/api/v1/users/wayan/follow"), "wayan");
     expect((await json(follow)).success).toBe(true);
@@ -104,10 +114,35 @@ describe("review", () => {
     expect(body.error?.code).toBe("NOT_ELIGIBLE");
   });
 
-  it("rejects duplicate review for the same completed trip", async () => {
-    const first = await handleCreateReviewRequest(
+  it("rejects review before both people confirm attendance", async () => {
+    const response = await handleCreateReviewRequest(
       authed("http://localhost/api/v1/users/wayan/reviews", {
         body: { tripId: "trip_completed", communication: 5, attitude: 4 },
+      }),
+      "wayan",
+    );
+    const body = await json(response);
+    expect(body.success).toBe(false);
+    expect(body.error?.code).toBe("NOT_ELIGIBLE");
+  });
+
+  it("rejects duplicate review for the same completed trip", async () => {
+    await handleConfirmAttendanceRequest(
+      authed("http://localhost/api/v1/trips/trip_completed/attendance", {
+        body: { confirmed: true },
+      }),
+      "trip_completed",
+    );
+    await handleConfirmAttendanceRequest(
+      authed("http://localhost/api/v1/trips/trip_completed/attendance", {
+        cookie: "host",
+        body: { confirmed: true },
+      }),
+      "trip_completed",
+    );
+    const first = await handleCreateReviewRequest(
+      authed("http://localhost/api/v1/users/wayan/reviews", {
+        body: { tripId: "trip_completed", communication: 5, attitude: 4, comment: "Koordinasi rapi" },
       }),
       "wayan",
     );
@@ -159,6 +194,16 @@ describe("public history", () => {
     const wayanItems = wayan.data?.items as Array<{ title: string; visibility: string }>;
     expect(wayanItems.every((row) => row.visibility === "PUBLIC")).toBe(true);
     expect(wayanItems.some((row) => row.title.includes("Komodo"))).toBe(true);
+    expect(wayanItems.some((row) => row.title.includes("Private"))).toBe(false);
+
+    const own = await json(
+      await handleGetHistoryRequest(
+        authed("http://localhost/api/v1/users/wayan/history", { method: "GET", cookie: "host" }),
+        "wayan",
+      ),
+    );
+    const ownItems = own.data?.items as Array<{ title: string; visibility: string }>;
+    expect(ownItems.some((row) => row.visibility === "PRIVATE")).toBe(true);
 
     const hidden = await json(
       await handleGetHistoryRequest(
@@ -245,6 +290,19 @@ describe("offline itinerary and logout", () => {
       ),
     );
     expect(saved.success).toBe(true);
+
+    const editor = await json(
+      await handleSaveOfflineItineraryRequest(
+        authed("http://localhost/api/v1/offline/itineraries", {
+          body: {
+            id: "trip_1",
+            title: "Itinerary trip saya",
+            path: "/trip-saya/trip_1/itinerary",
+          },
+        }),
+      ),
+    );
+    expect(editor.success).toBe(true);
   });
 
   it("clears private offline itineraries on logout", async () => {

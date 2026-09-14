@@ -7,7 +7,8 @@ import { Icon } from "@/components/ui/Icon";
 import { findScheduleConflicts, generateAlternative, getItineraryEditor, saveItineraryVersion, selectItineraryVersion } from "./api";
 import { INITIAL_BUDGET_ITEMS, PLACE_CANDIDATES } from "./mock-data";
 import { RoutePreview } from "./RoutePreview";
-import { ROUTES } from "@/lib/routes";
+import { SaveOfflineItineraryButton } from "@/components/offline/SaveOfflineItineraryButton";
+import { ROUTES, tripItineraryPath } from "@/lib/routes";
 
 type Tab = "itinerary" | "budget" | "checklist";
 type Notice = { tone: "success" | "error" | "info"; text: string } | null;
@@ -241,6 +242,11 @@ export function ItineraryEditorExperience({ tripId }: { tripId: string }) {
             </select>
             <button type="button" onClick={() => void generate()} disabled={generating} className="btn-primary"><Icon name="rocket_launch" /> {generating ? "Mengoptimalkan…" : "Optimalkan dengan AI"}</button>
           </div>
+          <SaveOfflineItineraryButton
+            id={tripId}
+            title={snapshot.tripTitle}
+            path={tripItineraryPath(tripId)}
+          />
           <button type="button" onClick={() => void closeSlots()} disabled={publishing} className="rounded-full border border-outline-variant bg-white px-4 py-3 type-label text-on-surface-variant hover:border-primary hover:text-primary disabled:opacity-50"><Icon name="lock" /> Tutup Slot</button>
           <button type="button" onClick={() => void deleteDraft()} disabled={saving} className="rounded-full border border-error/30 bg-white px-4 py-3 type-label text-error hover:bg-error-container disabled:opacity-50"><Icon name="delete" /> Hapus Draft</button>
         </div>

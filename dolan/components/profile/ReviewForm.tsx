@@ -2,44 +2,85 @@
 
 import Link from "next/link";
 import { useEffect, useState, type FormEvent } from "react";
+import {
+  reviewTripForPeer,
+  tripsFromMinePayload,
+  type TripForFeedback,
+} from "@/lib/community/completed-feedback";
 import { ROUTES } from "@/lib/routes";
 
 type ReviewFormProps = {
   username: string;
+  tripId?: string | null;
 };
 
-export function ReviewForm({ username }: ReviewFormProps) {
+async function loadCompletedMine(): Promise<TripForFeedback[]> {
+  const [hosted, joined] = await Promise.all([
+    fetch("/api/v1/trips/me?role=hosted", { credentials: "include" }),
+    fetch("/api/v1/trips/me?role=joined", { credentials: "include" }),
+  ]);
+  const hostedJson = (await hosted.json()) as unknown;
+  const joinedJson = (await joined.json()) as unknown;
+  return [...tripsFromMinePayload(hostedJson), ...tripsFromMinePayload(joinedJson)];
+}
+
+export function ReviewForm({ username, tripId: preferredTripId = null }: ReviewFormProps) {
   const [communication, setCommunication] = useState(5);
   const [attitude, setAttitude] = useState(5);
+  const [comment, setComment] = useState("");
   const [message, setMessage] = useState<string | null>(null);
-  const [items, setItems] = useState<Array<{ id: string; communication: number; attitude: number }>>([]);
+  const [trip, setTrip] = useState<TripForFeedback | null>(null);
+  const [loadingTrip, setLoadingTrip] = useState(true);
+  const [items, setItems] = useState<
+    Array<{ id: string; communication: number; attitude: number; comment: string | null }>
+  >([]);
 
-  async function load() {
-    const response = await fetch(`/api/v1/users/${username}/reviews`, { credentials: "include" });
+  async function loadReviews() {
+    const response = await fetch(`/api/v1/users/${encodeURIComponent(username)}/reviews`, {
+      credentials: "include",
+    });
     const json = (await response.json()) as {
       success: boolean;
-      data?: { items: Array<{ id: string; communication: number; attitude: number }> };
+      data?: {
+        items: Array<{ id: string; communication: number; attitude: number; comment: string | null }>;
+      };
     };
     if (json.success) setItems(json.data?.items ?? []);
   }
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+    let cancelled = false;
+    async function load() {
+      setLoadingTrip(true);
+      const mine = await loadCompletedMine();
+      if (cancelled) return;
+      setTrip(reviewTripForPeer(mine, username, preferredTripId));
+      setLoadingTrip(false);
+    }
     void load();
+    void loadReviews();
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [username]);
+  }, [username, preferredTripId]);
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
     setMessage(null);
-    const response = await fetch(`/api/v1/users/${username}/reviews`, {
+    if (!trip) {
+      setMessage("Belum ada trip selesai bersama pengguna ini.");
+      return;
+    }
+    const response = await fetch(`/api/v1/users/${encodeURIComponent(username)}/reviews`, {
       method: "POST",
       credentials: "include",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        tripId: "trip_completed",
+        tripId: trip.id,
         communication,
         attitude,
+        comment: comment.trim() || null,
       }),
     });
     const json = (await response.json()) as {
@@ -51,7 +92,7 @@ export function ReviewForm({ username }: ReviewFormProps) {
       return;
     }
     setMessage("Ulasan tersimpan.");
-    await load();
+    await loadReviews();
   }
 
   return (
@@ -61,8 +102,21 @@ export function ReviewForm({ username }: ReviewFormProps) {
       </Link>
       <h1 className="type-title mt-3 text-on-surface">Ulasan @{username}</h1>
       <p className="type-body mt-2 text-on-surface-variant">
-        Review hanya untuk peserta trip yang sudah selesai. Tidak bisa mereview diri sendiri atau mengirim duplikat.
+        Review hanya untuk peserta trip selesai setelah kedua pihak konfirmasi kehadiran. Tidak bisa mereview
+        diri sendiri atau mengirim duplikat. Komentar opsional.
       </p>
+      {loadingTrip ? (
+        <p className="type-body mt-4 text-on-surface-variant">Mencari trip selesai bersama @{username}…</p>
+      ) : trip ? (
+        <p className="type-caption mt-3 text-on-surface-variant">
+          Terikat trip selesai: {trip.title}
+        </p>
+      ) : (
+        <p className="type-body mt-4 text-on-surface-variant" role="status">
+          Belum ada trip selesai bersama @{username}. Konfirmasi kehadiran dulu di Trip Saya atau detail trip
+          yang sudah COMPLETED.
+        </p>
+      )}
       <form onSubmit={(event) => void onSubmit(event)} className="card-surface mt-5 grid gap-3 p-4">
         <label className="type-label text-on-surface">
           Komunikasi ({communication})
@@ -86,7 +140,16 @@ export function ReviewForm({ username }: ReviewFormProps) {
             onChange={(event) => setAttitude(Number(event.target.value))}
           />
         </label>
-        <button type="submit" className="btn-primary !min-h-11">
+        <label className="type-label text-on-surface">
+          Komentar (opsional)
+          <textarea
+            className="mt-2 min-h-20 w-full rounded-xl border border-outline-variant bg-surface-container-lowest p-3 type-body"
+            value={comment}
+            onChange={(event) => setComment(event.target.value)}
+            placeholder="Ceritakan komunikasi dan sikap di trip ini"
+          />
+        </label>
+        <button type="submit" className="btn-primary !min-h-11" disabled={!trip}>
           Kirim ulasan trip selesai
         </button>
         {message ? <p className="type-body text-on-surface-variant">{message}</p> : null}
@@ -95,6 +158,7 @@ export function ReviewForm({ username }: ReviewFormProps) {
         {items.map((row) => (
           <li key={row.id} className="card-surface px-4 py-3 type-body text-on-surface">
             Komunikasi {row.communication} · Sikap {row.attitude}
+            {row.comment ? ` · ${row.comment}` : ""}
           </li>
         ))}
       </ul>

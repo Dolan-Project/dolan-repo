@@ -1,4 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
+import { handleBlockRequest } from "@/lib/community/handle-community";
+import { resetCommunityMocks } from "@/mocks/community-store";
 import {
   handleCreateCommentRequest,
   handleGetTripRequest,
@@ -15,6 +17,7 @@ import {
 
 afterEach(() => {
   resetSocialMocks();
+  resetCommunityMocks();
 });
 
 function cookie(value: string) {
@@ -64,20 +67,20 @@ describe("comments", () => {
 
   it("lets a pending applicant comment", async () => {
     await handleRequestJoinRequest(
-      new Request("http://localhost/api/v1/trips/trip_1/join-requests", {
+      new Request("http://localhost/api/v1/trips/trip_open/join-requests", {
         method: "POST",
         headers: { ...cookie("complete"), "content-type": "application/json" },
         body: JSON.stringify({ message: "Ikut ya" }),
       }),
-      "trip_1",
+      "trip_open",
     );
     const response = await handleCreateCommentRequest(
-      new Request("http://localhost/api/v1/trips/trip_1/comments", {
+      new Request("http://localhost/api/v1/trips/trip_open/comments", {
         method: "POST",
         headers: { ...cookie("complete"), "content-type": "application/json" },
         body: JSON.stringify({ body: "Pending tetap boleh komentar" }),
       }),
-      "trip_1",
+      "trip_open",
     );
     const json = (await response.json()) as { success: boolean };
     expect(json.success).toBe(true);
@@ -87,12 +90,12 @@ describe("comments", () => {
 describe("join", () => {
   it("creates a pending request labeled join-free without payment fields", async () => {
     const response = await handleRequestJoinRequest(
-      new Request("http://localhost/api/v1/trips/trip_1/join-requests", {
+      new Request("http://localhost/api/v1/trips/trip_open/join-requests", {
         method: "POST",
         headers: { ...cookie("complete"), "content-type": "application/json" },
         body: JSON.stringify({ message: "Ikut ya" }),
       }),
-      "trip_1",
+      "trip_open",
     );
     const json = (await response.json()) as {
       success: true;
@@ -104,14 +107,35 @@ describe("join", () => {
     expect("checkout" in json.data).toBe(false);
   });
 
+  it("rejects join when the applicant blocked the host", async () => {
+    await handleBlockRequest(
+      new Request("http://localhost/api/v1/users/wayan/block", {
+        method: "POST",
+        headers: { ...cookie("complete"), "content-type": "application/json" },
+      }),
+      "wayan",
+    );
+    const response = await handleRequestJoinRequest(
+      new Request("http://localhost/api/v1/trips/trip_open/join-requests", {
+        method: "POST",
+        headers: { ...cookie("complete"), "content-type": "application/json" },
+        body: JSON.stringify({ message: "Ikut ya" }),
+      }),
+      "trip_open",
+    );
+    const json = (await response.json()) as { error: { code: string } };
+    expect(response.status).toBe(409);
+    expect(json.error.code).toBe("BLOCKED_RELATION");
+  });
+
   it("shows the host decision to the applicant", async () => {
     const created = await handleRequestJoinRequest(
-      new Request("http://localhost/api/v1/trips/trip_1/join-requests", {
+      new Request("http://localhost/api/v1/trips/trip_open/join-requests", {
         method: "POST",
         headers: { ...cookie("complete"), "content-type": "application/json" },
         body: JSON.stringify({}),
       }),
-      "trip_1",
+      "trip_open",
     );
     const createdJson = (await created.json()) as { data: { id: string } };
     await handleReviewJoinRequest(
@@ -123,10 +147,10 @@ describe("join", () => {
       createdJson.data.id,
     );
     const trip = await handleGetTripRequest(
-      new Request("http://localhost/api/v1/trips/trip_1", {
+      new Request("http://localhost/api/v1/trips/trip_open", {
         headers: cookie("complete"),
       }),
-      "trip_1",
+      "trip_open",
     );
     const json = (await trip.json()) as {
       data: { joinFree: true; myJoinRequest: { status: string } | null };
@@ -137,12 +161,12 @@ describe("join", () => {
 
   it("lets the applicant withdraw a pending request", async () => {
     const created = await handleRequestJoinRequest(
-      new Request("http://localhost/api/v1/trips/trip_1/join-requests", {
+      new Request("http://localhost/api/v1/trips/trip_open/join-requests", {
         method: "POST",
         headers: { ...cookie("complete"), "content-type": "application/json" },
         body: JSON.stringify({}),
       }),
-      "trip_1",
+      "trip_open",
     );
     const createdJson = (await created.json()) as { data: { id: string } };
     const withdrawn = await handleWithdrawJoinRequest(
@@ -160,18 +184,18 @@ describe("join", () => {
 describe("chat and notifications", () => {
   it("blocks pending members from reading chat", async () => {
     await handleRequestJoinRequest(
-      new Request("http://localhost/api/v1/trips/trip_1/join-requests", {
+      new Request("http://localhost/api/v1/trips/trip_open/join-requests", {
         method: "POST",
         headers: { ...cookie("complete"), "content-type": "application/json" },
         body: JSON.stringify({}),
       }),
-      "trip_1",
+      "trip_open",
     );
     const response = await handleListMessagesRequest(
-      new Request("http://localhost/api/v1/trips/trip_1/messages", {
+      new Request("http://localhost/api/v1/trips/trip_open/messages", {
         headers: cookie("complete"),
       }),
-      "trip_1",
+      "trip_open",
     );
     const json = (await response.json()) as { error: { code: string } };
     expect(json.error.code).toBe("NOT_MEMBER");

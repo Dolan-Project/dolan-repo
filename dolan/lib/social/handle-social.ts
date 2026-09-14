@@ -26,11 +26,13 @@ import {
 } from "@/mocks/social";
 import {
   TRIP_HOSTED_ID,
+  TRIP_JOINABLE_ID,
   TRIP_PUBLIC_ID,
   resetSocialMocks,
   socialStore,
-  tripHost,
 } from "@/mocks/social-store";
+import { isBlockedEitherWay } from "@/mocks/community-store";
+import { mockStoredRole, mockTripExists } from "@/mocks/trips";
 import { jsonResult, statusForCode, validationError } from "@/lib/auth/api-response";
 import { readSessionId } from "@/lib/auth/session-cookie";
 
@@ -103,7 +105,17 @@ function fail(code: string, message: string) {
 }
 
 function knownTrip(tripId: string) {
-  return tripId === TRIP_PUBLIC_ID || tripId === TRIP_HOSTED_ID;
+  return (
+    tripId === TRIP_PUBLIC_ID ||
+    tripId === TRIP_HOSTED_ID ||
+    tripId === TRIP_JOINABLE_ID ||
+    mockTripExists(tripId)
+  );
+}
+
+function tripHost(tripId: string): PublicUser {
+  if (tripId === TRIP_HOSTED_ID) return samplePublicUser;
+  return sampleOtherUser;
 }
 
 function myJoin(tripId: string, userId: string) {
@@ -116,6 +128,10 @@ function myJoin(tripId: string, userId: string) {
 
 function viewerRole(tripId: string, session: AuthSession | null): TripViewerRole {
   if (!session) return "none";
+  if (session.user.id === samplePublicUser.id) {
+    const stored = mockStoredRole(tripId);
+    if (stored) return stored;
+  }
   if (session.user.id === tripHost(tripId).id) return "host";
   const join = myJoin(tripId, session.user.id);
   if (join?.status === "PENDING") return "pending";
@@ -140,7 +156,9 @@ function tripDetail(tripId: string, session: AuthSession | null): TripDetail {
     title:
       tripId === TRIP_HOSTED_ID
         ? "Sailing Liveaboard Phinisi Komodo 4D3N"
-        : "Santai Sore & Sunset Canggu",
+        : tripId === TRIP_JOINABLE_ID
+          ? "Santai Sore & Sunset Canggu"
+          : "Santai Sore & Sunset Canggu",
     description: "Trip publik Dolan. Join gratis — biaya perjalanan mandiri.",
     visibility: "PUBLIC",
     status: "OPEN",
@@ -222,8 +240,11 @@ export async function handleRequestJoinRequest(request: Request, tripId: string)
   if (!session.profileComplete) {
     return fail(AuthErrorCode.PROFILE_INCOMPLETE, "Lengkapi profil dulu");
   }
-  if (session.user.id === tripHost(tripId).id) {
+  if (viewerRole(tripId, session) === "host") {
     return fail(AuthErrorCode.FORBIDDEN, "Host tidak mengajukan join ke trip sendiri");
+  }
+  if (isBlockedEitherWay(session.user.id, tripHost(tripId).id)) {
+    return fail("BLOCKED_RELATION", "Tidak bisa join trip pengguna yang diblokir");
   }
   const parsed = joinRequestBodySchema.safeParse(await readBody(request));
   if (!parsed.success) return validationError(parsed.error);
@@ -242,7 +263,7 @@ export async function handleListJoinRequestsRequest(request: Request, tripId: st
   }
   const { session } = actorFromRequest(request);
   if (!session) return fail("UNAUTHORIZED", "Tidak sah");
-  if (session.user.id !== tripHost(tripId).id) {
+  if (viewerRole(tripId, session) !== "host") {
     return fail(AuthErrorCode.NOT_HOST, "Hanya host yang melihat antrean join");
   }
   const rows = socialStore().joins.filter((row) => row.tripId === tripId);
@@ -256,7 +277,7 @@ export async function handleReviewJoinRequest(request: Request, requestId: strin
   if (!parsed.success) return validationError(parsed.error);
   const existing = socialStore().joins.find((row) => row.id === requestId);
   if (!existing) return fail("NOT_FOUND", "Pengajuan tidak ditemukan");
-  if (session.user.id !== tripHost(existing.tripId).id) {
+  if (viewerRole(existing.tripId, session) !== "host") {
     return fail(AuthErrorCode.NOT_HOST, "Hanya host yang memutuskan pengajuan");
   }
   const mock = mockReviewJoin(requestId, parsed.data.decision);

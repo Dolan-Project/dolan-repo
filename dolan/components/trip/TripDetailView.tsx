@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { Icon } from "@/components/ui/Icon";
+import { AttendanceConfirm } from "@/components/trips/AttendanceConfirm";
 import type { ApiError, JoinRequest, TripComment, TripDetail } from "@/lib/contracts";
 import { ROUTES, tripEditHref, tripItineraryPath } from "@/lib/routes";
 import type { EditableItineraryDay } from "@dolan/shared";
@@ -335,6 +336,14 @@ export function TripDetailView({
               ) : <button type="button" className="btn-ghost" disabled={pending} onClick={() => setConfirmLeave(true)}>Keluar trip</button>
             ) : null}
           </div>
+          {trip.status === "COMPLETED" &&
+          (trip.viewerRole === "host" || trip.viewerRole === "participant") ? (
+            <AttendanceConfirm
+              tripId={trip.id}
+              tripTitle={trip.title}
+              reviewUsername={trip.viewerRole === "participant" ? trip.host.username : null}
+            />
+          ) : null}
           <Link href={visitor ? ROUTES.beranda : ROUTES.tripSaya} className="type-label inline-block text-primary">{visitor ? "Kembali ke beranda" : "Kembali ke Trip Saya"}</Link>
         </aside>
       </div>

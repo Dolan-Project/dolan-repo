@@ -54,6 +54,8 @@ export type StoredMember = {
   userId: string;
   role: TripMemberRole;
   membershipStatus: MembershipStatus;
+  attendanceConfirmed: boolean;
+  showOnProfile: boolean;
   joinedAt: string;
   leftAt: string | null;
 };
@@ -108,6 +110,7 @@ export interface TripStore {
   listMembers(tripId: string): Promise<StoredMember[]>;
   ensureHostMembership(tripId: string, userId: string): Promise<void>;
   addParticipant(tripId: string, userId: string): Promise<StoredMember>;
+  confirmAttendance(tripId: string, userId: string, confirmed: boolean): Promise<StoredMember | null>;
   leaveMembership(tripId: string, userId: string): Promise<StoredMember | null>;
   getJoinRequest(id: string): Promise<StoredJoin | null>;
   getJoinByTripUser(tripId: string, userId: string): Promise<StoredJoin | null>;

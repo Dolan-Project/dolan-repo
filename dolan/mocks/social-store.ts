@@ -3,6 +3,7 @@ import { sampleOtherUser, samplePublicUser } from "@/mocks/fixtures";
 
 export const TRIP_PUBLIC_ID = "trip_1";
 export const TRIP_HOSTED_ID = "trip_host";
+export const TRIP_JOINABLE_ID = "trip_open";
 export const ROOT_COMMENT_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 
 export type AppNotification = {

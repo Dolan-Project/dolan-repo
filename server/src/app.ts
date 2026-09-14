@@ -25,6 +25,7 @@ import { createJobRouter } from "./modules/jobs/job-routes.ts";
 import type { GenerationJobService } from "./modules/jobs/job-service.ts";
 import { createSearchRouter } from "./modules/search/search-routes.ts";
 import type { SearchService } from "./modules/search/search-service.ts";
+import { createSocialRouter } from "./modules/social/social-routes.ts";
 import { MemorySocialStore, type SocialQueryStore } from "./modules/social/social-queries.ts";
 import { createTripRouter } from "./modules/trips/trip-routes.ts";
 import type { TripService } from "./modules/trips/trip-service.ts";
@@ -48,16 +49,20 @@ export function createApp(
 ) {
   const memoryChat = new MemoryChatStore();
   const chat = chatService ?? new ChatService(memoryChat);
-  const tripService = trips ?? createMemoryTripService(undefined, tripChatBridge(memoryChat, chat));
-  const location = locationService ?? new LocationService(new MemoryLocationStore(), chat);
-  const shareLinks = shareLinkService ?? new ShareLinkService(new MemoryShareLinkStore(), chat, async (tripId) => ({
-    title: `Trip ${tripId}`,
-    destinationCity: "Yogyakarta",
-    startDate: "2026-10-01",
-    endDate: "2026-10-03",
-    summary: "Ringkasan publik",
-  }));
-  const exports = itineraryExport ?? new ItineraryExportService(chat, async () => null);
+  const tripService = trips ?? createMemoryTripService(undefined, tripChatBridge(memoryChat, chat), social);
+  const locations = locationService ?? new LocationService(new MemoryLocationStore(), chat);
+  const shares =
+    shareLinkService ??
+    new ShareLinkService(new MemoryShareLinkStore(), chat, async (tripId) => ({
+      title: `Trip ${tripId}`,
+      destinationCity: "Yogyakarta",
+      startDate: "2026-10-01",
+      endDate: "2026-10-03",
+      summary: "Ringkasan publik",
+      privateOriginLabel: "SECRET_HOME",
+      email: "hidden@example.com",
+    }));
+  const itinerary = itineraryExport ?? new ItineraryExportService(chat, async () => null);
   const app = express();
   app.disable("x-powered-by");
   if (env.nodeEnv === "production") {
@@ -114,20 +119,11 @@ export function createApp(
   app.use("/api/v1", createJobRouter(jobService));
   app.use("/api/v1", createTripRouter(tripService));
   app.use("/api/v1", createChatRouter(chat));
-  app.use("/api/v1", createLocationRouter(location, shareLinks, exports));
+  app.use("/api/v1", createLocationRouter(locations, shares, itinerary));
+  app.use("/api/v1", createSocialRouter(authService, social, tripService));
 
   app.get("/api/v1/public/ping", requireCapability("read_public"), (_req, res) => {
     res.json(apiSuccess({ ok: true }));
-  });
-
-  app.post("/api/v1/users/:userId/follow", requireCapability("follow"), async (req, res, next) => {
-    try {
-      const targetId = Array.isArray(req.params.userId) ? String(req.params.userId[0]) : String(req.params.userId);
-      await social.follow(req.authUser!.id, targetId);
-      res.status(201).json(apiSuccess({ followed: true }));
-    } catch (error) {
-      next(error);
-    }
   });
 
   app.use(notFoundHandler);

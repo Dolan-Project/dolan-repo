@@ -1,8 +1,10 @@
 import { jsonResult, statusForCode } from "@/lib/auth/api-response";
+import { isChosenItineraryPath } from "@/lib/offline/itinerary-path";
 import { readSessionId } from "@/lib/auth/session-cookie";
 import { createApiError } from "@/mocks/scenarios";
 import {
   actorFromSessionId,
+  bothAttendanceConfirmed,
   clearOfflineForSessionId,
   communityStore,
   completedTogether,
@@ -52,6 +54,9 @@ export async function handleFollowRequest(request: Request, username: string) {
 
   if (actor.user.id === target.id) {
     return fail("SELF_FOLLOW", "Tidak bisa follow diri sendiri");
+  }
+  if (!actor.emailVerified) {
+    return fail("EMAIL_UNVERIFIED", "Verifikasi email dulu untuk follow");
   }
   if (isBlockedEitherWay(actor.user.id, target.id)) {
     return fail("BLOCKED_RELATION", "Relasi diblokir");
@@ -168,6 +173,9 @@ export async function handleCreateReviewRequest(request: Request, username: stri
   if (!completedTogether(tripId, actor.user.id, target.id)) {
     return fail("NOT_ELIGIBLE", "Review hanya untuk peserta trip yang sudah selesai");
   }
+  if (!bothAttendanceConfirmed(tripId, actor.user.id, target.id)) {
+    return fail("NOT_ELIGIBLE", "Review dibuka setelah kedua pihak konfirmasi kehadiran");
+  }
   const store = communityStore();
   if (
     store.reviews.some(
@@ -176,6 +184,7 @@ export async function handleCreateReviewRequest(request: Request, username: stri
   ) {
     return fail("DUPLICATE_REVIEW", "Ulasan untuk trip ini sudah ada");
   }
+  const comment = String(body.comment ?? "").trim();
   const row = {
     id: nextId("review"),
     reviewerId: actor.user.id,
@@ -183,6 +192,8 @@ export async function handleCreateReviewRequest(request: Request, username: stri
     tripId,
     communication,
     attitude,
+    comment: comment || null,
+    moderationStatus: "VISIBLE" as const,
   };
   store.reviews.push(row);
   refreshRating(target.id);
@@ -194,7 +205,7 @@ export async function handleGetReviewsRequest(request: Request, username: string
   const found = requireTarget(username);
   if (!found.target) return found.error;
   const items = communityStore()
-    .reviews.filter((row) => row.revieweeId === found.target.id)
+    .reviews.filter((row) => row.revieweeId === found.target.id && row.moderationStatus === "VISIBLE")
     .map((row) => ({
       ...row,
       reviewer: publicUserListItem(userById(row.reviewerId)!),
@@ -203,14 +214,18 @@ export async function handleGetReviewsRequest(request: Request, username: string
 }
 
 export async function handleGetHistoryRequest(request: Request, username: string) {
-  void request;
   const found = requireTarget(username);
   if (!found.target) return found.error;
-  if (!found.target.showPublicHistory) {
+  const actor = actorOf(request);
+  const isOwner = actor?.user.id === found.target.id;
+  if (!isOwner && !found.target.showPublicHistory) {
     return jsonResult({ success: true, data: { items: [] } }, 200);
   }
   const items = communityStore()
-    .history.filter((row) => row.userId === found.target.id && row.visibility === "PUBLIC")
+    .history.filter(
+      (row) =>
+        row.userId === found.target.id && (isOwner || row.visibility === "PUBLIC"),
+    )
     .map((row) => ({ title: row.title, visibility: row.visibility }));
   return jsonResult({ success: true, data: { items } }, 200);
 }
@@ -241,7 +256,13 @@ export async function handleCreateReportRequest(request: Request) {
   const targetType = body.targetType;
   const targetId = String(body.targetId ?? "");
   const reason = String(body.reason ?? "").trim();
-  if (targetType !== "user" && targetType !== "trip" && targetType !== "comment") {
+  if (
+    targetType !== "user" &&
+    targetType !== "trip" &&
+    targetType !== "comment" &&
+    targetType !== "message" &&
+    targetType !== "review"
+  ) {
     return fail("VALIDATION_ERROR", "Target laporan tidak valid");
   }
   if (!targetId || !reason) {
@@ -250,7 +271,7 @@ export async function handleCreateReportRequest(request: Request) {
   const row = {
     id: nextId("report"),
     reporterId: actor.user.id,
-    targetType: targetType as "user" | "trip" | "comment",
+    targetType: targetType as "user" | "trip" | "comment" | "message" | "review",
     targetId,
     reason,
     status: "OPEN" as const,
@@ -274,8 +295,16 @@ export async function handleModerateReportRequest(request: Request, reportId: st
   if (!report) return fail("NOT_FOUND", "Laporan tidak ditemukan");
   const body = await readBody(request);
   const action = String(body.action ?? "");
-  if (action === "hide") report.status = "HIDDEN";
-  else if (action === "dismiss") report.status = "DISMISSED";
+  if (action === "hide") {
+    report.status = "HIDDEN";
+    if (report.targetType === "review") {
+      const review = communityStore().reviews.find((row) => row.id === report.targetId);
+      if (review) {
+        review.moderationStatus = "HIDDEN";
+        refreshRating(review.revieweeId);
+      }
+    }
+  } else if (action === "dismiss") report.status = "DISMISSED";
   else return fail("VALIDATION_ERROR", "Aksi moderasi tidak valid");
   return jsonResult({ success: true, data: report }, 200);
 }
@@ -287,7 +316,7 @@ export async function handleSaveOfflineItineraryRequest(request: Request) {
   const id = String(body.id ?? "");
   const title = String(body.title ?? "");
   const path = String(body.path ?? "");
-  if (!id || !title || !path.startsWith("/itinerary/")) {
+  if (!id || !title || !isChosenItineraryPath(path)) {
     return fail("NOT_ELIGIBLE", "Offline hanya untuk itinerary yang dipilih");
   }
   const store = communityStore();

@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Icon } from "@/components/ui/Icon";
+import { AttendanceConfirm } from "@/components/trips/AttendanceConfirm";
 import { GoogleMap, type MapPoint } from "@/features/explore/GoogleMap";
 import { PlacePhoto } from "@/features/explore/PlacePhoto";
 import type { ApiError, MyTripRole, MyTripSummary, TripSummary } from "@/lib/contracts";
@@ -217,8 +218,13 @@ export function MyTripsBoard() {
       setRows([]);
       setSelectedId(null);
       try {
-        const response = await fetch(`/api/v1/trips/me?role=${tab}`, { credentials: "include", signal: ac.signal });
-        const json = (await response.json()) as { success: true; data: MyTripSummary[] } | ApiError;
+        const response = await fetch(`/api/v1/trips/me?role=${tab}`, {
+          credentials: "include",
+          signal: ac.signal,
+        });
+        const json = (await response.json()) as
+          | { success: true; data: MyTripSummary[] }
+          | ApiError;
         if (ac.signal.aborted) return;
         if (!json.success) {
           setError(json.error.message);
@@ -408,6 +414,13 @@ function TripCard({ trip, tab, selected, onSelect }: { trip: MyTripSummary; tab:
         {tripPoints(trip).length > 0 ? <a href={mapsRouteUrl(tripPoints(trip))} target="_blank" rel="noreferrer" className="rounded-full px-3 py-2 type-label text-primary hover:bg-primary-fixed"><Icon name="share" /> Bagikan rute</a> : null}
         <Link href={tripDetailHref(trip.id)} className="rounded-full px-3 py-2 type-label text-primary hover:bg-primary-fixed">Lihat detail</Link>
       </div>
+      {trip.status === "COMPLETED" ? (
+        <AttendanceConfirm
+          tripId={trip.id}
+          tripTitle={trip.title}
+          reviewUsername={tab === "joined" ? trip.host.username : null}
+        />
+      ) : null}
     </article>
   );
 }

@@ -21,6 +21,15 @@ describe("trip mocks", () => {
     }
   });
 
+  it("exposes the completed joined trip for attendance and review", () => {
+    const joined = mockListMyTrips("success", "joined");
+    expect(joined.success).toBe(true);
+    if (!joined.success) return;
+    const completed = joined.data.find((trip) => trip.id === "trip_completed");
+    expect(completed?.status).toBe("COMPLETED");
+    expect(completed?.host.username).toBe("wayan");
+  });
+
   it("create trip empty scenario returns no trip body payment fields", () => {
     const created = mockCreateTrip("success");
     expect(created.success).toBe(true);
@@ -103,5 +112,15 @@ describe("trip mocks", () => {
     expect(result.data.viewerRole).toBe("host");
     expect(result.data.visibility).toBe("PRIVATE");
     expect(result.data.privateOriginLabel).toBe("Jakarta");
+  });
+
+  it("lets a logged-in user see a public trip they do not host as a visitor", () => {
+    const result = mockGetTrip("success", "trip_open");
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.viewerRole).toBe("none");
+    expect(result.data.host.username).toBe("wayan");
+    expect(result.data.joinFree).toBe(true);
+    expect(result.data.myJoinRequest).toBeNull();
   });
 });

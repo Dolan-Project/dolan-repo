@@ -24,10 +24,6 @@ import { MemoryQuotaStore, QuotaService } from "./modules/search/quota.ts";
 import { SearchService } from "./modules/search/search-service.ts";
 import { SequelizeQuotaStore } from "./modules/search/sequelize-quota.ts";
 import { SequelizeSearchStore } from "./modules/search/sequelize-store.ts";
-import { MemoryTripStore } from "./modules/trips/memory-store.ts";
-import { SequelizeTripStore } from "./modules/trips/sequelize-store.ts";
-import { TripService, type TripRealtime } from "./modules/trips/trip-service.ts";
-import { MemorySocialStore, SequelizeSocialStore } from "./modules/social/social-queries.ts";
 import { ItineraryExportService } from "./modules/location/itinerary-export.ts";
 import { loadExportItinerary } from "./modules/location/load-export-itinerary.ts";
 import { loadTripPreview } from "./modules/location/load-trip-preview.ts";
@@ -36,6 +32,10 @@ import { MemoryLocationStore } from "./modules/location/memory-location-store.ts
 import { SequelizeLocationStore } from "./modules/location/sequelize-location-store.ts";
 import { SequelizeShareLinkStore } from "./modules/location/sequelize-share-link-store.ts";
 import { MemoryShareLinkStore, ShareLinkService } from "./modules/location/share-link-service.ts";
+import { MemorySocialStore, SequelizeSocialStore } from "./modules/social/social-queries.ts";
+import { MemoryTripStore } from "./modules/trips/memory-store.ts";
+import { SequelizeTripStore } from "./modules/trips/sequelize-store.ts";
+import { TripService, type TripBlockLookup, type TripRealtime } from "./modules/trips/trip-service.ts";
 
 export function createAuthAdapter(): AuthAdapter {
   if (env.authAdapter === "supabase" && env.supabaseUrl && env.supabaseServiceRoleKey) {
@@ -140,8 +140,12 @@ export function createRuntimeSearchService(databaseReady: boolean) {
   });
 }
 
-export function createMemoryTripService(store = new MemoryTripStore(), realtime?: TripRealtime) {
-  return new TripService(store, realtime);
+export function createMemoryTripService(
+  store = new MemoryTripStore(),
+  realtime?: TripRealtime,
+  social?: TripBlockLookup,
+) {
+  return new TripService(store, realtime, social);
 }
 
 export function createProductionTripService(realtime?: TripRealtime) {

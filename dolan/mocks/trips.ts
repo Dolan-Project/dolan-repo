@@ -10,6 +10,7 @@ import type {
 import { sampleOtherUser, samplePublicUser } from "./fixtures";
 import { meetingPointFor, resolveGeoPlace } from "./geo";
 import { createApiError, type MockScenario } from "./scenarios";
+import { socialStore } from "./social-store";
 
 const idempotentCreates = new Map<string, string>();
 const trips = new Map<string, TripDetail>();
@@ -99,8 +100,32 @@ function detailToSummary(detail: TripDetail): MyTripSummary {
   };
 }
 
+function ensureCompletedJoinedTrip() {
+  if (trips.has("trip_completed")) return;
+  const joined = trips.get("trip_joined");
+  if (!joined) return;
+  const completed = buildDetail({
+    ...joined,
+    id: "trip_completed",
+    title: "Sailing Komodo selesai",
+    host: sampleOtherUser,
+    destinationCity: "Labuan Bajo",
+    status: "COMPLETED",
+    startDate: "2026-08-01",
+    endDate: "2026-08-04",
+    meetingPoint: "Pelabuhan Labuan Bajo",
+    viewerRole: "participant",
+    activeParticipantCount: 2,
+  });
+  trips.set(completed.id, completed);
+  roles.set(completed.id, "participant");
+}
+
 function seed() {
-  if (trips.has("trip_1")) return;
+  if (trips.has("trip_1")) {
+    ensureCompletedJoinedTrip();
+    return;
+  }
   const hosted = buildDetail({
     id: "trip_1",
     title: "Jelajah Yogyakarta",
@@ -185,18 +210,44 @@ function seed() {
     viewerRole: "host",
     maxParticipants: null,
   });
+  const openJoin = buildDetail({
+    ...hosted,
+    id: "trip_open",
+    title: "Santai Sore & Sunset Canggu",
+    host: sampleOtherUser,
+    destinationCity: "Canggu",
+    startDate: "2026-10-12",
+    endDate: "2026-10-14",
+    meetingPoint: "Pantai Batu Bolong",
+    viewerRole: "none",
+    maxParticipants: 8,
+    description: "Trip publik. Join gratis — biaya perjalanan mandiri.",
+  });
+  const hostedSocial = buildDetail({
+    ...hosted,
+    id: "trip_host",
+    title: "Sailing Liveaboard Phinisi Komodo 4D3N",
+    destinationCity: "Labuan Bajo",
+    meetingPoint: "Bandara Komodo (LBJ)",
+    viewerRole: "host",
+    maxParticipants: 7,
+  });
   trips.set(hosted.id, { ...hosted, activeParticipantCount: 6 });
   trips.set(joined.id, joined);
   trips.set(pending.id, pending);
   trips.set(ongoing.id, ongoing);
   trips.set(closed.id, closed);
   trips.set(privateTrip.id, privateTrip);
+  trips.set(openJoin.id, openJoin);
+  trips.set(hostedSocial.id, hostedSocial);
   roles.set(hosted.id, "host");
   roles.set(joined.id, "participant");
   roles.set(pending.id, "pending");
   roles.set(ongoing.id, "participant");
   roles.set(closed.id, "host");
   roles.set(privateTrip.id, "host");
+  roles.set(hostedSocial.id, "host");
+  ensureCompletedJoinedTrip();
 }
 
 export function mockListMyTrips(
@@ -241,6 +292,46 @@ function canGuestView(trip: TripDetail) {
   return trip.visibility === "PUBLIC" && trip.status !== "DRAFT";
 }
 
+function attachJoinState(
+  detail: TripDetail,
+  guest: boolean,
+): TripDetail {
+  const pendingRequestCount = socialStore().joins.filter(
+    (row) => row.tripId === detail.id && row.status === "PENDING",
+  ).length;
+  if (guest || detail.viewerRole === "host") {
+    return { ...detail, myJoinRequest: null, pendingRequestCount };
+  }
+  const join =
+    socialStore()
+      .joins.filter(
+        (row) =>
+          row.tripId === detail.id && row.applicant.id === samplePublicUser.id,
+      )
+      .at(-1) ?? null;
+  let viewerRole = detail.viewerRole;
+  if (viewerRole === "none" || viewerRole === "visitor") {
+    if (join?.status === "PENDING") viewerRole = "pending";
+    if (join?.status === "ACCEPTED") viewerRole = "participant";
+  }
+  return {
+    ...detail,
+    viewerRole,
+    myJoinRequest: join,
+    pendingRequestCount,
+  };
+}
+
+export function mockTripExists(tripId: string) {
+  seed();
+  return trips.has(tripId);
+}
+
+export function mockStoredRole(tripId: string): TripViewerRole | undefined {
+  seed();
+  return roles.get(tripId);
+}
+
 export function mockGetTrip(
   scenario: MockScenario,
   tripId = "trip_1",
@@ -256,16 +347,25 @@ export function mockGetTrip(
     if (!canGuestView(trip)) {
       return createApiError("NOT_FOUND", "Trip tidak ditemukan");
     }
-    return { success: true, data: presentTrip(trip, "none") };
+    return {
+      success: true,
+      data: attachJoinState(presentTrip(trip, "none"), true),
+    };
   }
   const storedRole = roles.get(trip.id);
   if (storedRole) {
-    return { success: true, data: presentTrip(trip, storedRole) };
+    return {
+      success: true,
+      data: attachJoinState(presentTrip(trip, storedRole), false),
+    };
   }
   if (!canGuestView(trip)) {
     return createApiError("NOT_FOUND", "Trip tidak ditemukan");
   }
-  return { success: true, data: presentTrip(trip, "none") };
+  return {
+    success: true,
+    data: attachJoinState(presentTrip(trip, "none"), false),
+  };
 }
 
 export function mockCreateTrip(

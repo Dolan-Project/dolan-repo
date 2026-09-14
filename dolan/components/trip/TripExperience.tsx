@@ -14,6 +14,7 @@ type TripExperienceProps = {
   tripId: string;
   isLoggedIn: boolean;
   emailVerified: boolean;
+  hideHero?: boolean;
 };
 
 type Json<T> = { success: true; data: T } | ApiError;
@@ -22,7 +23,12 @@ async function readJson<T>(response: Response): Promise<Json<T>> {
   return (await response.json()) as Json<T>;
 }
 
-export function TripExperience({ tripId, isLoggedIn, emailVerified }: TripExperienceProps) {
+export function TripExperience({
+  tripId,
+  isLoggedIn,
+  emailVerified,
+  hideHero = false,
+}: TripExperienceProps) {
   const [trip, setTrip] = useState<TripDetail | null>(null);
   const [comments, setComments] = useState<TripComment[]>([]);
   const [queue, setQueue] = useState<JoinRequest[]>([]);
@@ -141,6 +147,13 @@ export function TripExperience({ tripId, isLoggedIn, emailVerified }: TripExperi
   }
 
   if (!trip) {
+    if (hideHero) {
+      return error ? (
+        <p className="type-body text-error" role="alert">
+          {error}
+        </p>
+      ) : null;
+    }
     return <p className="type-body text-on-surface-variant">{error || "Memuat trip…"}</p>;
   }
 
@@ -157,7 +170,8 @@ export function TripExperience({ tripId, isLoggedIn, emailVerified }: TripExperi
           : joinStatus ?? "none";
 
   return (
-    <div className="mx-auto flex max-w-[960px] flex-col gap-6 px-margin py-6 md:px-margin-desktop md:py-10">
+    <div className={hideHero ? "flex flex-col gap-6" : "mx-auto flex max-w-[960px] flex-col gap-6 px-margin py-6 md:px-margin-desktop md:py-10"}>
+      {hideHero ? null : (
       <div>
         <p className="type-micro uppercase tracking-wider text-primary">Trip publik</p>
         <h1 className="type-title mt-1 text-on-surface">{trip.title}</h1>
@@ -172,6 +186,7 @@ export function TripExperience({ tripId, isLoggedIn, emailVerified }: TripExperi
           </span>
         </div>
       </div>
+      )}
 
       {error ? (
         <p className="rounded-xl bg-error-container px-4 py-3 type-body text-on-error-container">
@@ -325,7 +340,6 @@ export function TripExperience({ tripId, isLoggedIn, emailVerified }: TripExperi
           </p>
         )}
       </section>
-
     </div>
   );
 }

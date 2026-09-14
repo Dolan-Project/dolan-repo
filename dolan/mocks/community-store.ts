@@ -12,11 +12,13 @@ export type ReviewRow = {
   tripId: string;
   communication: number;
   attitude: number;
+  comment: string | null;
+  moderationStatus: "VISIBLE" | "HIDDEN";
 };
 export type ReportRow = {
   id: string;
   reporterId: string;
-  targetType: "user" | "trip" | "comment";
+  targetType: "user" | "trip" | "comment" | "message" | "review";
   targetId: string;
   reason: string;
   status: "OPEN" | "HIDDEN" | "DISMISSED";
@@ -142,10 +144,18 @@ export function actorFromSessionId(sessionId: string | null) {
   if (!sessionId) return null;
   if (sessionId === "admin") {
     const user = userById("user_admin");
-    return user ? { user, isAdmin: true } : null;
+    return user ? { user, isAdmin: true, emailVerified: true } : null;
+  }
+  if (sessionId === "host") {
+    const user = userById(sampleOtherUser.id);
+    return user ? { user, isAdmin: false, emailVerified: true } : null;
+  }
+  if (sessionId === "unverified") {
+    const user = userById(samplePublicUser.id);
+    return user ? { user, isAdmin: false, emailVerified: false } : null;
   }
   const user = userById(samplePublicUser.id);
-  return user ? { user, isAdmin: false } : null;
+  return user ? { user, isAdmin: false, emailVerified: true } : null;
 }
 
 export function isBlockedEitherWay(userA: string, userB: string) {
@@ -164,6 +174,13 @@ export function completedTogether(tripId: string, userA: string, userB: string) 
   );
 }
 
+export function bothAttendanceConfirmed(tripId: string, userA: string, userB: string) {
+  const store = communityStore();
+  const confirmed = (userId: string) =>
+    store.attendance.some((row) => row.tripId === tripId && row.userId === userId && row.confirmed);
+  return confirmed(userA) && confirmed(userB);
+}
+
 export function refreshFollowCounts() {
   for (const user of store.users) {
     user.followersCount = store.follows.filter((row) => row.followingId === user.id).length;
@@ -174,7 +191,7 @@ export function refreshFollowCounts() {
 export function refreshRating(userId: string) {
   const user = userById(userId);
   if (!user) return;
-  const rows = store.reviews.filter((row) => row.revieweeId === userId);
+  const rows = store.reviews.filter((row) => row.revieweeId === userId && row.moderationStatus === "VISIBLE");
   if (rows.length === 0) {
     user.rating = { ...emptyRating };
     return;

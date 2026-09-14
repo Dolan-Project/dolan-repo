@@ -42,10 +42,15 @@ export type TripRealtime = {
   onCancelled?(tripId: string): Promise<unknown> | unknown;
 };
 
+export type TripBlockLookup = {
+  isBlockedEitherWay(userA: string, userB: string): Promise<boolean>;
+};
+
 export class TripService {
   constructor(
     private readonly store: TripStore,
     private readonly realtime?: TripRealtime,
+    private readonly social?: TripBlockLookup,
   ) {}
 
   async createDraft(actor: SessionActor, body: CreateTripBody, idempotencyKey: string | undefined) {
@@ -217,6 +222,45 @@ export class TripService {
     return this.transition(actor, tripId, "COMPLETED", ["ONGOING"]);
   }
 
+  async confirmAttendance(actor: SessionActor, tripId: string, confirmed: boolean) {
+    const user = requireUser(actor);
+    const trip = await this.store.getTrip(tripId);
+    if (!trip) throw hiddenTrip();
+    if (trip.status !== "COMPLETED") {
+      throw badRequest("NOT_ELIGIBLE", "Attendance can only be confirmed on a completed trip");
+    }
+    const member = await this.store.confirmAttendance(tripId, user.id, confirmed);
+    if (!member) {
+      throw forbidden("NOT_ELIGIBLE", "Only trip participants can confirm attendance");
+    }
+    return { tripId, confirmed: member.attendanceConfirmed };
+  }
+
+  async reviewEligibility(tripId: string, reviewerId: string, revieweeId: string) {
+    const trip = await this.store.getTrip(tripId);
+    if (!trip || trip.status !== "COMPLETED") return { allowed: false as const };
+    const members = await this.store.listMembers(tripId);
+    const reviewer = members.find((row) => row.userId === reviewerId && row.membershipStatus === "ACTIVE");
+    const reviewee = members.find((row) => row.userId === revieweeId && row.membershipStatus === "ACTIVE");
+    if (!reviewer || !reviewee) return { allowed: false as const };
+    if (!reviewer.attendanceConfirmed || !reviewee.attendanceConfirmed) return { allowed: false as const };
+    return { allowed: true as const, trip };
+  }
+
+  async historyFor(targetUserId: string, viewerUserId: string | null) {
+    const hosted = await this.store.listHosted(targetUserId, 1, 50);
+    const joined = await this.store.listJoined(targetUserId, 1, 50);
+    const isOwner = viewerUserId === targetUserId;
+    const items = [...hosted.items, ...joined.items]
+      .filter((trip) => trip.status === "COMPLETED")
+      .filter((trip) => isOwner || trip.visibility === "PUBLIC")
+      .map((trip) => ({
+        title: trip.title,
+        visibility: trip.visibility,
+      }));
+    return { items };
+  }
+
   async cancel(actor: SessionActor, tripId: string) {
     const detail = await this.transition(actor, tripId, "CANCELLED", ["DRAFT", "OPEN", "CLOSED", "ONGOING"]);
     await this.store.setChatReadOnly(tripId, new Date());
@@ -281,7 +325,11 @@ export class TripService {
         if (trip.status !== "OPEN") {
           throw badRequest(TripErrorCode.INVALID_TRANSITION, "This trip is not accepting join requests");
         }
-        if (await this.store.isBlocked(user.id, trip.hostUserId)) {
+        const blockedByStore = await this.store.isBlocked(user.id, trip.hostUserId);
+        const blockedBySocial = this.social
+          ? await this.social.isBlockedEitherWay(user.id, trip.hostUserId)
+          : false;
+        if (blockedByStore || blockedBySocial) {
           throw forbidden(TripErrorCode.BLOCKED_RELATION, "Join is blocked between these users");
         }
         const members = await this.store.listMembers(tripId);

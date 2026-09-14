@@ -279,6 +279,21 @@ export class SequelizeTripStore implements TripStore {
     return toStoredMember(member);
   }
 
+  async confirmAttendance(tripId: string, userId: string, confirmed: boolean) {
+    const member = await TripMember.findOne({
+      where: { tripId, userId, membershipStatus: "ACTIVE" },
+      transaction: this.tx(),
+    });
+    if (!member) return null;
+    const value = confirmed ? "PRESENT" : "ABSENT";
+    if (member.role === "HOST") {
+      await member.update({ hostAttendance: value }, { transaction: this.tx() });
+    } else {
+      await member.update({ selfAttendance: value }, { transaction: this.tx() });
+    }
+    return toStoredMember(member);
+  }
+
   async leaveMembership(tripId: string, userId: string) {
     const member = await TripMember.findOne({
       where: { tripId, userId, membershipStatus: "ACTIVE" },
@@ -535,12 +550,16 @@ function toStoredTrip(trip: Trip): StoredTrip {
 }
 
 function toStoredMember(member: TripMember): StoredMember {
+  const confirmed =
+    member.role === "HOST" ? member.hostAttendance === "PRESENT" : member.selfAttendance === "PRESENT";
   return {
     id: member.id,
     tripId: member.tripId,
     userId: member.userId,
     role: member.role,
     membershipStatus: member.membershipStatus,
+    attendanceConfirmed: confirmed,
+    showOnProfile: member.showOnProfile ?? true,
     joinedAt: member.joinedAt.toISOString(),
     leftAt: member.leftAt ? member.leftAt.toISOString() : null,
   };

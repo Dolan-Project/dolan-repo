@@ -16,8 +16,8 @@ import {
   mockResetPassword,
 } from "@/mocks/auth";
 import { samplePublicUser } from "@/mocks/fixtures";
-import { createApiError } from "@/mocks/scenarios";
 import { clearOfflineForSessionId } from "@/mocks/community-store";
+import { createApiError } from "@/mocks/scenarios";
 import { jsonResult, statusForCode, validationError } from "./api-response";
 import { proxyToExpress } from "./express-proxy";
 import { resolveAfterAuth } from "./post-auth-path";

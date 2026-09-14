@@ -140,6 +140,8 @@ export class MemoryTripStore implements TripStore {
       userId,
       role: "HOST",
       membershipStatus: "ACTIVE",
+      attendanceConfirmed: false,
+      showOnProfile: true,
       joinedAt: new Date().toISOString(),
       leftAt: null,
     });
@@ -160,10 +162,21 @@ export class MemoryTripStore implements TripStore {
       userId,
       role: "PARTICIPANT",
       membershipStatus: "ACTIVE",
+      attendanceConfirmed: false,
+      showOnProfile: true,
       joinedAt: new Date().toISOString(),
       leftAt: null,
     };
     this.members.push(member);
+    return member;
+  }
+
+  async confirmAttendance(tripId: string, userId: string, confirmed: boolean) {
+    const member = this.members.find(
+      (row) => row.tripId === tripId && row.userId === userId && row.membershipStatus === "ACTIVE",
+    );
+    if (!member) return null;
+    member.attendanceConfirmed = confirmed;
     return member;
   }
 
