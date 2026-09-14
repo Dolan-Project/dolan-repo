@@ -103,6 +103,8 @@ export class SequelizeTripStore implements TripStore {
         currency: input.currency,
         planningPartySize: input.planningPartySize,
         maxParticipants: input.maxParticipants,
+        genderRule: input.genderRule ?? "ALL_GENDERS",
+        communityRules: input.communityRules ?? null,
         currentItineraryVersionId: input.currentItineraryVersionId,
         preferences: input.preferences,
       },
@@ -144,6 +146,8 @@ export class SequelizeTripStore implements TripStore {
         budgetBasis: patch.budgetBasis ?? trip.budgetBasis,
         planningPartySize: patch.planningPartySize ?? trip.planningPartySize,
         maxParticipants: patch.maxParticipants === undefined ? trip.maxParticipants : patch.maxParticipants,
+        genderRule: patch.genderRule ?? trip.genderRule,
+        communityRules: patch.communityRules === undefined ? trip.communityRules : patch.communityRules,
         currentItineraryVersionId:
           patch.currentItineraryVersionId === undefined
             ? trip.currentItineraryVersionId
@@ -521,6 +525,8 @@ function toStoredTrip(trip: Trip): StoredTrip {
     currency: trip.currency,
     planningPartySize: trip.planningPartySize,
     maxParticipants: trip.maxParticipants ?? null,
+    genderRule: trip.genderRule,
+    communityRules: trip.communityRules ?? null,
     currentItineraryVersionId: trip.currentItineraryVersionId ?? null,
     preferences: (trip.preferences as Record<string, unknown> | null) ?? null,
     createdAt: trip.createdAt.toISOString(),

@@ -20,6 +20,7 @@ export type TripSummary = {
   publicMeetingPointLabel: string | null;
   publicMeetingPointLatitude: number | null;
   publicMeetingPointLongitude: number | null;
+  genderRule?: "ALL_GENDERS" | "FEMALE_ONLY" | "MALE_ONLY";
 };
 
 export type MyTripSummary = TripSummary & {
@@ -43,6 +44,8 @@ export type TripDetail = {
   currency: string;
   planningPartySize: number;
   maxParticipants: number | null;
+  genderRule?: "ALL_GENDERS" | "FEMALE_ONLY" | "MALE_ONLY";
+  communityRules?: string | null;
   publicMeetingPointLabel: string | null;
   publicMeetingPointLatitude: number | null;
   publicMeetingPointLongitude: number | null;

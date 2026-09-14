@@ -54,6 +54,7 @@ export function TripDetailView({ tripId }: { tripId: string }) {
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
   const [confirmLeave, setConfirmLeave] = useState(false);
+  const [routeMarkers, setRouteMarkers] = useState<TripMapMarker[]>([]);
 
   async function reload() {
     const response = await fetch(`/api/v1/trips/${tripId}`, {
@@ -72,7 +73,15 @@ export function TripDetailView({ tripId }: { tripId: string }) {
   }
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void reload();
+    void fetch(`/api/v1/trips/${encodeURIComponent(tripId)}/route-map`, { credentials: "include" })
+      .then(async (response) => response.ok ? response.json() : null)
+      .then((payload: { success?: boolean; data?: { points?: Array<{ id: string; label: string; lat: number; lng: number }> } } | null) => {
+        if (!payload?.success) return;
+        setRouteMarkers((payload.data?.points ?? []).map((point, index) => ({ id: point.id, label: point.label, latitude: point.lat, longitude: point.lng, selected: index === 0 })));
+      })
+      .catch(() => undefined);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tripId]);
 
@@ -122,7 +131,7 @@ export function TripDetailView({ tripId }: { tripId: string }) {
       ? (trip.origin ?? trip.privateOriginLabel)
       : null;
   const meetingLabel = trip.meetingPoint ?? trip.publicMeetingPointLabel;
-  const markers = detailMarkers(trip);
+  const markers = routeMarkers.length > 1 ? routeMarkers : detailMarkers(trip);
 
   return (
     <div className="mx-auto max-w-3xl px-margin py-8 md:px-margin-desktop">
@@ -162,6 +171,7 @@ export function TripDetailView({ tripId }: { tripId: string }) {
         join). Rencana {trip.planningPartySize} orang
         {trip.maxParticipants ? ` · kapasitas ${trip.maxParticipants}` : ""}.
       </p>
+      {trip.visibility === "PUBLIC" ? <div className="mt-4 rounded-2xl bg-surface-container-low p-4"><p className="type-label text-on-surface">Aturan peserta</p><p className="type-caption mt-1 text-on-surface-variant">{trip.genderRule === "FEMALE_ONLY" ? "Khusus perempuan" : trip.genderRule === "MALE_ONLY" ? "Khusus laki-laki" : "Semua gender"}</p>{trip.communityRules ? <p className="type-body mt-2 whitespace-pre-line text-on-surface">{trip.communityRules}</p> : null}<p className="type-caption mt-2 text-primary">Join gratis. Setiap peserta menanggung biaya perjalanannya sendiri.</p></div> : null}
       {error ? (
         <p className="type-body mt-3 text-error" role="alert">
           {error}
@@ -169,6 +179,7 @@ export function TripDetailView({ tripId }: { tripId: string }) {
       ) : null}
 
       <div className="mt-6 flex flex-wrap gap-2">
+        {(trip.viewerRole === "host" || trip.viewerRole === "participant") ? <Link href={ROUTES.tripChat(trip.id)} className="btn-primary"><span aria-hidden="true">💬</span> Buka grup chat</Link> : null}
         {trip.viewerRole === "host" &&
         trip.status !== "CANCELLED" &&
         trip.status !== "COMPLETED" ? (

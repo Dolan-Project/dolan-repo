@@ -1,14 +1,14 @@
 import { proxyToExpress } from "@/lib/auth/express-proxy";
 import { handleCreateTripRequest } from "@/lib/auth/handle-trip";
 import { jsonResult } from "@/lib/auth/api-response";
-import { useMockApi } from "@/lib/auth/use-mock";
+import { shouldUseMockApi } from "@/lib/auth/use-mock";
 
 export async function POST(
   request: Request,
   context: { params: Promise<{ templateId: string }> },
 ) {
   const { templateId } = await context.params;
-  if (useMockApi()) {
+  if (shouldUseMockApi()) {
     const body = await request.json() as {
       templateTitle?: string;
       destinationCity?: string;

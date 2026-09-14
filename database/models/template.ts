@@ -17,6 +17,10 @@ export class ItineraryTemplate extends Model<
   declare title: string;
   declare description: CreationOptional<string | null>;
   declare city: string;
+  declare provinceId: CreationOptional<string | null>;
+  declare featuredRank: CreationOptional<number | null>;
+  declare budgetLow: CreationOptional<string | null>;
+  declare budgetHigh: CreationOptional<string | null>;
   declare durationDays: number;
   declare transportMode: CreationOptional<string | null>;
   declare source: CreationOptional<"CURATED" | "USER_TRIP">;
@@ -78,6 +82,10 @@ export function initTemplateModels(sequelize: Sequelize) {
       title: { type: DataTypes.STRING(200), allowNull: false },
       description: { type: DataTypes.TEXT, allowNull: true },
       city: { type: DataTypes.STRING(120), allowNull: false },
+      provinceId: { type: DataTypes.UUID, allowNull: true, field: "province_id" },
+      featuredRank: { type: DataTypes.INTEGER, allowNull: true, field: "featured_rank" },
+      budgetLow: { type: DataTypes.DECIMAL(14, 2), allowNull: true, field: "budget_low" },
+      budgetHigh: { type: DataTypes.DECIMAL(14, 2), allowNull: true, field: "budget_high" },
       durationDays: { type: DataTypes.INTEGER, allowNull: false, field: "duration_days" },
       transportMode: { type: DataTypes.STRING(64), allowNull: true, field: "transport_mode" },
       source: { type: DataTypes.STRING(32), allowNull: false, defaultValue: "CURATED" },

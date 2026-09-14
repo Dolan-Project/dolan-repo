@@ -3,6 +3,7 @@ import { getSequelize } from "../src/connection.ts";
 import { initUserModel, User } from "./user.ts";
 import { initUserProfileModel, UserProfile } from "./user-profile.ts";
 import { initPlaceModel, Place } from "./place.ts";
+import { initProvinceModels, Province, ProvincePlace } from "./province.ts";
 import {
   initTemplateModels,
   ItineraryTemplate,
@@ -44,6 +45,7 @@ import {
   IdempotencyKey,
   initSupportModels,
   TripShareLink,
+  TripInvitation,
 } from "./support.ts";
 
 let initialized = false;
@@ -115,6 +117,10 @@ function applyAssociations() {
   TripChecklistItem.belongsTo(User, { foreignKey: "userId", as: "owner" });
 
   Place.hasMany(ItineraryTemplate, { foreignKey: "coverPlaceId", as: "coverTemplates" });
+  Province.hasMany(ProvincePlace, { foreignKey: "provinceId", as: "places" });
+  ProvincePlace.belongsTo(Province, { foreignKey: "provinceId", as: "province" });
+  Province.hasMany(ItineraryTemplate, { foreignKey: "provinceId", as: "templates" });
+  ItineraryTemplate.belongsTo(Province, { foreignKey: "provinceId", as: "province" });
   ItineraryTemplate.belongsTo(Place, { foreignKey: "coverPlaceId", as: "coverPlace" });
   ItineraryTemplate.belongsTo(User, { foreignKey: "creatorUserId", as: "creator" });
   ItineraryTemplate.belongsTo(Trip, { foreignKey: "sourceTripId", as: "sourceTrip" });
@@ -170,6 +176,11 @@ function applyAssociations() {
   UserReview.belongsTo(User, { foreignKey: "reviewerUserId", as: "reviewer" });
   UserReview.belongsTo(User, { foreignKey: "revieweeUserId", as: "reviewee" });
 
+  Trip.hasMany(TripInvitation, { foreignKey: "tripId", as: "invitations" });
+  TripInvitation.belongsTo(Trip, { foreignKey: "tripId", as: "trip" });
+  TripInvitation.belongsTo(User, { foreignKey: "invitedByUserId", as: "inviter" });
+  TripInvitation.belongsTo(User, { foreignKey: "invitedUserId", as: "invitedUser" });
+
   User.hasMany(LocationShare, { foreignKey: "userId", as: "locationShares" });
   LocationShare.belongsTo(User, { foreignKey: "userId", as: "user" });
   LocationShare.belongsTo(Trip, { foreignKey: "tripId", as: "trip" });
@@ -222,6 +233,7 @@ export function initModels(sequelize: Sequelize = getSequelize()) {
   initUserModel(sequelize);
   initUserProfileModel(sequelize);
   initPlaceModel(sequelize);
+  initProvinceModels(sequelize);
   initTemplateModels(sequelize);
   initTripModels(sequelize);
   initItineraryModels(sequelize);
@@ -243,6 +255,8 @@ export function getModels() {
     User,
     UserProfile,
     Place,
+    Province,
+    ProvincePlace,
     ItineraryTemplate,
     TemplateDay,
     TemplateStop,
@@ -270,6 +284,7 @@ export function getModels() {
     ModerationAction,
     GenerationJob,
     TripShareLink,
+    TripInvitation,
     ApiUsageCounter,
     IdempotencyKey,
   };
@@ -279,6 +294,8 @@ export {
   User,
   UserProfile,
   Place,
+  Province,
+  ProvincePlace,
   ItineraryTemplate,
   TemplateDay,
   TemplateStop,
@@ -306,6 +323,7 @@ export {
   ModerationAction,
   GenerationJob,
   TripShareLink,
+  TripInvitation,
   ApiUsageCounter,
   IdempotencyKey,
 };

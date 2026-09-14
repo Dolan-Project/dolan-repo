@@ -11,3 +11,8 @@ export async function PATCH(request: Request, { params }: Ctx) {
   const { tripId } = await params;
   return tripRouteHandlers.update(request, tripId);
 }
+
+export async function DELETE(request: Request, { params }: Ctx) {
+  const { tripId } = await params;
+  return tripRouteHandlers.delete(request, tripId);
+}

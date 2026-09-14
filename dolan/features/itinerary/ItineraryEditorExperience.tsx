@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { BudgetItemInput, EditableItineraryDay, EditableItineraryStop, EditorGenerationStatus, ItineraryEditorSnapshot } from "@dolan/shared";
 import { Icon } from "@/components/ui/Icon";
 import { findScheduleConflicts, generateAlternative, getItineraryEditor, saveItineraryVersion } from "./api";
 import { INITIAL_BUDGET_ITEMS, PLACE_CANDIDATES } from "./mock-data";
 import { RoutePreview } from "./RoutePreview";
+import { ROUTES } from "@/lib/routes";
 
 type Tab = "itinerary" | "budget" | "checklist";
 type Notice = { tone: "success" | "error" | "info"; text: string } | null;
@@ -24,7 +26,8 @@ function versionBudgetInputs(snapshot: ItineraryEditorSnapshot, versionId: strin
 }
 
 export function ItineraryEditorExperience({ tripId }: { tripId: string }) {
-  const publishIdempotencyKey = useMemo(() => typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : "00000000-0000-4000-8000-000000000001", [tripId]);
+  const router = useRouter();
+  const publishIdempotencyKey = useMemo(() => typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : "00000000-0000-4000-8000-000000000001", []);
   const [snapshot, setSnapshot] = useState<ItineraryEditorSnapshot | null>(null);
   const [selectedVersionId, setSelectedVersionId] = useState("");
   const [days, setDays] = useState<EditableItineraryDay[]>([]);
@@ -157,6 +160,41 @@ export function ItineraryEditorExperience({ tripId }: { tripId: string }) {
     }
   };
 
+  const closeSlots = async () => {
+    setPublishing(true);
+    setNotice(null);
+    try {
+      const response = await fetch(`/api/v1/trips/${encodeURIComponent(tripId)}/transition`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ action: "close" }),
+      });
+      const payload = await response.json() as { success: boolean; error?: { message?: string } };
+      if (!response.ok || !payload.success) throw new Error(payload.error?.message ?? "Slot gagal ditutup.");
+      setNotice({ tone: "success", text: "Pengajuan peserta baru sudah ditutup." });
+    } catch (error) {
+      setNotice({ tone: "error", text: error instanceof Error ? error.message : "Slot gagal ditutup." });
+    } finally {
+      setPublishing(false);
+    }
+  };
+
+  const deleteDraft = async () => {
+    if (!window.confirm("Hapus draft trip ini? Tindakan ini tidak dapat dibatalkan.")) return;
+    setSaving(true);
+    try {
+      const response = await fetch(`/api/v1/trips/${encodeURIComponent(tripId)}`, { method: "DELETE", credentials: "include" });
+      const payload = await response.json() as { success: boolean; error?: { message?: string } };
+      if (!response.ok || !payload.success) throw new Error(payload.error?.message ?? "Trip gagal dihapus.");
+      router.push(ROUTES.tripSaya);
+      router.refresh();
+    } catch (error) {
+      setNotice({ tone: "error", text: error instanceof Error ? error.message : "Trip gagal dihapus." });
+      setSaving(false);
+    }
+  };
+
   const chooseVersion = (versionId: string, activate = false) => {
     if (!snapshot) return;
     const version = snapshot.versions.find((item) => item.id === versionId);
@@ -187,8 +225,8 @@ export function ItineraryEditorExperience({ tripId }: { tripId: string }) {
             {snapshot.versions.map((version) => <option key={version.id} value={version.id}>Versi {version.versionNumber} · {version.source}{version.id === snapshot.activeVersionId ? " · Aktif" : ""}</option>)}
           </select>
           <button type="button" onClick={generate} disabled={generating} className="btn-primary"><Icon name="rocket_launch" /> {generating ? "Mengoptimalkan…" : "Optimalkan dengan AI"}</button>
-          <button type="button" onClick={() => setNotice({ tone: "info", text: "Tutup slot akan tersedia setelah endpoint status trip terhubung." })} className="rounded-full border border-outline-variant bg-white px-4 py-3 type-label text-on-surface-variant hover:border-primary hover:text-primary"><Icon name="lock" /> Tutup Slot</button>
-          <button type="button" onClick={() => setNotice({ tone: "info", text: "Hapus trip memerlukan konfirmasi dan endpoint trip terhubung." })} className="rounded-full border border-error/30 bg-white px-4 py-3 type-label text-error hover:bg-error-container"><Icon name="delete" /> Hapus Trip</button>
+          <button type="button" onClick={() => void closeSlots()} disabled={publishing} className="rounded-full border border-outline-variant bg-white px-4 py-3 type-label text-on-surface-variant hover:border-primary hover:text-primary disabled:opacity-50"><Icon name="lock" /> Tutup Slot</button>
+          <button type="button" onClick={() => void deleteDraft()} disabled={saving} className="rounded-full border border-error/30 bg-white px-4 py-3 type-label text-error hover:bg-error-container disabled:opacity-50"><Icon name="delete" /> Hapus Draft</button>
         </div>
       </header>
 

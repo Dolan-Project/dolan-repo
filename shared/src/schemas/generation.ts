@@ -15,6 +15,10 @@ export const generatedStopSchema = z.object({
   startTime: z.string().nullable(),
   durationMinutes: z.number().int().positive(),
   travelDurationMinutes: z.number().int().nonnegative().nullable(),
+  routePolyline: z.string().nullable().optional(),
+  travelDistanceMeters: z.number().int().nonnegative().nullable().optional(),
+  routeStatus: z.enum(["PENDING", "AVAILABLE", "UNAVAILABLE"]).optional(),
+  routeTravelMode: z.string().nullable().optional(),
   notes: z.string().nullable(),
   isLocked: z.boolean(),
 });
@@ -37,7 +41,7 @@ export const generationJobSchema = z.object({
   id: z.string().uuid(),
   tripId: z.string(),
   requestedBy: z.string().uuid(),
-  type: z.enum(["GENERATE_ITINERARY", "REGENERATE_ITINERARY"]),
+  type: z.enum(["RECOMMEND_DESTINATIONS", "GENERATE_ITINERARY", "REGENERATE_ITINERARY"]),
   status: z.enum(["QUEUED", "PROCESSING", "SUCCEEDED", "FAILED"]),
   attemptCount: z.number().int().nonnegative(),
   resultVersionId: z.string().uuid().nullable(),
@@ -48,7 +52,7 @@ export const generationJobSchema = z.object({
 });
 
 export const enqueueGenerationSchema = z.object({
-  type: z.enum(["GENERATE_ITINERARY", "REGENERATE_ITINERARY"]).default("GENERATE_ITINERARY"),
+  type: z.enum(["RECOMMEND_DESTINATIONS", "GENERATE_ITINERARY", "REGENERATE_ITINERARY"]).default("GENERATE_ITINERARY"),
   idempotencyKey: z.string().uuid(),
   preferences: z.record(z.string(), z.unknown()).optional(),
 });

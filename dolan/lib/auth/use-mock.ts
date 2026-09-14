@@ -1,5 +1,3 @@
-export function useMockApi(): boolean {
+export function shouldUseMockApi(): boolean {
   return process.env.NEXT_PUBLIC_USE_MOCK_API !== "false";
 }
-
-export const shouldUseMockApi = useMockApi;

@@ -48,6 +48,10 @@ export class ItineraryStop extends Model<
   declare startTime: CreationOptional<string | null>;
   declare durationMinutes: CreationOptional<number>;
   declare travelDurationMinutes: CreationOptional<number | null>;
+  declare routePolyline: CreationOptional<string | null>;
+  declare travelDistanceMeters: CreationOptional<number | null>;
+  declare routeStatus: CreationOptional<"PENDING" | "AVAILABLE" | "UNAVAILABLE">;
+  declare routeTravelMode: CreationOptional<string | null>;
   declare notes: CreationOptional<string | null>;
   declare isLocked: CreationOptional<boolean>;
   declare createdAt: CreationOptional<Date>;
@@ -161,6 +165,10 @@ export function initItineraryModels(sequelize: Sequelize) {
         allowNull: true,
         field: "travel_duration_minutes",
       },
+      routePolyline: { type: DataTypes.TEXT, allowNull: true, field: "route_polyline" },
+      travelDistanceMeters: { type: DataTypes.INTEGER, allowNull: true, field: "travel_distance_meters" },
+      routeStatus: { type: DataTypes.STRING(24), allowNull: false, defaultValue: "PENDING", field: "route_status" },
+      routeTravelMode: { type: DataTypes.STRING(24), allowNull: true, field: "route_travel_mode" },
       notes: { type: DataTypes.TEXT, allowNull: true },
       isLocked: {
         type: DataTypes.BOOLEAN,

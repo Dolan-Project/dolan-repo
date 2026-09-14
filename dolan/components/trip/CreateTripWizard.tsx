@@ -35,7 +35,7 @@ const aiPicks = [
   { city: "Raja Ampat", region: "Papua Barat Daya", cover: ASSETS.nusaPenida },
 ] as const;
 
-type Path = "known" | "ai";
+type Path = "manual" | "ai-route" | "ai-discovery" | "template";
 
 function newKey() {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -52,10 +52,10 @@ type CreateTripWizardProps = {
 
 export function CreateTripWizard({ templateId, initialPlaceId, initialDestination }: CreateTripWizardProps) {
   const router = useRouter();
-  const idempotencyKey = useMemo(newKey, []);
-  const publishIdempotencyKey = useMemo(newKey, []);
+  const idempotencyKey = useMemo(() => newKey(), []);
+  const publishIdempotencyKey = useMemo(() => newKey(), []);
   const [step, setStep] = useState(1);
-  const [path, setPath] = useState<Path>("known");
+  const [path, setPath] = useState<Path>(templateId ? "template" : "manual");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [origin, setOrigin] = useState("");
@@ -74,6 +74,11 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
   const [maxParticipants, setMaxParticipants] = useState(7);
   const [meetingPoint, setMeetingPoint] = useState("");
   const [companionNote, setCompanionNote] = useState("");
+  const [pace, setPace] = useState<"SANTAI" | "SEIMBANG" | "PADAT">("SEIMBANG");
+  const [accessibilityNeeds, setAccessibilityNeeds] = useState("");
+  const [genderRule, setGenderRule] = useState<"ALL_GENDERS" | "FEMALE_ONLY" | "MALE_ONLY">("ALL_GENDERS");
+  const [communityRules, setCommunityRules] = useState("");
+  const [privateInvite, setPrivateInvite] = useState("");
   const [confirmPublish, setConfirmPublish] = useState(false);
   const [pending, setPending] = useState(false);
   const [formError, setFormError] = useState("");
@@ -84,8 +89,7 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
   useEffect(() => {
     if (!templateId) return;
     const controller = new AbortController();
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api/v1";
-    fetch(`${baseUrl}/templates/${encodeURIComponent(templateId)}`, {
+    fetch(`/api/v1/templates/${encodeURIComponent(templateId)}`, {
       credentials: "include",
       headers: { Accept: "application/json" },
       signal: controller.signal,
@@ -97,7 +101,7 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
         setTitle((current) => current || payload.data!.title);
         setDestinationCity((current) => current || payload.data!.city);
         setTransport((current) => payload.data!.transportMode || current);
-        setPath("known");
+        setPath("template");
       })
       .catch((error) => {
         if (controller.signal.aborted) return;
@@ -109,7 +113,7 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
     return () => controller.abort();
   }, [templateId]);
 
-  const visualStep = step === 4 && path === "known" ? 5 : step;
+  const visualStep = step === 4 && (path === "manual" || path === "template") ? 5 : step;
 
   const previewMarkers = useMemo(() => {
     const markers: {
@@ -163,6 +167,11 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
       maxParticipants: visibility === "PUBLIC" ? maxParticipants : undefined,
       meetingPoint: visibility === "PUBLIC" ? meetingPoint : "",
       companionNote,
+      pace,
+      accessibilityNeeds,
+      genderRule,
+      communityRules,
+      privateInvite,
     };
   }
 
@@ -184,7 +193,7 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
       return;
     }
     if (step === 3) {
-      setStep(path === "ai" && !destinationCity.trim() ? 4 : 5);
+      setStep(path === "ai-discovery" || path === "ai-route" ? 4 : 5);
       return;
     }
     if (step === 4) setStep(5);
@@ -224,6 +233,25 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
       return;
     }
     const createdTripId = "tripId" in json.data ? json.data.tripId : json.data.id;
+    if (visibility === "PRIVATE" && privateInvite.trim()) {
+      const entries = privateInvite.split(",").map((item) => item.trim()).filter(Boolean);
+      for (const entry of entries) {
+        const isDolan = entry.startsWith("@");
+        const invitationResponse = await fetch(`/api/v1/trips/${createdTripId}/invitations`, {
+          method: "POST", credentials: "include", headers: { "content-type": "application/json" },
+          body: JSON.stringify(isDolan ? { channel: "DOLAN", username: entry } : { channel: "WHATSAPP" }),
+        });
+        const invitation = await invitationResponse.json() as { success: boolean; data?: { invitePath: string } };
+        if (invitation.success && invitation.data && !isDolan) {
+          const phone = entry.replace(/\D/g, "").replace(/^0/, "62");
+          const inviteUrl = `${window.location.origin}${invitation.data.invitePath}`;
+          window.open(`https://wa.me/${phone}?text=${encodeURIComponent(`Yuk ikut trip DOLAN saya. Biaya perjalanan ditanggung masing-masing: ${inviteUrl}`)}`, "_blank", "noopener,noreferrer");
+        }
+      }
+    }
+    if (path === "ai-route" || path === "ai-discovery") {
+      await fetch(`/api/v1/trips/${createdTripId}/generate`, { method: "POST", credentials: "include", headers: { "content-type": "application/json", "idempotency-key": newKey() }, body: JSON.stringify({ type: path === "ai-discovery" ? "RECOMMEND_DESTINATIONS" : "GENERATE_ITINERARY", idempotencyKey: newKey(), preferences: { mode: path, regenerateMode: "balanced" } }) }).catch(() => undefined);
+    }
     if (mode === "publish") {
       const published = await fetch(`/api/v1/trips/${createdTripId}/publish`, {
         method: "POST",
@@ -280,16 +308,28 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
           <Header n={1} title="Bagaimana kamu ingin memulai rencana ini?" />
           <div className="grid gap-4 md:grid-cols-2">
             <PathCard
-              selected={path === "known"}
-              title="Aku sudah punya tujuan"
-              desc="Isi destinasi, tanggal, dan budget. Itinerary AI lengkap menyusul."
-              onClick={() => setPath("known")}
+              selected={path === "manual"}
+              title="Punya rencana sendiri"
+              desc="Tentukan tujuan dan susun aktivitas manual di editor itinerary."
+              onClick={() => setPath("manual")}
             />
             <PathCard
-              selected={path === "ai"}
+              selected={path === "ai-route"}
+              title="Optimalkan rute dengan AI"
+              desc="Kamu sudah tahu tujuannya; Groq menyusun urutan, jadwal, dan estimasi budget."
+              onClick={() => setPath("ai-route")}
+            />
+            <PathCard
+              selected={path === "ai-discovery"}
               title="Bantu AI pilih tujuan"
-              desc="Tujuan boleh kosong. Pilih dari rekomendasi mock, generator 6 langkah Alya menyusul."
-              onClick={() => setPath("ai")}
+              desc="Belum tahu mau ke mana? Isi waktu, asal, budget, dan preferensi untuk mendapat rekomendasi."
+              onClick={() => setPath("ai-discovery")}
+            />
+            <PathCard
+              selected={path === "template"}
+              title="Pakai itinerary populer"
+              desc="Mulai dari salah satu dari 38 template provinsi DOLAN lalu edit sesuai kebutuhanmu."
+              onClick={() => { setPath("template"); if (!templateId) router.push("/jelajah?tab=templates"); }}
             />
           </div>
           <Nav nextLabel="Lanjut" onNext={goNext} />
@@ -331,7 +371,7 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
                 id="destinationCity"
                 label="Destinasi utama"
                 error={fieldErrors.destinationCity}
-                hint={path === "ai" ? "Boleh kosong di jalur Bantu AI" : undefined}
+                hint={path === "ai-discovery" ? "Boleh kosong; AI akan merekomendasikan tujuan" : undefined}
               >
                 <input
                   id="destinationCity"
@@ -453,6 +493,7 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
                 <option>Camping</option>
               </select>
             </Field>
+            <div className="grid gap-4 md:grid-cols-2"><Field id="pace" label="Tempo perjalanan"><select id="pace" className="field-input" value={pace} onChange={(event) => setPace(event.target.value as typeof pace)}><option value="SANTAI">Santai</option><option value="SEIMBANG">Seimbang</option><option value="PADAT">Padat</option></select></Field><Field id="accessibilityNeeds" label="Aksesibilitas / kebutuhan khusus" hint="Opsional"><input id="accessibilityNeeds" className="field-input" value={accessibilityNeeds} onChange={(event) => setAccessibilityNeeds(event.target.value)} placeholder="Contoh: hindari banyak tangga" /></Field></div>
             <div>
               <p className="type-label mb-2 text-on-surface">Aktivitas prioritas</p>
               <div className="flex flex-wrap gap-2">
@@ -526,11 +567,12 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
                     onChange={(e) => setCompanionNote(e.target.value)}
                   />
                 </Field>
+                <div className="grid gap-3 md:grid-cols-2"><Field id="genderRule" label="Aturan peserta"><select id="genderRule" className="field-input" value={genderRule} onChange={(event) => setGenderRule(event.target.value as typeof genderRule)}><option value="ALL_GENDERS">Semua gender</option><option value="FEMALE_ONLY">Female only</option><option value="MALE_ONLY">Male only</option></select></Field><Field id="communityRules" label="Aturan grup"><textarea id="communityRules" className="field-input min-h-20" value={communityRules} onChange={(event) => setCommunityRules(event.target.value)} placeholder="Ketepatan waktu, pembagian biaya, barang wajib…" /></Field></div>
                 <p className="type-caption text-primary">
                   Join gratis — biaya perjalanan ditanggung masing-masing. Tidak ada deposit.
                 </p>
               </div>
-            ) : null}
+            ) : <div className="rounded-xl bg-primary-fixed/35 p-4"><Field id="privateInvite" label="Undang teman (opsional)" hint="Masukkan username teman DOLAN atau nomor WhatsApp, pisahkan dengan koma. Undangan baru dikirim setelah trip disimpan."><input id="privateInvite" className="field-input" value={privateInvite} onChange={(event) => setPrivateInvite(event.target.value)} placeholder="@sinta, @dimas, 0812…" /></Field></div>}
           </div>
           <Nav onBack={() => setStep(2)} onNext={goNext} nextLabel="Lanjut ke review" />
         </>
@@ -538,9 +580,9 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
 
       {step === 4 ? (
         <>
-          <Header n={4} title="Pilih destinasi rekomendasi (mock)" />
+          <Header n={4} title={path === "ai-discovery" ? "Pilih arah rekomendasi AI" : "Atur cara AI menyusun rute"} />
           <p className="type-body mb-4 text-on-surface-variant">
-            Ini daftar contoh, bukan hasil job AI Alya. Pilih satu supaya draft punya tujuan.
+            Setelah draft disimpan, Groq akan membuat versi itinerary baru. Tempat, budget, dan rute jalan tetap diverifikasi oleh server.
           </p>
           <div className="grid gap-3 md:grid-cols-3">
             {aiPicks.map((pick) => (
@@ -622,7 +664,7 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
             <button
               type="button"
               className="btn-ghost"
-              onClick={() => setStep(path === "ai" && !destinationCity ? 4 : 3)}
+              onClick={() => setStep(path === "ai-discovery" || path === "ai-route" ? 4 : 3)}
             >
               Kembali
             </button>

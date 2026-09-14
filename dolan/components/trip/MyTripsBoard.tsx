@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Icon } from "@/components/ui/Icon";
 import { GoogleMap, type MapPoint } from "@/features/explore/GoogleMap";
@@ -204,6 +205,8 @@ export function MyTripsBoard() {
   const [focusCenter, setFocusCenter] = useState<{ lat: number; lng: number } | null>(null);
   const [zoomCommand, setZoomCommand] = useState<{ id: number; delta: 1 | -1 } | null>(null);
   const [notice, setNotice] = useState("");
+  const [routePolylines, setRoutePolylines] = useState<string[]>([]);
+  const [persistedPoints, setPersistedPoints] = useState<MapPoint[]>([]);
   const dragStart = useRef<number | null>(null);
 
   useEffect(() => {
@@ -243,7 +246,35 @@ export function MyTripsBoard() {
     () => visibleRows.find((trip) => trip.id === selectedId) ?? visibleRows[0] ?? null,
     [visibleRows, selectedId],
   );
-  const points = useMemo(() => tripPoints(selected), [selected]);
+  const fallbackPoints = useMemo(() => tripPoints(selected), [selected]);
+  const points = persistedPoints.length ? persistedPoints : fallbackPoints;
+
+  useEffect(() => {
+    const controller = new AbortController();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setPersistedPoints([]); setRoutePolylines([]);
+    if (!selected) return () => controller.abort();
+    void fetch(`/api/v1/trips/${encodeURIComponent(selected.id)}/route-map`, { credentials: "include", signal: controller.signal })
+      .then(async (response) => response.ok ? response.json() : null)
+      .then((payload: { data?: { points?: MapPoint[]; polylines?: string[] } } | null) => { if (!controller.signal.aborted) { setPersistedPoints(payload?.data?.points ?? []); setRoutePolylines(payload?.data?.polylines ?? []); } })
+      .catch(() => undefined);
+    return () => controller.abort();
+  }, [selected]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    if (routePolylines.length) return () => controller.abort();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setRoutePolylines([]);
+    if (points.length < 2) return () => controller.abort();
+    void fetch("/api/v1/routes/preview", { method: "POST", credentials: "include", headers: { "content-type": "application/json" }, body: JSON.stringify({ points: points.map(({ lat, lng }) => ({ lat, lng })) }), signal: controller.signal })
+      .then(async (response) => response.ok ? response.json() : null)
+      .then((payload: { data?: { segments?: Array<{ ok: boolean; encodedPolyline?: string }> } } | null) => {
+        if (!controller.signal.aborted) setRoutePolylines(payload?.data?.segments?.filter((segment) => segment.ok && segment.encodedPolyline).map((segment) => segment.encodedPolyline!) ?? []);
+      })
+      .catch(() => undefined);
+    return () => controller.abort();
+  }, [points, routePolylines.length]);
 
   function changeTab(next: MyTripRole) {
     setTab(next);
@@ -278,7 +309,7 @@ export function MyTripsBoard() {
     <div className="relative mx-auto w-full max-w-[1440px] px-3 pb-3 pt-3 md:px-6 md:pb-5 md:pt-5">
       <div className="relative h-[calc(100dvh-6.25rem)] min-h-[580px] overflow-hidden rounded-[1.75rem] border border-outline-variant/60 bg-white shadow-[0_18px_50px_rgba(22,48,80,.12)] lg:grid lg:h-[calc(100vh-7rem)] lg:min-h-[650px] lg:grid-cols-2">
         <section className="relative h-full min-h-[440px] overflow-hidden border-r border-outline-variant/50">
-          <GoogleMap key={selected?.id ?? tab} points={points} selectedId={points[0]?.id ?? null} onSelect={noop} showRoute={points.length > 1} mapType={mapType} focusCenter={focusCenter} zoomCommand={zoomCommand} className="absolute inset-0 h-full w-full" />
+          <GoogleMap key={selected?.id ?? tab} points={points} selectedId={points[0]?.id ?? null} onSelect={noop} showRoute={routePolylines.length > 0} routePolylines={routePolylines} mapType={mapType} focusCenter={focusCenter} zoomCommand={zoomCommand} className="absolute inset-0 h-full w-full" />
           <div className="pointer-events-none absolute left-3 right-3 top-3 rounded-2xl border border-white/70 bg-white/90 p-3 shadow-lg backdrop-blur-md md:left-4 md:right-20 md:top-4 md:p-4">
             <p className="type-micro uppercase tracking-wider text-secondary">Rute trip aktif</p>
             <h2 className="type-subtitle mt-1">{selected?.destinationCity ?? "Pilih trip untuk melihat lokasi"}</h2>
@@ -350,7 +381,7 @@ function TripCard({ trip, tab, selected, onSelect }: { trip: MyTripSummary; tab:
       <span className={`absolute right-0 top-0 z-10 rounded-bl-xl px-2.5 py-1.5 text-[8px] font-extrabold tracking-wide text-white md:text-[9px] ${tab === "hosted" ? "bg-primary" : tab === "joined" ? "bg-teal-600" : "bg-amber-500"}`}>{roleLabel}</span>
       <button type="button" aria-pressed={selected} onClick={onSelect} className="flex w-full cursor-pointer items-start gap-3 px-3 pb-3 pt-6 text-left" aria-label={`Tampilkan lokasi ${trip.title}`}>
         <div className="relative h-20 w-24 shrink-0 overflow-hidden rounded-xl bg-surface-container md:h-24 md:w-28">
-          {trip.coverPlace ? <PlacePhoto googlePlaceId={trip.coverPlace.googlePlaceId} photoName={trip.coverPlace.photoName} alt={trip.title} className="h-full w-full transition duration-300 group-hover:scale-105" /> : <img src={coverFor(trip.destinationCity ?? "")} alt={trip.destinationCity ?? trip.title} className="h-full w-full object-cover transition duration-300 group-hover:scale-105" />}
+          {trip.coverPlace ? <PlacePhoto googlePlaceId={trip.coverPlace.googlePlaceId} photoName={trip.coverPlace.photoName} alt={trip.title} className="h-full w-full transition duration-300 group-hover:scale-105" /> : <Image fill unoptimized sizes="112px" src={coverFor(trip.destinationCity ?? "")} alt={trip.destinationCity ?? trip.title} className="object-cover transition duration-300 group-hover:scale-105" />}
           <span className={`absolute bottom-2 left-2 rounded-lg px-2 py-1 text-[10px] font-bold text-white backdrop-blur ${trip.visibility === "PUBLIC" ? "bg-primary/90" : "bg-[#071c32]/85"}`}>{trip.visibility === "PUBLIC" ? "Publik" : "Private"}</span>
         </div>
         <div className="min-w-0 flex-1">
@@ -371,7 +402,7 @@ function TripCard({ trip, tab, selected, onSelect }: { trip: MyTripSummary; tab:
       </button>
       <div className="flex flex-wrap items-center gap-1.5 border-t border-outline-variant/45 px-3 py-2.5">
         {tab === "hosted" && trip.visibility === "PUBLIC" ? <Link href={`${tripDetailHref(trip.id)}#join-requests`} className="btn-primary !min-h-9 !px-3 !text-xs">Kelola Pengajuan {trip.pendingRequestCount ? `(${trip.pendingRequestCount})` : ""}</Link> : null}
-        {trip.visibility === "PUBLIC" && tab !== "pending" ? <Link href={`${tripDetailHref(trip.id)}#chat`} className="rounded-full bg-surface-container px-3 py-2 type-label"><Icon name="forum" /> Grup Chat</Link> : null}
+        {trip.visibility === "PUBLIC" && tab !== "pending" ? <Link href={ROUTES.tripChat(trip.id)} className="rounded-full bg-surface-container px-3 py-2 type-label"><Icon name="forum" /> Grup Chat</Link> : null}
         {tab === "hosted" ? <Link href={tripItineraryPath(trip.id)} className="rounded-full bg-surface-container px-3 py-2 type-label"><Icon name="edit" /> Edit itinerary</Link> : null}
         {tab === "pending" ? <Link href={tripDetailHref(trip.id)} className="btn-brand !min-h-9 !px-3 !text-xs"><Icon name="forum" /> Buka diskusi publik</Link> : null}
         {tripPoints(trip).length > 0 ? <a href={mapsRouteUrl(tripPoints(trip))} target="_blank" rel="noreferrer" className="rounded-full px-3 py-2 type-label text-primary hover:bg-primary-fixed"><Icon name="share" /> Bagikan rute</a> : null}

@@ -23,7 +23,7 @@ import { proxyToExpress } from "./express-proxy";
 import { resolveAfterAuth } from "./post-auth-path";
 import { readSessionId, sessionCookieHeader } from "./session-cookie";
 import { getSupabaseAnon } from "./supabase-anon";
-import { useMockApi } from "./use-mock";
+import { shouldUseMockApi } from "./use-mock";
 
 const TAKEN_EMAIL = "taken@dolan.test";
 const RATE_EMAIL = "rate@dolan.test";
@@ -134,7 +134,7 @@ export async function handleRegisterRequest(request: Request): Promise<Response>
   const parsed = registerSchema.safeParse(await readBody(request));
   if (!parsed.success) return validationError(parsed.error);
 
-  if (!useMockApi()) {
+  if (!shouldUseMockApi()) {
     const client = getSupabaseAnon();
     if (!client) return providerUnavailable();
     const { data, error } = await client.auth.signUp({
@@ -174,7 +174,7 @@ export async function handleLoginRequest(request: Request): Promise<Response> {
   const parsed = loginSchema.safeParse(await readBody(request));
   if (!parsed.success) return validationError(parsed.error);
 
-  if (!useMockApi()) {
+  if (!shouldUseMockApi()) {
     const client = getSupabaseAnon();
     if (!client) return providerUnavailable();
     const { data, error } = await client.auth.signInWithPassword({
@@ -210,7 +210,7 @@ export async function handleLoginRequest(request: Request): Promise<Response> {
 }
 
 export async function handleLogoutRequest(request: Request): Promise<Response> {
-  if (!useMockApi()) {
+  if (!shouldUseMockApi()) {
     const client = getSupabaseAnon();
     await client?.auth.signOut();
     const tokenHeader = request.headers.get("authorization") ?? request.headers.get("cookie");
@@ -230,7 +230,7 @@ export async function handleForgotPasswordRequest(
 ): Promise<Response> {
   const parsed = forgotPasswordSchema.safeParse(await readBody(request));
   if (!parsed.success) return validationError(parsed.error);
-  if (!useMockApi()) {
+  if (!shouldUseMockApi()) {
     const client = getSupabaseAnon();
     if (!client) return providerUnavailable();
     await client.auth.resetPasswordForEmail(parsed.data.email);
@@ -249,7 +249,7 @@ export async function handleResetPasswordRequest(
 ): Promise<Response> {
   const parsed = resetPasswordSchema.safeParse(await readBody(request));
   if (!parsed.success) return validationError(parsed.error);
-  if (!useMockApi()) {
+  if (!shouldUseMockApi()) {
     const client = getSupabaseAnon();
     if (!client) return providerUnavailable();
     const { data, error } = await client.auth.verifyOtp({
@@ -288,7 +288,7 @@ export async function handleCallbackRequest(request: Request): Promise<Response>
     return Response.redirect(dest, 302);
   }
 
-  if (!useMockApi()) {
+  if (!shouldUseMockApi()) {
     const client = getSupabaseAnon();
     if (!client) {
       const dest = new URL("/cek-email", url.origin);

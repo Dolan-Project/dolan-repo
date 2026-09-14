@@ -74,9 +74,12 @@ export class TripService {
         currency: "IDR",
         planningPartySize: body.planningPartySize,
         maxParticipants: body.maxParticipants ?? null,
+        genderRule: body.genderRule,
+        communityRules: body.communityRules ?? null,
         currentItineraryVersionId: null,
         preferences: body.preferences ?? null,
       });
+      await this.store.ensureHostMembership(trip.id, user.id);
       return this.toDetail(trip, user);
     });
   }
@@ -129,6 +132,8 @@ export class TripService {
       budgetAmount: body.budgetAmount === undefined ? trip.budgetAmount : body.budgetAmount,
       budgetBasis: body.budgetBasis ?? trip.budgetBasis,
       maxParticipants: body.maxParticipants === undefined ? trip.maxParticipants : body.maxParticipants,
+      genderRule: body.genderRule ?? trip.genderRule ?? "ALL_GENDERS",
+      communityRules: body.communityRules === undefined ? trip.communityRules : body.communityRules,
       publicMeetingPointLabel:
         body.publicMeetingPointLabel === undefined ? trip.publicMeetingPointLabel : body.publicMeetingPointLabel,
       publicMeetingPointLatitude:
@@ -640,6 +645,8 @@ export class TripService {
       currency: trip.currency,
       planningPartySize: trip.planningPartySize,
       maxParticipants: trip.maxParticipants,
+      genderRule: trip.genderRule ?? "ALL_GENDERS",
+      communityRules: trip.communityRules ?? null,
       publicMeetingPointLabel: trip.publicMeetingPointLabel,
       publicMeetingPointLatitude: trip.publicMeetingPointLatitude,
       publicMeetingPointLongitude: trip.publicMeetingPointLongitude,
@@ -677,6 +684,7 @@ export class TripService {
       publicMeetingPointLongitude: trip.publicMeetingPointLongitude,
       host: host ? toPublicUser(host) : placeholderUser(trip.hostUserId),
       maxParticipants: trip.maxParticipants,
+      genderRule: trip.genderRule ?? "ALL_GENDERS",
     };
   }
 

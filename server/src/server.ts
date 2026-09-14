@@ -21,6 +21,7 @@ import { envRateLimit } from "./middleware/rate-limit.ts";
 import { logger } from "./lib/logger.ts";
 import { AuthService } from "./modules/auth/auth-service.ts";
 import { startGenerationWorker } from "./modules/jobs/run-worker.ts";
+import { ProvinceService } from "./modules/provinces/province-service.ts";
 import { createSocketServer, logSocketReady } from "./socket/index.ts";
 
 async function main() {
@@ -57,6 +58,7 @@ async function main() {
     createLocationService(chatService, databaseReady),
     createShareLinkService(chatService, databaseReady),
     createItineraryExportService(chatService, databaseReady),
+    new ProvinceService(databaseReady),
   );
 
   httpServer.on("request", app);

@@ -1,97 +1,41 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
+import { GoogleMap } from "@/features/explore/GoogleMap";
 import { Icon } from "@/components/ui/Icon";
-import {
-  INDONESIA_TILES,
-  projectOnIndonesiaTiles,
-} from "@/mocks/geo";
 
 export type TripMapMarker = {
-  id: string;
-  label: string;
-  latitude: number;
-  longitude: number;
-  selected?: boolean;
-  tone?: "meeting" | "origin";
+  id: string; label: string; latitude: number; longitude: number;
+  selected?: boolean; tone?: "meeting" | "origin";
 };
 
-const tileXs = range(INDONESIA_TILES.minX, INDONESIA_TILES.maxX);
-const tileYs = range(INDONESIA_TILES.minY, INDONESIA_TILES.maxY);
-
-function range(from: number, to: number) {
-  return Array.from({ length: to - from + 1 }, (_, index) => from + index);
-}
-
-export function TripBoardMap({
-  markers,
-  compact = false,
-  onSelect,
-}: {
-  markers: TripMapMarker[];
-  compact?: boolean;
-  onSelect?: (id: string) => void;
-}) {
-  return (
-    <div
-      className={`relative overflow-hidden bg-[#9ec5d8] ${
-        compact ? "h-48 rounded-2xl" : "h-full min-h-[320px]"
-      }`}
-    >
-      <div
-        className="absolute inset-0 grid"
-        style={{
-          gridTemplateColumns: `repeat(${tileXs.length}, minmax(0, 1fr))`,
-          gridTemplateRows: `repeat(${tileYs.length}, minmax(0, 1fr))`,
-        }}
-      >
-        {tileYs.flatMap((y) =>
-          tileXs.map((x) => (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              key={`${x}-${y}`}
-              alt=""
-              className="h-full w-full object-cover"
-              src={`https://tile.openstreetmap.org/${INDONESIA_TILES.z}/${x}/${y}.png`}
-            />
-          )),
-        )}
-      </div>
-      <div className="absolute inset-0 bg-linear-to-b from-surface/10 via-transparent to-surface/25" />
-      {markers.map((marker) => {
-        const pos = projectOnIndonesiaTiles(marker.latitude, marker.longitude);
-        const selected = Boolean(marker.selected);
-        const origin = marker.tone === "origin";
-        return (
-          <button
-            key={marker.id}
-            type="button"
-            onClick={() => onSelect?.(marker.id)}
-            className="absolute z-10 -translate-x-1/2 -translate-y-full"
-            style={{ left: `${pos.left}%`, top: `${pos.top}%` }}
-            aria-current={selected ? "true" : undefined}
-            aria-label={`Pilih ${marker.label}`}
-          >
-            {selected ? (
-              <span className="absolute inset-x-2 top-2 h-6 animate-ping rounded-full bg-primary/30" />
-            ) : null}
-            <span
-              className={`relative flex items-center gap-1 rounded-full py-1 pl-1 pr-2.5 shadow-lg ${
-                selected
-                  ? "bg-primary text-on-primary"
-                  : origin
-                    ? "bg-secondary-container text-on-secondary-container"
-                    : "bg-surface-container-lowest text-on-surface"
-              }`}
-            >
-              <Icon name="location_on" filled className="text-[18px]" />
-              <span className="type-micro max-w-36 truncate">{marker.label}</span>
-            </span>
-          </button>
-        );
-      })}
-      <p className="absolute bottom-2 left-2 z-10 rounded-lg bg-surface-container-lowest/90 px-2 py-1 type-micro text-on-surface-variant">
-        © OpenStreetMap · titik temu publik, bukan rute jalan
-      </p>
+export function TripBoardMap({ markers, compact = false, onSelect }: { markers: TripMapMarker[]; compact?: boolean; onSelect?: (id: string) => void }) {
+  const [mapType, setMapType] = useState<"roadmap" | "satellite">("roadmap");
+  const [zoomCommand, setZoomCommand] = useState<{ id: number; delta: 1 | -1 } | null>(null);
+  const [myLocation, setMyLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [routePolylines, setRoutePolylines] = useState<string[]>([]);
+  const points = useMemo(() => markers.map((marker) => ({ id: marker.id, label: marker.label, lat: marker.latitude, lng: marker.longitude })), [markers]);
+  const selectedId = markers.find((marker) => marker.selected)?.id ?? markers[0]?.id ?? null;
+  useEffect(() => {
+    const controller = new AbortController();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setRoutePolylines([]);
+    if (points.length < 2) return () => controller.abort();
+    void fetch("/api/v1/routes/preview", { method: "POST", credentials: "include", headers: { "content-type": "application/json" }, body: JSON.stringify({ points: points.map(({ lat, lng }) => ({ lat, lng })) }), signal: controller.signal })
+      .then(async (response) => response.ok ? response.json() : null)
+      .then((payload: { data?: { segments?: Array<{ ok: boolean; encodedPolyline?: string }> } } | null) => { if (!controller.signal.aborted) setRoutePolylines(payload?.data?.segments?.filter((segment) => segment.ok && segment.encodedPolyline).map((segment) => segment.encodedPolyline!) ?? []); })
+      .catch(() => undefined);
+    return () => controller.abort();
+  }, [points]);
+  function locate() { navigator.geolocation?.getCurrentPosition((position) => setMyLocation({ lat: position.coords.latitude, lng: position.coords.longitude })); }
+  return <div className={`relative overflow-hidden bg-surface-container ${compact ? "h-48 rounded-2xl" : "h-full min-h-[320px]"}`}>
+    <GoogleMap points={points} selectedId={selectedId} onSelect={(id) => onSelect?.(id)} mapType={mapType} focusCenter={myLocation} zoomCommand={zoomCommand} showRoute={routePolylines.length > 0} routePolylines={routePolylines} className="h-full w-full" />
+    <div className="absolute right-3 top-3 z-20 grid overflow-hidden rounded-2xl border border-white/80 bg-white/95 shadow-lg backdrop-blur">
+      <button type="button" className="grid h-10 w-10 place-items-center border-b border-outline-variant/40" onClick={() => setMapType((type) => type === "roadmap" ? "satellite" : "roadmap")} aria-label="Ubah jenis peta"><Icon name="layers" /></button>
+      <button type="button" className="grid h-10 w-10 place-items-center border-b border-outline-variant/40" onClick={locate} aria-label="Lokasi saya"><Icon name="my_location" /></button>
+      <button type="button" className="grid h-10 w-10 place-items-center border-b border-outline-variant/40" onClick={() => setZoomCommand({ id: Date.now(), delta: 1 })} aria-label="Perbesar"><Icon name="add" /></button>
+      <button type="button" className="grid h-10 w-10 place-items-center" onClick={() => setZoomCommand({ id: Date.now(), delta: -1 })} aria-label="Perkecil"><Icon name="remove" /></button>
     </div>
-  );
+    <p className="absolute bottom-2 left-2 z-10 rounded-lg bg-white/90 px-2 py-1 text-[10px] font-bold text-on-surface-variant">Google Maps · rute mengikuti jalan saat Routes API tersedia</p>
+  </div>;
 }

@@ -1,7 +1,7 @@
 export type LatLng = { latitude: number; longitude: number };
 
 export type RouteLegResult =
-  | { ok: true; durationMinutes: number }
+  | { ok: true; durationMinutes: number; distanceMeters?: number; encodedPolyline?: string; travelMode?: string }
   | { ok: false; reason: string };
 
 export interface RoutesClient {
@@ -11,7 +11,7 @@ export interface RoutesClient {
 const UNSUPPORTED = "Rute tidak tersedia untuk segmen ini. Jangan anggap garis lurus sebagai jalan.";
 
 export class MockRoutesClient implements RoutesClient {
-  constructor(private readonly result: RouteLegResult = { ok: true, durationMinutes: 25 }) {}
+  constructor(private readonly result: RouteLegResult = { ok: true, durationMinutes: 25, distanceMeters: 12000, encodedPolyline: "", travelMode: "DRIVE" }) {}
 
   async computeLeg(): Promise<RouteLegResult> {
     return this.result;
@@ -31,7 +31,7 @@ export class GoogleRoutesClient implements RoutesClient {
         headers: {
           "Content-Type": "application/json",
           "X-Goog-Api-Key": this.apiKey,
-          "X-Goog-FieldMask": "routes.duration,routes.distanceMeters",
+          "X-Goog-FieldMask": "routes.duration,routes.distanceMeters,routes.polyline.encodedPolyline",
         },
         body: JSON.stringify({
           origin: { location: { latLng: from } },
@@ -44,12 +44,13 @@ export class GoogleRoutesClient implements RoutesClient {
       if (!response.ok) {
         return { ok: false, reason: UNSUPPORTED };
       }
-      const payload = (await response.json()) as { routes?: Array<{ duration?: string }> };
-      const duration = payload.routes?.[0]?.duration;
-      if (!duration) return { ok: false, reason: UNSUPPORTED };
+      const payload = (await response.json()) as { routes?: Array<{ duration?: string; distanceMeters?: number; polyline?: { encodedPolyline?: string } }> };
+      const route = payload.routes?.[0];
+      const duration = route?.duration;
+      if (!duration || !route?.polyline?.encodedPolyline) return { ok: false, reason: UNSUPPORTED };
       const seconds = Number(duration.replace(/s$/, ""));
       if (!Number.isFinite(seconds) || seconds <= 0) return { ok: false, reason: UNSUPPORTED };
-      return { ok: true, durationMinutes: Math.max(1, Math.round(seconds / 60)) };
+      return { ok: true, durationMinutes: Math.max(1, Math.round(seconds / 60)), distanceMeters: route.distanceMeters ?? 0, encodedPolyline: route.polyline.encodedPolyline, travelMode: "DRIVE" };
     } catch {
       return { ok: false, reason: UNSUPPORTED };
     }
@@ -86,11 +87,11 @@ export async function applyRouteLegs(
       const leg = await routes.computeLeg(from, to);
       stops.push(
         leg.ok
-          ? { ...stop, travelDurationMinutes: leg.durationMinutes }
+          ? { ...stop, travelDurationMinutes: leg.durationMinutes, routePolyline: leg.encodedPolyline || null, travelDistanceMeters: leg.distanceMeters ?? null, routeStatus: leg.encodedPolyline ? "AVAILABLE" as const : "PENDING" as const, routeTravelMode: leg.travelMode ?? null }
           : {
               ...stop,
               travelDurationMinutes: null,
-              notes: [stop.notes, leg.reason].filter(Boolean).join(" "),
+              notes: [stop.notes, leg.reason].filter(Boolean).join(" "), routePolyline: null, travelDistanceMeters: null, routeStatus: "UNAVAILABLE" as const, routeTravelMode: null,
             },
       );
       cursor += 1;

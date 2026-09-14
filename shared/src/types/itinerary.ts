@@ -11,6 +11,10 @@ export type EditableItineraryStop = {
   startTime: string | null;
   durationMinutes: number;
   travelDurationMinutes: number | null;
+  routePolyline?: string | null;
+  travelDistanceMeters?: number | null;
+  routeStatus?: "PENDING" | "AVAILABLE" | "UNAVAILABLE";
+  routeTravelMode?: string | null;
   notes: string | null;
   isLocked: boolean;
 };

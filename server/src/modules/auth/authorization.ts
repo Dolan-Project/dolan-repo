@@ -38,8 +38,7 @@ export function authorize(actor: SessionActor, capability: AuthCapability): Auth
 
   if (
     capability === "create_draft" ||
-    capability === "upload_own_profile_asset" ||
-    capability === "approve_join"
+    capability === "upload_own_profile_asset"
   ) {
     return { allowed: true };
   }
@@ -73,6 +72,12 @@ export function authorize(actor: SessionActor, capability: AuthCapability): Auth
 
   if (capability === "publish_trip") {
     return { allowed: true };
+  }
+
+  if (capability === "approve_join") {
+    return trip?.memberRole === "HOST"
+      ? { allowed: true }
+      : deny(403, AuthErrorCode.NOT_HOST, "Only the host can manage participants");
   }
 
   if (capability === "join_trip") {
