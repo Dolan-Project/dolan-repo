@@ -18,6 +18,12 @@ describe("searchGeoPlaces", () => {
       true,
     );
   });
+
+  it("ranks Gunung Bromo above city-center guesses when searching bromo", () => {
+    const hits = searchGeoPlaces("bromo");
+    expect(hits[0]?.label).toMatch(/Gunung Bromo|Cemoro Lawang/i);
+    expect(hits[0]?.latitude).toBeCloseTo(-7.94, 1);
+  });
 });
 
 describe("resolveGeoPlace", () => {

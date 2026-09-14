@@ -4,6 +4,7 @@ import { AppShell } from "@/components/layout/AppShell";
 import { Icon } from "@/components/ui/Icon";
 import { INDONESIA_PROVINCES } from "@/lib/provinces";
 import { ProvincePlacesGrid } from "@/components/province/ProvincePlacesGrid";
+import { provinceCoverUrl } from "@/lib/province-cover";
 
 export function generateStaticParams() {
   return INDONESIA_PROVINCES.map(({ slug }) => ({ slug }));
@@ -74,6 +75,7 @@ export default async function ProvincePage({ params }: { params: Promise<{ slug:
   const templateDescription = live?.template?.description ?? catalog!.template.description;
   const durationDays = live?.template?.durationDays ?? catalog!.template.durationDays;
   const usageCount = live?.template?.usageCount ?? 0;
+  const cover = catalog ? provinceCoverUrl(catalog) : null;
   const dayCards =
     live?.template?.days?.map((day) => ({
       dayNumber: day.dayNumber,
@@ -92,16 +94,21 @@ export default async function ProvincePage({ params }: { params: Promise<{ slug:
   return (
     <AppShell>
       <main className="min-h-screen bg-surface px-margin pb-20 pt-8 md:px-margin-desktop md:pt-12">
-        <section className="relative mx-auto max-w-7xl overflow-hidden rounded-[2rem] bg-gradient-to-br from-[#075fb8] via-[#118acb] to-[#74d5e8] px-6 py-10 text-white shadow-xl md:px-12 md:py-16">
-          <div className="absolute -right-20 -top-24 h-72 w-72 rounded-full bg-white/15 blur-2xl" />
-          <p className="type-label relative font-extrabold uppercase tracking-[.16em] text-white/75">
+        <section className="relative mx-auto max-w-7xl overflow-hidden rounded-[2rem] text-white shadow-xl">
+          {cover ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={cover} alt="" className="absolute inset-0 h-full w-full object-cover" />
+          ) : null}
+          <div className={`absolute inset-0 bg-gradient-to-br from-[#075fb8]/90 via-[#118acb]/80 to-[#071c32]/75 ${cover ? "" : "from-[#075fb8] via-[#118acb] to-[#74d5e8]"}`} />
+          <div className="relative px-6 py-10 md:px-12 md:py-16">
+          <p className="type-label font-extrabold uppercase tracking-[.16em] text-white/75">
             Jelajah 38 Provinsi
           </p>
-          <h1 className="relative mt-3 max-w-3xl text-4xl font-extrabold leading-tight md:text-6xl">
+          <h1 className="mt-3 max-w-3xl text-4xl font-extrabold leading-tight md:text-6xl">
             Petualangan terbaik di {name}
           </h1>
-          <p className="relative mt-5 max-w-2xl text-sm leading-7 text-white/85 md:text-base">{description}</p>
-          <div className="relative mt-7 flex flex-wrap gap-3 text-sm font-bold">
+          <p className="mt-5 max-w-2xl text-sm leading-7 text-white/85 md:text-base">{description}</p>
+          <div className="mt-7 flex flex-wrap gap-3 text-sm font-bold">
             <span className="rounded-full bg-white/15 px-4 py-2 backdrop-blur">
               <Icon name="location_on" /> Ibu kota {capital}
             </span>
@@ -109,6 +116,7 @@ export default async function ProvincePage({ params }: { params: Promise<{ slug:
               <Icon name="route" /> Template {durationDays} hari
               {usageCount > 0 ? ` · dipakai ${usageCount}x` : ""}
             </span>
+          </div>
           </div>
         </section>
 

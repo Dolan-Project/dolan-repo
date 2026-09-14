@@ -185,22 +185,32 @@ export async function saveItineraryVersion(tripId: string, actorId: string, body
     const stops: EditableItineraryStop[] = [];
     for (const stop of day.stops) {
       const stored = stop.googlePlaceId ? await Place.findOne({ where: { googlePlaceId: stop.googlePlaceId } }) : null;
+      const latitude = stop.latitude ?? stored?.cachedLatitude ?? 0;
+      const longitude = stop.longitude ?? stored?.cachedLongitude ?? 0;
+      const name = stop.customTitle ?? stored?.cachedName ?? "Destinasi";
+      const googlePlaceId = stop.googlePlaceId ?? `tpl-${stop.id}`;
       stops.push({
-        ...stop,
-        place: toPlaceSummary(stored) ?? (stop.googlePlaceId
-          ? {
-              googlePlaceId: stop.googlePlaceId,
-              name: stop.customTitle ?? "Destinasi",
-              formattedAddress: null,
-              city: null,
-              latitude: 0,
-              longitude: 0,
-              rating: null,
-              userRatingCount: null,
-              photoName: null,
-              googleMapsUrl: null,
-            }
-          : null),
+        id: stop.id,
+        sequence: stop.sequence,
+        place: {
+          googlePlaceId,
+          name,
+          formattedAddress: stored?.cachedCity ? `${name}, ${stored.cachedCity}` : name,
+          city: stored?.cachedCity ?? trip.destinationCity ?? null,
+          latitude,
+          longitude,
+          rating: null,
+          userRatingCount: null,
+          photoName: null,
+          googleMapsUrl: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${name} ${latitude},${longitude}`)}`,
+        },
+        customTitle: stop.customTitle,
+        activityType: stop.activityType,
+        startTime: stop.startTime,
+        durationMinutes: stop.durationMinutes,
+        travelDurationMinutes: stop.travelDurationMinutes,
+        notes: stop.notes,
+        isLocked: stop.isLocked,
         routePolyline: null,
         travelDistanceMeters: null,
         routeStatus: "PENDING",
@@ -250,6 +260,14 @@ export async function saveItineraryVersion(tripId: string, actorId: string, body
             },
             transaction,
           });
+          if (stop.place.latitude || stop.place.longitude) {
+            await place.update({
+              cachedName: stop.place.name,
+              cachedCity: stop.place.city ?? place.cachedCity,
+              cachedLatitude: stop.place.latitude || place.cachedLatitude,
+              cachedLongitude: stop.place.longitude || place.cachedLongitude,
+            }, { transaction });
+          }
           placeId = place.id;
         }
         await ItineraryStop.create(

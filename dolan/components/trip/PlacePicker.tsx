@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useMemo, useState } from "react";
 import { Field } from "@/components/auth/Field";
+import { Icon } from "@/components/ui/Icon";
 import { shouldUseMockApi } from "@/lib/auth/use-mock";
 import { searchGeoPlaces } from "@/mocks/geo";
 
@@ -37,6 +38,7 @@ export function PlacePicker({
   error,
   excludeLabel,
   placeholder,
+  icon = "location_on",
 }: {
   id: string;
   label: string;
@@ -46,6 +48,7 @@ export function PlacePicker({
   error?: string;
   excludeLabel?: string;
   placeholder?: string;
+  icon?: string;
 }) {
   const listId = useId();
   const [open, setOpen] = useState(false);
@@ -93,7 +96,7 @@ export function PlacePicker({
       <div className="relative">
         <input
           id={id}
-          className="field-input"
+          className="field-input field-input-icon"
           value={value}
           placeholder={placeholder}
           autoComplete="off"
@@ -110,6 +113,7 @@ export function PlacePicker({
             window.setTimeout(() => setOpen(false), 120);
           }}
         />
+        <Icon name={icon} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[20px] text-primary" />
         {open && suggestions.length > 0 ? (
           <ul
             id={listId}

@@ -1,60 +1,42 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { Field } from "@/components/auth/Field";
 import { Icon } from "@/components/ui/Icon";
 import { PlacePicker } from "@/components/trip/PlacePicker";
-import { TripBoardMap } from "@/components/trip/TripBoardMap";
-import type { DestinationRecommendation, ItineraryTemplateDetail, UseTemplateResult } from "@dolan/shared";
+import { CreateTripItineraryStep } from "@/components/trip/CreateTripItineraryStep";
+import type { EditableItineraryDay, EditableItineraryStop, ItineraryEditorSnapshot, ItineraryTemplateDetail, UseTemplateResult } from "@dolan/shared";
 import type { ApiError, CreateTripInput, TripDetail } from "@/lib/contracts";
-import { ASSETS } from "@/lib/assets";
-import { tripDetailHref, tripItineraryPath } from "@/lib/routes";
+import { ROUTES } from "@/lib/routes";
+import { buildDestinationItinerary, buildProvinceTemplateDays, templateMatchesDestination } from "@/lib/destination-itinerary";
 import { INDONESIA_PROVINCES, searchProvinces } from "@/lib/provinces";
-import { meetingPointFor, resolveGeoPlace } from "@/mocks/geo";
+import {
+  applyTemplatePrefill,
+  applyPublicMeetingPoint,
+  availableBudgetPool,
+  budgetItemsFromPlan,
+  canRegenerate,
+  estimateItineraryBudget,
+  firstStopMeetingLabel,
+  formatRupiah,
+  packItinerarySchedule,
+  reorderStopsInDay,
+  toItinerarySaveDays,
+  tripTitleFromDestination,
+  validateWizardBasics,
+  WIZARD_STEPS,
+  type WizardPath,
+} from "@/lib/template-itinerary";
+import { generateAlternative, saveItineraryVersion } from "@/features/itinerary/api";
+import { INITIAL_BUDGET_ITEMS, createBudgetSummary } from "@/features/itinerary/mock-data";
+import { provinceCoverUrl } from "@/lib/province-cover";
 
-const steps = [
-  "Pilih Jalur",
-  "Dasar Trip",
-  "Budget",
-  "AI / Tujuan",
-  "Review",
-  "Publish",
-] as const;
-
-const activities = [
-  "Snorkeling",
-  "Sunrise Trekking",
-  "Fotografi",
-  "Kuliner",
-  "Satwa Liar",
-] as const;
-
-const aiPicks = [
-  { city: "Labuan Bajo", region: "NTT", cover: ASSETS.komodo, googlePlaceId: "ChIJ-LBJ-Airport", name: "Labuan Bajo" },
-  { city: "Gunung Bromo", region: "Jawa Timur", cover: ASSETS.mountBatur, googlePlaceId: "ChIJaaaaaaaaaaaaaaaaaaaa", name: "Gunung Bromo" },
-  { city: "Raja Ampat", region: "Papua Barat Daya", cover: ASSETS.nusaPenida, googlePlaceId: "ChIJxYBx6Da5eY4R2lX2sQ0oYkA", name: "Raja Ampat" },
-] as const;
-
-function coverForCandidate(candidate: DestinationRecommendation) {
-  const haystack = `${candidate.city} ${candidate.name} ${candidate.region ?? ""}`.toLowerCase();
-  if (haystack.includes("bajo") || haystack.includes("komodo")) return ASSETS.komodo;
-  if (haystack.includes("bali") || haystack.includes("ubud") || haystack.includes("canggu")) return ASSETS.cangguUbud;
-  if (haystack.includes("yogya") || haystack.includes("jogja")) return ASSETS.jogja;
-  if (haystack.includes("bromo") || haystack.includes("batur")) return ASSETS.mountBatur;
-  return ASSETS.tanahLot;
-}
-
-function wait(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-type Path = "manual" | "ai-route" | "ai-discovery" | "template";
+const BUDGET_PRESETS = [750_000, 1_500_000, 2_500_000, 5_000_000];
 
 function newKey() {
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
-    return crypto.randomUUID();
-  }
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
   return `trip-${Date.now()}`;
 }
 
@@ -69,31 +51,18 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
   const idempotencyKey = useMemo(() => newKey(), []);
   const publishIdempotencyKey = useMemo(() => newKey(), []);
   const [step, setStep] = useState(1);
-  const [path, setPath] = useState<Path>(templateId ? "template" : "manual");
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [origin, setOrigin] = useState("");
+  const [path, setPath] = useState<WizardPath>(templateId ? "template" : "create");
   const [destinationCity, setDestinationCity] = useState(initialDestination ?? "");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [transport, setTransport] = useState("Kapal Phinisi");
-  const [planningPartySize, setPlanningPartySize] = useState(4);
+  const [transport, setTransport] = useState("Transportasi umum + sewa lokal");
+  const [partySize, setPartySize] = useState(2);
   const [budgetAmount, setBudgetAmount] = useState(2_000_000);
-  const [budgetBasis, setBudgetBasis] = useState<"PER_PERSON" | "GROUP">(
-    "PER_PERSON",
-  );
-  const [lodgingPref, setLodgingPref] = useState("Homestay / Guesthouse Lokal");
-  const [activityPrefs, setActivityPrefs] = useState<string[]>(["Snorkeling"]);
+  const [budgetBasis, setBudgetBasis] = useState<"PER_PERSON" | "GROUP">("PER_PERSON");
   const [visibility, setVisibility] = useState<"PRIVATE" | "PUBLIC">("PRIVATE");
-  const [maxParticipants, setMaxParticipants] = useState(7);
-  const [meetingPoint, setMeetingPoint] = useState("");
-  const [companionNote, setCompanionNote] = useState("");
-  const [pace, setPace] = useState<"SANTAI" | "SEIMBANG" | "PADAT">("SEIMBANG");
-  const [accessibilityNeeds, setAccessibilityNeeds] = useState("");
+  const [maxParticipants, setMaxParticipants] = useState<number | "">("");
   const [genderRule, setGenderRule] = useState<"ALL_GENDERS" | "FEMALE_ONLY" | "MALE_ONLY">("ALL_GENDERS");
-  const [communityRules, setCommunityRules] = useState("");
-  const [privateInvite, setPrivateInvite] = useState("");
-  const [confirmPublish, setConfirmPublish] = useState(false);
+  const [inviteUsernames, setInviteUsernames] = useState<string[]>([]);
   const [pending, setPending] = useState(false);
   const [formError, setFormError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -101,12 +70,22 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
   const [templateLoading, setTemplateLoading] = useState(Boolean(templateId));
   const [selectedTemplateId, setSelectedTemplateId] = useState(templateId ?? "");
   const [templateQuery, setTemplateQuery] = useState("");
-  const [regenerateMode, setRegenerateMode] = useState<"balanced" | "cheaper" | "alternative">("balanced");
+  const [templateDetail, setTemplateDetail] = useState<ItineraryTemplateDetail | null>(null);
   const [connections, setConnections] = useState<Array<{ username: string; displayName: string }>>([]);
-  const [draftTripId, setDraftTripId] = useState<string | null>(null);
-  const [aiCandidates, setAiCandidates] = useState<DestinationRecommendation[] | null>(null);
-  const [recommendPending, setRecommendPending] = useState(false);
-  const [usedAiFallback, setUsedAiFallback] = useState(false);
+  const [tripId, setTripId] = useState("");
+  const [snapshot, setSnapshot] = useState<ItineraryEditorSnapshot | null>(null);
+  const [days, setDays] = useState<EditableItineraryDay[]>([]);
+  const [selectedStopId, setSelectedStopId] = useState<string | null>(null);
+  const [editingStopId, setEditingStopId] = useState<string | null>(null);
+  const [generating, setGenerating] = useState(false);
+  const [regenerateUsed, setRegenerateUsed] = useState(0);
+  const [itineraryReady, setItineraryReady] = useState(false);
+
+  const tripTitle = tripTitleFromDestination(destinationCity, templateTitle);
+  const budgetPlan = useMemo(
+    () => estimateItineraryBudget(days, availableBudgetPool(budgetAmount, budgetBasis, partySize), partySize),
+    [days, budgetAmount, budgetBasis, partySize],
+  );
 
   useEffect(() => {
     if (!templateId) return;
@@ -119,11 +98,7 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
       .then(async (response) => {
         const payload = await response.json() as { success: boolean; data?: ItineraryTemplateDetail; error?: { message?: string } };
         if (!response.ok || !payload.success || !payload.data) throw new Error(payload.error?.message ?? "Template tidak tersedia.");
-        setTemplateTitle(payload.data.title);
-        setTitle((current) => current || payload.data!.title);
-        setDestinationCity((current) => current || payload.data!.city);
-        setTransport((current) => payload.data!.transportMode || current);
-        setPath("template");
+        applyChosenTemplate(payload.data);
       })
       .catch((error) => {
         if (controller.signal.aborted) return;
@@ -138,13 +113,13 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
   useEffect(() => {
     const controller = new AbortController();
     void fetch("/api/v1/users/me", { credentials: "include", signal: controller.signal })
-      .then(async (response) => response.ok ? response.json() : null)
+      .then(async (response) => (response.ok ? response.json() : null))
       .then((payload: { success?: boolean; data?: { user?: { username?: string } } } | null) => {
         const username = payload?.data?.user?.username;
         if (!username) return null;
         return fetch(`/api/v1/users/${encodeURIComponent(username)}/following`, { credentials: "include", signal: controller.signal });
       })
-      .then(async (response) => response && response.ok ? response.json() : null)
+      .then(async (response) => (response && response.ok ? response.json() : null))
       .then((payload: { success?: boolean; data?: { items?: Array<{ username: string; displayName: string }> } } | null) => {
         if (!controller.signal.aborted) setConnections(payload?.data?.items ?? []);
       })
@@ -152,101 +127,86 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
     return () => controller.abort();
   }, []);
 
-  const visualStep = step === 4 && (path === "manual" || path === "template") ? 5 : step;
-
-  const previewMarkers = useMemo(() => {
-    const markers: {
-      id: string;
-      label: string;
-      latitude: number;
-      longitude: number;
-      selected?: boolean;
-      tone: "origin" | "meeting";
-    }[] = [];
-    const originPlace = resolveGeoPlace(origin);
-    if (originPlace) {
-      markers.push({
-        id: "origin",
-        label: originPlace.label,
-        latitude: originPlace.latitude,
-        longitude: originPlace.longitude,
-        tone: "origin",
-      });
-    }
-    const meeting = meetingPointFor(meetingPoint, destinationCity);
-    if (visibility === "PUBLIC" && meeting) {
-      markers.push({
-        id: "meeting",
-        label: meetingPoint || destinationCity || "Titik temu",
-        latitude: meeting.latitude,
-        longitude: meeting.longitude,
-        selected: true,
-        tone: "meeting",
-      });
-    }
-    return markers;
-  }, [origin, meetingPoint, destinationCity, visibility]);
+  function applyChosenTemplate(detail: ItineraryTemplateDetail) {
+    const prefill = applyTemplatePrefill(detail);
+    setTemplateDetail(detail);
+    setSelectedTemplateId(detail.id);
+    setTemplateTitle(detail.title);
+    setDestinationCity(prefill.destinationCity);
+    setTransport(prefill.transport);
+    setPath("template");
+  }
 
   function payload(): CreateTripInput {
+    const publicCapacity = visibility === "PUBLIC" ? Number(maxParticipants || 8) : undefined;
     return {
-      path,
-      title,
-      description,
-      origin,
+      path: path === "template" ? "template" : "ai-route",
+      title: tripTitle,
+      description: "",
+      origin: "Titik awal belum ditentukan",
       destinationCity,
       startDate,
       endDate,
       transport,
-      planningPartySize,
+      planningPartySize: partySize,
       budgetAmount,
       budgetBasis,
-      lodgingPref,
-      activityPrefs,
+      lodgingPref: "",
+      activityPrefs: [],
       visibility,
-      maxParticipants: visibility === "PUBLIC" ? maxParticipants : undefined,
-      meetingPoint: visibility === "PUBLIC" ? meetingPoint : "",
-      companionNote,
-      pace,
-      accessibilityNeeds,
+      maxParticipants: publicCapacity,
+      meetingPoint: visibility === "PUBLIC" ? (firstStopMeetingLabel(days) || destinationCity) : "",
+      companionNote: "",
+      pace: "SEIMBANG",
       genderRule,
-      communityRules,
-      privateInvite,
-      regenerateMode,
     };
   }
 
-  function toggleActivity(name: string) {
-    setActivityPrefs((current) =>
-      current.includes(name)
-        ? current.filter((item) => item !== name)
-        : [...current, name],
-    );
+  async function chooseProvinceTemplate(province: (typeof INDONESIA_PROVINCES)[number]) {
+    setFormError("");
+    setTemplateLoading(true);
+    try {
+      const response = await fetch(`/api/v1/templates/${encodeURIComponent(province.template.id)}`, {
+        credentials: "include",
+        headers: { Accept: "application/json" },
+      });
+      const json = await response.json() as { success: boolean; data?: ItineraryTemplateDetail; error?: { message?: string } };
+      if (!response.ok || !json.success || !json.data) throw new Error(json.error?.message ?? "Template tidak tersedia.");
+      applyChosenTemplate(json.data);
+      setBudgetAmount(province.template.budgetHigh || budgetAmount);
+    } catch (error) {
+      setFormError(error instanceof Error ? error.message : "Template tidak dapat dimuat.");
+    } finally {
+      setTemplateLoading(false);
+    }
   }
 
-  function goNext() {
-    if (step === 1) {
-      if (path === "template" && !selectedTemplateId) {
-        setFormError("Pilih salah satu template provinsi dulu.");
-        return;
-      }
-      setFormError("");
-      setStep(2);
+  function goFromStep1() {
+    if (path === "template" && !selectedTemplateId) {
+      setFormError("Pilih dulu satu kartu template. Kartu yang dipilih punya bingkai biru.");
       return;
     }
-    if (step === 2) {
-      setStep(3);
-      return;
-    }
-    if (step === 3) {
-      setStep(path === "ai-discovery" || path === "ai-route" ? 4 : 5);
-      return;
-    }
-    if (step === 4) setStep(5);
+    setFormError("");
+    setStep(2);
   }
 
-  async function ensureDraftTrip(): Promise<string | null> {
-    if (draftTripId) return draftTripId;
-    const activeTemplateId = selectedTemplateId || templateId;
+  function goFromStep2() {
+    const errors = validateWizardBasics({ destinationCity, startDate, endDate, budgetAmount, partySize });
+    setFieldErrors(errors);
+    if (Object.keys(errors).length) {
+      setFormError("Lengkapi destinasi, tanggal, jumlah orang, dan budget dulu.");
+      return;
+    }
+    setFormError("");
+    setItineraryReady(false);
+    setDays([]);
+    setStep(3);
+    void prepareItinerary({ force: true });
+  }
+
+  async function ensureDraftTrip() {
+    if (tripId) return tripId;
+    const activeTemplateId = path === "template" ? (selectedTemplateId || templateId) : undefined;
     const created = await fetch(activeTemplateId ? `/api/v1/templates/${encodeURIComponent(activeTemplateId)}/use` : "/api/v1/trips", {
       method: "POST",
       credentials: "include",
@@ -255,739 +215,583 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
         "idempotency-key": idempotencyKey,
       },
       body: JSON.stringify(activeTemplateId ? {
-        templateTitle: templateTitle || title,
+        templateTitle: tripTitle,
         destinationCity,
-        originLabel: origin || undefined,
+        originLabel: "Titik awal belum ditentukan",
         startDate,
-        endDate: endDate || undefined,
-        transportMode: transport || undefined,
-        planningPartySize,
+        endDate,
+        transportMode: transport,
+        planningPartySize: partySize,
         budgetAmount: String(budgetAmount),
         budgetBasis,
       } : payload()),
     });
-    const json = (await created.json()) as
-      | { success: true; data: TripDetail | UseTemplateResult }
-      | ApiError;
+    const json = (await created.json()) as { success: true; data: TripDetail | UseTemplateResult } | ApiError;
     if (!json.success) {
       setFormError(json.error.message);
       setFieldErrors(json.error.fields ?? {});
-      return null;
+      throw new Error(json.error.message);
     }
-    const createdId = "tripId" in json.data ? json.data.tripId : json.data.id;
-    setDraftTripId(createdId);
-    return createdId;
+    const createdTripId = "tripId" in json.data ? json.data.tripId : json.data.id;
+    setTripId(createdTripId);
+    return createdTripId;
   }
 
-  async function pollGenerationJob(jobId: string) {
-    for (let attempt = 0; attempt < 20; attempt += 1) {
-      await wait(1000);
-      const response = await fetch(`/api/v1/generation-jobs/${encodeURIComponent(jobId)}`, { credentials: "include" });
-      const payload = await response.json() as {
-        success: boolean;
-        data?: { status: string; resultCandidates?: DestinationRecommendation[] | null };
-      };
-      if (!response.ok || !payload.success || !payload.data) continue;
-      if (payload.data.status === "SUCCEEDED" || payload.data.status === "FAILED") return payload.data;
-    }
-    return null;
-  }
-
-  async function requestDestinationRecommendations() {
-    if (recommendPending) return;
-    setRecommendPending(true);
+  async function prepareItinerary(options?: { force?: boolean }) {
+    if (!options?.force && itineraryReady && days.length > 0) return;
+    setGenerating(true);
     setFormError("");
-    setUsedAiFallback(false);
     try {
-      const tripId = await ensureDraftTrip();
-      if (!tripId) return;
-      const jobKey = newKey();
-      const response = await fetch(`/api/v1/trips/${encodeURIComponent(tripId)}/generate`, {
-        method: "POST",
-        credentials: "include",
-        headers: {
-          "content-type": "application/json",
-          "idempotency-key": jobKey,
-        },
-        body: JSON.stringify({
-          type: "RECOMMEND_DESTINATIONS",
-          idempotencyKey: jobKey,
-          preferences: {
-            mode: path,
-            regenerateMode,
-            origin,
-            budgetAmount,
-            budgetBasis,
-            activityPrefs,
-            lodgingPref,
-            startDate,
-            endDate,
-          },
-        }),
+      const province = INDONESIA_PROVINCES.find((item) => item.template.id === selectedTemplateId);
+      const useTemplate = path === "template" && Boolean(province) && templateMatchesDestination(province!.name, destinationCity);
+      const nextDays = packItinerarySchedule(
+        useTemplate && province
+          ? buildProvinceTemplateDays(province, { startDate })
+          : buildDestinationItinerary({ destination: destinationCity, startDate, endDate, variant: 0 }),
+      );
+      setDays(nextDays);
+      setSelectedStopId(nextDays[0]?.stops[0]?.id ?? null);
+      setSnapshot({
+        tripId: tripId || "draft",
+        tripTitle,
+        destinationCity,
+        startDate,
+        endDate,
+        activeVersionId: "wizard-v1",
+        versions: [{
+          id: "wizard-v1",
+          tripId: tripId || "draft",
+          versionNumber: 1,
+          source: useTemplate ? "TEMPLATE" : "AI",
+          summary: useTemplate ? "Rute dari template kurasi DOLAN." : `Rute dioptimalkan untuk ${destinationCity}.`,
+          assumptions: ["Estimasi biaya menyesuaikan budget trip"],
+          days: nextDays,
+          budget: createBudgetSummary(INITIAL_BUDGET_ITEMS),
+          createdAt: new Date().toISOString(),
+        }],
+        checklist: [],
       });
-      const json = await response.json() as {
-        success: boolean;
-        data?: { id: string; resultCandidates?: DestinationRecommendation[] | null; status?: string };
-        error?: { message?: string };
-      };
-      if (!response.ok || !json.success || !json.data?.id) {
-        throw new Error(json.error?.message ?? "Gagal meminta rekomendasi AI");
-      }
-      const job = json.data.status === "SUCCEEDED" || json.data.status === "FAILED"
-        ? json.data
-        : await pollGenerationJob(json.data.id);
-      if (job?.status === "SUCCEEDED" && job.resultCandidates && job.resultCandidates.length > 0) {
-        setAiCandidates(job.resultCandidates);
-        return;
-      }
-      throw new Error("Rekomendasi AI belum tersedia");
+      setItineraryReady(true);
     } catch (error) {
-      const useMockFallback = process.env.NEXT_PUBLIC_USE_MOCK_API !== "false";
-      if (useMockFallback) {
-        setAiCandidates(aiPicks.map((pick) => ({
-          googlePlaceId: pick.googlePlaceId,
-          name: pick.name,
-          city: pick.city,
-          region: pick.region,
-        })));
-        setUsedAiFallback(true);
-        setFormError("");
-      } else {
-        setFormError(error instanceof Error ? error.message : "Gagal meminta rekomendasi AI");
-      }
+      setFormError(error instanceof Error ? error.message : "Itinerary belum bisa disusun.");
     } finally {
-      setRecommendPending(false);
+      setGenerating(false);
     }
   }
 
-  async function submit(mode: "draft" | "publish") {
-    if (pending || templateLoading) return;
-    setPending(true);
+  function updateStop(dayId: string, stopId: string, patch: Partial<EditableItineraryStop>) {
+    setDays((current) => current.map((day) => (
+      day.id === dayId
+        ? { ...day, stops: day.stops.map((stop) => (stop.id === stopId ? { ...stop, ...patch } : stop)) }
+        : day
+    )));
+  }
+
+  async function regenerate() {
+    if (!snapshot || generating || !canRegenerate(regenerateUsed)) return;
+    setGenerating(true);
     setFormError("");
-    setFieldErrors({});
-    const activeTemplateId = selectedTemplateId || templateId;
-    let createdTripId = draftTripId;
-    if (!createdTripId) {
-      const created = await fetch(activeTemplateId ? `/api/v1/templates/${encodeURIComponent(activeTemplateId)}/use` : "/api/v1/trips", {
-        method: "POST",
-        credentials: "include",
-        headers: {
-          "content-type": "application/json",
-          "idempotency-key": idempotencyKey,
-        },
-        body: JSON.stringify(activeTemplateId ? {
-          templateTitle: templateTitle || title,
-          destinationCity,
-          originLabel: origin || undefined,
-          startDate,
-          endDate: endDate || undefined,
-          transportMode: transport || undefined,
-          planningPartySize,
-          budgetAmount: String(budgetAmount),
-          budgetBasis,
-        } : payload()),
+    try {
+      const nextDays = buildDestinationItinerary({
+        destination: destinationCity,
+        startDate,
+        endDate,
+        variant: regenerateUsed + 1,
+        excludeNames: days.flatMap((day) => day.stops.map((stop) => stop.customTitle || stop.place?.name || "")),
+        preferCheaper: budgetPlan.overBudget,
       });
-      const json = (await created.json()) as
-        | { success: true; data: TripDetail | UseTemplateResult }
-        | ApiError;
-      if (!json.success) {
-        setPending(false);
-        setFormError(json.error.message);
-        setFieldErrors(json.error.fields ?? {});
-        return;
-      }
-      createdTripId = "tripId" in json.data ? json.data.tripId : json.data.id;
-      setDraftTripId(createdTripId);
+      const next = await generateAlternative(snapshot, nextDays, INITIAL_BUDGET_ITEMS, "balanced");
+      setSnapshot({ ...next.snapshot, versions: [{ ...next.snapshot.versions[0], days: nextDays }, ...next.snapshot.versions.slice(1)] });
+      setDays(nextDays);
+      setSelectedStopId(nextDays[0]?.stops[0]?.id ?? selectedStopId);
+      setRegenerateUsed((used) => used + 1);
+    } catch (error) {
+      setFormError(error instanceof Error ? error.message : "Regenerate gagal.");
+    } finally {
+      setGenerating(false);
     }
-    if (visibility === "PRIVATE" && privateInvite.trim()) {
-      const entries = privateInvite.split(",").map((item) => item.trim()).filter(Boolean);
-      for (const entry of entries) {
-        const isDolan = entry.startsWith("@");
-        const invitationResponse = await fetch(`/api/v1/trips/${createdTripId}/invitations`, {
-          method: "POST", credentials: "include", headers: { "content-type": "application/json" },
-          body: JSON.stringify(isDolan ? { channel: "DOLAN", username: entry } : { channel: "WHATSAPP" }),
-        });
-        const invitation = await invitationResponse.json() as { success: boolean; data?: { invitePath: string } };
-        if (invitation.success && invitation.data && !isDolan) {
-          const phone = entry.replace(/\D/g, "").replace(/^0/, "62");
-          const inviteUrl = `${window.location.origin}${invitation.data.invitePath}`;
-          window.open(`https://wa.me/${phone}?text=${encodeURIComponent(`Yuk ikut trip DOLAN saya. Biaya perjalanan ditanggung masing-masing: ${inviteUrl}`)}`, "_blank", "noopener,noreferrer");
-        }
-      }
-    }
-    if (path === "ai-route" || (path === "ai-discovery" && !aiCandidates?.length)) {
-      await fetch(`/api/v1/trips/${createdTripId}/generate`, { method: "POST", credentials: "include", headers: { "content-type": "application/json", "idempotency-key": newKey() }, body: JSON.stringify({ type: path === "ai-discovery" ? "RECOMMEND_DESTINATIONS" : "GENERATE_ITINERARY", idempotencyKey: newKey(), preferences: { mode: path, regenerateMode } }) }).catch(() => undefined);
-    }
-    if (mode === "publish") {
-      const published = await fetch(`/api/v1/trips/${createdTripId}/publish`, {
-        method: "POST",
-        credentials: "include",
-        headers: { "content-type": "application/json", "idempotency-key": publishIdempotencyKey },
-        body: JSON.stringify({ confirmPublish: true, visibility }),
-      });
-      const pubJson = (await published.json()) as
-        | { success: true; data: TripDetail }
-        | ApiError;
-      setPending(false);
-      if (!pubJson.success) {
-        setFormError(pubJson.error.message);
-        return;
-      }
-      router.push(tripDetailHref(pubJson.data.id));
-      router.refresh();
+  }
+
+  async function persistItineraryThenInvite() {
+    if (!days.length) {
+      setFormError("Itinerary masih kosong. Tunggu generate selesai atau pilih template.");
       return;
     }
-    setPending(false);
-    router.push(tripItineraryPath(createdTripId));
-    router.refresh();
+    setPending(true);
+    setFormError("");
+    try {
+      const packed = packItinerarySchedule(days);
+      setDays(packed);
+      const createdTripId = await ensureDraftTrip();
+      const current = {
+        ...(snapshot ?? {
+          tripId: createdTripId,
+          tripTitle,
+          destinationCity,
+          startDate,
+          endDate,
+          activeVersionId: "wizard-v1",
+          versions: [],
+          checklist: [],
+        }),
+        tripId: createdTripId,
+      } satisfies ItineraryEditorSnapshot;
+      const items = budgetItemsFromPlan(packed, budgetPlan);
+      const saved = await saveItineraryVersion(current, {
+        baseVersionId: current.activeVersionId || "wizard-v1",
+        summary: path === "template" ? "Itinerary dari template, disesuaikan di wizard" : "Itinerary AI yang sudah disetujui sesuai budget",
+        days: toItinerarySaveDays(packed),
+        budgetItems: items.length ? items : INITIAL_BUDGET_ITEMS,
+      });
+      setSnapshot({ ...saved, tripId: createdTripId });
+      setDays(saved.versions[0]?.days?.length ? saved.versions[0].days : packed);
+      setStep(4);
+    } catch (error) {
+      setFormError(error instanceof Error ? error.message : "Gagal menyimpan itinerary.");
+    } finally {
+      setPending(false);
+    }
   }
 
+  async function persistCurrentItinerary(createdTripId: string) {
+    const packed = packItinerarySchedule(days);
+    const current = {
+      ...(snapshot ?? {
+        tripId: createdTripId,
+        tripTitle,
+        destinationCity,
+        startDate,
+        endDate,
+        activeVersionId: "wizard-v1",
+        versions: [],
+        checklist: [],
+      }),
+      tripId: createdTripId,
+    } satisfies ItineraryEditorSnapshot;
+    const items = budgetItemsFromPlan(packed, budgetPlan);
+    await saveItineraryVersion(current, {
+      baseVersionId: current.activeVersionId || "wizard-v1",
+      summary: path === "template" ? "Itinerary dari template, disesuaikan di wizard" : "Itinerary AI yang sudah disetujui sesuai budget",
+      days: toItinerarySaveDays(packed),
+      budgetItems: items.length ? items : INITIAL_BUDGET_ITEMS,
+    });
+  }
+
+  async function finish() {
+    if (pending) return;
+    if (visibility === "PUBLIC" && maxParticipants !== "" && Number(maxParticipants) < 2) {
+      setFormError("Kapasitas publik minimal 2 termasuk host.");
+      return;
+    }
+    setPending(true);
+    setFormError("");
+    try {
+      const createdTripId = await ensureDraftTrip();
+      if (days.length) {
+        await persistCurrentItinerary(createdTripId);
+      }
+      await fetch(`/api/v1/trips/${createdTripId}`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(payload()),
+      });
+      for (const username of inviteUsernames) {
+        await fetch(`/api/v1/trips/${createdTripId}/invitations`, {
+          method: "POST",
+          credentials: "include",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ channel: "DOLAN", username: `@${username}` }),
+        }).catch(() => undefined);
+      }
+      if (visibility === "PUBLIC") {
+        const published = await fetch(`/api/v1/trips/${createdTripId}/publish`, {
+          method: "POST",
+          credentials: "include",
+          headers: { "content-type": "application/json", "idempotency-key": publishIdempotencyKey },
+          body: JSON.stringify({ confirmPublish: true, visibility }),
+        });
+        const pubJson = (await published.json()) as { success: true } | ApiError;
+        if (!pubJson.success) {
+          setFormError(pubJson.error.message);
+          setPending(false);
+          return;
+        }
+      }
+      router.push(ROUTES.trip(createdTripId));
+      router.refresh();
+    } catch (error) {
+      setFormError(error instanceof Error ? error.message : "Trip belum tersimpan.");
+    } finally {
+      setPending(false);
+    }
+  }
+
+  const templates = templateQuery.trim() ? searchProvinces(templateQuery) : INDONESIA_PROVINCES.slice(0, 12);
+
   return (
-    <div className="mx-auto max-w-3xl px-margin py-8 md:px-margin-desktop md:py-12">
-      {templateId || selectedTemplateId ? <div className="mb-5 rounded-2xl border border-primary/15 bg-primary-fixed/45 px-4 py-3" role="status"><p className="type-label font-extrabold text-primary">{templateLoading ? "Memuat template itinerary…" : `Template dipilih: ${templateTitle || "Rute traveler"}`}</p><p className="mt-1 type-caption text-on-surface-variant">Tanggal, titik awal, dan budget tetap bisa kamu sesuaikan. Setelah disimpan, rute akan terbuka di editor.</p></div> : initialPlaceId ? <p className="mb-5 rounded-2xl bg-primary-fixed/45 px-4 py-3 type-caption text-on-surface-variant">Destinasi dari halaman wisata sudah dimasukkan. Lengkapi tanggal dan budget untuk melanjutkan.</p> : null}
-      <div className="mb-8 hidden items-center justify-between sm:flex">
-        {steps.map((label, i) => {
-          const n = i + 1;
-          const active = visualStep === n || (visualStep === 6 && n >= 5);
-          const done = visualStep > n;
-          return (
-            <div key={label} className="flex flex-1 flex-col items-center">
-              <span
-                className={`flex h-8 w-8 items-center justify-center rounded-full type-micro ${
-                  active || done
-                    ? "bg-primary text-on-primary"
-                    : "bg-surface-container text-on-surface-variant"
-                }`}
-              >
-                {n}
-              </span>
-              <span className="type-micro mt-1 text-on-surface-variant">
-                {label}
-              </span>
-            </div>
-          );
-        })}
-      </div>
+    <div className={`${step === 3 ? "mx-auto max-w-6xl" : "mx-auto max-w-3xl"} px-margin py-8 md:px-margin-desktop md:py-12`}>
+      <p className="type-micro font-extrabold uppercase tracking-[0.18em] text-primary">Buat trip</p>
+      <h1 className="type-title mt-2 text-on-surface">Rencana perjalanan, empat langkah</h1>
+      <p className="type-body mt-2 max-w-2xl text-on-surface-variant">
+        Destinasi, jumlah orang, dan budget dulu. AI lalu menyusun rute sekaligus estimasi biaya per tempat.
+      </p>
+
+      <WizardProgress step={step} />
+
+      {initialPlaceId && step === 2 ? (
+        <p className="mb-5 rounded-2xl bg-primary-fixed/45 px-4 py-3 type-caption text-on-surface-variant">
+          Destinasi dari halaman wisata sudah dimasukkan. Lengkapi tanggal, jumlah orang, dan budget.
+        </p>
+      ) : null}
 
       {step === 1 ? (
         <>
-          <Header n={1} title="Bagaimana kamu ingin memulai rencana ini?" />
           <div className="grid gap-4 md:grid-cols-2">
-            <PathCard
-              selected={path === "manual"}
-              title="Punya rencana sendiri"
-              desc="Tentukan tujuan dan susun aktivitas manual di editor itinerary."
-              onClick={() => setPath("manual")}
-            />
-            <PathCard
-              selected={path === "ai-route"}
-              title="Optimalkan rute dengan AI"
-              desc="Kamu sudah tahu tujuannya; Groq menyusun urutan, jadwal, dan estimasi budget."
-              onClick={() => setPath("ai-route")}
-            />
-            <PathCard
-              selected={path === "ai-discovery"}
-              title="Bantu AI pilih tujuan"
-              desc="Belum tahu mau ke mana? Isi waktu, asal, budget, dan preferensi untuk mendapat rekomendasi."
-              onClick={() => setPath("ai-discovery")}
-            />
-            <PathCard
-              selected={path === "template"}
-              title="Pakai itinerary populer"
-              desc="Mulai dari salah satu dari 38 template provinsi DOLAN lalu edit sesuai kebutuhanmu."
+            <button
+              type="button"
+              onClick={() => {
+                setPath("create");
+                setTemplateDetail(null);
+                setSelectedTemplateId("");
+                setTemplateTitle("");
+              }}
+              className={`card-surface p-6 text-left ${path === "create" ? "ring-2 ring-primary" : ""}`}
+            >
+              <span className="grid h-11 w-11 place-items-center rounded-2xl bg-primary-fixed text-primary"><Icon name="alt_route" className="text-[22px]" /></span>
+              <h2 className="type-subtitle mt-3 text-on-surface">Buat itinerary baru</h2>
+              <p className="type-body mt-2 text-on-surface-variant">
+                Isi destinasi, jumlah orang, tanggal, dan budget. AI mengoptimalkan rute plus estimasi biaya.
+              </p>
+            </button>
+            <button
+              type="button"
               onClick={() => setPath("template")}
-            />
+              className={`card-surface p-6 text-left ${path === "template" ? "ring-2 ring-primary" : ""}`}
+            >
+              <span className="grid h-11 w-11 place-items-center rounded-2xl bg-secondary-fixed text-secondary"><Icon name="map" className="text-[22px]" /></span>
+              <h2 className="type-subtitle mt-3 text-on-surface">Pakai template itinerary</h2>
+              <p className="type-body mt-2 text-on-surface-variant">
+                Pilih rute 38 provinsi. Peta langsung muncul, biaya tetap dihitung dari budget kamu.
+              </p>
+            </button>
           </div>
           {path === "template" ? (
-            <div className="mt-5 rounded-[1.75rem] border border-primary/15 bg-white p-5">
-              <Field id="templateQuery" label="Cari template provinsi" hint="Kalau dikosongkan, urutan mengikuti 38 kurasi DOLAN.">
-                <input id="templateQuery" className="field-input" value={templateQuery} onChange={(event) => setTemplateQuery(event.target.value)} placeholder="Jawa Barat, Bali, Aceh…" />
+            <div className="card-surface mt-5 p-5">
+              <Field id="templateQuery" label="Cari template di database" hint="38 rute kurasi. Ketik nama provinsi untuk menyaring.">
+                <div className="relative">
+                  <Icon name="search" className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[20px] text-primary" />
+                  <input id="templateQuery" className="field-input field-input-icon" value={templateQuery} onChange={(event) => setTemplateQuery(event.target.value)} placeholder="Bali, Aceh, Yogyakarta…" />
+                </div>
               </Field>
-              <div className="mt-4 grid gap-3 md:grid-cols-2">
-                {(templateQuery.trim() ? searchProvinces(templateQuery) : INDONESIA_PROVINCES.slice(0, 8)).map((province) => (
-                  <button
-                    type="button"
-                    key={province.slug}
-                    onClick={() => {
-                      setSelectedTemplateId(province.template.id);
-                      setTemplateTitle(province.template.title);
-                      setTitle((current) => current || province.template.title);
-                      setDestinationCity(province.name);
-                      setTransport(province.template.transportMode);
-                    }}
-                    className={`rounded-2xl border p-4 text-left ${selectedTemplateId === province.template.id ? "border-primary bg-primary-fixed/40" : "border-outline-variant bg-surface-container-low"}`}
-                  >
-                    <p className="type-label text-primary">{province.name}</p>
-                    <p className="type-subtitle mt-1 text-on-surface">{province.template.title}</p>
-                    <p className="type-caption mt-1 text-on-surface-variant">{province.template.durationDays} hari · backpacker</p>
-                  </button>
-                ))}
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                {templates.map((province) => {
+                  const selected = selectedTemplateId === province.template.id;
+                  return (
+                    <article
+                      key={province.slug}
+                      className={`overflow-hidden rounded-2xl border bg-white text-left shadow-sm ${
+                        selected ? "border-primary ring-2 ring-primary" : "border-outline-variant"
+                      }`}
+                    >
+                      <button
+                        type="button"
+                        className="block w-full text-left"
+                        onClick={() => void chooseProvinceTemplate(province)}
+                      >
+                        <div className="relative h-28 bg-surface-container">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={provinceCoverUrl(province)} alt={province.name} className="h-full w-full object-cover" />
+                          <span className="absolute left-3 top-3 rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-extrabold text-primary">{province.name}</span>
+                          {selected ? (
+                            <span className="absolute right-3 top-3 rounded-full bg-primary px-2.5 py-1 text-[10px] font-extrabold text-white">Dipilih</span>
+                          ) : null}
+                        </div>
+                        <div className="p-3 pb-2">
+                          <p className="type-subtitle text-on-surface">{province.template.title}</p>
+                          <p className="type-caption mt-1 text-on-surface-variant">{province.template.durationDays} hari · {formatRupiah(province.template.budgetLow)}–{formatRupiah(province.template.budgetHigh)}</p>
+                        </div>
+                      </button>
+                      <div className="flex items-center justify-between gap-2 px-3 pb-3">
+                        <p className="type-caption text-on-surface-variant">{selected ? "Lanjut ke detail trip." : "Klik kartu untuk memilih."}</p>
+                        <Link
+                          href={ROUTES.province(province.slug)}
+                          className="btn-ghost !min-h-8 !px-2.5 !text-xs"
+                          onClick={(event) => event.stopPropagation()}
+                        >
+                          Lihat detail
+                        </Link>
+                      </div>
+                    </article>
+                  );
+                })}
               </div>
-              {!templateQuery.trim() ? <p className="mt-3 type-caption text-on-surface-variant">Menampilkan 8 template pertama. Ketik nama provinsi untuk mencari 38 rute kurasi.</p> : null}
+              <p className="mt-3 type-caption text-on-surface-variant">
+                Klik kartu untuk memilih template. Tombol lihat detail membuka peta dan rute provinsi, tanpa mengganti pilihan.
+              </p>
             </div>
           ) : null}
-          <Nav nextLabel="Lanjut" onNext={goNext} />
+          <Nav nextLabel="Lanjut ke detail" onNext={goFromStep1} />
         </>
       ) : null}
 
       {step === 2 ? (
         <>
-          <Header n={2} title="Informasi dasar perjalanan" />
-          <div className="card-surface space-y-4 p-5 md:p-7">
-            <Field id="title" label="Judul Trip" error={fieldErrors.title}>
-              <input
-                id="title"
-                className="field-input"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="Contoh: Sailing Komodo 4D3N"
-              />
-            </Field>
-            <Field id="description" label="Deskripsi" hint="Opsional">
-              <textarea
-                id="description"
-                className="field-input min-h-24"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-              />
-            </Field>
-            <div className="grid gap-4 md:grid-cols-2">
-              <PlacePicker
-                id="origin"
-                label="Asal / titik keberangkatan"
-                value={origin}
-                onChange={setOrigin}
-                error={fieldErrors.origin}
-                placeholder="Cari kota atau bandara"
-                hint="Asal pribadi tidak dipakai sebagai titik temu publik."
-              />
-              <Field
-                id="destinationCity"
-                label="Destinasi utama"
-                error={fieldErrors.destinationCity}
-                hint={path === "ai-discovery" ? "Boleh kosong; AI akan merekomendasikan tujuan" : undefined}
-              >
-                <input
-                  id="destinationCity"
-                  className="field-input"
-                  value={destinationCity}
-                  onChange={(e) => setDestinationCity(e.target.value)}
-                  placeholder="Kota atau taman nasional"
-                />
-              </Field>
-            </div>
-            {previewMarkers.length > 0 ? (
-              <TripBoardMap compact markers={previewMarkers} />
-            ) : null}
+          <div className="card-surface space-y-5 p-5 md:p-7">
+            {path === "template" ? (
+              <p className="rounded-2xl bg-primary-fixed/40 px-4 py-3 type-caption text-on-surface-variant">
+                Destinasi terisi dari <strong className="text-on-surface">{templateTitle || "kurasi DOLAN"}</strong>. Judul trip otomatis: {tripTitle}.
+              </p>
+            ) : (
+              <p className="rounded-2xl bg-surface-container-low px-4 py-3 type-caption text-on-surface-variant">
+                Judul trip dibuat otomatis dari destinasi: <strong className="text-on-surface">{tripTitle}</strong>
+              </p>
+            )}
+            <PlacePicker
+              id="destinationCity"
+              label="Destinasi / tujuan"
+              value={destinationCity}
+              onChange={setDestinationCity}
+              error={fieldErrors.destinationCity}
+              placeholder="Cari kota atau destinasi"
+            />
             <div className="grid gap-4 md:grid-cols-2">
               <Field id="startDate" label="Tanggal mulai" error={fieldErrors.startDate}>
-                <input
-                  id="startDate"
-                  type="date"
-                  className="field-input"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                />
+                <div className="relative">
+                  <Icon name="calendar_month" className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[20px] text-primary" />
+                  <input id="startDate" type="date" className="field-input field-input-icon" value={startDate} onChange={(event) => setStartDate(event.target.value)} />
+                </div>
               </Field>
               <Field id="endDate" label="Tanggal selesai" error={fieldErrors.endDate}>
-                <input
-                  id="endDate"
-                  type="date"
-                  className="field-input"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                />
+                <div className="relative">
+                  <Icon name="calendar_month" className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[20px] text-primary" />
+                  <input id="endDate" type="date" className="field-input field-input-icon" value={endDate} onChange={(event) => setEndDate(event.target.value)} />
+                </div>
               </Field>
             </div>
-            <div className="grid gap-4 md:grid-cols-2">
-              <Field id="transport" label="Moda transportasi">
-                <select
-                  id="transport"
-                  className="field-input"
-                  value={transport}
-                  onChange={(e) => setTransport(e.target.value)}
-                >
-                  <option>Kapal Phinisi</option>
-                  <option>Pesawat + sewa mobil</option>
-                  <option>Kereta</option>
-                  <option>Kendaraan pribadi</option>
-                </select>
+            <div className="space-y-4">
+              <Field id="partySize" label="Berapa orang" error={fieldErrors.partySize}>
+                <div className="flex items-center gap-3 rounded-2xl bg-surface-container-low px-3 py-2">
+                  <span className="grid h-10 w-10 place-items-center rounded-full bg-white text-primary"><Icon name="group" className="text-[20px]" /></span>
+                  <button type="button" className="grid h-10 w-10 place-items-center rounded-full bg-white type-subtitle" onClick={() => setPartySize((value) => Math.max(1, value - 1))} aria-label="Kurangi orang">−</button>
+                  <input
+                    id="partySize"
+                    type="number"
+                    min={1}
+                    max={20}
+                    className="h-10 w-16 border-0 bg-transparent text-center type-subtitle outline-none"
+                    value={partySize}
+                    onChange={(event) => setPartySize(Math.max(1, Number(event.target.value) || 1))}
+                  />
+                  <button type="button" className="grid h-10 w-10 place-items-center rounded-full bg-primary text-white type-subtitle" onClick={() => setPartySize((value) => Math.min(20, value + 1))} aria-label="Tambah orang">+</button>
+                </div>
               </Field>
-              <Field
-                id="planningPartySize"
-                label="Jumlah orang untuk estimasi biaya"
-                hint="Bukan kuota publik. Kapasitas diisi terpisah jika trip dibuka."
-                error={fieldErrors.planningPartySize}
-              >
-                <input
-                  id="planningPartySize"
-                  type="number"
-                  min={1}
-                  className="field-input"
-                  value={planningPartySize}
-                  onChange={(e) => setPlanningPartySize(Number(e.target.value))}
-                />
-              </Field>
+              <div className="rounded-2xl bg-surface-container-low p-4">
+                <div className="mb-3 flex items-center justify-between gap-2">
+                  <span className="flex items-center gap-2 type-label text-on-surface">
+                    <span className="grid h-8 w-8 place-items-center rounded-full bg-white text-primary"><Icon name="payments" className="text-[18px]" /></span>
+                    Budget tersedia
+                  </span>
+                  <div className="flex rounded-full bg-white p-0.5">
+                    <button type="button" className={`rounded-full px-2.5 py-1 type-caption ${budgetBasis === "PER_PERSON" ? "bg-primary text-white" : "text-on-surface-variant"}`} onClick={() => setBudgetBasis("PER_PERSON")}>Per orang</button>
+                    <button type="button" className={`rounded-full px-2.5 py-1 type-caption ${budgetBasis === "GROUP" ? "bg-primary text-white" : "text-on-surface-variant"}`} onClick={() => setBudgetBasis("GROUP")}>Rombongan</button>
+                  </div>
+                </div>
+                <Field id="budgetAmount" label="Nominal (Rp)" error={fieldErrors.budgetAmount}>
+                  <div className="relative">
+                    <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 type-label text-primary">Rp</span>
+                    <input
+                      id="budgetAmount"
+                      type="text"
+                      inputMode="numeric"
+                      className="field-input pl-12"
+                      value={budgetAmount.toLocaleString("id-ID")}
+                      onChange={(event) => setBudgetAmount(Number(event.target.value.replace(/\D/g, "")) || 0)}
+                    />
+                  </div>
+                </Field>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {BUDGET_PRESETS.map((amount) => (
+                    <button
+                      key={amount}
+                      type="button"
+                      onClick={() => setBudgetAmount(amount)}
+                      className={`rounded-full px-3 py-1.5 type-caption ${budgetAmount === amount ? "bg-primary text-white" : "bg-white text-on-surface"}`}
+                    >
+                      {formatRupiah(amount)}
+                    </button>
+                  ))}
+                </div>
+                <p className="type-caption mt-2 text-on-surface-variant">
+                  Pool itinerary: {formatRupiah(availableBudgetPool(budgetAmount, budgetBasis, partySize))} · swadaya, bukan harga join.
+                </p>
+              </div>
             </div>
           </div>
-          <Nav onBack={() => setStep(1)} onNext={goNext} />
+          <Nav onBack={() => setStep(1)} onNext={goFromStep2} nextLabel={path === "template" ? "Lihat rute + biaya" : "Generate itinerary"} />
         </>
       ) : null}
 
       {step === 3 ? (
         <>
-          <Header n={3} title="Budget, preferensi, dan visibilitas" />
-          <div className="card-surface space-y-5 p-5 md:p-7">
-            <div className="rounded-xl bg-surface-container-low p-4">
-              <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-                <span className="type-label text-on-surface">Target budget</span>
-                <div className="flex gap-3">
-                  <label className="type-caption flex items-center gap-1">
-                    <input
-                      type="radio"
-                      checked={budgetBasis === "PER_PERSON"}
-                      onChange={() => setBudgetBasis("PER_PERSON")}
-                    />
-                    Per orang
-                  </label>
-                  <label className="type-caption flex items-center gap-1">
-                    <input
-                      type="radio"
-                      checked={budgetBasis === "GROUP"}
-                      onChange={() => setBudgetBasis("GROUP")}
-                    />
-                    Total rombongan
-                  </label>
-                </div>
-              </div>
-              <Field id="budgetAmount" label="Nominal (Rp)" error={fieldErrors.budgetAmount}>
-                <input
-                  id="budgetAmount"
-                  type="number"
-                  min={1}
-                  className="field-input"
-                  value={budgetAmount}
-                  onChange={(e) => setBudgetAmount(Number(e.target.value))}
-                />
-              </Field>
-              <p className="type-caption mt-2 text-on-surface-variant">
-                Estimasi swadaya, bukan harga join atau tagihan.
-              </p>
+          {generating && days.length === 0 ? (
+            <div className="card-surface p-8 text-center">
+              <p className="type-subtitle text-on-surface">AI sedang mengoptimalkan itinerary dan budget…</p>
+              <p className="type-body mt-2 text-on-surface-variant">Rute, peta, dan estimasi per tempat muncul setelah generate selesai.</p>
             </div>
-            <Field id="lodgingPref" label="Pilihan akomodasi">
-              <select
-                id="lodgingPref"
-                className="field-input"
-                value={lodgingPref}
-                onChange={(e) => setLodgingPref(e.target.value)}
-              >
-                <option>Homestay / Guesthouse Lokal</option>
-                <option>Kabin kapal / liveaboard</option>
-                <option>Hotel</option>
-                <option>Camping</option>
-              </select>
-            </Field>
-            <div className="grid gap-4 md:grid-cols-2"><Field id="pace" label="Tempo perjalanan"><select id="pace" className="field-input" value={pace} onChange={(event) => setPace(event.target.value as typeof pace)}><option value="SANTAI">Santai</option><option value="SEIMBANG">Seimbang</option><option value="PADAT">Padat</option></select></Field><Field id="accessibilityNeeds" label="Aksesibilitas / kebutuhan khusus" hint="Opsional"><input id="accessibilityNeeds" className="field-input" value={accessibilityNeeds} onChange={(event) => setAccessibilityNeeds(event.target.value)} placeholder="Contoh: hindari banyak tangga" /></Field></div>
-            <div>
-              <p className="type-label mb-2 text-on-surface">Aktivitas prioritas</p>
-              <div className="flex flex-wrap gap-2">
-                {activities.map((item) => (
-                  <button
-                    key={item}
-                    type="button"
-                    onClick={() => toggleActivity(item)}
-                    className={`chip ${
-                      activityPrefs.includes(item)
-                        ? "bg-primary text-on-primary"
-                        : "bg-surface-container-high text-on-surface"
-                    }`}
-                  >
-                    {item}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <label className="flex items-center justify-between gap-3 rounded-xl border border-outline-variant p-4">
-              <span>
-                <span className="type-label block text-on-surface">
-                  Rencana perjalanan publik?
-                </span>
-                <span className="type-caption text-on-surface-variant">
-                  Public tidak otomatis terbit. Publish butuh konfirmasi di langkah terakhir.
-                </span>
-              </span>
-              <input
-                type="checkbox"
-                checked={visibility === "PUBLIC"}
-                onChange={(e) =>
-                  setVisibility(e.target.checked ? "PUBLIC" : "PRIVATE")
-                }
-              />
-            </label>
-            {visibility === "PUBLIC" ? (
-              <div className="space-y-3 rounded-xl bg-surface-container-low p-4">
-                <Field
-                  id="maxParticipants"
-                  label="Kapasitas maksimal (termasuk host)"
-                  error={fieldErrors.maxParticipants}
-                >
-                  <input
-                    id="maxParticipants"
-                    type="number"
-                    min={2}
-                    className="field-input"
-                    value={maxParticipants}
-                    onChange={(e) => setMaxParticipants(Number(e.target.value))}
-                  />
-                </Field>
-                <PlacePicker
-                  id="meetingPoint"
-                  label="Titik temu publik"
-                  value={meetingPoint}
-                  onChange={setMeetingPoint}
-                  excludeLabel={origin}
-                  error={fieldErrors.meetingPoint}
-                  hint="Jangan salin alamat/asal pribadi."
-                  placeholder="Bandara / pelabuhan / area publik"
-                />
-                {previewMarkers.length > 0 ? (
-                  <TripBoardMap compact markers={previewMarkers} />
-                ) : null}
-                <Field id="companionNote" label="Catatan untuk rekan jalan">
-                  <textarea
-                    id="companionNote"
-                    className="field-input min-h-20"
-                    value={companionNote}
-                    onChange={(e) => setCompanionNote(e.target.value)}
-                  />
-                </Field>
-                <div className="grid gap-3 md:grid-cols-2"><Field id="genderRule" label="Aturan peserta"><select id="genderRule" className="field-input" value={genderRule} onChange={(event) => setGenderRule(event.target.value as typeof genderRule)}><option value="ALL_GENDERS">Semua gender</option><option value="FEMALE_ONLY">Female only</option><option value="MALE_ONLY">Male only</option></select></Field><Field id="communityRules" label="Aturan grup"><textarea id="communityRules" className="field-input min-h-20" value={communityRules} onChange={(event) => setCommunityRules(event.target.value)} placeholder="Ketepatan waktu, pembagian biaya, barang wajib…" /></Field></div>
-                <p className="type-caption text-primary">
-                  Join gratis — biaya perjalanan ditanggung masing-masing. Tidak ada deposit.
-                </p>
-              </div>
-            ) : <div className="rounded-xl bg-primary-fixed/35 p-4">
-              <Field id="privateInvite" label="Undang teman (opsional)" hint="Pilih teman yang sudah saling follow, atau masukkan username/@ dan nomor WhatsApp dipisah koma.">
-                <input id="privateInvite" className="field-input" value={privateInvite} onChange={(event) => setPrivateInvite(event.target.value)} placeholder="@sinta, @dimas, 0812…" />
-              </Field>
-              {connections.length > 0 ? (
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {connections.map((person) => {
-                    const tag = `@${person.username}`;
-                    const selected = privateInvite.split(",").map((item) => item.trim()).includes(tag);
-                    return (
-                      <button
-                        type="button"
-                        key={person.username}
-                        className={`rounded-full px-3 py-2 type-label ${selected ? "bg-primary text-white" : "bg-white text-on-surface"}`}
-                        onClick={() => {
-                          const current = privateInvite.split(",").map((item) => item.trim()).filter(Boolean);
-                          setPrivateInvite((selected ? current.filter((item) => item !== tag) : [...current, tag]).join(", "));
-                        }}
-                      >
-                        {tag} · {person.displayName}
-                      </button>
-                    );
-                  })}
-                </div>
-              ) : <p className="mt-2 type-caption text-on-surface-variant">Belum ada koneksi DOLAN. Follow balik dulu, atau undang lewat WhatsApp.</p>}
-            </div>}
-          </div>
-          <Nav onBack={() => setStep(2)} onNext={goNext} nextLabel="Lanjut ke review" />
+          ) : (
+            <CreateTripItineraryStep
+              days={days}
+              selectedStopId={selectedStopId}
+              editingStopId={editingStopId}
+              generating={generating}
+              fromTemplate={path === "template"}
+              regenerateUsed={regenerateUsed}
+              budgetPlan={budgetPlan}
+              partySize={partySize}
+              isPublic={visibility === "PUBLIC"}
+              onSelectStop={(id) => {
+                setSelectedStopId(id);
+                setEditingStopId(id);
+              }}
+              onEditStop={(id) => {
+                setSelectedStopId(id);
+                setEditingStopId(id);
+              }}
+              onCloseEdit={() => setEditingStopId(null)}
+              onReorderStops={(dayId, fromIndex, toIndex) => {
+                setDays((current) => {
+                  const next = reorderStopsInDay(current, dayId, fromIndex, toIndex);
+                  return visibility === "PUBLIC" ? applyPublicMeetingPoint(next, true) : next;
+                });
+              }}
+              onUpdateStop={updateStop}
+              onRegenerate={() => void regenerate()}
+            />
+          )}
+          <Nav
+            onBack={() => setStep(2)}
+            onNext={() => void persistItineraryThenInvite()}
+            nextLabel={pending ? "Menyimpan…" : "Setuju & lanjut undang"}
+            nextDisabled={pending || generating || days.length === 0}
+          />
         </>
       ) : null}
 
       {step === 4 ? (
         <>
-          <Header n={4} title={path === "ai-discovery" ? "Pilih arah rekomendasi AI" : "Atur cara Groq menyusun rute"} />
-          <p className="type-body mb-4 text-on-surface-variant">
-            {path === "ai-discovery"
-              ? "Minta rekomendasi destinasi berdasarkan tanggal, asal, budget, dan preferensi. Setelah memilih, lanjut ke review."
-              : "Setelah draft disimpan, Groq membuat versi itinerary baru. Kalau hasilnya kurang cocok, kamu bisa regenerate biasa, hemat, atau rute alternatif dari editor."}
-          </p>
-          {path !== "ai-discovery" ? (
-          <div className="mb-5 grid gap-3 md:grid-cols-3">
-            {([
-              ["balanced", "Regenerate biasa", "Seimbang antara waktu, biaya, dan destinasi populer."],
-              ["cheaper", "Alternatif hemat", "Transport umum, makan kaki lima, dan jarak tempuh lebih pendek."],
-              ["alternative", "Rute alternatif", "Urutan dan tempat berbeda dari rute umum backpacker."],
-            ] as const).map(([id, title, desc]) => (
-              <button key={id} type="button" onClick={() => setRegenerateMode(id)} className={`card-surface p-4 text-left ${regenerateMode === id ? "ring-2 ring-primary" : ""}`}>
-                <p className="type-subtitle text-on-surface">{title}</p>
-                <p className="type-caption mt-1 text-on-surface-variant">{desc}</p>
-              </button>
-            ))}
-          </div>
-          ) : null}
-          {path === "ai-discovery" ? (
-            <div className="space-y-4">
-              <div className="flex flex-wrap items-center gap-3">
-                <button
-                  type="button"
-                  className="btn-primary"
-                  disabled={recommendPending}
-                  onClick={() => void requestDestinationRecommendations()}
-                >
-                  {recommendPending ? "Meminta rekomendasi…" : "Minta rekomendasi AI"}
+          <div className="card-surface space-y-5 p-5 md:p-7">
+            <div>
+              <p className="type-label mb-3 text-on-surface">Private / public</p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <button type="button" onClick={() => {
+                  setVisibility("PRIVATE");
+                  setDays((current) => applyPublicMeetingPoint(current, false));
+                }} className={`rounded-2xl border p-4 text-left ${visibility === "PRIVATE" ? "border-primary bg-primary-fixed/40" : "border-outline-variant"}`}>
+                  <p className="type-subtitle text-on-surface">Private</p>
+                  <p className="type-caption mt-1 text-on-surface-variant">Hanya kamu dan teman yang diundang.</p>
                 </button>
-                {usedAiFallback ? (
-                  <p className="type-caption text-on-surface-variant">Menampilkan pilihan cadangan (mock).</p>
-                ) : null}
+                <button type="button" onClick={() => {
+                  setVisibility("PUBLIC");
+                  setDays((current) => applyPublicMeetingPoint(current, true));
+                }} className={`rounded-2xl border p-4 text-left ${visibility === "PUBLIC" ? "border-primary bg-primary-fixed/40" : "border-outline-variant"}`}>
+                  <p className="type-subtitle text-on-surface">Public</p>
+                  <p className="type-caption mt-1 text-on-surface-variant">Bisa ditemukan traveler lain. Join tetap gratis. Titik pertama itinerary jadi titik kumpul.</p>
+                </button>
               </div>
-              {formError ? (
-                <p className="type-body text-error" role="alert">{formError}</p>
-              ) : null}
-              <div className="grid gap-3 md:grid-cols-3">
-                {(aiCandidates ?? []).map((pick) => {
-                  const label = pick.city || pick.name;
-                  return (
-                    <button
-                      key={pick.googlePlaceId}
-                      type="button"
-                      onClick={() => setDestinationCity(label)}
-                      className={`card-surface overflow-hidden text-left ${
-                        destinationCity === label ? "ring-2 ring-primary" : ""
-                      }`}
-                    >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img alt="" src={coverForCandidate(pick)} className="h-28 w-full object-cover" />
-                      <div className="p-3">
-                        <p className="type-subtitle text-on-surface">{pick.name}</p>
-                        <p className="type-caption text-on-surface-variant">
-                          {pick.region ?? pick.city}
-                          {pick.estimateNote ? ` · ${pick.estimateNote}` : ""}
-                        </p>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-              {!aiCandidates?.length && !recommendPending ? (
-                <p className="type-caption text-on-surface-variant">
-                  Tekan “Minta rekomendasi AI” untuk melihat kandidat destinasi.
-                </p>
-              ) : null}
             </div>
-          ) : null}
-          <Nav
-            onBack={() => setStep(3)}
-            onNext={goNext}
-            nextLabel={path === "ai-discovery" ? "Pakai destinasi ini" : "Lanjut review"}
-          />
-        </>
-      ) : null}
-
-      {step === 5 ? (
-        <>
-          <Header n={6} title="Simpan draft atau konfirmasi publish" />
-          <div className="card-surface space-y-3 p-5">
-            <p className="type-subtitle text-on-surface">{title || "(Tanpa judul)"}</p>
-            <p className="type-body text-on-surface-variant">
-              {origin || "Asal?"} → {destinationCity || "(tujuan belakangan)"} ·{" "}
-              {startDate} – {endDate}
-            </p>
-            <p className="type-caption text-on-surface-variant">
-              {visibility === "PUBLIC" ? "Niat publik" : "Private"} · rencana{" "}
-              {planningPartySize} orang
-              {visibility === "PUBLIC" ? ` · kapasitas ${maxParticipants}` : ""} · Rp{" "}
-              {budgetAmount.toLocaleString("id-ID")}{" "}
-              {budgetBasis === "PER_PERSON" ? "/ orang" : " rombongan"}
-            </p>
-            <p className="type-caption text-on-surface-variant">
-              Draft tidak otomatis tampil di pencarian publik.
-            </p>
             {visibility === "PUBLIC" ? (
-              <label className="flex items-start gap-2">
-                <input
-                  type="checkbox"
-                  checked={confirmPublish}
-                  onChange={(e) => setConfirmPublish(e.target.checked)}
-                />
-                <span className="type-caption text-on-surface">
-                  Saya konfirmasi memublikasikan trip ini. Join tetap gratis, tanpa
-                  checkout.
-                </span>
-              </label>
-            ) : (
-              <label className="flex items-start gap-2">
-                <input
-                  type="checkbox"
-                  checked={confirmPublish}
-                  onChange={(e) => setConfirmPublish(e.target.checked)}
-                />
-                <span className="type-caption text-on-surface">
-                  Simpan sebagai perjalanan private (status closed, tidak menerima join).
-                </span>
-              </label>
-            )}
-          </div>
-          {formError ? (
-            <p className="type-body mt-3 text-error" role="alert">
-              {formError}
-            </p>
-          ) : null}
-          <div className="mt-6 flex flex-wrap justify-between gap-3">
-            <button
-              type="button"
-              className="btn-ghost"
-              onClick={() => setStep(path === "ai-discovery" || path === "ai-route" ? 4 : 3)}
-            >
-              Kembali
-            </button>
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                className="btn-ghost"
-                disabled={pending}
-                onClick={() => void submit("draft")}
-              >
-                Simpan draft
-              </button>
-              <button
-                type="button"
-                className="btn-primary"
-                disabled={pending || !confirmPublish}
-                onClick={() => void submit("publish")}
-              >
-                {pending ? "Menyimpan…" : "Konfirmasi & publish"}
-              </button>
+              <div className="space-y-4 rounded-2xl bg-surface-container-low p-4">
+                <p className="rounded-2xl bg-white px-4 py-3 type-body text-on-surface">
+                  Titik kumpul: <strong>{firstStopMeetingLabel(days) || destinationCity}</strong>
+                </p>
+                <Field id="maxParticipants" label="Max grup (opsional)" hint="Termasuk host. Kosongkan untuk memakai default 8.">
+                  <input id="maxParticipants" type="number" min={2} className="field-input" value={maxParticipants} onChange={(event) => setMaxParticipants(event.target.value === "" ? "" : Number(event.target.value))} placeholder="8" />
+                </Field>
+                <Field id="genderRule" label="Gender (public)">
+                  <select id="genderRule" className="field-input" value={genderRule} onChange={(event) => setGenderRule(event.target.value as typeof genderRule)}>
+                    <option value="ALL_GENDERS">All gender</option>
+                    <option value="FEMALE_ONLY">Female only</option>
+                    <option value="MALE_ONLY">Male only</option>
+                  </select>
+                </Field>
+              </div>
+            ) : null}
+            <div>
+              <p className="type-label text-on-surface">Invite friend (opsional)</p>
+              <p className="type-caption mt-1 text-on-surface-variant">Hanya teman yang sudah connect / kamu ikuti.</p>
+              {connections.length > 0 ? (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {connections.map((person) => {
+                    const selected = inviteUsernames.includes(person.username);
+                    return (
+                      <button
+                        type="button"
+                        key={person.username}
+                        className={`rounded-full px-3 py-2 type-label ${selected ? "bg-primary text-white" : "bg-surface-container-high text-on-surface"}`}
+                        onClick={() => {
+                          setInviteUsernames((current) =>
+                            selected ? current.filter((item) => item !== person.username) : [...current, person.username],
+                          );
+                        }}
+                      >
+                        @{person.username} · {person.displayName}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="mt-2 rounded-2xl bg-primary-fixed/35 px-4 py-3 type-caption text-on-surface-variant">
+                  Belum ada koneksi DOLAN. Follow dulu, atau simpan trip tanpa undangan.
+                </p>
+              )}
             </div>
+          </div>
+          <div className="mt-6 flex flex-wrap justify-between gap-3">
+            <button type="button" className="btn-ghost" onClick={() => setStep(3)}>Kembali</button>
+            <button type="button" className="btn-primary" disabled={pending} onClick={() => void finish()}>
+              {pending ? "Menyimpan…" : "Simpan ke Trip Saya"}
+              <Icon name="arrow_forward" className="text-[16px]" />
+            </button>
           </div>
         </>
       ) : null}
+
+      {formError ? <p className="type-body mt-4 text-error" role="alert">{formError}</p> : null}
+      {templateLoading ? <p className="type-caption mt-3 text-on-surface-variant">Memuat template…</p> : null}
     </div>
   );
 }
 
-function Header({ n, title }: { n: number; title: string }) {
+function WizardProgress({ step }: { step: number }) {
   return (
-    <div className="mb-6 text-center">
-      <span className="chip bg-primary-fixed text-primary">Langkah {n} dari 6</span>
-      <h1 className="type-title mt-3 text-on-surface">{title}</h1>
-    </div>
-  );
-}
-
-function PathCard({
-  selected,
-  title,
-  desc,
-  onClick,
-}: {
-  selected: boolean;
-  title: string;
-  desc: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`card-surface p-6 text-left ${selected ? "ring-2 ring-primary" : ""}`}
-    >
-      <h2 className="type-subtitle text-on-surface">{title}</h2>
-      <p className="type-body mt-2 text-on-surface-variant">{desc}</p>
-    </button>
+    <ol className="mt-6 mb-8 flex items-center">
+      {WIZARD_STEPS.map((item, index) => {
+        const done = step > item.n;
+        const active = step === item.n;
+        return (
+          <li key={item.n} className={`flex items-center ${index === WIZARD_STEPS.length - 1 ? "" : "flex-1"}`}>
+            <div className="flex flex-col items-center">
+              <span
+                className={`grid h-10 w-10 place-items-center rounded-full border-2 type-label ${
+                  done || active ? "border-primary bg-primary text-white" : "border-outline-variant bg-white text-on-surface-variant"
+                }`}
+              >
+                {String(item.n).padStart(2, "0")}
+              </span>
+              <span className="mt-1 hidden type-caption font-bold text-on-surface sm:block">{item.label}</span>
+            </div>
+            {index < WIZARD_STEPS.length - 1 ? (
+              <div className="mx-2 mb-5 h-1.5 flex-1 overflow-hidden rounded-full bg-surface-container-high sm:mb-6">
+                <div
+                  className={`h-full rounded-full bg-primary transition-all ${done ? "w-full" : active ? "w-1/2 animate-pulse" : "w-0"}`}
+                />
+              </div>
+            ) : null}
+          </li>
+        );
+      })}
+    </ol>
   );
 }
 
@@ -995,21 +799,21 @@ function Nav({
   onBack,
   onNext,
   nextLabel = "Lanjut",
+  nextDisabled = false,
 }: {
   onBack?: () => void;
   onNext: () => void;
   nextLabel?: string;
+  nextDisabled?: boolean;
 }) {
   return (
     <div className="mt-6 flex justify-between gap-3">
       {onBack ? (
-        <button type="button" className="btn-ghost" onClick={onBack}>
-          Kembali
-        </button>
+        <button type="button" className="btn-ghost" onClick={onBack}>Kembali</button>
       ) : (
         <span />
       )}
-      <button type="button" className="btn-primary" onClick={onNext}>
+      <button type="button" className="btn-primary" disabled={nextDisabled} onClick={onNext}>
         {nextLabel}
         <Icon name="arrow_forward" className="text-[16px]" />
       </button>

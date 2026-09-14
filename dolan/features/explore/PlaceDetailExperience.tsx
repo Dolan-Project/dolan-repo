@@ -7,6 +7,8 @@ import { Icon } from "@/components/ui/Icon";
 import { GoogleMap } from "./GoogleMap";
 import { PlacePhoto } from "./PlacePhoto";
 import { DolanApiError, getPlaceDetails } from "./api";
+import { findProvinceForTemplate, provinceDetailHref } from "@/lib/provinces";
+import { provinceCoverUrl } from "@/lib/province-cover";
 
 type DetailData = {
   place: PlaceDetails;
@@ -147,7 +149,28 @@ function RelatedTrip({ trip }: { trip: TripSummary }) {
   );
 }
 
-function TemplateCard({ template }: { template: ItineraryTemplateSummary }) { return <article className="card-surface p-4"><div className="flex items-start justify-between gap-3"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-tertiary-fixed text-tertiary"><Icon name="route" className="text-[22px]" /></span><div className="min-w-0 flex-1"><div className="flex flex-wrap gap-1"><span className="chip bg-tertiary-fixed text-tertiary">{template.sourceLabel}</span>{template.popularityLabel ? <span className="chip bg-secondary-fixed text-on-secondary-container">{template.popularityLabel}</span> : null}</div><h3 className="type-label-lg mt-2 line-clamp-2">{template.title}</h3><p className="type-caption mt-1 text-on-surface-variant">{template.durationDays} hari · dipakai {template.usageCount} traveler</p></div></div><Link href={`/buat-trip?templateId=${encodeURIComponent(template.id)}`} className="btn-brand mt-4 w-full !min-h-9">Pakai dan sesuaikan rute</Link></article>; }
+function TemplateCard({ template }: { template: ItineraryTemplateSummary }) {
+  const province = findProvinceForTemplate({ templateId: template.id, city: template.city });
+  const href = provinceDetailHref({ templateId: template.id, city: template.city }) ?? `/buat-trip?templateId=${encodeURIComponent(template.id)}`;
+  const cover = province ? provinceCoverUrl(province) : null;
+  return (
+    <Link href={href} className="card-surface overflow-hidden">
+      {cover ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={cover} alt="" className="h-28 w-full object-cover" />
+      ) : null}
+      <div className="p-4">
+        <div className="flex flex-wrap gap-1">
+          <span className="chip bg-tertiary-fixed text-tertiary">{template.sourceLabel}</span>
+          {template.popularityLabel ? <span className="chip bg-secondary-fixed text-on-secondary-container">{template.popularityLabel}</span> : null}
+        </div>
+        <h3 className="type-label-lg mt-2 line-clamp-2">{template.title}</h3>
+        <p className="type-caption mt-1 text-on-surface-variant">{template.durationDays} hari · dipakai {template.usageCount} traveler</p>
+        <p className="mt-3 type-label text-primary">Lihat rute {province?.name ?? "provinsi"}</p>
+      </div>
+    </Link>
+  );
+}
 
 function EmptyRelated({ icon, title, body, action, href }: { icon: string; title: string; body: string; action: string; href: string }) { return <div className="rounded-[22px] border border-dashed border-outline-variant bg-white p-6 text-center"><Icon name={icon} className="text-[32px] text-primary" /><h3 className="type-subtitle mt-2">{title}</h3><p className="type-body mt-1 text-on-surface-variant">{body}</p><Link href={href} className="btn-secondary mt-4">{action}</Link></div>; }
 

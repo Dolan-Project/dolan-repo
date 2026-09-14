@@ -58,8 +58,10 @@ export function RoutePreview({
           points={points}
           selectedId={null}
           onSelect={() => undefined}
-          showRoute={routePolylines.length > 0}
+          numberedBadges
+          showRoute={points.length > 1}
           routePolylines={routePolylines}
+          routeColor="#004ac6"
           className="absolute inset-0 h-full w-full"
         />
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/10 via-transparent to-[#071c32]/20" />
@@ -75,7 +77,7 @@ export function RoutePreview({
           <p className="type-label">Rute mengikuti jalan Google Maps</p>
           <p className="type-caption mt-1 text-white/70">
             {routePolylines.length > 0
-              ? "Garis oranye mengikuti jalan yang tersedia, bukan tarikan lurus antar titik."
+              ? "Garis biru mengikuti jalan yang tersedia, bukan tarikan lurus antar titik."
               : "Tambahkan browser key dan server key Google Maps agar garis rute mengikuti jalan."}
           </p>
         </div>

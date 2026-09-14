@@ -1,0 +1,388 @@
+import type { EditableItineraryDay } from "@dolan/shared";
+import { INDONESIA_PROVINCES, type CuratedProvince } from "@/lib/provinces";
+import { resolvePlaceCoordinates } from "@/lib/place-coordinates";
+import { planEfficientDays, selectCompactStops, travelMinutesBetween } from "@/lib/route-optimize";
+import { addDaysToIso, packItinerarySchedule, placeFromTemplateStop, PROVINCE_CENTERS } from "@/lib/template-itinerary";
+import { ASSETS } from "@/lib/assets";
+
+export type DestinationStopSeed = {
+  name: string;
+  lat: number;
+  lng: number;
+  notes?: string;
+};
+
+export const CITY_ROUTES: Array<{ match: string[]; stops: DestinationStopSeed[] }> = [
+  {
+    match: ["yogyakarta", "jogja"],
+    stops: [
+      { name: "Tugu Yogyakarta", lat: -7.7829, lng: 110.3671, notes: "Titik foto ikon kota sebelum lanjut ke selatan." },
+      { name: "Jalan Malioboro", lat: -7.7926, lng: 110.3658, notes: "Jalan kaki, belanja, dan kuliner sepanjang Malioboro." },
+      { name: "Keraton Yogyakarta", lat: -7.8053, lng: 110.3642, notes: "Kawasan keraton dan alun-alun utara." },
+      { name: "Taman Sari", lat: -7.81, lng: 110.3594, notes: "Jalan kaki dari keraton, cek jam kunjungan." },
+      { name: "Alun-Alun Kidul", lat: -7.8117, lng: 110.3635, notes: "Sore hari ramai. Naik odong-odong atau jalan kaki." },
+    ],
+  },
+  {
+    match: ["bandung"],
+    stops: [
+      { name: "Tebing Keraton", lat: -6.8352, lng: 107.663, notes: "Sore di Dago. Kabut sering turun menjelang maghrib." },
+      { name: "Cihampelas Walk", lat: -6.8956, lng: 107.6046, notes: "Factory outlet dan kuliner di koridor Cihampelas." },
+      { name: "Gedung Sate", lat: -6.9025, lng: 107.6187, notes: "Titik kumpul yang mudah dikenali di pusat kota." },
+      { name: "Museum Geologi Bandung", lat: -6.9007, lng: 107.6191, notes: "Dekat Gedung Sate, cocok dilanjut jalan kaki." },
+      { name: "Jalan Braga", lat: -6.9174, lng: 107.609, notes: "Jalan kaki, kuliner, dan foto kawasan Braga." },
+      { name: "Jalan Asia Afrika", lat: -6.9212, lng: 107.6097, notes: "Museum KAA dan alun-alun dalam satu koridor." },
+      { name: "Alun-Alun Bandung", lat: -6.9218, lng: 107.6071, notes: "Istirahat siang, kuliner, dan Masjid Raya." },
+      { name: "Saung Angklung Udjo", lat: -6.8978, lng: 107.6553, notes: "Pertunjukan angklung sore, masih di dalam kota." },
+    ],
+  },
+  {
+    match: ["bogor"],
+    stops: [
+      { name: "Kebun Raya Bogor", lat: -6.5971, lng: 106.799, notes: "Masuk pagi, sisihkan 2 jam untuk jalan di kebun raya." },
+      { name: "Istana Bogor", lat: -6.598, lng: 106.7994, notes: "Sisi kebun raya. Cek jadwal area yang buka untuk publik." },
+      { name: "Taman Kencana Bogor", lat: -6.5938, lng: 106.7965, notes: "Jalan kaki dari kebun raya, cocok untuk makan siang." },
+      { name: "Jalan Suryakencana", lat: -6.6035, lng: 106.7998, notes: "Chinatown Bogor, kuliner sore." },
+    ],
+  },
+  {
+    match: ["jakarta", "dki"],
+    stops: [
+      { name: "Ancol", lat: -6.1256, lng: 106.8333, notes: "Pagi di kawasan pantai Ancol sebelum lanjut ke selatan." },
+      { name: "Kota Tua Jakarta", lat: -6.1352, lng: 106.8133, notes: "Jalan kaki di Fatahillah. Museum di dalam kawasan berbayar terpisah." },
+      { name: "Monumen Nasional", lat: -6.1754, lng: 106.8272, notes: "Plaza Monas gratis. Naik ke puncak opsional dan berbayar." },
+      { name: "Bundaran HI", lat: -6.1944, lng: 106.8229, notes: "Titik foto dan kuliner di pusat kota. Masuk kawasan gratis." },
+    ],
+  },
+  {
+    match: ["dieng", "wonosobo"],
+    stops: [
+      { name: "Kawah Sikidang", lat: -7.2201, lng: 109.9054 },
+      { name: "Candi Arjuna", lat: -7.2058, lng: 109.9074 },
+      { name: "Bukit Sikunir", lat: -7.2351, lng: 109.9242 },
+    ],
+  },
+  {
+    match: ["lombok", "rinjani"],
+    stops: [
+      { name: "Desa Sembalun", lat: -8.3614, lng: 116.5306 },
+      { name: "Plawangan Sembalun", lat: -8.3831, lng: 116.4512 },
+      { name: "Danau Segara Anak", lat: -8.4075, lng: 116.4161 },
+    ],
+  },
+  {
+    match: ["bromo", "cemoro", "tengger", "probolinggo"],
+    stops: [
+      { name: "Penanjakan Bromo", lat: -7.9083, lng: 112.9468, notes: "Sunrise di penanjakan. Siapkan jaket dan jeep." },
+      { name: "Gunung Bromo", lat: -7.9425, lng: 112.953, notes: "Jalan di lautan pasir menuju kawah. Tiket kawasan + jeep." },
+      { name: "Madakaripura", lat: -7.8538, lng: 113.0064, notes: "Air terjun dekat Bromo, satu koridor jalan." },
+    ],
+  },
+  {
+    match: ["komodo", "labuan bajo"],
+    stops: [
+      { name: "Pulau Padar", lat: -8.6486, lng: 119.5892 },
+      { name: "Pink Beach", lat: -8.6031, lng: 119.5196 },
+      { name: "Manta Point", lat: -8.5374, lng: 119.6161 },
+    ],
+  },
+  {
+    match: ["karimunjawa", "karimun jawa", "jepara"],
+    stops: [
+      { name: "Pelabuhan Karimunjawa", lat: -5.8841, lng: 110.4419 },
+      { name: "Pantai Tanjung Gelam", lat: -5.8388, lng: 110.3978 },
+      { name: "Bukit Love", lat: -5.8703, lng: 110.4344 },
+    ],
+  },
+];
+
+export function findProvinceForDestination(input: string) {
+  const value = input.trim().toLocaleLowerCase("id-ID");
+  if (!value) return undefined;
+  const exact = INDONESIA_PROVINCES.find((province) => {
+    const name = province.name.toLocaleLowerCase("id-ID");
+    const capital = province.capital.toLocaleLowerCase("id-ID");
+    return province.slug === value || name === value || capital === value;
+  });
+  if (exact) return exact;
+  const byPlaceName = INDONESIA_PROVINCES.find((province) =>
+    province.places.some((place) => {
+      const placeName = place.name.toLocaleLowerCase("id-ID");
+      return placeName === value || (value.length >= 4 && (placeName.includes(value) || value.includes(placeName)));
+    }),
+  );
+  if (byPlaceName) return byPlaceName;
+  const byCity = INDONESIA_PROVINCES.find((province) =>
+    province.places.some((place) => place.city.toLocaleLowerCase("id-ID") === value),
+  );
+  if (byCity) return byCity;
+  if (value.length < 4) return undefined;
+  return INDONESIA_PROVINCES.find((province) => {
+    const name = province.name.toLocaleLowerCase("id-ID");
+    const capital = province.capital.toLocaleLowerCase("id-ID");
+    return (
+      name.includes(value) ||
+      capital.includes(value) ||
+      (value.includes(name) && name.length >= 5) ||
+      (value.includes(capital) && capital.length >= 5)
+    );
+  });
+}
+
+export function isProvinceDestination(input: string) {
+  const value = input.trim().toLocaleLowerCase("id-ID");
+  if (!value) return false;
+  return INDONESIA_PROVINCES.some((province) => {
+    const name = province.name.toLocaleLowerCase("id-ID");
+    return province.slug === value || name === value;
+  });
+}
+
+export function templateMatchesDestination(templateCity: string, destination: string) {
+  const city = templateCity.trim().toLocaleLowerCase("id-ID");
+  const dest = destination.trim().toLocaleLowerCase("id-ID");
+  if (!city || !dest) return false;
+  if (city === dest) return true;
+  const destProvince = findProvinceForDestination(destination);
+  const templateProvince = findProvinceForDestination(templateCity);
+  if (destProvince && templateProvince) return destProvince.slug === templateProvince.slug;
+  return dest.includes(city) || city.includes(dest);
+}
+
+function seedCoords(name: string, city: string) {
+  const known = resolvePlaceCoordinates(name, city);
+  if (known) return known;
+  const summary = placeFromTemplateStop(name, city);
+  return { lat: summary.latitude, lng: summary.longitude };
+}
+
+function routeHub(destination: string) {
+  const value = destination.trim();
+  const named = resolvePlaceCoordinates(value, value);
+  if (named) return named;
+  const province = findProvinceForDestination(value);
+  if (province) {
+    const capital = resolvePlaceCoordinates(province.capital, province.name) ?? PROVINCE_CENTERS[province.name];
+    if (capital) return capital;
+  }
+  const fallback = placeFromTemplateStop(value || "Indonesia", value || "Indonesia");
+  return { lat: fallback.latitude, lng: fallback.longitude };
+}
+
+function matchCityRoute(destination: string) {
+  const value = destination.trim().toLocaleLowerCase("id-ID");
+  if (!value) return undefined;
+  const byKeyword = CITY_ROUTES.find((route) => route.match.some((item) => value.includes(item)));
+  if (byKeyword) return byKeyword;
+  return CITY_ROUTES.find((route) =>
+    route.stops.some((stop) => {
+      const name = stop.name.toLocaleLowerCase("id-ID");
+      return name === value || value.includes(name) || name.includes(value);
+    }),
+  );
+}
+
+function cityRouteStops(destination: string): DestinationStopSeed[] {
+  const known = matchCityRoute(destination);
+  if (!known) return [];
+  return known.stops.map((stop) => {
+    const coords = resolvePlaceCoordinates(stop.name, destination) ?? { lat: stop.lat, lng: stop.lng };
+    return { ...stop, lat: coords.lat, lng: coords.lng };
+  });
+}
+
+function provinceRouteStops(destination: string): DestinationStopSeed[] {
+  const province = findProvinceForDestination(destination);
+  if (!province) return [];
+  return province.places.map((place) => {
+    const coords = seedCoords(place.name, province.name);
+    return {
+      name: place.name,
+      lat: coords.lat,
+      lng: coords.lng,
+      notes: place.description,
+    };
+  });
+}
+
+export function destinationStopSeeds(destination: string): DestinationStopSeed[] {
+  if (isProvinceDestination(destination)) {
+    const provinceStops = provinceRouteStops(destination);
+    if (provinceStops.length) return provinceStops;
+  }
+  const cityStops = cityRouteStops(destination);
+  if (cityStops.length) return cityStops;
+  const named = resolvePlaceCoordinates(destination, destination);
+  if (named) {
+    return [{ name: destination.trim(), lat: named.lat, lng: named.lng, notes: `Kunjungan ke ${destination.trim()}.` }];
+  }
+  const fallback = seedCoords(destination.trim() || "Indonesia", destination.trim() || "Indonesia");
+  return [{ name: destination.trim() || "Destinasi", lat: fallback.lat, lng: fallback.lng, notes: "Rute awal. Sesuaikan titik di peta." }];
+}
+
+function dayCount(startDate: string, endDate: string) {
+  if (!startDate || !endDate || endDate < startDate) return 1;
+  const start = new Date(`${startDate}T00:00:00Z`).getTime();
+  const end = new Date(`${endDate}T00:00:00Z`).getTime();
+  return Math.max(1, Math.round((end - start) / 86_400_000) + 1);
+}
+
+function daysFromSeedClusters(
+  clusters: DestinationStopSeed[][],
+  input: { destination: string; startDate: string; idPrefix: string; titleFor: (dayIndex: number) => string },
+) {
+  return clusters.map((chunk, dayIndex) => ({
+    id: `${input.idPrefix}-day-${dayIndex + 1}`,
+    dayNumber: dayIndex + 1,
+    date: input.startDate ? addDaysToIso(input.startDate, dayIndex) : `2026-10-${String(24 + dayIndex).padStart(2, "0")}`,
+    title: input.titleFor(dayIndex),
+    stops: chunk.map((stop, stopIndex) => {
+      const place = placeFromTemplateStop(stop.name, input.destination);
+      const previous = chunk[stopIndex - 1];
+      return {
+        id: `${input.idPrefix}-day-${dayIndex + 1}-stop-${stopIndex + 1}`,
+        sequence: stopIndex + 1,
+        place: { ...place, latitude: stop.lat, longitude: stop.lng, city: input.destination, formattedAddress: `${stop.name}, ${input.destination}` },
+        customTitle: stop.name,
+        activityType: stopIndex === 0 && dayIndex === 0 ? "Titik kumpul" : "Wisata",
+        startTime: "08:00",
+        durationMinutes: 90,
+        travelDurationMinutes:
+          stopIndex === 0 || !previous ? 0 : travelMinutesBetween({ lat: previous.lat, lng: previous.lng }, { lat: stop.lat, lng: stop.lng }),
+        notes: stop.notes ?? `Kunjungan ke ${stop.name}. Ideal ${stopIndex === 0 ? "pagi" : "lanjutan rute"} di koridor terdekat.`,
+        isLocked: false,
+      };
+    }),
+  }));
+}
+
+export function destinationCandidatePool(destination: string): DestinationStopSeed[] {
+  const merged: DestinationStopSeed[] = [];
+  const seen = new Set<string>();
+  const push = (stop: DestinationStopSeed) => {
+    const key = stop.name.trim().toLocaleLowerCase("id-ID");
+    if (!key || seen.has(key)) return;
+    seen.add(key);
+    const coords = resolvePlaceCoordinates(stop.name, destination) ?? { lat: stop.lat, lng: stop.lng };
+    merged.push({ ...stop, lat: coords.lat, lng: coords.lng });
+  };
+  destinationStopSeeds(destination).forEach(push);
+  if (!isProvinceDestination(destination)) {
+    cityRouteStops(destination).forEach(push);
+  }
+  return merged;
+}
+
+export function buildDestinationItinerary(input: {
+  destination: string;
+  startDate: string;
+  endDate: string;
+  rotate?: number;
+  variant?: number;
+  excludeNames?: string[];
+  preferCheaper?: boolean;
+}): EditableItineraryDay[] {
+  const seeds = destinationCandidatePool(input.destination);
+  const fallback = destinationStopSeeds(input.destination);
+  const pool = seeds.length ? seeds : fallback;
+  const daysTotal = dayCount(input.startDate, input.endDate);
+  const hub = routeHub(input.destination);
+  const variant = Math.max(0, input.variant ?? input.rotate ?? 0);
+  const cityTrip = !isProvinceDestination(input.destination);
+  const clusters = selectCompactStops(pool, daysTotal, hub, {
+    excludeNames: input.excludeNames,
+    variant,
+    maxPerDay: cityTrip ? 4 : 3,
+    maxRadiusKm: cityTrip ? 18 : 90,
+  });
+  const days = clusters.length
+    ? clusters
+    : planEfficientDays(pool, daysTotal, hub);
+  return packItinerarySchedule(
+    daysFromSeedClusters(days, {
+      destination: input.destination,
+      startDate: input.startDate,
+      idPrefix: "dest",
+      titleFor: (dayIndex) => `Jelajah ${input.destination} · hari ${dayIndex + 1}`,
+    }),
+  );
+}
+
+export function destinationCoverUrl(city: string) {
+  const key = city.trim().toLowerCase();
+  if (key.includes("yogya") || key.includes("jogja")) return ASSETS.jogja;
+  if (key.includes("bali") || key.includes("ubud") || key.includes("canggu")) return ASSETS.tanahLot;
+  if (key.includes("lombok") || key.includes("rinjani") || key.includes("bromo") || key.includes("batur")) return ASSETS.mountBatur;
+  if (key.includes("karimun") || key.includes("penida")) return ASSETS.nusaPenida;
+  if (key.includes("komodo") || key.includes("bajo")) return ASSETS.komodo;
+  const tag = encodeURIComponent((city.trim() || "indonesia").split(",")[0]!.replace(/\s+/g, ","));
+  if (key.includes("bandung")) {
+    return `https://images.unsplash.com/photo-1555899434-94d10b8c0b5a?auto=format&fit=crop&w=1200&q=80&sig=${tag}`;
+  }
+  return `https://loremflickr.com/1200/800/${tag},indonesia,travel`;
+}
+
+const KOMODO_STOP_PATTERN = /pink beach|bandara komodo|pulau padar|manta point|pulau kanawa/i;
+
+export function itineraryFitsDestination(days: EditableItineraryDay[], destination: string) {
+  if (!days.length) return false;
+  const dest = destination.trim().toLowerCase();
+  if (/komodo|labuan bajo|\bbajo\b/.test(dest)) return true;
+  const names = days.flatMap((day) => day.stops.map((stop) => `${stop.customTitle ?? ""} ${stop.place?.name ?? ""}`)).join(" ");
+  return !KOMODO_STOP_PATTERN.test(names);
+}
+
+export function resolveTripItineraryDays(input: {
+  destination: string;
+  startDate: string | null;
+  endDate: string | null;
+  days: EditableItineraryDay[];
+}) {
+  if (itineraryFitsDestination(input.days, input.destination)) return input.days;
+  return buildDestinationItinerary({
+    destination: input.destination.trim() || "Indonesia",
+    startDate: input.startDate ?? "",
+    endDate: input.endDate ?? input.startDate ?? "",
+  });
+}
+
+export function buildProvinceTemplateDays(province: CuratedProvince, options?: { startDate?: string }): EditableItineraryDay[] {
+  const notesByName = new Map(province.template.stops.map((stop) => [stop.name.toLocaleLowerCase("id-ID"), stop.notes]));
+  const durationByName = new Map(province.template.stops.map((stop) => [stop.name.toLocaleLowerCase("id-ID"), stop.durationMinutes]));
+  const seeds: DestinationStopSeed[] = province.template.stops.map((stop) => {
+    const coords = seedCoords(stop.name, province.name);
+    return { name: stop.name, lat: coords.lat, lng: coords.lng, notes: stop.notes };
+  });
+  const unique = seeds.filter((stop, index, list) => list.findIndex((item) => item.name === stop.name) === index);
+  const hub = resolvePlaceCoordinates(unique[0]?.name ?? "", province.name)
+    ?? PROVINCE_CENTERS[province.name]
+    ?? { lat: unique[0]?.lat ?? -2.5, lng: unique[0]?.lng ?? 118 };
+  const clusters = planEfficientDays(unique, province.template.durationDays, hub);
+  const startDate = options?.startDate && /^\d{4}-\d{2}-\d{2}$/.test(options.startDate) ? options.startDate : "";
+  return packItinerarySchedule(
+    clusters.map((chunk, dayIndex) => ({
+      id: `${province.slug}-day-${dayIndex + 1}`,
+      dayNumber: dayIndex + 1,
+      date: startDate ? addDaysToIso(startDate, dayIndex) : `2026-10-${String(24 + dayIndex).padStart(2, "0")}`,
+      title: `Hari ${dayIndex + 1} · ${province.name}`,
+      stops: chunk.map((stop, stopIndex) => {
+        const place = placeFromTemplateStop(stop.name, province.name);
+        const previous = chunk[stopIndex - 1];
+        const key = stop.name.toLocaleLowerCase("id-ID");
+        const travel = stopIndex === 0 || !previous ? 0 : travelMinutesBetween({ lat: previous.lat, lng: previous.lng }, { lat: stop.lat, lng: stop.lng });
+        return {
+          id: `${province.slug}-day-${dayIndex + 1}-stop-${stopIndex + 1}`,
+          sequence: stopIndex + 1,
+          place: { ...place, latitude: stop.lat, longitude: stop.lng, formattedAddress: `${stop.name}, ${province.name}` },
+          customTitle: stop.name,
+          activityType: stopIndex === 0 && dayIndex === 0 ? "Titik kumpul" : "Wisata",
+          startTime: "08:00",
+          durationMinutes: durationByName.get(key) || 120,
+          travelDurationMinutes: travel,
+          notes: notesByName.get(key) ?? stop.notes ?? `Rute hemat jarak ke ${stop.name}.`,
+          isLocked: false,
+        };
+      }),
+    })),
+  );
+}

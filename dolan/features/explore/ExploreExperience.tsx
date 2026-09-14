@@ -7,6 +7,8 @@ import { Icon } from "@/components/ui/Icon";
 import { GoogleMap, type MapPoint } from "./GoogleMap";
 import { PlacePhoto } from "./PlacePhoto";
 import { DolanApiError, searchExplore, type ExplorePage, type ExploreSort, type ExploreTab } from "./api";
+import { findProvinceForTemplate, provinceDetailHref } from "@/lib/provinces";
+import { provinceCoverUrl } from "@/lib/province-cover";
 
 type ExploreItem = PlaceSummary | TripSummary | ItineraryTemplateSummary;
 type SheetSnap = "collapsed" | "half" | "expanded";
@@ -330,8 +332,40 @@ function TripCard({ trip, onSelect }: { trip: TripSummary; onSelect: () => void 
 }
 
 function TemplateCard({ template, onSelect }: { template: ItineraryTemplateSummary; onSelect: () => void }) {
+  const province = findProvinceForTemplate({ templateId: template.id, city: template.city });
+  const href = provinceDetailHref({ templateId: template.id, city: template.city }) ?? `/buat-trip?templateId=${encodeURIComponent(template.id)}`;
+  const cover = province ? provinceCoverUrl(province) : null;
   const place = template.coverPlace;
-  return <div className="flex gap-3" onClick={onSelect}>{place ? <PlacePhoto googlePlaceId={place.googlePlaceId} photoName={place.photoName} photoUri={place.photoUri} alt={template.title} className="h-24 w-28 shrink-0 rounded-xl" /> : <div className="flex h-24 w-28 shrink-0 items-center justify-center rounded-xl bg-tertiary-fixed text-tertiary"><Icon name="route" className="text-[30px]" /></div>}<div className="min-w-0 flex-1"><div className="flex flex-wrap gap-1"><span className="chip bg-tertiary-fixed text-tertiary">{template.sourceLabel}</span>{template.popularityLabel ? <span className="chip bg-secondary-fixed text-on-secondary-container">{template.popularityLabel}</span> : null}</div><h2 className="type-label-lg mt-1 line-clamp-2 text-on-surface">{template.title}</h2><p className="mt-1 type-caption text-on-surface-variant">{template.city} · {template.durationDays} hari</p><div className="mt-2 flex items-center justify-between"><span className="type-micro text-on-surface-variant">Dipakai {template.usageCount} traveler</span><Link href={`/buat-trip?templateId=${encodeURIComponent(template.id)}`} className="rounded-full bg-primary px-3 py-1.5 type-micro text-white">Pakai rute</Link></div></div></div>;
+  return (
+    <div className="flex gap-3">
+      <Link href={href} className="contents" onClick={onSelect}>
+        {cover ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={cover} alt="" className="h-24 w-28 shrink-0 rounded-xl object-cover" />
+        ) : place ? (
+          <PlacePhoto googlePlaceId={place.googlePlaceId} photoName={place.photoName} photoUri={place.photoUri} alt={template.title} className="h-24 w-28 shrink-0 rounded-xl" />
+        ) : (
+          <div className="flex h-24 w-28 shrink-0 items-center justify-center rounded-xl bg-tertiary-fixed text-tertiary"><Icon name="route" className="text-[30px]" /></div>
+        )}
+      </Link>
+      <div className="min-w-0 flex-1">
+        <Link href={href} className="block" onClick={onSelect}>
+          <div className="flex flex-wrap gap-1">
+            <span className="chip bg-tertiary-fixed text-tertiary">{template.sourceLabel}</span>
+            {template.popularityLabel ? <span className="chip bg-secondary-fixed text-on-secondary-container">{template.popularityLabel}</span> : null}
+          </div>
+          <h2 className="type-label-lg mt-1 line-clamp-2 text-on-surface">{template.title}</h2>
+          <p className="mt-1 type-caption text-on-surface-variant">{template.city} · {template.durationDays} hari</p>
+        </Link>
+        <div className="mt-2 flex items-center justify-between gap-2">
+          <span className="type-micro text-on-surface-variant">Dipakai {template.usageCount} traveler</span>
+          <Link href={`/buat-trip?templateId=${encodeURIComponent(template.id)}`} className="rounded-full bg-primary px-3 py-1.5 type-micro text-white" onClick={onSelect}>
+            Pakai rute
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function LoadingCards() { return <div className="space-y-3 p-4" aria-label="Memuat hasil">{[0, 1, 2, 3].map((item) => <div key={item} className="h-28 animate-pulse rounded-2xl bg-surface-container" />)}</div>; }

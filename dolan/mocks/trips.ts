@@ -137,7 +137,7 @@ function seed() {
     destinationCity: "Yogyakarta",
     activeParticipantCount: 1,
     maxParticipants: 6,
-    description: "Heritage walk Jogja",
+    description: "",
     origin: "Jakarta",
     meetingPoint: "Stasiun Tugu",
     transport: "Kereta",

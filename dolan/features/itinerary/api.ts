@@ -14,17 +14,20 @@ const clone = <T,>(value: T): T => structuredClone(value);
 
 export function findScheduleConflicts(days: EditableItineraryDay[]) {
   const conflicts: Record<string, string> = {};
+  const minutes = (time: string) => {
+    const [hours, mins] = time.split(":").map(Number);
+    return hours * 60 + mins;
+  };
   for (const day of days) {
     for (let index = 1; index < day.stops.length; index += 1) {
       const previous = day.stops[index - 1];
       const current = day.stops[index];
       if (!previous.startTime || !current.startTime) continue;
-      const minutes = (time: string) => {
-        const [hours, mins] = time.split(":").map(Number);
-        return hours * 60 + mins;
-      };
-      const earliest = minutes(previous.startTime) + previous.durationMinutes + (current.travelDurationMinutes ?? 0);
-      if (minutes(current.startTime) < earliest) {
+      const previousStart = minutes(previous.startTime);
+      const currentStart = minutes(current.startTime);
+      const earliest = previousStart + previous.durationMinutes + (current.travelDurationMinutes ?? 0);
+      const currentAdjusted = currentStart < previousStart ? currentStart + 24 * 60 : currentStart;
+      if (currentAdjusted < earliest) {
         conflicts[current.id] = `Mulai terlalu cepat. Jadwal paling awal ${String(Math.floor(earliest / 60) % 24).padStart(2, "0")}:${String(earliest % 60).padStart(2, "0")}.`;
       }
     }
@@ -48,11 +51,21 @@ export async function getItineraryEditor(tripId: string): Promise<ItineraryEdito
   throw new Error(payload.error?.message ?? "Gagal memuat itinerary dari server.");
 }
 
+function saveInputErrorMessage(error: { issues?: Array<{ message?: string }> }) {
+  const first = error.issues?.[0]?.message ?? "";
+  if (first.toLowerCase().includes("waktu")) return first;
+  return "Itinerary belum bisa disimpan. Cek jam, durasi, dan nama tempat.";
+}
+
 export async function saveItineraryVersion(
   snapshot: ItineraryEditorSnapshot,
   input: SaveItineraryVersionInput,
 ): Promise<ItineraryEditorSnapshot> {
-  const parsed = saveItineraryVersionSchema.parse(input);
+  const parsedResult = saveItineraryVersionSchema.safeParse(input);
+  if (!parsedResult.success) {
+    throw new Error(saveInputErrorMessage(parsedResult.error));
+  }
+  const parsed = parsedResult.data;
   if (
     Object.keys(
       findScheduleConflicts(

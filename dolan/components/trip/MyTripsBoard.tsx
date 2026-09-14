@@ -8,9 +8,9 @@ import { AttendanceConfirm } from "@/components/trips/AttendanceConfirm";
 import { GoogleMap, type MapPoint } from "@/features/explore/GoogleMap";
 import { PlacePhoto } from "@/features/explore/PlacePhoto";
 import type { ApiError, MyTripRole, MyTripSummary, TripSummary } from "@/lib/contracts";
-import { ASSETS } from "@/lib/assets";
 import { ROUTES, tripDetailHref, tripItineraryPath } from "@/lib/routes";
 import { meetingPointFor } from "@/mocks/geo";
+import { CITY_ROUTES, destinationCoverUrl } from "@/lib/destination-itinerary";
 import { ItineraryPdfButton } from "./ItineraryPdfButton";
 
 const tabs: { id: MyTripRole; label: string }[] = [
@@ -22,76 +22,10 @@ type SheetPos = "collapsed" | "half" | "expanded";
 type MapType = "roadmap" | "satellite";
 const noop = () => undefined;
 
-type RouteStop = { label: string; lat: number; lng: number };
-const fallbackRoutes: Array<{ match: string[]; stops: RouteStop[] }> = [
-  {
-    match: ["yogyakarta", "jogja"],
-    stops: [
-      { label: "Keraton Yogyakarta", lat: -7.8053, lng: 110.3642 },
-      { label: "Taman Sari", lat: -7.81, lng: 110.3594 },
-      { label: "Candi Prambanan", lat: -7.752, lng: 110.4915 },
-    ],
-  },
-  {
-    match: ["dieng", "wonosobo"],
-    stops: [
-      { label: "Kawah Sikidang", lat: -7.2201, lng: 109.9054 },
-      { label: "Candi Arjuna", lat: -7.2058, lng: 109.9074 },
-      { label: "Bukit Sikunir", lat: -7.2351, lng: 109.9242 },
-    ],
-  },
-  {
-    match: ["bandung"],
-    stops: [
-      { label: "Stasiun Bandung", lat: -6.9147, lng: 107.602 },
-      { label: "Gedung Sate", lat: -6.9025, lng: 107.6187 },
-      { label: "Tebing Keraton", lat: -6.8352, lng: 107.663 },
-      { label: "Kawah Putih", lat: -7.1662, lng: 107.4021 },
-    ],
-  },
-  {
-    match: ["lombok", "rinjani"],
-    stops: [
-      { label: "Desa Sembalun", lat: -8.3614, lng: 116.5306 },
-      { label: "Plawangan Sembalun", lat: -8.3831, lng: 116.4512 },
-      { label: "Danau Segara Anak", lat: -8.4075, lng: 116.4161 },
-    ],
-  },
-  {
-    match: ["bromo"],
-    stops: [
-      { label: "Penanjakan Bromo", lat: -7.9083, lng: 112.9468 },
-      { label: "Gunung Bromo", lat: -7.9425, lng: 112.953 },
-      { label: "Madakaripura", lat: -7.8538, lng: 113.0064 },
-    ],
-  },
-  {
-    match: ["karimunjawa", "jepara"],
-    stops: [
-      { label: "Pelabuhan Karimunjawa", lat: -5.8841, lng: 110.4419 },
-      { label: "Pantai Tanjung Gelam", lat: -5.8388, lng: 110.3978 },
-      { label: "Bukit Love", lat: -5.8703, lng: 110.4344 },
-    ],
-  },
-  {
-    match: ["komodo", "labuan bajo"],
-    stops: [
-      { label: "Pulau Padar", lat: -8.6486, lng: 119.5892 },
-      { label: "Pink Beach", lat: -8.6031, lng: 119.5196 },
-      { label: "Manta Point", lat: -8.5374, lng: 119.6161 },
-    ],
-  },
-];
-
-function coverFor(city: string) {
-  const key = city.toLowerCase();
-  if (key.includes("yogya") || key.includes("jogja")) return ASSETS.jogja;
-  if (key.includes("lombok") || key.includes("rinjani")) return ASSETS.mountBatur;
-  if (key.includes("karimun") || key.includes("penida")) return ASSETS.nusaPenida;
-  if (key.includes("bromo") || key.includes("batur")) return ASSETS.mountBatur;
-  if (key.includes("komodo") || key.includes("bajo")) return ASSETS.komodo;
-  return ASSETS.mapItinerary;
-}
+const fallbackRoutes = CITY_ROUTES.map((route) => ({
+  match: route.match,
+  stops: route.stops.map((stop) => ({ label: stop.name, lat: stop.lat, lng: stop.lng })),
+}));
 
 function nextSheet(pos: SheetPos): SheetPos {
   if (pos === "collapsed") return "half";
@@ -316,12 +250,12 @@ export function MyTripsBoard() {
     <div className="relative mx-auto w-full max-w-[1440px] px-3 pb-3 pt-3 md:px-6 md:pb-5 md:pt-5">
       <div className="relative h-[calc(100dvh-6.25rem)] min-h-[580px] overflow-hidden rounded-[1.75rem] border border-outline-variant/60 bg-white shadow-[0_18px_50px_rgba(22,48,80,.12)] lg:grid lg:h-[calc(100vh-7rem)] lg:min-h-[650px] lg:grid-cols-2">
         <section className="relative h-full min-h-[440px] overflow-hidden border-r border-outline-variant/50">
-          <GoogleMap key={selected?.id ?? tab} points={points} selectedId={points[0]?.id ?? null} onSelect={noop} showRoute={routePolylines.length > 0} routePolylines={routePolylines} mapType={mapType} focusCenter={focusCenter} zoomCommand={zoomCommand} className="absolute inset-0 h-full w-full" />
+          <GoogleMap key={selected?.id ?? tab} points={points} selectedId={points[0]?.id ?? null} onSelect={noop} showRoute={points.length > 1} routePolylines={routePolylines} mapType={mapType} focusCenter={focusCenter} zoomCommand={zoomCommand} className="absolute inset-0 h-full w-full" />
           <div className="pointer-events-none absolute left-3 right-3 top-3 rounded-2xl border border-white/70 bg-white/90 p-3 shadow-lg backdrop-blur-md md:left-4 md:right-20 md:top-4 md:p-4">
             <p className="type-micro uppercase tracking-wider text-secondary">Rute trip aktif</p>
             <h2 className="type-subtitle mt-1">{selected?.destinationCity ?? "Pilih trip untuk melihat lokasi"}</h2>
             <p className="type-caption mt-1 text-on-surface-variant">
-              {points.length > 1 ? `${points.length} titik perjalanan · klik card untuk mengganti rute` : points.length === 1 ? "Lokasi trip aktif · itinerary lengkap akan menambah garis rute" : "Koordinat trip ini belum tersedia"}
+              {points.length > 1 ? `${points.length} titik · garis biru mengikuti jalan Google Maps` : points.length === 1 ? "Lokasi trip aktif · itinerary lengkap akan menambah garis rute" : "Koordinat trip ini belum tersedia"}
             </p>
           </div>
           <div className="absolute bottom-5 right-4 z-10 flex flex-col gap-2">
@@ -388,7 +322,7 @@ function TripCard({ trip, tab, selected, onSelect }: { trip: MyTripSummary; tab:
       <span className={`absolute right-0 top-0 z-10 rounded-bl-xl px-2.5 py-1.5 text-[8px] font-extrabold tracking-wide text-white md:text-[9px] ${tab === "hosted" ? "bg-primary" : tab === "joined" ? "bg-teal-600" : "bg-amber-500"}`}>{roleLabel}</span>
       <button type="button" aria-pressed={selected} onClick={onSelect} className="flex w-full cursor-pointer items-start gap-3 px-3 pb-3 pt-6 text-left" aria-label={`Tampilkan lokasi ${trip.title}`}>
         <div className="relative h-20 w-24 shrink-0 overflow-hidden rounded-xl bg-surface-container md:h-24 md:w-28">
-          {trip.coverPlace ? <PlacePhoto googlePlaceId={trip.coverPlace.googlePlaceId} photoName={trip.coverPlace.photoName} photoUri={trip.coverPlace.photoUri} alt={trip.title} className="h-full w-full transition duration-300 group-hover:scale-105" /> : <Image fill unoptimized sizes="112px" src={coverFor(trip.destinationCity ?? "")} alt={trip.destinationCity ?? trip.title} className="object-cover transition duration-300 group-hover:scale-105" />}
+          {trip.coverPlace ? <PlacePhoto googlePlaceId={trip.coverPlace.googlePlaceId} photoName={trip.coverPlace.photoName} photoUri={trip.coverPlace.photoUri} alt={trip.title} className="h-full w-full transition duration-300 group-hover:scale-105" /> : <Image fill unoptimized sizes="112px" src={destinationCoverUrl(trip.destinationCity ?? "")} alt={trip.destinationCity ?? trip.title} className="object-cover transition duration-300 group-hover:scale-105" />}
           <span className={`absolute bottom-2 left-2 rounded-lg px-2 py-1 text-[10px] font-bold text-white backdrop-blur ${trip.visibility === "PUBLIC" ? "bg-primary/90" : "bg-[#071c32]/85"}`}>{trip.visibility === "PUBLIC" ? "Publik" : "Private"}</span>
         </div>
         <div className="min-w-0 flex-1">

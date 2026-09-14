@@ -193,6 +193,10 @@ const paths: Record<string, { outline: string; filled?: string }> = {
     outline:
       "M9.19 6.35c-2.04 2.29-3.44 5.58-3.94 8.65L13.5 8.75 9.19 6.35zm4.26 3.16L6.46 16.8c.99.13 2.01.2 3.04.2 2.5 0 4.89-.55 7.04-1.54l-3.09-6.05zM21 3c-1.89 1.47-4.07 2.5-6.39 3.05L19 10.5 21 3zM11 23l1-4.5L8.5 20 11 23z",
   },
+  drag_handle: {
+    outline:
+      "M4 7h16v2H4V7zm0 4h16v2H4v-2zm0 4h16v2H4v-2z",
+  },
 };
 
 export function Icon({ name, className = "", filled = false }: IconProps) {

@@ -1,7 +1,20 @@
 import { z } from "zod";
 import { budgetItemInputSchema } from "./budget.ts";
 
-const timeSchema = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Waktu harus menggunakan format HH:mm");
+function normalizeClockValue(value: unknown) {
+  if (value == null || value === "") return null;
+  if (typeof value !== "string") return value;
+  const match = value.trim().match(/^(\d{1,2}):([0-5]\d)/);
+  if (!match) return value;
+  const hours = Number(match[1]);
+  if (hours > 23) return value;
+  return `${String(hours).padStart(2, "0")}:${match[2]}`;
+}
+
+const timeSchema = z.preprocess(
+  normalizeClockValue,
+  z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Waktu harus menggunakan format HH:mm").nullable(),
+);
 
 export const editableStopInputSchema = z.object({
   id: z.string().min(1),
@@ -9,9 +22,11 @@ export const editableStopInputSchema = z.object({
   googlePlaceId: z.string().min(3).nullable(),
   customTitle: z.string().trim().min(1).nullable(),
   activityType: z.string().trim().min(1),
-  startTime: timeSchema.nullable(),
+  startTime: timeSchema,
   durationMinutes: z.number().int().min(15).max(1440),
   travelDurationMinutes: z.number().int().nonnegative().nullable(),
+  latitude: z.number().min(-90).max(90).optional(),
+  longitude: z.number().min(-180).max(180).optional(),
   notes: z.string().trim().max(1000).nullable(),
   isLocked: z.boolean(),
 });
