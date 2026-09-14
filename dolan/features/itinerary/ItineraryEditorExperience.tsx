@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { BudgetItemInput, EditableItineraryDay, EditableItineraryStop, EditorGenerationStatus, ItineraryEditorSnapshot } from "@dolan/shared";
 import { Icon } from "@/components/ui/Icon";
-import { findScheduleConflicts, generateAlternative, getItineraryEditor, saveItineraryVersion, selectItineraryVersion } from "./api";
+import { findScheduleConflicts, generateAlternative, getItineraryEditor, saveItineraryVersion, selectItineraryVersion, upsertChecklistItem, deleteChecklistItem } from "./api";
 import { INITIAL_BUDGET_ITEMS, PLACE_CANDIDATES } from "./mock-data";
 import { RoutePreview } from "./RoutePreview";
 import { SaveOfflineItineraryButton } from "@/components/offline/SaveOfflineItineraryButton";
@@ -45,12 +45,30 @@ export function ItineraryEditorExperience({ tripId }: { tripId: string }) {
   const [newChecklist, setNewChecklist] = useState("");
 
   useEffect(() => {
-    getItineraryEditor(tripId).then((data) => {
-      setSnapshot(data);
-      setSelectedVersionId(data.activeVersionId);
-      setDays(clone(data.versions.find((item) => item.id === data.activeVersionId)!.days));
-      setBudgetItems(versionBudgetInputs(data, data.activeVersionId));
-    });
+    let cancelled = false;
+    getItineraryEditor(tripId)
+      .then((data) => {
+        if (cancelled) return;
+        setSnapshot(data);
+        const versionId = data.activeVersionId || data.versions[0]?.id || "";
+        setSelectedVersionId(versionId);
+        const version = data.versions.find((item) => item.id === versionId);
+        setDays(clone(version?.days ?? []));
+        setBudgetItems(versionId ? versionBudgetInputs(data, versionId) : clone(INITIAL_BUDGET_ITEMS));
+        if (!version) {
+          setNotice({ tone: "info", text: "Belum ada versi itinerary. Generate atau tambah hari lalu simpan." });
+        }
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        setNotice({
+          tone: "error",
+          text: error instanceof Error ? error.message : "Gagal memuat itinerary.",
+        });
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [tripId]);
 
   const conflicts = useMemo(() => findScheduleConflicts(days), [days]);
@@ -131,10 +149,13 @@ export function ItineraryEditorExperience({ tripId }: { tripId: string }) {
       setJob(next.job
         ? { id: next.job.id, status: next.job.status, attemptCount: next.job.attemptCount, resultVersionId: next.job.resultVersionId, errorCode: next.job.errorCode }
         : { id: crypto.randomUUID(), status: "SUCCEEDED", attemptCount: 1, resultVersionId: next.snapshot.versions[0]?.id ?? null, errorCode: null });
-      setNotice({ tone: "success", text: `Versi AI ${next.snapshot.versions[0]?.versionNumber ?? ""} siap ditinjau. Klik “Jadikan aktif” jika kamu menyukainya.` });
-    } catch {
+      setNotice({ tone: "success", text: `Versi AI ${next.snapshot.versions[0]?.versionNumber ?? ""} siap ditinjau. Klik ?Jadikan aktif? jika kamu menyukainya.` });
+    } catch (error) {
       setJob({ id: crypto.randomUUID(), status: "FAILED", attemptCount: 1, resultVersionId: null, errorCode: "GENERATION_FAILED" });
-      setNotice({ tone: "error", text: "Generate gagal. Draft dan versi aktif tidak berubah; silakan coba lagi." });
+      setNotice({
+        tone: "error",
+        text: error instanceof Error ? error.message : "Generate gagal. Draft dan versi aktif tidak berubah; silakan coba lagi.",
+      });
     } finally {
       setGenerating(false);
     }
@@ -226,13 +247,13 @@ export function ItineraryEditorExperience({ tripId }: { tripId: string }) {
     <main className="mx-auto max-w-[1480px] px-4 pb-28 pt-5 md:px-8 md:pb-10">
       <header className="mb-5 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="type-micro uppercase tracking-[.16em] text-secondary">Trip saya · Editor itinerary</p>
+          <p className="type-micro uppercase tracking-[.16em] text-secondary">Trip saya � Editor itinerary</p>
           <h1 className="type-title mt-1 md:text-[1.75rem]">{snapshot.tripTitle}</h1>
-          <p className="type-body mt-1 text-on-surface-variant"><Icon name="location_on" /> {snapshot.destinationCity} · {snapshot.startDate} — {snapshot.endDate}</p>
+          <p className="type-body mt-1 text-on-surface-variant"><Icon name="location_on" /> {snapshot.destinationCity} � {snapshot.startDate} ? {snapshot.endDate}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <select aria-label="Pilih versi itinerary" value={selectedVersionId} onChange={(event) => chooseVersion(event.target.value)} className="min-h-11 rounded-full border border-outline-variant bg-white px-4 type-label outline-none focus:border-primary">
-            {snapshot.versions.map((version) => <option key={version.id} value={version.id}>Versi {version.versionNumber} · {version.source}{version.id === snapshot.activeVersionId ? " · Aktif" : ""}</option>)}
+            {snapshot.versions.map((version) => <option key={version.id} value={version.id}>Versi {version.versionNumber} � {version.source}{version.id === snapshot.activeVersionId ? " � Aktif" : ""}</option>)}
           </select>
           <div className="flex flex-wrap items-center gap-2">
             <select aria-label="Mode regenerate AI" value={regenerateMode} onChange={(event) => setRegenerateMode(event.target.value as typeof regenerateMode)} className="min-h-11 rounded-full border border-outline-variant bg-white px-4 type-label outline-none focus:border-primary">
@@ -240,7 +261,7 @@ export function ItineraryEditorExperience({ tripId }: { tripId: string }) {
               <option value="cheaper">Alternatif hemat</option>
               <option value="alternative">Rute alternatif</option>
             </select>
-            <button type="button" onClick={() => void generate()} disabled={generating} className="btn-primary"><Icon name="rocket_launch" /> {generating ? "Mengoptimalkan…" : "Optimalkan dengan AI"}</button>
+            <button type="button" onClick={() => void generate()} disabled={generating} className="btn-primary"><Icon name="rocket_launch" /> {generating ? "Mengoptimalkan?" : "Optimalkan dengan AI"}</button>
           </div>
           <SaveOfflineItineraryButton
             id={tripId}
@@ -253,7 +274,7 @@ export function ItineraryEditorExperience({ tripId }: { tripId: string }) {
       </header>
 
       {notice && <div role="status" className={`mb-4 rounded-2xl border px-4 py-3 type-label ${notice.tone === "error" ? "border-error/30 bg-error-container text-on-error-container" : notice.tone === "success" ? "border-success/30 bg-emerald-50 text-emerald-800" : "border-primary/20 bg-primary-fixed text-on-primary-fixed"}`}>{notice.text}{generatedVersionId && <><button type="button" className="ml-3 underline" onClick={() => chooseVersion(generatedVersionId)}>Tinjau versi</button><button type="button" className="ml-3 underline" onClick={() => chooseVersion(generatedVersionId, true)}>Jadikan aktif</button></>}</div>}
-      {job && <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-outline-variant bg-white px-4 py-3"><span className="type-label">Generation job <code className="text-xs text-on-surface-variant">{job.id}</code></span><span className={`chip ${job.status === "SUCCEEDED" ? "bg-emerald-50 text-emerald-800" : job.status === "FAILED" ? "bg-error-container text-error" : "bg-secondary-fixed text-secondary"}`}>{job.status === "PROCESSING" ? "Sedang diproses" : job.status === "SUCCEEDED" ? "Berhasil" : "Gagal"} · percobaan {job.attemptCount}</span></div>}
+      {job && <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-outline-variant bg-white px-4 py-3"><span className="type-label">Generation job <code className="text-xs text-on-surface-variant">{job.id}</code></span><span className={`chip ${job.status === "SUCCEEDED" ? "bg-emerald-50 text-emerald-800" : job.status === "FAILED" ? "bg-error-container text-error" : "bg-secondary-fixed text-secondary"}`}>{job.status === "PROCESSING" ? "Sedang diproses" : job.status === "SUCCEEDED" ? "Berhasil" : "Gagal"} � percobaan {job.attemptCount}</span></div>}
 
       <div className="mb-4 flex items-center gap-1 overflow-x-auto rounded-2xl bg-surface-container-low p-1.5">
         {([ ["itinerary", "Itinerary", "alt_route"], ["budget", "Budget", "payments"], ["checklist", "Checklist", "check_circle"] ] as const).map(([key, label, icon]) => <button key={key} type="button" onClick={() => setTab(key)} className={`flex min-h-10 min-w-max flex-1 items-center justify-center gap-2 rounded-xl px-4 type-label transition ${tab === key ? "bg-white text-primary shadow-sm" : "text-on-surface-variant hover:bg-white/60"}`}><Icon name={icon} /> {label}</button>)}
@@ -267,14 +288,14 @@ export function ItineraryEditorExperience({ tripId }: { tripId: string }) {
             <button type="button" onClick={addDay} className="w-full rounded-2xl border-2 border-dashed border-primary/25 bg-primary-fixed/30 py-4 type-label text-primary hover:bg-primary-fixed"><Icon name="add" /> Tambah hari perjalanan</button>
           </div>}
           {tab === "budget" && <BudgetEditor items={budgetItems} total={budgetTotal} onChange={(items) => { setBudgetItems(items); setDirty(true); }} />}
-          {tab === "checklist" && <ChecklistEditor snapshot={snapshot} setSnapshot={setSnapshot} title={newChecklist} setTitle={setNewChecklist} />}
+          {tab === "checklist" && <ChecklistEditor snapshot={snapshot} setSnapshot={setSnapshot} title={newChecklist} setTitle={setNewChecklist} setNotice={setNotice} />}
         </section>
       </div>
 
       <div className="fixed bottom-[74px] left-3 right-3 z-30 flex items-center justify-between gap-3 rounded-2xl border border-outline-variant bg-white/95 p-3 shadow-[0_12px_40px_rgba(7,28,50,.22)] backdrop-blur md:static md:mt-5 md:ml-auto md:w-fit">
         <div className="hidden sm:block"><p className="type-label">{dirty ? "Ada perubahan belum tersimpan" : `Versi aktif: ${activeVersion?.versionNumber}`}</p><p className="type-caption text-on-surface-variant">Penyimpanan membuat versi baru.</p></div>
-        <button type="button" onClick={save} disabled={saving || !dirty || Object.keys(conflicts).length > 0} className="btn-brand flex-1 md:flex-none"><Icon name="bookmark_added" /> {saving ? "Menyimpan…" : "Simpan versi baru"}</button>
-        <button type="button" onClick={publish} disabled={publishing || saving || dirty || Object.keys(conflicts).length > 0} className="btn-primary flex-1 md:flex-none"><Icon name="publish" /> {publishing ? "Memublikasikan…" : "Publikasikan trip"}</button>
+        <button type="button" onClick={save} disabled={saving || !dirty || Object.keys(conflicts).length > 0} className="btn-brand flex-1 md:flex-none"><Icon name="bookmark_added" /> {saving ? "Menyimpan?" : "Simpan versi baru"}</button>
+        <button type="button" onClick={publish} disabled={publishing || saving || dirty || Object.keys(conflicts).length > 0} className="btn-primary flex-1 md:flex-none"><Icon name="publish" /> {publishing ? "Memublikasikan?" : "Publikasikan trip"}</button>
       </div>
     </main>
   );
@@ -282,11 +303,11 @@ export function ItineraryEditorExperience({ tripId }: { tripId: string }) {
 
 function DayEditor({ day, conflicts, onChangeTitle, onUpdateStop, onMove, onRemove, onAdd, onDeleteDay }: { day: EditableItineraryDay; conflicts: Record<string, string>; onChangeTitle: (value: string) => void; onUpdateStop: (id: string, patch: Partial<EditableItineraryStop>) => void; onMove: (index: number, direction: -1 | 1) => void; onRemove: (id: string) => void; onAdd: (index: number) => void; onDeleteDay: () => void }) {
   return <article className="rounded-[1.5rem] border border-outline-variant/70 bg-white p-4 shadow-sm md:p-5">
-    <div className="flex items-start gap-3"><div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-primary text-white"><span className="type-micro">HARI</span><strong className="-mt-1">{day.dayNumber}</strong></div><div className="min-w-0 flex-1"><input aria-label={`Judul hari ${day.dayNumber}`} value={day.title ?? ""} onChange={(e) => onChangeTitle(e.target.value)} className="w-full border-b border-transparent bg-transparent type-subtitle outline-none hover:border-outline-variant focus:border-primary" /><p className="type-caption mt-1 text-on-surface-variant">{day.date} · {day.stops.length} destinasi</p></div><button type="button" onClick={onDeleteDay} className="rounded-full p-2 text-on-surface-variant hover:bg-error-container hover:text-error" aria-label={`Hapus hari ${day.dayNumber}`}><Icon name="close" /></button></div>
+    <div className="flex items-start gap-3"><div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-primary text-white"><span className="type-micro">HARI</span><strong className="-mt-1">{day.dayNumber}</strong></div><div className="min-w-0 flex-1"><input aria-label={`Judul hari ${day.dayNumber}`} value={day.title ?? ""} onChange={(e) => onChangeTitle(e.target.value)} className="w-full border-b border-transparent bg-transparent type-subtitle outline-none hover:border-outline-variant focus:border-primary" /><p className="type-caption mt-1 text-on-surface-variant">{day.date} � {day.stops.length} destinasi</p></div><button type="button" onClick={onDeleteDay} className="rounded-full p-2 text-on-surface-variant hover:bg-error-container hover:text-error" aria-label={`Hapus hari ${day.dayNumber}`}><Icon name="close" /></button></div>
     <div className="mt-4 space-y-3">{day.stops.map((stop, index) => <div key={stop.id} className={`rounded-2xl border p-3 transition ${conflicts[stop.id] ? "border-error bg-error-container/25" : stop.isLocked ? "border-secondary-container/50 bg-secondary-fixed/20" : "border-outline-variant/70 bg-surface-container-low/45"}`}>
-      <div className="flex items-start gap-3"><div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-secondary-container type-label text-white">{index + 1}</div><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><h3 className="type-label-lg">{stop.place?.name ?? stop.customTitle}</h3>{stop.isLocked && <span className="chip bg-secondary-fixed text-secondary"><Icon name="lock" /> Dikunci</span>}</div><p className="type-caption text-on-surface-variant">{stop.place?.formattedAddress}</p></div><div className="flex"><button type="button" onClick={() => onMove(index, -1)} disabled={index === 0} className="rounded-lg px-2 py-1 text-primary disabled:opacity-25" aria-label="Pindah ke atas">↑</button><button type="button" onClick={() => onMove(index, 1)} disabled={index === day.stops.length - 1} className="rounded-lg px-2 py-1 text-primary disabled:opacity-25" aria-label="Pindah ke bawah">↓</button></div></div>
+      <div className="flex items-start gap-3"><div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-secondary-container type-label text-white">{index + 1}</div><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><h3 className="type-label-lg">{stop.place?.name ?? stop.customTitle}</h3>{stop.isLocked && <span className="chip bg-secondary-fixed text-secondary"><Icon name="lock" /> Dikunci</span>}</div><p className="type-caption text-on-surface-variant">{stop.place?.formattedAddress}</p></div><div className="flex"><button type="button" onClick={() => onMove(index, -1)} disabled={index === 0} className="rounded-lg px-2 py-1 text-primary disabled:opacity-25" aria-label="Pindah ke atas">?</button><button type="button" onClick={() => onMove(index, 1)} disabled={index === day.stops.length - 1} className="rounded-lg px-2 py-1 text-primary disabled:opacity-25" aria-label="Pindah ke bawah">?</button></div></div>
       <div className="mt-3 grid grid-cols-2 gap-2 md:grid-cols-4"><label className="type-caption text-on-surface-variant">Mulai<input type="time" value={stop.startTime ?? ""} onChange={(e) => onUpdateStop(stop.id, { startTime: e.target.value })} className="mt-1 w-full rounded-xl border border-outline-variant bg-white px-3 py-2 text-on-surface" /></label><label className="type-caption text-on-surface-variant">Durasi (menit)<input type="number" min="15" step="15" value={stop.durationMinutes} onChange={(e) => onUpdateStop(stop.id, { durationMinutes: Number(e.target.value) })} className="mt-1 w-full rounded-xl border border-outline-variant bg-white px-3 py-2 text-on-surface" /></label><label className="type-caption text-on-surface-variant">Perjalanan<input type="number" min="0" step="5" value={stop.travelDurationMinutes ?? 0} onChange={(e) => onUpdateStop(stop.id, { travelDurationMinutes: Number(e.target.value) })} className="mt-1 w-full rounded-xl border border-outline-variant bg-white px-3 py-2 text-on-surface" /></label><label className="type-caption text-on-surface-variant">Aktivitas<input value={stop.activityType} onChange={(e) => onUpdateStop(stop.id, { activityType: e.target.value })} className="mt-1 w-full rounded-xl border border-outline-variant bg-white px-3 py-2 text-on-surface" /></label></div>
-      <textarea aria-label={`Catatan ${stop.place?.name}`} placeholder="Catatan aktivitas…" value={stop.notes ?? ""} onChange={(e) => onUpdateStop(stop.id, { notes: e.target.value || null })} className="mt-2 min-h-16 w-full resize-y rounded-xl border border-outline-variant bg-white px-3 py-2 type-body outline-none focus:border-primary" />
+      <textarea aria-label={`Catatan ${stop.place?.name}`} placeholder="Catatan aktivitas?" value={stop.notes ?? ""} onChange={(e) => onUpdateStop(stop.id, { notes: e.target.value || null })} className="mt-2 min-h-16 w-full resize-y rounded-xl border border-outline-variant bg-white px-3 py-2 type-body outline-none focus:border-primary" />
       {conflicts[stop.id] && <p className="mt-1 type-caption font-semibold text-error">{conflicts[stop.id]}</p>}
       <div className="mt-2 flex justify-end gap-2"><button type="button" onClick={() => onUpdateStop(stop.id, { isLocked: !stop.isLocked })} className="rounded-full border border-outline-variant px-3 py-1.5 type-label text-on-surface-variant"><Icon name="lock" /> {stop.isLocked ? "Buka kunci" : "Kunci"}</button><button type="button" disabled={stop.isLocked || day.stops.length === 1} onClick={() => onRemove(stop.id)} className="rounded-full px-3 py-1.5 type-label text-error hover:bg-error-container disabled:opacity-30">Hapus</button></div>
     </div>)}</div>
@@ -297,10 +318,136 @@ function DayEditor({ day, conflicts, onChangeTitle, onUpdateStop, onMove, onRemo
 function BudgetEditor({ items, total, onChange }: { items: BudgetItemInput[]; total: number; onChange: (items: BudgetItemInput[]) => void }) {
   const update = (index: number, patch: Partial<BudgetItemInput>) => onChange(items.map((item, itemIndex) => itemIndex === index ? { ...item, ...patch } : item));
   const totalLow = items.reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.unitCostLow || 0), 0);
-  return <div className="rounded-[1.5rem] border border-outline-variant/70 bg-white p-4 shadow-sm md:p-5"><div className="flex flex-wrap items-end justify-between gap-3"><div><p className="type-micro uppercase text-secondary">Estimasi per peserta · bukan biaya join</p><h2 className="type-title mt-1">Rencana budget</h2></div><div className="text-right"><p className="type-caption text-on-surface-variant">Rentang estimasi</p><strong className="type-subtitle text-primary">{money.format(totalLow)} – {money.format(total)}</strong></div></div><p className="mt-2 rounded-xl bg-primary-fixed/50 px-3 py-2 type-caption text-on-primary-fixed">Nilai ini hanya preview. Server menghitung ulang subtotal dan total ketika versi disimpan.</p><div className="mt-4 space-y-3">{items.map((item, index) => <div key={`${item.label}-${index}`} className="rounded-2xl bg-surface-container-low p-3"><div className="mb-2 flex items-center justify-between"><span className="chip bg-white text-on-surface-variant">{item.category}</span><span className="type-caption text-on-surface-variant">Sumber: {item.sourceType} · dicek saat simpan</span></div><div className="grid gap-2 md:grid-cols-[1.4fr_.7fr_1fr_1fr_auto]"><input value={item.label} onChange={(e) => update(index, { label: e.target.value })} aria-label="Nama biaya" className="rounded-xl border border-outline-variant bg-white px-3 py-2" /><input type="number" min="0" value={item.quantity} onChange={(e) => update(index, { quantity: e.target.value })} aria-label="Jumlah" className="rounded-xl border border-outline-variant bg-white px-3 py-2" /><input type="number" min="0" value={item.unitCostLow} onChange={(e) => update(index, { unitCostLow: e.target.value })} aria-label="Biaya minimum" className="rounded-xl border border-outline-variant bg-white px-3 py-2" /><input type="number" min="0" value={item.unitCostHigh} onChange={(e) => update(index, { unitCostHigh: e.target.value })} aria-label="Biaya maksimum" className="rounded-xl border border-outline-variant bg-white px-3 py-2" /><button type="button" onClick={() => onChange(items.filter((_, itemIndex) => itemIndex !== index))} className="rounded-xl px-3 text-error hover:bg-error-container" aria-label="Hapus biaya"><Icon name="close" /></button></div><p className="mt-2 type-caption text-on-surface-variant">{item.quantity} {item.unit} × {money.format(Number(item.unitCostLow || 0))}–{money.format(Number(item.unitCostHigh || 0))}</p></div>)}</div><button type="button" onClick={() => onChange([...items, { category: "OTHER", label: "Biaya baru", quantity: "1", unit: "item", unitCostLow: "0", unitCostHigh: "0", sourceType: "USER", notes: null }])} className="mt-3 rounded-full border border-primary px-4 py-2 type-label text-primary"><Icon name="add" /> Tambah biaya</button></div>;
+  return <div className="rounded-[1.5rem] border border-outline-variant/70 bg-white p-4 shadow-sm md:p-5"><div className="flex flex-wrap items-end justify-between gap-3"><div><p className="type-micro uppercase text-secondary">Estimasi per peserta � bukan biaya join</p><h2 className="type-title mt-1">Rencana budget</h2></div><div className="text-right"><p className="type-caption text-on-surface-variant">Rentang estimasi</p><strong className="type-subtitle text-primary">{money.format(totalLow)} ? {money.format(total)}</strong></div></div><p className="mt-2 rounded-xl bg-primary-fixed/50 px-3 py-2 type-caption text-on-primary-fixed">Nilai ini hanya preview. Server menghitung ulang subtotal dan total ketika versi disimpan.</p><div className="mt-4 space-y-3">{items.map((item, index) => <div key={`${item.label}-${index}`} className="rounded-2xl bg-surface-container-low p-3"><div className="mb-2 flex items-center justify-between"><span className="chip bg-white text-on-surface-variant">{item.category}</span><span className="type-caption text-on-surface-variant">Sumber: {item.sourceType} � dicek saat simpan</span></div><div className="grid gap-2 md:grid-cols-[1.4fr_.7fr_1fr_1fr_auto]"><input value={item.label} onChange={(e) => update(index, { label: e.target.value })} aria-label="Nama biaya" className="rounded-xl border border-outline-variant bg-white px-3 py-2" /><input type="number" min="0" value={item.quantity} onChange={(e) => update(index, { quantity: e.target.value })} aria-label="Jumlah" className="rounded-xl border border-outline-variant bg-white px-3 py-2" /><input type="number" min="0" value={item.unitCostLow} onChange={(e) => update(index, { unitCostLow: e.target.value })} aria-label="Biaya minimum" className="rounded-xl border border-outline-variant bg-white px-3 py-2" /><input type="number" min="0" value={item.unitCostHigh} onChange={(e) => update(index, { unitCostHigh: e.target.value })} aria-label="Biaya maksimum" className="rounded-xl border border-outline-variant bg-white px-3 py-2" /><button type="button" onClick={() => onChange(items.filter((_, itemIndex) => itemIndex !== index))} className="rounded-xl px-3 text-error hover:bg-error-container" aria-label="Hapus biaya"><Icon name="close" /></button></div><p className="mt-2 type-caption text-on-surface-variant">{item.quantity} {item.unit} � {money.format(Number(item.unitCostLow || 0))}?{money.format(Number(item.unitCostHigh || 0))}</p></div>)}</div><button type="button" onClick={() => onChange([...items, { category: "OTHER", label: "Biaya baru", quantity: "1", unit: "item", unitCostLow: "0", unitCostHigh: "0", sourceType: "USER", notes: null }])} className="mt-3 rounded-full border border-primary px-4 py-2 type-label text-primary"><Icon name="add" /> Tambah biaya</button></div>;
 }
 
-function ChecklistEditor({ snapshot, setSnapshot, title, setTitle }: { snapshot: ItineraryEditorSnapshot; setSnapshot: (snapshot: ItineraryEditorSnapshot) => void; title: string; setTitle: (value: string) => void }) {
+function ChecklistEditor({
+  snapshot,
+  setSnapshot,
+  title,
+  setTitle,
+  setNotice,
+}: {
+  snapshot: ItineraryEditorSnapshot;
+  setSnapshot: (snapshot: ItineraryEditorSnapshot) => void;
+  title: string;
+  setTitle: (value: string) => void;
+  setNotice: (notice: Notice) => void;
+}) {
   const done = snapshot.checklist.filter((item) => item.isCompleted).length;
-  return <div className="rounded-[1.5rem] border border-outline-variant/70 bg-white p-4 shadow-sm md:p-5"><div className="flex items-end justify-between"><div><p className="type-micro uppercase text-secondary">Persiapan perjalanan</p><h2 className="type-title mt-1">Checklist</h2></div><span className="chip bg-emerald-50 text-emerald-800">{done}/{snapshot.checklist.length} selesai</span></div><div className="mt-4 space-y-2">{snapshot.checklist.map((item) => <label key={item.id} className="flex cursor-pointer items-center gap-3 rounded-2xl bg-surface-container-low p-3"><input type="checkbox" checked={item.isCompleted} onChange={() => setSnapshot({ ...snapshot, checklist: snapshot.checklist.map((entry) => entry.id === item.id ? { ...entry, isCompleted: !entry.isCompleted } : entry) })} className="h-5 w-5 accent-primary" /><span className={`flex-1 type-label ${item.isCompleted ? "text-on-surface-variant line-through" : ""}`}>{item.title}<small className="mt-0.5 block font-normal text-on-surface-variant">Tenggat {item.dueDate ?? "belum ditentukan"}</small></span><button type="button" onClick={(e) => { e.preventDefault(); setSnapshot({ ...snapshot, checklist: snapshot.checklist.filter((entry) => entry.id !== item.id) }); }} className="rounded-full p-2 text-error" aria-label="Hapus checklist"><Icon name="close" /></button></label>)}</div><form className="mt-4 flex gap-2" onSubmit={(e) => { e.preventDefault(); if (!title.trim()) return; const nextId = `check-${snapshot.checklist.length + 1}`; setSnapshot({ ...snapshot, checklist: [...snapshot.checklist, { id: nextId, title: title.trim(), dueDate: null, isCompleted: false }] }); setTitle(""); }}><input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Tambah persiapan…" className="min-w-0 flex-1 rounded-full border border-outline-variant px-4 outline-none focus:border-primary" /><button className="btn-brand !min-h-10" type="submit"><Icon name="add" /> Tambah</button></form></div>;
+
+  const toggleItem = async (item: (typeof snapshot.checklist)[number]) => {
+    const optimistic = {
+      ...snapshot,
+      checklist: snapshot.checklist.map((entry) =>
+        entry.id === item.id ? { ...entry, isCompleted: !entry.isCompleted } : entry,
+      ),
+    };
+    setSnapshot(optimistic);
+    try {
+      const saved = await upsertChecklistItem(snapshot.tripId, {
+        id: item.id,
+        title: item.title,
+        dueDate: item.dueDate,
+        isCompleted: !item.isCompleted,
+      });
+      setSnapshot({
+        ...optimistic,
+        checklist: optimistic.checklist.map((entry) => (entry.id === item.id ? saved : entry)),
+      });
+    } catch (error) {
+      setSnapshot(snapshot);
+      setNotice({
+        tone: "error",
+        text: error instanceof Error ? error.message : "Gagal memperbarui checklist.",
+      });
+    }
+  };
+
+  const removeItem = async (itemId: string) => {
+    const previous = snapshot;
+    setSnapshot({ ...snapshot, checklist: snapshot.checklist.filter((entry) => entry.id !== itemId) });
+    try {
+      await deleteChecklistItem(snapshot.tripId, itemId);
+    } catch (error) {
+      setSnapshot(previous);
+      setNotice({
+        tone: "error",
+        text: error instanceof Error ? error.message : "Gagal menghapus checklist.",
+      });
+    }
+  };
+
+  const addItem = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!title.trim()) return;
+    try {
+      const saved = await upsertChecklistItem(snapshot.tripId, {
+        title: title.trim(),
+        dueDate: null,
+        isCompleted: false,
+      });
+      setSnapshot({ ...snapshot, checklist: [...snapshot.checklist, saved] });
+      setTitle("");
+    } catch (error) {
+      setNotice({
+        tone: "error",
+        text: error instanceof Error ? error.message : "Gagal menambah checklist.",
+      });
+    }
+  };
+
+  return (
+    <div className="rounded-[1.5rem] border border-outline-variant/70 bg-white p-4 shadow-sm md:p-5">
+      <div className="flex items-end justify-between">
+        <div>
+          <p className="type-micro uppercase text-secondary">Persiapan perjalanan</p>
+          <h2 className="type-title mt-1">Checklist</h2>
+        </div>
+        <span className="chip bg-emerald-50 text-emerald-800">
+          {done}/{snapshot.checklist.length} selesai
+        </span>
+      </div>
+      <div className="mt-4 space-y-2">
+        {snapshot.checklist.map((item) => (
+          <label key={item.id} className="flex cursor-pointer items-center gap-3 rounded-2xl bg-surface-container-low p-3">
+            <input
+              type="checkbox"
+              checked={item.isCompleted}
+              onChange={() => void toggleItem(item)}
+              className="h-5 w-5 accent-primary"
+            />
+            <span className={`flex-1 type-label ${item.isCompleted ? "text-on-surface-variant line-through" : ""}`}>
+              {item.title}
+              <small className="mt-0.5 block font-normal text-on-surface-variant">
+                Tenggat {item.dueDate ?? "belum ditentukan"}
+              </small>
+            </span>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                void removeItem(item.id);
+              }}
+              className="rounded-full p-2 text-error"
+              aria-label="Hapus checklist"
+            >
+              <Icon name="close" />
+            </button>
+          </label>
+        ))}
+      </div>
+      <form className="mt-4 flex gap-2" onSubmit={(e) => void addItem(e)}>
+        <input
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="Tambah persiapan?"
+          className="min-w-0 flex-1 rounded-full border border-outline-variant px-4 outline-none focus:border-primary"
+        />
+        <button className="btn-brand !min-h-10" type="submit">
+          <Icon name="add" /> Tambah
+        </button>
+      </form>
+    </div>
+  );
 }

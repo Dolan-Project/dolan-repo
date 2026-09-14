@@ -48,6 +48,10 @@ export const resetPasswordSchema = z
     path: ["confirmPassword"],
   });
 
+export const verifyEmailSchema = z.object({
+  token: z.string().trim().min(1, "Tautan verifikasi tidak valid"),
+});
+
 export const sessionResponseSchema = z.object({
   id: z.string().uuid(),
   authReference: z.string(),
@@ -65,4 +69,5 @@ export type LoginInput = z.infer<typeof loginSchema>;
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
+export type VerifyEmailInput = z.infer<typeof verifyEmailSchema>;
 export type SessionResponse = z.infer<typeof sessionResponseSchema>;

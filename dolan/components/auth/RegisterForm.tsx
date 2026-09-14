@@ -57,7 +57,7 @@ export function RegisterForm({ next }: RegisterFormProps) {
       body: JSON.stringify({ email, password, confirmPassword, displayName, username, next }),
     });
     const json = (await response.json()) as
-      | { success: true; data: AuthSession }
+      | { success: true; data: AuthSession & { debugVerifyToken?: string } }
       | ApiError;
     setPending(false);
     if (!json.success) {
@@ -67,6 +67,7 @@ export function RegisterForm({ next }: RegisterFormProps) {
     }
     const params = new URLSearchParams({ email });
     if (next) params.set("next", next);
+    if (json.data.debugVerifyToken) params.set("debugToken", json.data.debugVerifyToken);
     router.push(`${ROUTES.cekEmail}?${params.toString()}`);
     router.refresh();
   }

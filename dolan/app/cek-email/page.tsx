@@ -1,6 +1,5 @@
-import { AUTH_PATHS } from "@/lib/contracts";
-import Link from "next/link";
 import { AuthShell } from "@/components/auth/AuthShell";
+import { CekEmailActions } from "@/components/auth/CekEmailActions";
 import { Icon } from "@/components/ui/Icon";
 import { ROUTES } from "@/lib/routes";
 
@@ -10,15 +9,13 @@ type PageProps = {
     next?: string;
     type?: string;
     error?: string;
+    debugToken?: string;
   }>;
 };
 
 export default async function CekEmailPage({ searchParams }: PageProps) {
-  const { email, next, type, error } = await searchParams;
+  const { email, next, type, error, debugToken } = await searchParams;
   const isReset = type === "reset";
-  const callback = new URLSearchParams({ token: "valid" });
-  if (next) callback.set("next", next);
-  const resetLink = `${ROUTES.resetPassword}?token=valid`;
 
   return (
     <AuthShell
@@ -36,25 +33,13 @@ export default async function CekEmailPage({ searchParams }: PageProps) {
         <div className="mb-2 flex h-16 w-16 items-center justify-center rounded-full bg-primary-fixed text-primary">
           <Icon name="mail" className="text-[32px]" />
         </div>
-        {error ? (
-          <p className="type-body text-error" role="alert">
-            Tautan tidak valid atau kedaluwarsa.
-          </p>
-        ) : null}
-        <div className="mt-4 flex w-full flex-col gap-2">
-          <Link
-            href={isReset ? resetLink : `${AUTH_PATHS.callback}?${callback.toString()}`}
-            className="btn-primary w-full !min-h-12"
-          >
-            {isReset ? "Saya sudah buka tautan" : "Verifikasi & lanjutkan"}
-          </Link>
-          <Link
-            href={isReset ? ROUTES.lupaPassword : ROUTES.daftar}
-            className="rounded-full py-2.5 type-label text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface"
-          >
-            Kirim ulang tautan
-          </Link>
-        </div>
+        <CekEmailActions
+          email={email}
+          next={next}
+          isReset={isReset}
+          error={error}
+          debugToken={debugToken}
+        />
       </div>
     </AuthShell>
   );

@@ -4,6 +4,7 @@ import {
   loginSchema,
   registerSchema,
   resetPasswordSchema,
+  verifyEmailSchema,
   type AuthIdentity,
   type ProfileUpdateInput,
   type SessionResponse,
@@ -12,6 +13,11 @@ import { badRequest, conflict, notFound, unauthorized } from "../../lib/api-erro
 import { zodFields } from "../../lib/zod-fields.ts";
 import type { AuthAdapter } from "./auth-adapter.ts";
 import { env } from "../../config/env.ts";
+import {
+  resetPasswordEmailHtml,
+  sendEmail,
+  verificationEmailHtml,
+} from "../../integrations/email/resend-client.ts";
 import { isEmailVerified, isProfileComplete } from "./authorization.ts";
 import {
   buildGoogleAuthorizeUrl,
@@ -24,12 +30,20 @@ import {
 import { hashPassword, verifyPassword } from "./password.ts";
 import type { SessionStore } from "./session-store.ts";
 import type { UserRepository } from "./user-repository.ts";
+import type { SocialQueryStore } from "../social/social-queries.ts";
+
+type ProfileTripCounts = (userId: string) => Promise<{
+  hostTripCount: number;
+  participantTripCount: number;
+}>;
 
 export class AuthService {
   constructor(
     private readonly authAdapter: AuthAdapter,
     private readonly users: UserRepository,
     private readonly sessions?: SessionStore,
+    private readonly social?: SocialQueryStore,
+    private readonly tripCounts?: ProfileTripCounts,
   ) {}
 
   async resolveSession(accessToken: string): Promise<AuthIdentity> {
@@ -53,10 +67,15 @@ export class AuthService {
         password: parsed.data.password,
         username: parsed.data.username,
         displayName: parsed.data.displayName,
-        emailVerifiedAt: new Date().toISOString(),
+        emailVerifiedAt: null,
       });
       const { token } = await this.sessions.createSession(user.id);
-      return { session: this.toMeSession(user), accessToken: token };
+      const verify = await this.issueVerificationEmail(user, parsed.data.next);
+      return {
+        session: await this.toMeSession(user),
+        accessToken: token,
+        ...verify,
+      };
     } catch (error) {
       if (error instanceof Error && error.message === "EMAIL_TAKEN") {
         throw conflict("EMAIL_TAKEN", "Email sudah terdaftar");
@@ -83,7 +102,7 @@ export class AuthService {
       );
     }
     const { token } = await this.sessions.createSession(user.id);
-    return { session: this.toMeSession(user), accessToken: token };
+    return { session: await this.toMeSession(user), accessToken: token };
   }
 
   async logout(accessToken: string | null) {
@@ -102,10 +121,27 @@ export class AuthService {
     const message = "Jika email terdaftar, tautan reset telah dikirim.";
     const user = await this.users.findByEmail(parsed.data.email);
     if (!user) return { message };
+
     const { token } = await this.sessions.createResetToken(user.id);
-    if (env.nodeEnv !== "production") {
-      return { message, debugResetToken: token };
+    const resetUrl = `${env.webUrl}/reset-password?token=${encodeURIComponent(token)}`;
+    try {
+      const sent = await sendEmail({
+        to: user.email,
+        subject: "Reset kata sandi Dolan",
+        html: resetPasswordEmailHtml(resetUrl),
+        text: `Reset kata sandi Dolan: ${resetUrl}`,
+      });
+      if (!sent && env.nodeEnv !== "production") {
+        return { message, debugResetToken: token };
+      }
+    } catch (error) {
+      console.error("[auth] failed to send reset email", error);
+      if (env.nodeEnv !== "production") {
+        return { message, debugResetToken: token };
+      }
+      throw badRequest("PROVIDER_UNAVAILABLE", "Gagal mengirim email reset. Coba lagi sebentar.");
     }
+
     return { message };
   }
 
@@ -122,6 +158,34 @@ export class AuthService {
     await this.users.setPasswordHash(reset.userId, hashPassword(parsed.data.password));
     await this.sessions.revokeAllForUser(reset.userId);
     return { reset: true as const };
+  }
+
+  async verifyEmail(body: unknown) {
+    if (!this.sessions) throw badRequest("PROVIDER_UNAVAILABLE", "Local auth is not configured");
+    const parsed = verifyEmailSchema.safeParse(body ?? {});
+    if (!parsed.success) {
+      throw badRequest("VALIDATION_ERROR", "Tautan verifikasi tidak valid", zodFields(parsed.error));
+    }
+    const record = await this.sessions.consumeEmailVerificationToken(parsed.data.token);
+    if (!record) {
+      throw unauthorized(AuthErrorCode.INVALID_TOKEN, "Tautan verifikasi tidak valid atau sudah kedaluwarsa");
+    }
+    const user = await this.users.markEmailVerified(record.userId);
+    return { session: await this.toMeSession(user), verified: true as const };
+  }
+
+  async resendVerification(userId: string, next?: string | null) {
+    if (!this.sessions) throw badRequest("PROVIDER_UNAVAILABLE", "Local auth is not configured");
+    const user = await this.users.findById(userId);
+    if (!user) throw notFound("NOT_FOUND", "Pengguna tidak ditemukan");
+    if (isEmailVerified(user)) {
+      return { message: "Email sudah terverifikasi.", alreadyVerified: true as const };
+    }
+    const verify = await this.issueVerificationEmail(user, next);
+    return {
+      message: "Tautan verifikasi telah dikirim ulang.",
+      ...verify,
+    };
   }
 
   beginGoogleLogin(next: string | null | undefined) {
@@ -148,6 +212,33 @@ export class AuthService {
     return webLoginErrorUrl(message);
   }
 
+  private async issueVerificationEmail(user: AuthIdentity, next?: string | null) {
+    if (!this.sessions) throw badRequest("PROVIDER_UNAVAILABLE", "Local auth is not configured");
+    const { token } = await this.sessions.createEmailVerificationToken(user.id);
+    const params = new URLSearchParams({ token });
+    if (next) params.set("next", next);
+    const verifyUrl = `${env.webUrl}/api/auth/verify-email?${params.toString()}`;
+
+    try {
+      const sent = await sendEmail({
+        to: user.email,
+        subject: "Verifikasi email Dolan",
+        html: verificationEmailHtml(verifyUrl),
+        text: `Verifikasi email Dolan: ${verifyUrl}`,
+      });
+      if (!sent && env.nodeEnv !== "production") {
+        return { debugVerifyToken: token };
+      }
+      return {};
+    } catch (error) {
+      console.error("[auth] failed to send verification email", error);
+      if (env.nodeEnv !== "production") {
+        return { debugVerifyToken: token };
+      }
+      throw badRequest("PROVIDER_UNAVAILABLE", "Gagal mengirim email verifikasi. Coba kirim ulang sebentar lagi.");
+    }
+  }
+
   private async findOrCreateGoogleUser(profile: GoogleProfile) {
     const authReference = `google:${profile.sub}`;
     const existingByRef = await this.users.findByAuthReference(authReference);
@@ -166,7 +257,7 @@ export class AuthService {
       return await this.users.createOAuthUser({
         authReference,
         email: profile.email,
-        emailVerifiedAt: profile.emailVerified ? new Date().toISOString() : new Date().toISOString(),
+        emailVerifiedAt: profile.emailVerified ? new Date().toISOString() : null,
         displayName: profile.name,
         avatarUrl: profile.picture,
       });
@@ -194,7 +285,8 @@ export class AuthService {
     };
   }
 
-  toMeSession(user: AuthIdentity) {
+  async toMeSession(user: AuthIdentity) {
+    const stats = await this.loadProfileStats(user.id);
     return {
       emailVerified: isEmailVerified(user),
       profileComplete: isProfileComplete(user),
@@ -206,28 +298,44 @@ export class AuthService {
         coverUrl: user.coverUrl,
         bio: user.bio,
         domicile: user.domicile,
-        followersCount: 0,
-        followingCount: 0,
-        hostTripCount: 0,
-        participantTripCount: 0,
-        rating: {
-          overall: null,
-          communication: null,
-          attitude: null,
-          reviewCount: 0,
-        },
+        followersCount: stats.followersCount,
+        followingCount: stats.followingCount,
+        hostTripCount: stats.hostTripCount,
+        participantTripCount: stats.participantTripCount,
+        rating: stats.rating,
       },
     };
   }
 
-  toPublicUser(user: AuthIdentity) {
-    return this.toMeSession(user).user;
+  async toPublicUser(user: AuthIdentity) {
+    return (await this.toMeSession(user)).user;
+  }
+
+  private async loadProfileStats(userId: string) {
+    const [followersCount, followingCount, rating, tripCounts] = await Promise.all([
+      this.social?.countFollowers(userId) ?? Promise.resolve(0),
+      this.social?.countFollowing(userId) ?? Promise.resolve(0),
+      this.social?.ratingFor(userId) ?? Promise.resolve({
+        overall: null,
+        communication: null,
+        attitude: null,
+        reviewCount: 0,
+      }),
+      this.tripCounts?.(userId) ?? Promise.resolve({ hostTripCount: 0, participantTripCount: 0 }),
+    ]);
+    return {
+      followersCount,
+      followingCount,
+      hostTripCount: tripCounts.hostTripCount,
+      participantTripCount: tripCounts.participantTripCount,
+      rating,
+    };
   }
 
   async updateProfile(userId: string, input: ProfileUpdateInput) {
     try {
       const user = await this.users.updateProfile(userId, input);
-      return this.toMeSession(user);
+      return await this.toMeSession(user);
     } catch (error) {
       if (error instanceof Error && error.message === "USERNAME_TAKEN") {
         throw conflict("USERNAME_TAKEN", "Username sudah dipakai");
@@ -242,7 +350,7 @@ export class AuthService {
   async publicProfileByUsername(username: string) {
     const user = await this.users.findByUsername(username);
     if (!user) throw notFound("NOT_FOUND", "Pengguna tidak ditemukan");
-    return this.toPublicUser(user);
+    return await this.toPublicUser(user);
   }
 
   async resolveUser(usernameOrId: string) {
@@ -256,7 +364,7 @@ export class AuthService {
   async publicListItem(userId: string) {
     const user = await this.users.findById(userId);
     if (!user) return null;
-    const publicUser = this.toPublicUser(user);
+    const publicUser = await this.toPublicUser(user);
     return {
       id: publicUser.id,
       username: publicUser.username,

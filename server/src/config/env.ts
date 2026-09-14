@@ -43,6 +43,11 @@ export const env = {
   locationHideSeconds: Number(process.env.LOCATION_HIDE_SECONDS ?? 600),
   shareTokenSecret: process.env.SHARE_TOKEN_SECRET ?? "dev-share-token-secret",
   shareLinkTtlHours: Number(process.env.SHARE_LINK_TTL_HOURS ?? 168),
+  emailProviderApiKey: process.env.EMAIL_PROVIDER_API_KEY ?? "",
+  emailFrom: process.env.EMAIL_FROM ?? "",
+  vapidPublicKey: process.env.VAPID_PUBLIC_KEY ?? "",
+  vapidPrivateKey: process.env.VAPID_PRIVATE_KEY ?? "",
+  vapidSubject: process.env.VAPID_SUBJECT ?? "mailto:halo@dolan.id",
 };
 
 export function isProduction(): boolean {

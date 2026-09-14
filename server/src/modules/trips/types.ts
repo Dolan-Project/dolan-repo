@@ -108,6 +108,7 @@ export interface TripStore {
   deleteTrip(tripId: string): Promise<void>;
   listHosted(userId: string, page: number, limit: number): Promise<PageResult<StoredTrip>>;
   listJoined(userId: string, page: number, limit: number): Promise<PageResult<StoredTrip>>;
+  profileTripCounts(userId: string): Promise<{ hostTripCount: number; participantTripCount: number }>;
   listPending(userId: string, page: number, limit: number): Promise<PageResult<StoredTrip>>;
   getCoverPlace(tripId: string): Promise<PlaceSummary | null>;
   listMembers(tripId: string): Promise<StoredMember[]>;

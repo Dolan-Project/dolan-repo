@@ -103,6 +103,26 @@ export class MemoryTripStore implements TripStore {
     );
   }
 
+  async profileTripCounts(userId: string) {
+    const hostTripCount = this.trips.filter(
+      (trip) => trip.hostUserId === userId && trip.status === "COMPLETED",
+    ).length;
+    const joinedIds = new Set(
+      this.members
+        .filter(
+          (member) =>
+            member.userId === userId &&
+            member.role === "PARTICIPANT" &&
+            member.membershipStatus === "ACTIVE",
+        )
+        .map((member) => member.tripId),
+    );
+    const participantTripCount = this.trips.filter(
+      (trip) => joinedIds.has(trip.id) && trip.status === "COMPLETED",
+    ).length;
+    return { hostTripCount, participantTripCount };
+  }
+
   async listPending(userId: string, page: number, limit: number) {
     const ids = new Set(
       this.joins.filter((row) => row.userId === userId && row.status === "PENDING").map((row) => row.tripId),

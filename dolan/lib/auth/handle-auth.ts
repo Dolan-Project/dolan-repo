@@ -1,10 +1,10 @@
 import {
-  AUTH_ERROR_CODES,
   forgotPasswordSchema,
   isProfileComplete,
   loginSchema,
   registerSchema,
   resetPasswordSchema,
+  verifyEmailSchema,
   type AuthSession,
   type PublicUser,
 } from "@/lib/contracts";
@@ -70,8 +70,11 @@ type LocalAuthPayload = {
     accessToken?: string;
     message?: string;
     debugResetToken?: string;
+    debugVerifyToken?: string;
     reset?: boolean;
     loggedOut?: boolean;
+    verified?: boolean;
+    alreadyVerified?: boolean;
   };
 };
 
@@ -112,7 +115,17 @@ export async function handleRegisterRequest(request: Request): Promise<Response>
     const json = (await upstream.json()) as LocalAuthPayload;
     const token = json.data.accessToken;
     const session = json.data.session ?? registerSession();
-    return jsonResult({ success: true, data: session }, 200, token ?? undefined);
+    return jsonResult(
+      {
+        success: true,
+        data: {
+          ...session,
+          ...(json.data.debugVerifyToken ? { debugVerifyToken: json.data.debugVerifyToken } : {}),
+        },
+      },
+      200,
+      token ?? undefined,
+    );
   }
 
   const mock = mockRegister(
@@ -198,6 +211,97 @@ export async function handleResetPasswordRequest(
   return jsonResult(mock, 200);
 }
 
+export async function handleVerifyEmailRequest(request: Request): Promise<Response> {
+  const url = new URL(request.url);
+  const tokenFromQuery = url.searchParams.get("token");
+  const next = url.searchParams.get("next");
+  const body =
+    request.method === "GET"
+      ? { token: tokenFromQuery ?? "" }
+      : await readBody(request);
+  const parsed = verifyEmailSchema.safeParse(body);
+  if (!parsed.success) {
+    if (request.method === "GET") {
+      const dest = new URL("/cek-email", url.origin);
+      dest.searchParams.set("error", "invalid");
+      return Response.redirect(dest, 302);
+    }
+    return validationError(parsed.error);
+  }
+
+  if (!shouldUseMockApi()) {
+    const upstream = await proxyAuthJson(request, "/api/v1/auth/verify-email", parsed.data);
+    if (!upstream.ok) {
+      if (request.method === "GET") {
+        const dest = new URL("/cek-email", url.origin);
+        dest.searchParams.set("error", "invalid");
+        return Response.redirect(dest, 302);
+      }
+      return upstream;
+    }
+    const json = (await upstream.json()) as LocalAuthPayload & {
+      data: { session?: AuthSession; verified?: boolean };
+    };
+    const session = json.data.session ?? {
+      ...registerSession(),
+      emailVerified: true,
+    };
+    if (request.method === "GET") {
+      const dest = new URL(resolveAfterAuth(session, next), url.origin);
+      const headers = new Headers({ Location: dest.toString() });
+      const cookie = extractAccessToken(request);
+      if (cookie) headers.set("Set-Cookie", sessionCookieHeader(cookie));
+      return new Response(null, { status: 302, headers });
+    }
+    return jsonResult({ success: true, data: session }, 200);
+  }
+
+  if (parsed.data.token === "expired") {
+    if (request.method === "GET") {
+      const dest = new URL("/cek-email", url.origin);
+      dest.searchParams.set("error", "invalid");
+      return Response.redirect(dest, 302);
+    }
+    return jsonResult(
+      createApiError("INVALID_TOKEN", "Tautan verifikasi tidak valid"),
+      statusForCode("UNAUTHORIZED"),
+    );
+  }
+
+  const session: AuthSession = {
+    user: incompleteUser(),
+    emailVerified: true,
+    profileComplete: false,
+  };
+  if (request.method === "GET") {
+    const dest = new URL(resolveAfterAuth(session, next), url.origin);
+    return new Response(null, {
+      status: 302,
+      headers: {
+        Location: dest.toString(),
+        "Set-Cookie": sessionCookieHeader("pending"),
+      },
+    });
+  }
+  return jsonResult({ success: true, data: session }, 200, "pending");
+}
+
+export async function handleResendVerificationRequest(request: Request): Promise<Response> {
+  const body = (await readBody(request)) as { next?: string };
+  if (!shouldUseMockApi()) {
+    const upstream = await proxyAuthJson(request, "/api/v1/auth/resend-verification", body ?? {});
+    if (!upstream.ok) return upstream;
+    const json = (await upstream.json()) as LocalAuthPayload & {
+      data: { message?: string; alreadyVerified?: boolean; debugVerifyToken?: string };
+    };
+    return jsonResult({ success: true, data: json.data }, 200);
+  }
+  return jsonResult({
+    success: true,
+    data: { message: "Tautan verifikasi telah dikirim ulang." },
+  }, 200);
+}
+
 export async function handleCallbackRequest(request: Request): Promise<Response> {
   const url = new URL(request.url);
   const token = url.searchParams.get("token") ?? url.searchParams.get("code");
@@ -209,7 +313,6 @@ export async function handleCallbackRequest(request: Request): Promise<Response>
   }
 
   if (!shouldUseMockApi()) {
-    // Local auth marks email verified at register; callback just opens the app if a session exists.
     const accessToken = extractAccessToken(request) ?? token;
     const dest = new URL(resolveAfterAuth(loginSession(), next), url.origin);
     return new Response(null, {
@@ -235,3 +338,4 @@ export async function handleCallbackRequest(request: Request): Promise<Response>
     },
   });
 }
+

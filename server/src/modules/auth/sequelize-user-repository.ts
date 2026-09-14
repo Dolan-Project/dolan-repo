@@ -89,7 +89,12 @@ export class SequelizeUserRepository implements UserRepository {
         authReference: `local:${id}`,
         email,
         passwordHash: hashPassword(input.password),
-        emailVerifiedAt: input.emailVerifiedAt ? new Date(input.emailVerifiedAt) : new Date(),
+        emailVerifiedAt:
+          input.emailVerifiedAt !== undefined
+            ? input.emailVerifiedAt
+              ? new Date(input.emailVerifiedAt)
+              : null
+            : new Date(),
         role: "USER",
         status: "ACTIVE",
       });
@@ -137,7 +142,7 @@ export class SequelizeUserRepository implements UserRepository {
         authReference: input.authReference,
         email,
         passwordHash: null,
-        emailVerifiedAt: input.emailVerifiedAt ? new Date(input.emailVerifiedAt) : new Date(),
+        emailVerifiedAt: input.emailVerifiedAt ? new Date(input.emailVerifiedAt) : null,
         role: "USER",
         status: "ACTIVE",
       });
@@ -177,6 +182,16 @@ export class SequelizeUserRepository implements UserRepository {
     if (!user) throw notFound("NOT_FOUND", "Pengguna tidak ditemukan");
     user.passwordHash = passwordHash;
     await user.save({ fields: ["passwordHash"] });
+  }
+
+  async markEmailVerified(userId: string): Promise<AuthIdentity> {
+    const { User, UserProfile } = getModels();
+    const user = await User.findByPk(userId);
+    if (!user) throw notFound("NOT_FOUND", "Pengguna tidak ditemukan");
+    user.emailVerifiedAt = new Date();
+    await user.save({ fields: ["emailVerifiedAt"] });
+    const profile = await UserProfile.findOne({ where: { userId: user.id } });
+    return toAuthIdentity(user, profile);
   }
 
   async updateProfile(userId: string, input: ProfileUpdateInput): Promise<AuthIdentity> {

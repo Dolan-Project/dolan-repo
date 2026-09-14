@@ -1,12 +1,11 @@
 import { Router } from "express";
 import { apiSuccess, pushSubscriptionBodySchema } from "@dolan/shared";
-import { badRequest } from "../../lib/api-error.ts";
+import { badRequest, providerUnavailable } from "../../lib/api-error.ts";
 import { zodFields } from "../../lib/zod-fields.ts";
 import { requireLogin } from "../../middleware/authenticate.ts";
 import { getModels } from "@dolan/database";
 
-/** Minimal Web Push subscription store. Delivery is best-effort when VAPID is configured later. */
-export function createPushRouter() {
+export function createPushRouter(databaseReady = false) {
   const router = Router();
 
   router.post("/push/subscriptions", requireLogin, async (req, res, next) => {
@@ -35,8 +34,10 @@ export function createPushRouter() {
           });
         }
         res.status(201).json(apiSuccess({ id: row.id, endpoint: row.endpoint }));
-      } catch {
-        // Memory / no-DB: acknowledge so client SW can proceed in demo.
+      } catch (error) {
+        if (databaseReady) {
+          throw providerUnavailable("DATABASE_UNAVAILABLE", "Push subscription could not be saved", 503);
+        }
         res.status(201).json(
           apiSuccess({
             id: crypto.randomUUID(),

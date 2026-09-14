@@ -115,6 +115,19 @@ export class SequelizeChatStore implements ChatStore {
       targetId: input.targetId,
       data: input.data,
     });
+    const targetType = input.targetType;
+    const targetId = input.targetId;
+    if (targetType && targetId) {
+      void import("../push/push-delivery.ts").then(({ deliverPushNotification }) =>
+        deliverPushNotification({
+          recipientUserId: input.recipientUserId,
+          type: input.type,
+          targetType,
+          targetId,
+          data: input.data,
+        }),
+      );
+    }
     return toNotification(row);
   }
 
