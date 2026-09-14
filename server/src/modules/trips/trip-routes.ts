@@ -22,6 +22,13 @@ import { requireCapability } from "../../middleware/authorize.ts";
 import type { TripService } from "./trip-service.ts";
 import { getModels, getSequelize } from "@dolan/database";
 import { tripMutationError } from "./validation.ts";
+import {
+  deleteChecklist,
+  getItinerarySnapshot,
+  saveItineraryVersion,
+  selectItineraryVersion,
+  upsertChecklist,
+} from "./itinerary-editor.ts";
 
 function param(value: string | string[] | undefined): string {
   return Array.isArray(value) ? String(value[0] ?? "") : String(value ?? "");
@@ -100,7 +107,45 @@ export function createTripRouter(trips: TripService) {
     }
   });
 
-  router.get("/trips/:id/route", requireCapability("read_public"), withTripContext, async (req, res, next) => {
+  router.get("/trips/:id/itinerary", requireCapability("read_public"), withTripContext, async (req, res, next) => {
+    try {
+      await trips.getTrip(req.actor ?? { kind: "guest" }, param(req.params.id));
+      const actorId = req.actor?.kind === "user" ? req.actor.user.id : null;
+      res.json(apiSuccess(await getItinerarySnapshot(param(req.params.id), actorId)));
+    } catch (error) {
+      next(error);
+    }
+  });
+  router.post("/trips/:id/itinerary-versions", requireCapability("create_draft"), withTripContext, async (req, res, next) => {
+    try {
+      res.status(201).json(apiSuccess(await saveItineraryVersion(param(req.params.id), req.authUser!.id, req.body)));
+    } catch (error) {
+      next(error);
+    }
+  });
+  router.patch("/trips/:id/current-itinerary-version", requireCapability("create_draft"), withTripContext, async (req, res, next) => {
+    try {
+      res.json(apiSuccess(await selectItineraryVersion(param(req.params.id), req.authUser!.id, req.body)));
+    } catch (error) {
+      next(error);
+    }
+  });
+  router.post("/trips/:id/checklist", requireCapability("create_draft"), withTripContext, async (req, res, next) => {
+    try {
+      res.status(201).json(apiSuccess(await upsertChecklist(param(req.params.id), req.authUser!.id, req.body)));
+    } catch (error) {
+      next(error);
+    }
+  });
+  router.delete("/trips/:id/checklist/:itemId", requireCapability("create_draft"), withTripContext, async (req, res, next) => {
+    try {
+      res.json(apiSuccess(await deleteChecklist(param(req.params.id), req.authUser!.id, param(req.params.itemId))));
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  async function sendRouteMap(req: Request, res: Response, next: NextFunction) {
     try {
       await trips.getTrip(req.actor ?? { kind: "guest" }, param(req.params.id));
       const { Trip, ItineraryDay, ItineraryStop, Place } = getModels();
@@ -119,7 +164,9 @@ export function createTripRouter(trips: TripService) {
       }
       res.json(apiSuccess({ points, polylines }));
     } catch (error) { next(error); }
-  });
+  }
+  router.get("/trips/:id/route-map", requireCapability("read_public"), withTripContext, sendRouteMap);
+  router.get("/trips/:id/route", requireCapability("read_public"), withTripContext, sendRouteMap);
 
   router.patch("/trips/:id", requireCapability("create_draft"), withTripContext, async (req, res, next) => {
     try {

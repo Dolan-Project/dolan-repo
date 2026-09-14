@@ -26,6 +26,7 @@ export type ItineraryVersionRecord = {
 
 export type JobServiceOptions = {
   loadTrip?: (tripId: string) => Promise<DraftTrip | null>;
+  savePreferences?: (tripId: string, preferences: Record<string, unknown>) => Promise<void>;
   loadLockedStops?: (versionId: string | null) => Promise<LockedStop[]>;
   persistVersion?: (input: {
     jobId: string;
@@ -63,6 +64,10 @@ export class GenerationJobService {
       ...(typeof input.body === "object" && input.body ? input.body : {}),
       idempotencyKey: input.idempotencyKey,
     });
+
+    if (parsed.preferences && this.options.savePreferences) {
+      await this.options.savePreferences(trip.id, parsed.preferences);
+    }
 
     const replayed = await this.jobs.findByIdempotency(input.actorId, parsed.idempotencyKey);
     if (replayed) {

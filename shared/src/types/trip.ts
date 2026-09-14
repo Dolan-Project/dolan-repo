@@ -59,6 +59,7 @@ export type TripDetail = {
   pendingRequestCount: number;
   joinFree: true;
   currentItineraryVersionId: string | null;
+  members?: PublicUser[];
   myJoinRequest: JoinRequest | null;
   origin?: string;
   meetingPoint?: string | null;

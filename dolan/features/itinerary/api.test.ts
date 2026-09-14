@@ -14,7 +14,7 @@ describe("itinerary editor adapter", () => {
     const snapshot = createEditorSnapshot("komodo-4d3n");
     const lockedIds = snapshot.versions[0].days.flatMap((day) => day.stops).filter((stop) => stop.isLocked).map((stop) => stop.id);
     const next = await generateAlternative(snapshot, snapshot.versions[0].days, INITIAL_BUDGET_ITEMS);
-    expect(next.activeVersionId).toBe(snapshot.activeVersionId);
-    expect(next.versions[0].days.flatMap((day) => day.stops).filter((stop) => stop.isLocked).map((stop) => stop.id)).toEqual(lockedIds);
+    expect(next.snapshot.activeVersionId).toBe(snapshot.activeVersionId);
+    expect(next.snapshot.versions[0].days.flatMap((day) => day.stops).filter((stop) => stop.isLocked).map((stop) => stop.id)).toEqual(lockedIds);
   });
 });

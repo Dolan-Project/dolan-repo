@@ -660,6 +660,14 @@ export class TripService {
       pendingRequestCount: joins.filter((row) => row.status === "PENDING").length,
       joinFree: true,
       currentItineraryVersionId: trip.currentItineraryVersionId,
+      members: await Promise.all(
+        members
+          .filter((member) => member.membershipStatus === "ACTIVE")
+          .map(async (member) => {
+            const user = await this.store.getUser(member.userId);
+            return user ? toPublicUser(user) : placeholderUser(member.userId);
+          }),
+      ),
       myJoinRequest: myJoin ? await this.toJoin(myJoin) : null,
     };
   }

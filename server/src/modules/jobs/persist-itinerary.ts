@@ -176,3 +176,13 @@ export async function loadDraftTrip(tripId: string) {
     exists: true as const,
   };
 }
+
+export async function saveTripPreferences(tripId: string, preferences: Record<string, unknown>) {
+  if (!isUuid(tripId)) return;
+  const { Trip } = getModels();
+  const trip = await Trip.findByPk(tripId);
+  if (!trip) return;
+  const current = (trip.preferences ?? {}) as Record<string, unknown>;
+  trip.preferences = { ...current, ...preferences };
+  await trip.save();
+}

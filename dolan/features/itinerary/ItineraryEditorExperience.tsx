@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { BudgetItemInput, EditableItineraryDay, EditableItineraryStop, EditorGenerationStatus, ItineraryEditorSnapshot } from "@dolan/shared";
 import { Icon } from "@/components/ui/Icon";
-import { findScheduleConflicts, generateAlternative, getItineraryEditor, saveItineraryVersion } from "./api";
+import { findScheduleConflicts, generateAlternative, getItineraryEditor, saveItineraryVersion, selectItineraryVersion } from "./api";
 import { INITIAL_BUDGET_ITEMS, PLACE_CANDIDATES } from "./mock-data";
 import { RoutePreview } from "./RoutePreview";
 import { ROUTES } from "@/lib/routes";
@@ -37,6 +37,7 @@ export function ItineraryEditorExperience({ tripId }: { tripId: string }) {
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [regenerateMode, setRegenerateMode] = useState<"balanced" | "cheaper" | "alternative">("balanced");
   const [generatedVersionId, setGeneratedVersionId] = useState<string | null>(null);
   const [job, setJob] = useState<EditorGenerationStatus | null>(null);
   const [notice, setNotice] = useState<Notice>(null);
@@ -115,17 +116,23 @@ export function ItineraryEditorExperience({ tripId }: { tripId: string }) {
   const generate = async () => {
     if (!snapshot || generating) return;
     setGenerating(true);
-    const jobId = `generation-${snapshot.tripId}-${snapshot.versions.length + 1}`;
-    setJob({ id: jobId, status: "PROCESSING", attemptCount: 1, resultVersionId: null, errorCode: null });
-    setNotice({ tone: "info", text: "AI sedang mengoptimalkan rute. Draft aktif tetap aman." });
+    setJob({ id: crypto.randomUUID(), status: "PROCESSING", attemptCount: 1, resultVersionId: null, errorCode: null });
+    setNotice({
+      tone: "info",
+      text: regenerateMode === "cheaper"
+        ? "Groq sedang menyusun rute hemat. Draft aktif tetap aman."
+        : "AI sedang mengoptimalkan rute. Draft aktif tetap aman.",
+    });
     try {
-      const next = await generateAlternative(snapshot, days, budgetItems);
-      setSnapshot(next);
-      setGeneratedVersionId(next.versions[0].id);
-      setJob({ id: jobId, status: "SUCCEEDED", attemptCount: 1, resultVersionId: next.versions[0].id, errorCode: null });
-      setNotice({ tone: "success", text: `Versi AI ${next.versions[0].versionNumber} siap ditinjau. Versi aktif belum berubah.` });
+      const next = await generateAlternative(snapshot, days, budgetItems, regenerateMode);
+      setSnapshot(next.snapshot);
+      setGeneratedVersionId(next.snapshot.versions[0]?.id ?? null);
+      setJob(next.job
+        ? { id: next.job.id, status: next.job.status, attemptCount: next.job.attemptCount, resultVersionId: next.job.resultVersionId, errorCode: next.job.errorCode }
+        : { id: crypto.randomUUID(), status: "SUCCEEDED", attemptCount: 1, resultVersionId: next.snapshot.versions[0]?.id ?? null, errorCode: null });
+      setNotice({ tone: "success", text: `Versi AI ${next.snapshot.versions[0]?.versionNumber ?? ""} siap ditinjau. Klik “Jadikan aktif” jika kamu menyukainya.` });
     } catch {
-      setJob({ id: jobId, status: "FAILED", attemptCount: 1, resultVersionId: null, errorCode: "GENERATION_FAILED" });
+      setJob({ id: crypto.randomUUID(), status: "FAILED", attemptCount: 1, resultVersionId: null, errorCode: "GENERATION_FAILED" });
       setNotice({ tone: "error", text: "Generate gagal. Draft dan versi aktif tidak berubah; silakan coba lagi." });
     } finally {
       setGenerating(false);
@@ -204,7 +211,9 @@ export function ItineraryEditorExperience({ tripId }: { tripId: string }) {
     setBudgetItems(versionBudgetInputs(snapshot, versionId));
     setDirty(false);
     if (activate) {
-      setSnapshot({ ...snapshot, activeVersionId: versionId });
+      void selectItineraryVersion(snapshot.tripId, versionId).then((next) => {
+        setSnapshot(next ?? { ...snapshot, activeVersionId: versionId });
+      });
       setGeneratedVersionId(null);
       setNotice({ tone: "success", text: `Versi ${version.versionNumber} sekarang menjadi itinerary aktif.` });
     }
@@ -224,13 +233,20 @@ export function ItineraryEditorExperience({ tripId }: { tripId: string }) {
           <select aria-label="Pilih versi itinerary" value={selectedVersionId} onChange={(event) => chooseVersion(event.target.value)} className="min-h-11 rounded-full border border-outline-variant bg-white px-4 type-label outline-none focus:border-primary">
             {snapshot.versions.map((version) => <option key={version.id} value={version.id}>Versi {version.versionNumber} · {version.source}{version.id === snapshot.activeVersionId ? " · Aktif" : ""}</option>)}
           </select>
-          <button type="button" onClick={generate} disabled={generating} className="btn-primary"><Icon name="rocket_launch" /> {generating ? "Mengoptimalkan…" : "Optimalkan dengan AI"}</button>
+          <div className="flex flex-wrap items-center gap-2">
+            <select aria-label="Mode regenerate AI" value={regenerateMode} onChange={(event) => setRegenerateMode(event.target.value as typeof regenerateMode)} className="min-h-11 rounded-full border border-outline-variant bg-white px-4 type-label outline-none focus:border-primary">
+              <option value="balanced">Regenerate biasa</option>
+              <option value="cheaper">Alternatif hemat</option>
+              <option value="alternative">Rute alternatif</option>
+            </select>
+            <button type="button" onClick={() => void generate()} disabled={generating} className="btn-primary"><Icon name="rocket_launch" /> {generating ? "Mengoptimalkan…" : "Optimalkan dengan AI"}</button>
+          </div>
           <button type="button" onClick={() => void closeSlots()} disabled={publishing} className="rounded-full border border-outline-variant bg-white px-4 py-3 type-label text-on-surface-variant hover:border-primary hover:text-primary disabled:opacity-50"><Icon name="lock" /> Tutup Slot</button>
           <button type="button" onClick={() => void deleteDraft()} disabled={saving} className="rounded-full border border-error/30 bg-white px-4 py-3 type-label text-error hover:bg-error-container disabled:opacity-50"><Icon name="delete" /> Hapus Draft</button>
         </div>
       </header>
 
-      {notice && <div role="status" className={`mb-4 rounded-2xl border px-4 py-3 type-label ${notice.tone === "error" ? "border-error/30 bg-error-container text-on-error-container" : notice.tone === "success" ? "border-success/30 bg-emerald-50 text-emerald-800" : "border-primary/20 bg-primary-fixed text-on-primary-fixed"}`}>{notice.text}{generatedVersionId && <button type="button" className="ml-3 underline" onClick={() => chooseVersion(generatedVersionId)}>Tinjau versi</button>}</div>}
+      {notice && <div role="status" className={`mb-4 rounded-2xl border px-4 py-3 type-label ${notice.tone === "error" ? "border-error/30 bg-error-container text-on-error-container" : notice.tone === "success" ? "border-success/30 bg-emerald-50 text-emerald-800" : "border-primary/20 bg-primary-fixed text-on-primary-fixed"}`}>{notice.text}{generatedVersionId && <><button type="button" className="ml-3 underline" onClick={() => chooseVersion(generatedVersionId)}>Tinjau versi</button><button type="button" className="ml-3 underline" onClick={() => chooseVersion(generatedVersionId, true)}>Jadikan aktif</button></>}</div>}
       {job && <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-outline-variant bg-white px-4 py-3"><span className="type-label">Generation job <code className="text-xs text-on-surface-variant">{job.id}</code></span><span className={`chip ${job.status === "SUCCEEDED" ? "bg-emerald-50 text-emerald-800" : job.status === "FAILED" ? "bg-error-container text-error" : "bg-secondary-fixed text-secondary"}`}>{job.status === "PROCESSING" ? "Sedang diproses" : job.status === "SUCCEEDED" ? "Berhasil" : "Gagal"} · percobaan {job.attemptCount}</span></div>}
 
       <div className="mb-4 flex items-center gap-1 overflow-x-auto rounded-2xl bg-surface-container-low p-1.5">
@@ -238,7 +254,7 @@ export function ItineraryEditorExperience({ tripId }: { tripId: string }) {
       </div>
 
       <div className="grid gap-5 lg:grid-cols-[minmax(330px,.82fr)_minmax(520px,1.18fr)]">
-        <RoutePreview days={days} />
+        <RoutePreview days={days} destination={snapshot.destinationCity} />
         <section className="min-w-0">
           {tab === "itinerary" && <div className="space-y-4">
             {days.map((day) => <DayEditor key={day.id} day={day} conflicts={conflicts} onChangeTitle={(title) => changeDays(days.map((item) => item.id === day.id ? { ...item, title } : item))} onUpdateStop={(stopId, patch) => updateStop(day.id, stopId, patch)} onMove={(index, direction) => moveStop(day.id, index, direction)} onRemove={(stopId) => changeDays(days.map((item) => item.id === day.id ? { ...item, stops: item.stops.filter((stop) => stop.id !== stopId) } : item))} onAdd={(placeIndex) => addPlace(day.id, placeIndex)} onDeleteDay={() => day.stops.some((stop) => stop.isLocked) ? setNotice({ tone: "error", text: "Hari ini memiliki destinasi terkunci. Buka kunci sebelum menghapus hari." }) : changeDays(days.filter((item) => item.id !== day.id))} />)}

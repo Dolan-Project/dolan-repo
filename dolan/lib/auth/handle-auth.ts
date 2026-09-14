@@ -140,6 +140,12 @@ export async function handleRegisterRequest(request: Request): Promise<Response>
     const { data, error } = await client.auth.signUp({
       email: parsed.data.email,
       password: parsed.data.password,
+      options: {
+        data: {
+          username: parsed.data.username ?? "",
+          display_name: parsed.data.displayName ?? "",
+        },
+      },
     });
     if (error?.message.toLowerCase().includes("already")) {
       return jsonResult(

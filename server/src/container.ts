@@ -16,7 +16,7 @@ import { GroqAdapter } from "./modules/jobs/groq-adapter.ts";
 import { MemoryJobRepository } from "./modules/jobs/job-repository.ts";
 import { GenerationJobService, type JobServiceOptions } from "./modules/jobs/job-service.ts";
 import { createPlaceLookup } from "./modules/jobs/place-lookup.ts";
-import { loadDraftTrip, loadLockedStops, persistGeneratedVersion } from "./modules/jobs/persist-itinerary.ts";
+import { loadDraftTrip, loadLockedStops, persistGeneratedVersion, saveTripPreferences } from "./modules/jobs/persist-itinerary.ts";
 import { GoogleRoutesClient, MockRoutesClient } from "./modules/jobs/routes-adapter.ts";
 import { SequelizeJobRepository } from "./modules/jobs/sequelize-job-repository.ts";
 import { MemorySearchStore } from "./modules/search/memory-store.ts";
@@ -74,6 +74,7 @@ export function createProductionJobService(onJobUpdated?: JobServiceOptions["onJ
     env.groqApiKey ? new GroqAdapter(env.groqApiKey, env.groqModel) : new MockGeminiAdapter(),
     {
       loadTrip: loadDraftTrip,
+      savePreferences: saveTripPreferences,
       loadLockedStops,
       persistVersion: persistGeneratedVersion,
       routes: env.googleMapsServerKey ? new GoogleRoutesClient(env.googleMapsServerKey) : new MockRoutesClient(),

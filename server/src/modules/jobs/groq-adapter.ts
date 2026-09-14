@@ -27,10 +27,17 @@ export class GroqAdapter implements GenerationModel {
   private readonly client: Groq;
   constructor(apiKey: string, private readonly model: string) { this.client = new Groq({ apiKey }); }
   async generate(input: { tripId: string; preferences?: Record<string, unknown> }): Promise<unknown> {
+    const mode = String(input.preferences?.regenerateMode ?? "balanced");
+    const style =
+      mode === "cheaper"
+        ? "Prioritaskan rute hemat backpacker: transportasi umum, makan kaki lima, atraksi murah/gratis, jarak tempuh pendek, dan estimasi budget di kisaran rendah."
+        : mode === "alternative"
+          ? "Buat rute alternatif yang berbeda urutan/tempatnya dari rencana umum, tetap realistis untuk backpacker, dan hindari pengulangan destinasi yang terlalu klise jika ada opsi setara."
+          : "Buat rute seimbang antara waktu, biaya, dan pengalaman populer.";
     const response = await this.client.chat.completions.create({
-      model: this.model, temperature: 0.2,
+      model: this.model, temperature: mode === "alternative" ? 0.5 : 0.2,
       messages: [
-        { role: "system", content: "Kamu adalah perencana perjalanan backpacker Indonesia. Kembalikan JSON sesuai schema. Budget merupakan estimasi, bukan harga paket. Gunakan tempat nyata yang selanjutnya diverifikasi server." },
+        { role: "system", content: `Kamu adalah perencana perjalanan backpacker Indonesia. ${style} Kembalikan JSON sesuai schema. Budget merupakan estimasi, bukan harga paket. Gunakan tempat nyata yang selanjutnya diverifikasi server.` },
         { role: "user", content: `Susun itinerary optimal untuk trip ${input.tripId}. Preferensi: ${JSON.stringify(input.preferences ?? {})}` },
       ],
       response_format: { type: "json_schema", json_schema: { name: "dolan_itinerary", strict: true, schema: GROQ_ITINERARY_RESPONSE_SCHEMA } },

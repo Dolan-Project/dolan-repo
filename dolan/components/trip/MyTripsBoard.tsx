@@ -402,7 +402,7 @@ function TripCard({ trip, tab, selected, onSelect }: { trip: MyTripSummary; tab:
       </button>
       <div className="flex flex-wrap items-center gap-1.5 border-t border-outline-variant/45 px-3 py-2.5">
         {tab === "hosted" && trip.visibility === "PUBLIC" ? <Link href={`${tripDetailHref(trip.id)}#join-requests`} className="btn-primary !min-h-9 !px-3 !text-xs">Kelola Pengajuan {trip.pendingRequestCount ? `(${trip.pendingRequestCount})` : ""}</Link> : null}
-        {trip.visibility === "PUBLIC" && tab !== "pending" ? <Link href={ROUTES.tripChat(trip.id)} className="rounded-full bg-surface-container px-3 py-2 type-label"><Icon name="forum" /> Grup Chat</Link> : null}
+        {(tab === "hosted" || tab === "joined") ? <Link href={ROUTES.tripChat(trip.id)} className="rounded-full bg-surface-container px-3 py-2 type-label"><Icon name="forum" /> Grup Chat</Link> : null}
         {tab === "hosted" ? <Link href={tripItineraryPath(trip.id)} className="rounded-full bg-surface-container px-3 py-2 type-label"><Icon name="edit" /> Edit itinerary</Link> : null}
         {tab === "pending" ? <Link href={tripDetailHref(trip.id)} className="btn-brand !min-h-9 !px-3 !text-xs"><Icon name="forum" /> Buka diskusi publik</Link> : null}
         {tripPoints(trip).length > 0 ? <a href={mapsRouteUrl(tripPoints(trip))} target="_blank" rel="noreferrer" className="rounded-full px-3 py-2 type-label text-primary hover:bg-primary-fixed"><Icon name="share" /> Bagikan rute</a> : null}

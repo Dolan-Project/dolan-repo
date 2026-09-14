@@ -54,6 +54,7 @@ export function createTripBodyFromInput(input: CreateTripInput) {
       genderRule: input.genderRule,
       communityRules: input.communityRules,
       privateInvite: input.privateInvite,
+      regenerateMode: input.regenerateMode,
     },
     ...locationFields(input),
   };
@@ -90,6 +91,7 @@ export function updateTripBodyFromInput(input: CreateTripInput) {
       genderRule: input.genderRule,
       communityRules: input.communityRules,
       privateInvite: input.privateInvite,
+      regenerateMode: input.regenerateMode,
     },
   };
 }

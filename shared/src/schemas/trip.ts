@@ -157,6 +157,7 @@ export const createTripSchema = z
     genderRule: z.enum(["ALL_GENDERS", "FEMALE_ONLY", "MALE_ONLY"]).optional(),
     communityRules: z.string().trim().max(2000).optional(),
     privateInvite: z.string().trim().max(1000).optional(),
+    regenerateMode: z.enum(["balanced", "cheaper", "alternative"]).optional(),
   })
   .superRefine((value, ctx) => {
     if (["manual", "ai-route", "template", "known"].includes(value.path) && !value.destinationCity) {
