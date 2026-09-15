@@ -4,6 +4,8 @@ import Link from "next/link";
 import { FollowButton } from "@/components/profile/FollowButton";
 import { BlockReportActions } from "@/components/profile/BlockReportActions";
 import { LogoutButton } from "@/components/profile/LogoutButton";
+import { ProfileMediaHover } from "@/components/profile/ProfileMediaHover";
+import { ProfileSocialLinks } from "@/components/profile/ProfileSocialLinks";
 import { Icon } from "@/components/ui/Icon";
 import { ASSETS } from "@/lib/assets";
 import { ROUTES } from "@/lib/routes";
@@ -11,8 +13,6 @@ import { ROUTES } from "@/lib/routes";
 type ProfileViewProps = { user: PublicUser; action: "edit" | "follow" };
 
 export function ProfileView({ user, action }: ProfileViewProps) {
-  const avatar = user.avatarUrl ?? ASSETS.profile;
-  const cover = user.coverUrl ?? ASSETS.komodo;
   const tripTotal = user.hostTripCount + user.participantTripCount;
   const rating = user.rating.overall != null ? user.rating.overall.toFixed(2) : "—";
 
@@ -20,30 +20,31 @@ export function ProfileView({ user, action }: ProfileViewProps) {
     <main className="mx-auto max-w-[1180px] px-margin pb-10 pt-4 md:px-margin-desktop md:pb-14 md:pt-6">
       <section className="relative rounded-[2rem] border border-outline-variant/50 bg-white p-3 shadow-[0_16px_45px_rgba(22,48,80,.09)] sm:p-4">
         <div className="relative h-52 w-full overflow-hidden rounded-[1.75rem] bg-surface-container-highest sm:h-72 lg:h-80">
-          <img alt="Foto latar profil traveler" className="h-full w-full object-cover" src={cover} />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#071c32]/55 via-transparent to-transparent" />
-          <span className="absolute right-4 top-4 inline-flex items-center gap-1.5 rounded-full bg-black/45 px-3 py-1.5 type-micro font-semibold text-white backdrop-blur-md">
+          <ProfileMediaHover
+            kind="cover"
+            src={user.coverUrl}
+            fallbackSrc={ASSETS.komodo}
+            alt="Foto latar profil traveler"
+            canEdit={action === "edit"}
+            className="h-full w-full cursor-pointer"
+          />
+          <span className="pointer-events-none absolute right-4 top-4 z-20 inline-flex items-center gap-1.5 rounded-full bg-black/45 px-3 py-1.5 type-micro font-semibold text-white backdrop-blur-md">
             <Icon name="photo_camera" className="text-[14px]" />
             Cerita perjalanan
           </span>
-          {action === "edit" ? (
-            <Link
-              href={ROUTES.profilEdit}
-              className="absolute bottom-4 right-4 inline-flex items-center gap-1.5 rounded-full border border-white/30 bg-black/55 px-3 py-2 type-micro font-semibold text-white backdrop-blur-md"
-            >
-              <Icon name="photo_camera" className="text-[14px]" />
-              Ganti Sampul
-            </Link>
-          ) : null}
         </div>
 
         <div className="relative px-1 pb-3 sm:px-6 sm:pb-4">
           <div className="flex flex-col justify-between gap-4 pt-4 lg:flex-row lg:items-end">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:gap-5">
               <div className="-mt-16 shrink-0 sm:-mt-24">
-                <div className="h-28 w-28 overflow-hidden rounded-2xl border-4 border-white bg-white shadow-xl sm:h-36 sm:w-36">
-                  <img alt={`Foto profil ${user.displayName}`} className="h-full w-full object-cover" src={avatar} />
-                </div>
+                <ProfileMediaHover
+                  kind="avatar"
+                  src={user.avatarUrl}
+                  alt={`Foto profil ${user.displayName}`}
+                  canEdit={action === "edit"}
+                  className="h-28 w-28 cursor-pointer overflow-hidden rounded-2xl border-4 border-white bg-white shadow-xl sm:h-36 sm:w-36"
+                />
                 <span className="-mt-3 ml-2 inline-flex items-center gap-1.5 rounded-full bg-[#087f8c] px-3 py-1 type-micro font-bold text-white shadow-md">
                   <Icon name="verified" className="text-[12px]" />
                   Traveler Terverifikasi
@@ -62,6 +63,17 @@ export function ProfileView({ user, action }: ProfileViewProps) {
                     {user.domicile || "Domisili belum diisi"}
                   </span>
                 </div>
+                <ProfileSocialLinks
+                  instagramUrl={user.instagramUrl}
+                  tiktokUrl={user.tiktokUrl}
+                  className="mt-2.5"
+                />
+                {action === "edit" && !user.instagramUrl && !user.tiktokUrl ? (
+                  <p className="mt-2 type-caption text-on-surface-variant">
+                    Tambah Instagram atau TikTok di Edit Profil supaya traveler lain
+                    bisa mengecek akunmu.
+                  </p>
+                ) : null}
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2.5 pb-1">

@@ -12,6 +12,13 @@ const nextConfig: NextConfig = {
   experimental: {
     externalDir: true,
   },
+  async rewrites() {
+    const origin = (process.env.EXPRESS_ORIGIN ?? "http://localhost:4000").replace(/\/$/, "");
+    return [
+      { source: "/socket.io", destination: `${origin}/socket.io` },
+      { source: "/socket.io/:path*", destination: `${origin}/socket.io/:path*` },
+    ];
+  },
   images: {
     remotePatterns: [
       {

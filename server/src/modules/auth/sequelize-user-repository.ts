@@ -19,6 +19,8 @@ export function toAuthIdentity(user: User, profile: UserProfile | null): AuthIde
     avatarUrl: profile?.avatarUrl ?? null,
     coverUrl: profile?.coverUrl ?? null,
     bio: profile?.bio ?? null,
+    instagramUrl: profile?.instagramUrl ?? null,
+    tiktokUrl: profile?.tiktokUrl ?? null,
   };
 }
 
@@ -106,6 +108,8 @@ export class SequelizeUserRepository implements UserRepository {
           displayName: input.displayName ?? input.username ?? "Traveler",
           domicile: null,
           bio: null,
+          instagramUrl: null,
+          tiktokUrl: null,
         });
       }
       return toAuthIdentity(user, profile);
@@ -153,6 +157,8 @@ export class SequelizeUserRepository implements UserRepository {
         avatarUrl: input.avatarUrl ?? null,
         domicile: null,
         bio: null,
+        instagramUrl: null,
+        tiktokUrl: null,
       });
       return toAuthIdentity(user, profile);
     } catch (error) {
@@ -209,6 +215,8 @@ export class SequelizeUserRepository implements UserRepository {
           domicile: input.domicile,
           bio: input.bio ?? null,
           coverCaption: input.coverCaption ?? null,
+          instagramUrl: input.instagramUrl ?? null,
+          tiktokUrl: input.tiktokUrl ?? null,
         });
       } else {
         profile.username = input.username;
@@ -217,6 +225,12 @@ export class SequelizeUserRepository implements UserRepository {
         profile.bio = input.bio ?? null;
         if (input.coverCaption !== undefined) {
           profile.coverCaption = input.coverCaption;
+        }
+        if (input.instagramUrl !== undefined) {
+          profile.instagramUrl = input.instagramUrl;
+        }
+        if (input.tiktokUrl !== undefined) {
+          profile.tiktokUrl = input.tiktokUrl;
         }
         await profile.save();
       }

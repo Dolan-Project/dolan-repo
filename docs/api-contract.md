@@ -41,6 +41,8 @@ Return-to-action: query/body `next`; invalid → `/`. Tidak auto-submit join/pub
 
 Pending bukan member chat. Join tanpa pembayaran. Endpoint trip Express (lifecycle, join, komentar) dimiliki **Wira** — lihat bagian WIRA-D3 di bawah. Salsa memakai path yang sama untuk UI.
 
+`PATCH /users/me` body: `{ username, displayName, domicile, bio?, coverCaption?, instagramUrl?, tiktokUrl? }`. `instagramUrl` dan `tiktokUrl` opsional (bukan syarat `profileComplete`): username, `@handle`, atau URL penuh; disimpan sebagai URL kanonik Instagram/TikTok. Tampil di profil publik dan kartu host trip.
+
 ---
 
 # Search, places, templates (WIRA-D2)
@@ -333,13 +335,13 @@ Hanya `DRAFT`.
 
 ## `POST /trips/:id/publish`
 
-**Actor:** verified + profil lengkap (`publish_trip`)  
+**Actor:** login + profil lengkap (`publish_trip`)  
 **Schema:** `publishTripBodySchema`  
 **Response:** `ApiSuccess<TripDetail>`
 
 Atomik: membership host `ACTIVE` + satu `chat_rooms`. Public wajib `destinationCity`, `maxParticipants`, dan `publicMeetingPointLabel`.
 
-**Error:** `PROFILE_INCOMPLETE` (403), `EMAIL_UNVERIFIED` (403), `INVALID_TRANSITION` (400), `INVALID_PLAN_INPUT` (400)
+**Error:** `PROFILE_INCOMPLETE` (403), `INVALID_TRANSITION` (400), `INVALID_PLAN_INPUT` (400)
 
 ## Transisi host
 
@@ -363,7 +365,7 @@ Private→public memakai syarat publish public. Public→private ditolak jika ad
 
 ## `POST /trips/:id/join-requests` (alias `POST /trips/:id/join`)
 
-**Actor:** verified + profil lengkap (`join_trip`), bukan host  
+**Actor:** login + profil lengkap (`join_trip`), bukan host  
 **Schema:** `joinRequestBodySchema` — `message?`  
 **Response:** `201 ApiSuccess<JoinRequest>`  
 Hanya trip `PUBLIC` + `OPEN`. Setelah `REJECTED`/`ACCEPTED` tidak bisa ajukan ulang. `WITHDRAWN` boleh ajukan lagi pada baris yang sama.
@@ -398,20 +400,21 @@ Hanya status `PENDING`.
 
 ## `POST /trips/:id/comments`
 
-**Actor:** verified (`comment`) — boleh sebelum join dan saat pending  
+**Actor:** login (`comment`) — boleh sebelum join dan saat pending  
+**Header:** `Idempotency-Key` UUID wajib  
 **Schema:** `createCommentBodySchema` — `body`, `parentId?`  
-Reply satu tingkat. Parent harus trip yang sama.
+Reply satu tingkat. Parent harus trip yang sama. Socket `comment.created` ke room `trip:{id}:comments`.
 
-**Error:** `INVALID_PARENT` (400), `TRIP_NOT_PUBLIC` (403), `EMAIL_UNVERIFIED` (403)
+**Error:** `INVALID_PARENT` (400), `TRIP_NOT_PUBLIC` (403)
 
 ## `PATCH /trips/:id/comments/:commentId`
 
-**Actor:** verified (`comment`), penulis  
+**Actor:** login (`comment`), penulis  
 **Schema:** `updateCommentBodySchema`
 
 ## `DELETE /trips/:id/comments/:commentId`
 
-**Actor:** verified (`comment`), penulis atau host  
+**Actor:** login (`comment`), penulis atau host  
 Soft delete. Komentar terhapus tidak muncul di list.
 
 ## `POST /trips/:id/leave`

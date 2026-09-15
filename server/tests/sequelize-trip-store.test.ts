@@ -249,6 +249,8 @@ describe("Sequelize trip store", () => {
         avatarUrl: null,
         coverUrl: null,
         bio: null,
+        instagramUrl: null,
+        tiktokUrl: null,
       },
     };
 

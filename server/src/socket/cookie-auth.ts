@@ -4,5 +4,11 @@ import { parse as parseCookie } from "cookie";
 export function extractAccessTokenFromCookies(cookieHeader: string | undefined): string | null {
   if (!cookieHeader) return null;
   const cookies = parseCookie(cookieHeader);
-  return cookies.dolan_session ?? null;
+  const raw = cookies.dolan_session;
+  if (!raw) return null;
+  try {
+    return decodeURIComponent(raw);
+  } catch {
+    return raw;
+  }
 }

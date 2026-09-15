@@ -2,8 +2,23 @@ import { getModels } from "@dolan/database";
 import type { ChatMessage } from "@dolan/shared";
 import { Op } from "sequelize";
 import type { ChatAccess, ChatStore, StoredNotification } from "./chat-store.ts";
-import { publicUserStub } from "./public-user.ts";
+import { publicUserFromId } from "./public-user.ts";
 
+async function resolveProfile(userId: string) {
+  const { UserProfile } = getModels();
+  const profile = await UserProfile.findOne({ where: { userId } });
+  const user = await publicUserFromId(userId, profile?.username ?? "");
+  return {
+    ...user,
+    displayName: profile?.displayName ?? user.displayName,
+    avatarUrl: profile?.avatarUrl ?? user.avatarUrl,
+    coverUrl: profile?.coverUrl ?? user.coverUrl,
+    bio: profile?.bio ?? user.bio,
+    domicile: profile?.domicile ?? user.domicile,
+    instagramUrl: profile?.instagramUrl ?? user.instagramUrl,
+    tiktokUrl: profile?.tiktokUrl ?? user.tiktokUrl,
+  };
+}
 export class SequelizeChatStore implements ChatStore {
   async getAccess(tripId: string, userId: string): Promise<ChatAccess | null> {
     const { Trip, TripMember, TripJoinRequest, ChatRoom } = getModels();
@@ -15,21 +30,27 @@ export class SequelizeChatStore implements ChatStore {
       ChatRoom.findOne({ where: { tripId } }),
     ]);
     const roomRow = room ?? (await ChatRoom.create({ tripId }));
+    const isHost = trip.hostUserId === userId;
     return {
       tripId,
       tripStatus: trip.status,
       roomId: roomRow.id,
       readOnly: Boolean(roomRow.readOnlyAt) || trip.status === "CANCELLED",
-      memberRole: member?.role ?? null,
-      membershipStatus: member?.membershipStatus ?? null,
+      memberRole: member?.role ?? (isHost ? "HOST" : null),
+      membershipStatus: member?.membershipStatus ?? (isHost ? "ACTIVE" : null),
       joinRequestStatus: pending?.status ?? null,
     };
   }
 
   async listActiveMemberIds(tripId: string): Promise<string[]> {
-    const { TripMember } = getModels();
-    const members = await TripMember.findAll({ where: { tripId, membershipStatus: "ACTIVE" } });
-    return members.map((member) => member.userId);
+    const { Trip, TripMember } = getModels();
+    const [trip, members] = await Promise.all([
+      Trip.findByPk(tripId),
+      TripMember.findAll({ where: { tripId, membershipStatus: "ACTIVE" } }),
+    ]);
+    const ids = new Set(members.map((member) => member.userId));
+    if (trip?.hostUserId) ids.add(trip.hostUserId);
+    return [...ids];
   }
 
   async listMessages(input: {
@@ -163,19 +184,6 @@ export class SequelizeChatStore implements ChatStore {
   async resolveSender(userId: string) {
     return resolveProfile(userId);
   }
-}
-
-async function resolveProfile(userId: string) {
-  const { UserProfile } = getModels();
-  const profile = await UserProfile.findOne({ where: { userId } });
-  return {
-    ...publicUserStub(userId, profile?.username ?? ""),
-    displayName: profile?.displayName ?? profile?.username ?? "",
-    avatarUrl: profile?.avatarUrl ?? null,
-    coverUrl: profile?.coverUrl ?? null,
-    bio: profile?.bio ?? null,
-    domicile: profile?.domicile ?? null,
-  };
 }
 
 async function toMessage(

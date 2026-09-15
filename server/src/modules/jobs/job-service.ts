@@ -43,6 +43,10 @@ export type JobServiceOptions = {
   }) => Promise<string>;
   routes?: RoutesClient;
   resolveCoords?: (itinerary: GeminiItinerary) => Promise<Array<LatLng | null>>;
+  hydratePlaces?: (
+    itinerary: GeminiItinerary,
+    bias?: { destinationCity?: string | null; minStopsPerDay?: number; maxStopsPerDay?: number },
+  ) => Promise<GeminiItinerary>;
   verifyPlaces?: (itinerary: GeminiItinerary) => Promise<void>;
   requireDatabaseTrip?: boolean;
   onJobUpdated?: (job: GenerationJob) => void | Promise<void>;
@@ -171,11 +175,25 @@ export class GenerationJobService {
 
   private async processItinerary(claimed: JobRecord): Promise<JobRecord> {
     const trip = await this.options.loadTrip?.(claimed.tripId);
+    const preferences = trip?.preferences ?? undefined;
     const raw = await this.model.generate({
       tripId: claimed.tripId,
-      preferences: trip?.preferences ?? undefined,
+      preferences,
     });
     let itinerary = parseGeminiItinerary(raw);
+    const destinationCity =
+      typeof preferences?.destinationCity === "string"
+        ? preferences.destinationCity
+        : typeof preferences?.destinationLabel === "string"
+          ? preferences.destinationLabel
+          : null;
+    if (this.options.hydratePlaces) {
+      itinerary = await this.options.hydratePlaces(itinerary, {
+        destinationCity,
+        minStopsPerDay: Number(preferences?.minStopsPerDay ?? 2),
+        maxStopsPerDay: Number(preferences?.maxStopsPerDay ?? 4),
+      });
+    }
     assertRealPlaces(itinerary);
     await this.options.verifyPlaces?.(itinerary);
     const locked = (await this.options.loadLockedStops?.(claimed.selectedVersionId)) ?? [];

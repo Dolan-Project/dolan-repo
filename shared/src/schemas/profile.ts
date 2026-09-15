@@ -1,4 +1,25 @@
 import { z } from "zod";
+import { instagramProfileUrl, tiktokProfileUrl } from "../lib/social-links.ts";
+
+function optionalSocialUrl(
+  parse: (value: string) => string | null,
+  message: string,
+) {
+  return z
+    .string()
+    .optional()
+    .nullable()
+    .transform((value, ctx) => {
+      const raw = value?.trim() ?? "";
+      if (!raw) return null;
+      const url = parse(raw);
+      if (!url) {
+        ctx.addIssue({ code: "custom", message });
+        return z.NEVER;
+      }
+      return url;
+    });
+}
 
 export const profileUpdateSchema = z.object({
   username: z
@@ -22,6 +43,14 @@ export const profileUpdateSchema = z.object({
     .max(160, "Caption maksimal 160 karakter")
     .optional()
     .nullable(),
+  instagramUrl: optionalSocialUrl(
+    instagramProfileUrl,
+    "Isi username atau tautan Instagram yang valid",
+  ),
+  tiktokUrl: optionalSocialUrl(
+    tiktokProfileUrl,
+    "Isi username atau tautan TikTok yang valid",
+  ),
 });
 
 export type ProfileUpdateInput = z.infer<typeof profileUpdateSchema>;

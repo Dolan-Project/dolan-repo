@@ -13,7 +13,6 @@ import { ROUTES } from "@/lib/routes";
 type TripExperienceProps = {
   tripId: string;
   isLoggedIn: boolean;
-  emailVerified: boolean;
   hideHero?: boolean;
 };
 
@@ -26,7 +25,6 @@ async function readJson<T>(response: Response): Promise<Json<T>> {
 export function TripExperience({
   tripId,
   isLoggedIn,
-  emailVerified,
   hideHero = false,
 }: TripExperienceProps) {
   const [trip, setTrip] = useState<TripDetail | null>(null);
@@ -84,7 +82,7 @@ export function TripExperience({
       await fetch(`/api/v1/trips/${tripId}/comments`, {
         method: "POST",
         credentials: "include",
-        headers: { "content-type": "application/json" },
+        headers: { "content-type": "application/json", "Idempotency-Key": crypto.randomUUID() },
         body: JSON.stringify({
           body: commentBody,
           parentId: replyTo ?? undefined,
@@ -161,9 +159,7 @@ export function TripExperience({
     trip.myJoinRequest?.status === "WITHDRAWN" ? undefined : trip.myJoinRequest?.status;
   const joinCta = !isLoggedIn
     ? "login"
-    : !emailVerified
-      ? "unverified"
-      : trip.viewerRole === "host"
+    : trip.viewerRole === "host"
         ? "host"
         : trip.viewerRole === "participant"
           ? "member"
@@ -207,9 +203,6 @@ export function TripExperience({
           >
             Masuk untuk Ajukan join
           </Link>
-        ) : null}
-        {joinCta === "unverified" ? (
-          <p className="type-body mt-3 text-on-surface">Verifikasi email dulu untuk mengajukan join.</p>
         ) : null}
         {joinCta === "none" ? (
           <form className="mt-4 flex flex-col gap-3" onSubmit={onJoin}>
@@ -311,7 +304,7 @@ export function TripExperience({
             </li>
           ))}
         </ul>
-        {isLoggedIn && emailVerified ? (
+        {isLoggedIn ? (
           <form className="mt-4 flex flex-col gap-3" onSubmit={onComment}>
             {replyTo ? (
               <p className="type-caption">
@@ -333,11 +326,7 @@ export function TripExperience({
             </button>
           </form>
         ) : (
-          <p className="type-body mt-4">
-            {isLoggedIn
-              ? "Verifikasi email dulu untuk menulis komentar."
-              : "Masuk dan verifikasi email untuk menulis komentar."}
-          </p>
+          <p className="type-body mt-4">Masuk untuk menulis komentar.</p>
         )}
       </section>
     </div>

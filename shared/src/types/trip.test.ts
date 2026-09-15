@@ -10,6 +10,8 @@ const host: PublicUser = {
   coverUrl: null,
   bio: null,
   domicile: "Bandung",
+  instagramUrl: null,
+  tiktokUrl: null,
   followersCount: 0,
   followingCount: 0,
   hostTripCount: 1,

@@ -100,6 +100,7 @@ export function createProductionJobService(onJobUpdated?: JobServiceOptions["onJ
       persistVersion: persistGeneratedVersion,
       routes: new GoogleRoutesClient(env.googleMapsServerKey),
       resolveCoords: lookup.resolveCoords,
+      hydratePlaces: lookup.hydratePlaces,
       verifyPlaces: lookup.verifyPlaces,
       requireDatabaseTrip: true,
       onJobUpdated,

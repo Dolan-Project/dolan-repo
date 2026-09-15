@@ -10,6 +10,8 @@ const baseUser: PublicUser = {
   coverUrl: null,
   bio: null,
   domicile: "Jakarta",
+  instagramUrl: null,
+  tiktokUrl: null,
   followersCount: 0,
   followingCount: 0,
   hostTripCount: 0,

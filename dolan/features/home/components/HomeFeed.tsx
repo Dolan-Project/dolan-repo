@@ -2,12 +2,12 @@ import Link from "next/link";
 import { Icon } from "@/components/ui/Icon";
 import type { AuthSession } from "@/lib/contracts";
 import { ROUTES } from "@/lib/routes";
-import type { HomeFeedPayload } from "../home-feed-types";
+import type { HomeFeedResult } from "../load-home-feed";
 import styles from "./home-feed.module.css";
 
 type HomeFeedProps = {
   session: AuthSession;
-  feed: HomeFeedPayload;
+  feed: HomeFeedResult;
 };
 
 function formatRange(start: string | null, end: string | null) {
@@ -40,7 +40,7 @@ function provinceTone(slug: string) {
 
 export function HomeFeed({ session, feed }: HomeFeedProps) {
   const name = session.user.displayName || session.user.username || "Traveler";
-  const { tasks, trips, templates, provinces } = feed;
+  const { tasks, trips, templates, provinces } = feed.data;
   const hasTasks =
     !tasks.profileComplete ||
     tasks.draftTrips.length > 0 ||
@@ -48,6 +48,11 @@ export function HomeFeed({ session, feed }: HomeFeedProps) {
 
   return (
     <div className={styles.page}>
+      {!feed.ok ? (
+        <p className="mx-auto mb-4 max-w-5xl rounded-xl bg-error-container px-4 py-3 type-body text-on-error-container" role="alert">
+          {feed.error} Menampilkan data cadangan sementara.
+        </p>
+      ) : null}
       <section className={styles.hero}>
         <div className={styles.heroCopy}>
           <p className={styles.kicker}>Beranda Dolan</p>

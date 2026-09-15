@@ -4,10 +4,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { Field } from "@/components/auth/Field";
-import { PlacePicker } from "@/components/trip/PlacePicker";
+import { PlacePicker, type PlaceSuggestion } from "@/components/trip/PlacePicker";
 import { TripBoardMap } from "@/components/trip/TripBoardMap";
 import type { ApiError, CreateTripInput, TripDetail } from "@/lib/contracts";
 import { tripDetailHref } from "@/lib/routes";
+import { shouldUseMockApi } from "@/lib/auth/use-mock";
 import { meetingPointFor, resolveGeoPlace } from "@/mocks/geo";
 
 const activities = [
@@ -49,6 +50,8 @@ export function TripEditForm({ tripId }: { tripId: string }) {
   const [maxParticipants, setMaxParticipants] = useState(7);
   const [meetingPoint, setMeetingPoint] = useState("");
   const [companionNote, setCompanionNote] = useState("");
+  const [originCoords, setOriginCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [meetingCoords, setMeetingCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [pending, setPending] = useState(false);
   const [formError, setFormError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -105,8 +108,16 @@ export function TripEditForm({ tripId }: { tripId: string }) {
       selected?: boolean;
       tone: "origin" | "meeting";
     }[] = [];
-    const originPlace = resolveGeoPlace(origin);
-    if (originPlace) {
+    const originPlace = shouldUseMockApi() ? resolveGeoPlace(origin) : null;
+    if (originCoords) {
+      markers.push({
+        id: "origin",
+        label: origin || "Asal",
+        latitude: originCoords.lat,
+        longitude: originCoords.lng,
+        tone: "origin",
+      });
+    } else if (originPlace) {
       markers.push({
         id: "origin",
         label: originPlace.label,
@@ -115,8 +126,17 @@ export function TripEditForm({ tripId }: { tripId: string }) {
         tone: "origin",
       });
     }
-    const meeting = meetingPointFor(meetingPoint, destinationCity);
-    if (visibility === "PUBLIC" && meeting) {
+    const meeting = shouldUseMockApi() ? meetingPointFor(meetingPoint, destinationCity) : null;
+    if (visibility === "PUBLIC" && meetingCoords) {
+      markers.push({
+        id: "meeting",
+        label: meetingPoint || destinationCity || "Titik temu",
+        latitude: meetingCoords.lat,
+        longitude: meetingCoords.lng,
+        selected: true,
+        tone: "meeting",
+      });
+    } else if (visibility === "PUBLIC" && meeting) {
       markers.push({
         id: "meeting",
         label: meetingPoint || destinationCity || "Titik temu",
@@ -127,7 +147,7 @@ export function TripEditForm({ tripId }: { tripId: string }) {
       });
     }
     return markers;
-  }, [origin, meetingPoint, destinationCity, visibility]);
+  }, [origin, meetingPoint, destinationCity, visibility, originCoords, meetingCoords]);
 
   function payload(): CreateTripInput {
     return {
@@ -235,7 +255,15 @@ export function TripEditForm({ tripId }: { tripId: string }) {
             id="origin"
             label="Asal / titik keberangkatan"
             value={origin}
-            onChange={setOrigin}
+            onChange={(next) => {
+              setOrigin(next);
+              setOriginCoords(null);
+            }}
+            onSelectPlace={(place: PlaceSuggestion) => {
+              if (Number.isFinite(place.latitude) && Number.isFinite(place.longitude)) {
+                setOriginCoords({ lat: Number(place.latitude), lng: Number(place.longitude) });
+              }
+            }}
             error={fieldErrors.origin}
             placeholder="Cari kota atau bandara"
             hint="Asal pribadi tidak dipakai sebagai titik temu publik."
@@ -392,7 +420,15 @@ export function TripEditForm({ tripId }: { tripId: string }) {
               id="meetingPoint"
               label="Titik temu publik"
               value={meetingPoint}
-              onChange={setMeetingPoint}
+              onChange={(next) => {
+                setMeetingPoint(next);
+                setMeetingCoords(null);
+              }}
+              onSelectPlace={(place: PlaceSuggestion) => {
+                if (Number.isFinite(place.latitude) && Number.isFinite(place.longitude)) {
+                  setMeetingCoords({ lat: Number(place.latitude), lng: Number(place.longitude) });
+                }
+              }}
               excludeLabel={origin}
               error={fieldErrors.meetingPoint}
               hint="Jangan salin alamat/asal pribadi."

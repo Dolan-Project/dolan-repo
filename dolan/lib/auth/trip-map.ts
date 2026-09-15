@@ -9,15 +9,58 @@ import {
   type PublishTripInput,
   type TripDetail,
 } from "@dolan/shared";
+import { shouldUseMockApi } from "@/lib/auth/use-mock";
 import { meetingPointFor, resolveGeoPlace } from "@/mocks/geo";
 
 function moneyString(amount: number): string {
   return String(Math.round(amount));
 }
 
-function locationFields(input: CreateTripInput) {
-  const origin = resolveGeoPlace(input.origin);
-  const meeting = meetingPointFor(input.meetingPoint, input.destinationCity);
+type ResolvedPoint = { latitude: number; longitude: number };
+
+async function resolveLivePlace(query: string): Promise<ResolvedPoint | null> {
+  const trimmed = query.trim();
+  if (!trimmed) return null;
+  const base = (process.env.NEXT_PUBLIC_API_URL ?? process.env.EXPRESS_ORIGIN ?? "http://localhost:4000/api/v1")
+    .replace(/\/$/, "")
+    .replace(/\/api\/v1$/, "");
+  const url = `${base}/api/v1/search/places?${new URLSearchParams({ q: trimmed, page: "1", limit: "1" })}`;
+  try {
+    const response = await fetch(url, { headers: { Accept: "application/json" }, cache: "no-store" });
+    if (!response.ok) return null;
+    const payload = (await response.json()) as {
+      success?: boolean;
+      data?: Array<{ latitude?: number; longitude?: number }>;
+    };
+    const first = payload.success ? payload.data?.[0] : null;
+    if (!first || !Number.isFinite(first.latitude) || !Number.isFinite(first.longitude)) return null;
+    return { latitude: Number(first.latitude), longitude: Number(first.longitude) };
+  } catch {
+    return null;
+  }
+}
+
+async function locationFields(input: CreateTripInput) {
+  if (shouldUseMockApi()) {
+    const origin = resolveGeoPlace(input.origin);
+    const meeting = meetingPointFor(input.meetingPoint, input.destinationCity);
+    return {
+      originLabel: input.origin,
+      originLatitude: origin?.latitude,
+      originLongitude: origin?.longitude,
+      destinationCity: input.destinationCity || undefined,
+      transportMode: input.transport,
+      publicMeetingPointLabel: input.meetingPoint || undefined,
+      publicMeetingPointLatitude: meeting?.latitude,
+      publicMeetingPointLongitude: meeting?.longitude,
+    };
+  }
+
+  const [origin, meeting] = await Promise.all([
+    resolveLivePlace(input.origin),
+    resolveLivePlace(input.meetingPoint || input.destinationCity),
+  ]);
+
   return {
     originLabel: input.origin,
     originLatitude: origin?.latitude,
@@ -30,7 +73,7 @@ function locationFields(input: CreateTripInput) {
   };
 }
 
-export function createTripBodyFromInput(input: CreateTripInput) {
+export async function createTripBodyFromInput(input: CreateTripInput) {
   return {
     title: input.title,
     description: input.description || undefined,
@@ -56,12 +99,12 @@ export function createTripBodyFromInput(input: CreateTripInput) {
       privateInvite: input.privateInvite,
       regenerateMode: input.regenerateMode,
     },
-    ...locationFields(input),
+    ...(await locationFields(input)),
   };
 }
 
-export function updateTripBodyFromInput(input: CreateTripInput) {
-  const location = locationFields(input);
+export async function updateTripBodyFromInput(input: CreateTripInput) {
+  const location = await locationFields(input);
   return {
     title: input.title,
     description: input.description ?? "",

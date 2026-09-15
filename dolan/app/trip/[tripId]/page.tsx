@@ -10,7 +10,6 @@ export default async function TripDetailPage({ params }: PageProps) {
     <TripDetailView
       tripId={tripId}
       isLoggedIn={Boolean(session)}
-      emailVerified={Boolean(session?.emailVerified)}
     />
   );
 }

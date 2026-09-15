@@ -59,6 +59,34 @@ describe("handlePatchMeRequest", () => {
   });
 });
 
+describe("handlePatchMeRequest social links", () => {
+  it("stores canonical Instagram and TikTok URLs", async () => {
+    const response = await handlePatchMeRequest(
+      new Request("http://localhost/api/v1/users/me", {
+        method: "PATCH",
+        headers: {
+          cookie: "dolan_session=complete",
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          username: "salsa",
+          displayName: "Salsa",
+          domicile: "Jakarta",
+          instagramUrl: "@salsa.trek",
+          tiktokUrl: "salsa_trek",
+        }),
+      }),
+    );
+    const json = (await response.json()) as {
+      success: boolean;
+      data: { user: { instagramUrl: string | null; tiktokUrl: string | null } };
+    };
+    expect(json.success).toBe(true);
+    expect(json.data.user.instagramUrl).toBe("https://www.instagram.com/salsa.trek");
+    expect(json.data.user.tiktokUrl).toBe("https://www.tiktok.com/@salsa_trek");
+  });
+});
+
 describe("handleGetPublicProfileRequest", () => {
   it("returns NOT_FOUND for an unknown username", async () => {
     const response = await handleGetPublicProfileRequest("tidak-ada");

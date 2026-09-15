@@ -49,18 +49,7 @@ export function authorize(actor: SessionActor, capability: AuthCapability): Auth
       : deny(403, AuthErrorCode.FORBIDDEN, "Admin access required");
   }
 
-  const verified = isEmailVerified(user);
   const complete = isProfileComplete(user);
-
-  if (
-    (capability === "publish_trip" ||
-      capability === "join_trip" ||
-      capability === "comment" ||
-      capability === "follow") &&
-    !verified
-  ) {
-    return deny(403, AuthErrorCode.EMAIL_UNVERIFIED, "Verified email is required");
-  }
 
   if ((capability === "publish_trip" || capability === "join_trip") && !complete) {
     return deny(403, AuthErrorCode.PROFILE_INCOMPLETE, "Complete profile is required");
