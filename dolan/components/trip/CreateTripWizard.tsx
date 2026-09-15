@@ -22,7 +22,10 @@ import {
   estimateItineraryBudget,
   firstStopMeetingLabel,
   formatRupiah,
+  appendVisitStop,
+  mergeLockedStops,
   packItinerarySchedule,
+  placeTicketEstimate,
   reorderStopsInDay,
   toItinerarySaveDays,
   tripTitleFromDestination,
@@ -33,6 +36,8 @@ import {
 import { generateAlternative, generateInitialItinerary, saveItineraryVersion } from "@/features/itinerary/api";
 import { INITIAL_BUDGET_ITEMS, createBudgetSummary } from "@/features/itinerary/mock-data";
 import { provinceCoverUrl } from "@/lib/province-cover";
+import { PackingListField } from "@/components/trip/PackingListField";
+import { TemplateRoutePeek } from "@/components/trip/TemplateRoutePeek";
 
 const BUDGET_PRESETS = [750_000, 1_500_000, 2_500_000, 5_000_000];
 
@@ -51,7 +56,7 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
   const router = useRouter();
   const idempotencyKey = useMemo(() => newKey(), []);
   const publishIdempotencyKey = useMemo(() => newKey(), []);
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(templateId ? 2 : 1);
   const [path, setPath] = useState<WizardPath>(templateId ? "template" : "create");
   const [destinationCity, setDestinationCity] = useState(initialDestination ?? "");
   const [startDate, setStartDate] = useState("");
@@ -83,6 +88,7 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
   const [generating, setGenerating] = useState(false);
   const [regenerateUsed, setRegenerateUsed] = useState(0);
   const [itineraryReady, setItineraryReady] = useState(false);
+  const [packingItems, setPackingItems] = useState<string[]>([]);
   const [fromGroq, setFromGroq] = useState(false);
 
   const tripTitle = tripTitleFromDestination(destinationCity, templateTitle);
@@ -402,11 +408,38 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
   }
 
   function updateStop(dayId: string, stopId: string, patch: Partial<EditableItineraryStop>) {
-    setDays((current) => current.map((day) => (
-      day.id === dayId
-        ? { ...day, stops: day.stops.map((stop) => (stop.id === stopId ? { ...stop, ...patch } : stop)) }
-        : day
-    )));
+    setDays((current) => {
+      const previous = current.flatMap((day) => day.stops).find((stop) => stop.id === stopId);
+      const next = current.map((day) => (
+        day.id === dayId
+          ? { ...day, stops: day.stops.map((stop) => (stop.id === stopId ? { ...stop, ...patch } : stop)) }
+          : day
+      ));
+      if (!patch.place) return next;
+      const placeChanged =
+        previous?.place?.latitude !== patch.place.latitude ||
+        previous?.place?.longitude !== patch.place.longitude ||
+        Boolean(patch.customTitle && patch.customTitle !== (previous?.customTitle || previous?.place?.name));
+      if (!placeChanged) return next;
+      const packed = packItinerarySchedule(next);
+      return visibility === "PUBLIC" ? applyPublicMeetingPoint(packed, true) : packed;
+    });
+  }
+
+  function addStop(dayId: string, pick: { name: string; city: string; latitude?: number; longitude?: number }) {
+    setDays((current) => {
+      const next = appendVisitStop(current, dayId, { ...pick, city: pick.city || destinationCity, lock: true });
+      return visibility === "PUBLIC" ? applyPublicMeetingPoint(next, true) : next;
+    });
+  }
+
+  function removeStop(dayId: string, stopId: string) {
+    setDays((current) => {
+      const next = packItinerarySchedule(current.map((day) => (
+        day.id === dayId ? { ...day, stops: day.stops.filter((stop) => stop.id !== stopId) } : day
+      )));
+      return visibility === "PUBLIC" ? applyPublicMeetingPoint(next, true) : next;
+    });
   }
 
   async function regenerate() {
@@ -414,13 +447,21 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
     setGenerating(true);
     setFormError("");
     try {
+      const lockedKeys = new Set(
+        days.flatMap((day) => day.stops.filter((stop) => stop.isLocked).map((stop) => (stop.customTitle || stop.place?.name || "").trim().toLocaleLowerCase("id-ID"))),
+      );
+      const currentNames = days.flatMap((day) => day.stops.map((stop) => stop.customTitle || stop.place?.name || ""));
+      const excludeNames = (budgetPlan.overBudget
+        ? currentNames.filter((name) => placeTicketEstimate(name) > 0)
+        : currentNames
+      ).filter((name) => !lockedKeys.has(name.trim().toLocaleLowerCase("id-ID")));
       const createdTripId = tripId || (await ensureDraftTrip());
       const localFallback = buildDestinationItinerary({
         destination: destinationCity,
         startDate,
         endDate,
         variant: regenerateUsed + 1,
-        excludeNames: days.flatMap((day) => day.stops.map((stop) => stop.customTitle || stop.place?.name || "")),
+        excludeNames,
         preferCheaper: budgetPlan.overBudget,
       });
       const next = await generateAlternative(
@@ -442,9 +483,12 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
       );
       const nextDays = packItinerarySchedule(
         ensureMultiStopDays(
-          visibility === "PUBLIC"
-            ? applyPublicMeetingPoint(next.snapshot.versions[0]?.days ?? localFallback, true)
-            : (next.snapshot.versions[0]?.days ?? localFallback),
+          mergeLockedStops(
+            visibility === "PUBLIC"
+              ? applyPublicMeetingPoint(next.snapshot.versions[0]?.days ?? localFallback, true)
+              : (next.snapshot.versions[0]?.days ?? localFallback),
+            days,
+          ),
           destinationCity,
         ),
       );
@@ -461,6 +505,16 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
     } finally {
       setGenerating(false);
     }
+  }
+
+  async function savePacking(createdTripId: string) {
+    const titles = packingItems.map((item) => item.trim()).filter(Boolean);
+    await Promise.all(titles.map((title) => fetch(`/api/v1/trips/${encodeURIComponent(createdTripId)}/checklist`, {
+      method: "POST",
+      credentials: "include",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ title, isCompleted: false, dueDate: null }),
+    })));
   }
 
   async function persistItineraryThenInvite() {
@@ -494,6 +548,7 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
         days: toItinerarySaveDays(packed),
         budgetItems: items.length ? items : INITIAL_BUDGET_ITEMS,
       });
+      await savePacking(createdTripId);
       setSnapshot({ ...saved, tripId: createdTripId });
       setDays(saved.versions[0]?.days?.length ? saved.versions[0].days : packed);
       setStep(4);
@@ -541,6 +596,7 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
       if (days.length) {
         await persistCurrentItinerary(createdTripId);
       }
+      await savePacking(createdTripId);
       await fetch(`/api/v1/trips/${createdTripId}`, {
         method: "PATCH",
         credentials: "include",
@@ -581,7 +637,7 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
   const templates = catalogTemplates;
 
   return (
-    <div className={`${step === 3 ? "mx-auto max-w-6xl" : "mx-auto max-w-3xl"} px-margin py-8 md:px-margin-desktop md:py-12`}>
+    <div className={`${step === 3 ? "mx-auto max-w-6xl rounded-[1.5rem] bg-white" : "mx-auto max-w-3xl"} px-margin py-8 md:px-margin-desktop md:py-12`}>
       <p className="type-micro font-extrabold uppercase tracking-[0.18em] text-primary">Buat trip</p>
       <h1 className="type-title mt-2 text-on-surface">Rencana perjalanan, empat langkah</h1>
       <p className="type-body mt-2 max-w-2xl text-on-surface-variant">
@@ -636,7 +692,7 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
                 </div>
               </Field>
               {templatesError ? <p className="mt-3 type-caption text-error">{templatesError}</p> : null}
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
                 {templates.map((template) => {
                   const selected = selectedTemplateId === template.id;
                   const province = findProvinceForTemplate({ templateId: template.id, city: template.city });
@@ -644,8 +700,8 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
                   return (
                     <article
                       key={template.id}
-                      className={`overflow-hidden rounded-2xl border bg-white text-left shadow-sm ${
-                        selected ? "border-primary ring-2 ring-primary" : "border-outline-variant"
+                      className={`group relative overflow-hidden rounded-[1.35rem] border bg-white text-left shadow-[0_10px_30px_rgba(15,59,94,.08)] transition ${
+                        selected ? "border-primary ring-2 ring-primary" : "border-slate-200 hover:-translate-y-0.5 hover:border-primary/40"
                       }`}
                     >
                       <button
@@ -653,10 +709,10 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
                         className="block w-full text-left"
                         onClick={() => void chooseTemplateById(template.id)}
                       >
-                        <div className="relative h-28 bg-surface-container">
+                        <div className="relative h-36 bg-surface-container">
                           {cover ? (
                             // eslint-disable-next-line @next/next/no-img-element
-                            <img src={cover} alt={template.city} className="h-full w-full object-cover" />
+                            <img src={cover} alt={template.city} className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]" />
                           ) : template.coverPlace ? (
                             <PlacePhoto
                               googlePlaceId={template.coverPlace.googlePlaceId}
@@ -668,17 +724,24 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
                           ) : (
                             <div className="grid h-full place-items-center text-primary"><Icon name="route" className="text-[28px]" /></div>
                           )}
-                          <span className="absolute left-3 top-3 rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-extrabold text-primary">{template.city}</span>
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-transparent" />
+                          <span className="absolute left-3 top-3 rounded-full bg-white/92 px-2.5 py-1 text-[10px] font-extrabold text-primary">{template.city}</span>
+                          <span className="absolute bottom-3 left-3 rounded-full bg-[#004ac6] px-2.5 py-1 text-[10px] font-extrabold text-white">{template.durationDays} hari</span>
                           {selected ? (
-                            <span className="absolute right-3 top-3 rounded-full bg-primary px-2.5 py-1 text-[10px] font-extrabold text-white">Dipilih</span>
+                            <span className="absolute right-14 top-3 rounded-full bg-primary px-2.5 py-1 text-[10px] font-extrabold text-white">Dipilih</span>
                           ) : null}
                         </div>
-                        <div className="p-3 pb-2">
+                        <div className="p-3.5 pb-2">
                           <p className="type-subtitle text-on-surface">{template.title}</p>
                           <p className="type-caption mt-1 text-on-surface-variant">{template.durationDays} hari · dipakai {template.usageCount}x</p>
                         </div>
                       </button>
-                      <div className="flex items-center justify-between gap-2 px-3 pb-3">
+                      {province ? (
+                        <div className="absolute right-3 top-3 z-20">
+                          <TemplateRoutePeek province={province} />
+                        </div>
+                      ) : null}
+                      <div className="flex items-center justify-between gap-2 px-3.5 pb-3.5">
                         <p className="type-caption text-on-surface-variant">{selected ? "Lanjut ke detail trip." : "Klik kartu untuk memilih."}</p>
                         {province ? (
                           <Link
@@ -721,7 +784,7 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
               value={destinationCity}
               onChange={setDestinationCity}
               error={fieldErrors.destinationCity}
-              placeholder="Cari kota atau destinasi"
+              placeholder="Ketik destinasi, misal Jambi atau Lampung"
             />
             <div className="grid gap-4 md:grid-cols-2">
               <Field id="startDate" label="Tanggal mulai" error={fieldErrors.startDate}>
@@ -794,9 +857,10 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
                   Pool itinerary: {formatRupiah(availableBudgetPool(budgetAmount, budgetBasis, partySize))} · swadaya, bukan harga join.
                 </p>
               </div>
+              <PackingListField items={packingItems} onChange={setPackingItems} />
             </div>
           </div>
-          <Nav onBack={() => setStep(1)} onNext={goFromStep2} nextLabel={path === "template" ? "Lihat rute + biaya" : "Generate itinerary"} />
+          <Nav onBack={path === "template" ? undefined : () => setStep(1)} onNext={goFromStep2} nextLabel={path === "template" ? "Lihat rute + biaya" : "Generate itinerary"} />
         </>
       ) : null}
 
@@ -823,6 +887,11 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
               budgetPlan={budgetPlan}
               partySize={partySize}
               isPublic={visibility === "PUBLIC"}
+              destinationCity={destinationCity}
+              budgetAmount={budgetAmount}
+              budgetBasis={budgetBasis}
+              onBudgetAmountChange={setBudgetAmount}
+              onBudgetBasisChange={setBudgetBasis}
               onSelectStop={(id) => {
                 setSelectedStopId(id);
                 setEditingStopId(id);
@@ -839,6 +908,8 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
                 });
               }}
               onUpdateStop={updateStop}
+              onAddStop={addStop}
+              onRemoveStop={removeStop}
               onRegenerate={() => void regenerate()}
             />
           )}

@@ -1,6 +1,7 @@
 import type {
   BudgetItemInput,
   EditableItineraryDay,
+  EditableItineraryStop,
   ItineraryTemplateDetail,
   PlaceSummary,
   TemplateDaySummary,
@@ -164,6 +165,191 @@ export function suggestedStartMinutes(name: string) {
   if (/bromo|ijen|kawah/.test(value)) return 4 * 60 + 30;
   if (/uluwatu|tanah lot/.test(value)) return 15 * 60 + 30;
   return 8 * 60;
+}
+
+export type TransportLeg = {
+  mode: string;
+  detail: string;
+  amount: number;
+  minutes: number;
+  km: number;
+};
+
+export function stopCoordinates(stop?: EditableItineraryDay["stops"][number] | null) {
+  const lat = stop?.place?.latitude;
+  const lng = stop?.place?.longitude;
+  if (typeof lat === "number" && typeof lng === "number") return { lat, lng };
+  return null;
+}
+
+export function describeTransportLeg(
+  from: { lat: number; lng: number } | null | undefined,
+  to: { lat: number; lng: number } | null | undefined,
+  options?: { firstOfDay?: boolean; destinationName?: string },
+): TransportLeg {
+  if (options?.firstOfDay || !from || !to) {
+    return { mode: "Titik awal", detail: "Titik awal hari, belum ada perjalanan.", amount: 0, minutes: 0, km: 0 };
+  }
+  const km = haversineKm(from, to);
+  const name = (options?.destinationName ?? "").toLocaleLowerCase("id-ID");
+  if (/bromo|ijen|penanjakan/.test(name)) {
+    const minutes = Math.max(25, travelMinutesBetween(from, to));
+    return {
+      mode: "Jeep wisata",
+      detail: `Naik jeep wisata ~${minutes} menit (${km.toFixed(1)} km)`,
+      amount: Math.max(180_000, Math.round(km * 12_000)),
+      minutes,
+      km,
+    };
+  }
+  if (km < 0.8) {
+    const minutes = Math.max(5, Math.round((km / 4.5) * 60));
+    return {
+      mode: "Jalan kaki",
+      detail: `Jalan kaki ~${minutes} menit (${km.toFixed(1)} km)`,
+      amount: 0,
+      minutes,
+      km,
+    };
+  }
+  const minutes = travelMinutesBetween(from, to);
+  if (km < 12) {
+    return {
+      mode: "Ojek online / angkot",
+      detail: `Naik ojek online atau angkot ~${minutes} menit (${km.toFixed(1)} km)`,
+      amount: Math.max(15_000, Math.round(8_000 + km * 4_500)),
+      minutes,
+      km,
+    };
+  }
+  if (km < 45) {
+    return {
+      mode: "Taksi online",
+      detail: `Naik taksi online ~${minutes} menit (${km.toFixed(1)} km)`,
+      amount: Math.max(40_000, Math.round(km * 7_000)),
+      minutes,
+      km,
+    };
+  }
+  return {
+    mode: "Travel / sewa mobil",
+    detail: `Naik travel atau sewa mobil ~${minutes} menit (${km.toFixed(1)} km)`,
+    amount: Math.max(150_000, Math.round(km * 6_500)),
+    minutes,
+    km,
+  };
+}
+
+export type PickedVisitPlace = {
+  name: string;
+  city: string;
+  latitude?: number;
+  longitude?: number;
+};
+
+export function placeSummaryFromPick(input: PickedVisitPlace): PlaceSummary {
+  const base = placeFromTemplateStop(input.name, input.city);
+  const latitude = input.latitude;
+  const longitude = input.longitude;
+  if (
+    latitude == null ||
+    longitude == null ||
+    !Number.isFinite(latitude) ||
+    !Number.isFinite(longitude) ||
+    (latitude === 0 && longitude === 0)
+  ) {
+    return { ...base, name: input.name };
+  }
+  return {
+    ...base,
+    name: input.name,
+    city: input.city,
+    formattedAddress: `${input.name}, ${input.city}`,
+    latitude,
+    longitude,
+    googleMapsUrl: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${input.name} ${latitude.toFixed(6)},${longitude.toFixed(6)}`)}`,
+  };
+}
+
+export function appendVisitStop(
+  days: EditableItineraryDay[],
+  dayId: string,
+  input: PickedVisitPlace & { lock?: boolean },
+): EditableItineraryDay[] {
+  const next = days.map((day) => {
+    if (day.id !== dayId) return day;
+    const place = placeSummaryFromPick(input);
+    const stop: EditableItineraryStop = {
+      id: `${dayId}-custom-${Date.now()}`,
+      sequence: day.stops.length + 1,
+      place,
+      customTitle: input.name,
+      activityType: "Wisata",
+      startTime: "08:00",
+      durationMinutes: 90,
+      travelDurationMinutes: 20,
+      notes: "Ditambah sendiri.",
+      isLocked: input.lock !== false,
+    };
+    return { ...day, stops: [...day.stops, stop] };
+  });
+  return packItinerarySchedule(next);
+}
+
+export function mergeLockedStops(generated: EditableItineraryDay[], previous: EditableItineraryDay[]): EditableItineraryDay[] {
+  const locked = previous.flatMap((day) => (
+    day.stops.filter((stop) => stop.isLocked).map((stop) => ({ dayNumber: day.dayNumber, stop }))
+  ));
+  if (!locked.length) return generated;
+  const stopKey = (stop: EditableItineraryStop) => (stop.customTitle || stop.place?.name || "").trim().toLocaleLowerCase("id-ID");
+  const used = new Set(generated.flatMap((day) => day.stops.map(stopKey).filter(Boolean)));
+  const next = generated.map((day) => {
+    const extras = locked
+      .filter((item) => item.dayNumber === day.dayNumber)
+      .map((item) => item.stop)
+      .filter((stop) => {
+        const key = stopKey(stop);
+        return Boolean(key) && !used.has(key);
+      });
+    extras.forEach((stop) => used.add(stopKey(stop)));
+    const stops = day.stops.map((stop) => (
+      locked.some((item) => stopKey(item.stop) === stopKey(stop)) ? { ...stop, isLocked: true } : stop
+    ));
+    return extras.length ? { ...day, stops: [...stops, ...extras] } : { ...day, stops };
+  });
+  const leftover = locked.filter((item) => {
+    const key = stopKey(item.stop);
+    return Boolean(key) && !used.has(key);
+  });
+  if (leftover.length && next[0]) {
+    next[0] = { ...next[0], stops: [...next[0].stops, ...leftover.map((item) => item.stop)] };
+  }
+  return packItinerarySchedule(next);
+}
+
+export function withGlobalStopNumbers(days: EditableItineraryDay[]): EditableItineraryDay[] {
+  let sequence = 1;
+  return days.map((day) => ({
+    ...day,
+    stops: day.stops.map((stop) => ({ ...stop, sequence: sequence++ })),
+  }));
+}
+
+export function placeTicketEstimate(name: string) {
+  const value = name.toLocaleLowerCase("id-ID");
+  if (
+    /bundaran|hotel indonesia|selamat datang|welcome monument|braga|malioboro|alun-?alun|tugu yogyakarta|^tugu\b|cihampelas|asia afrika|kota tua|suryakencana|taman kencana|gedung sate|monumen nasional|\bmonas\b|plaza monas|lapangan monas/.test(
+      value,
+    )
+  ) {
+    return 0;
+  }
+  if (/bromo|ijen|kawah|rinjani|padar|komodo|kerinci/.test(value)) return 150_000;
+  if (/candi|pura|tanah lot|uluwatu|keraton|museum|taman nasional|tangkuban|kebun raya|borobudur|prambanan/.test(value)) {
+    return 50_000;
+  }
+  if (/ancol|pantai|gili/.test(value)) return 25_000;
+  return 0;
 }
 
 export function packItinerarySchedule(days: EditableItineraryDay[]): EditableItineraryDay[] {
@@ -561,7 +747,7 @@ function usableCoord(value: number | null | undefined) {
 }
 
 export function hydrateItineraryPlaces(days: EditableItineraryDay[], city: string): EditableItineraryDay[] {
-  return days.map((day) => ({
+  return withGlobalStopNumbers(days.map((day) => ({
     ...day,
     stops: day.stops.map((item) => {
       const stop = item as StopWithCoords;
@@ -593,7 +779,7 @@ export function hydrateItineraryPlaces(days: EditableItineraryDay[], city: strin
         },
       };
     }),
-  }));
+  })));
 }
 
 export function googleMapsDirectionsUrl(markers: Array<{ latitude: number; longitude: number }>) {

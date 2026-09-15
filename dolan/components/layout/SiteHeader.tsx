@@ -4,9 +4,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { AuthSession } from "@/lib/contracts";
-import { ASSETS } from "@/lib/assets";
 import { ROUTES, type NavKey } from "@/lib/routes";
 import { Icon } from "@/components/ui/Icon";
+import { DolanWordmark } from "@/components/brand/DolanWordmark";
 import { UserAvatar } from "@/components/ui/UserAvatar";
 
 const desktopLinks: { key: NavKey; href: string; label: string }[] = [
@@ -38,6 +38,7 @@ export function SiteHeader({
   unreadCount?: number;
 }) {
   const pathname = usePathname();
+  const chatChrome = pathname === "/chat" || /\/trip\/[^/]+\/chat$/.test(pathname);
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
     const update = () => setScrolled(window.scrollY > 20);
@@ -46,6 +47,7 @@ export function SiteHeader({
     return () => window.removeEventListener("scroll", update);
   }, []);
   const transparent = pathname === "/" && !scrolled;
+  if (chatChrome) return null;
 
   return (
     <header
@@ -57,16 +59,8 @@ export function SiteHeader({
     >
       <div className="mx-auto flex h-14 max-w-[1240px] items-center justify-between gap-3 px-margin md:h-16 md:px-margin-desktop lg:grid lg:grid-cols-3">
         <div className="flex min-w-0 items-center gap-6">
-          <Link href={ROUTES.beranda} className="flex items-center gap-2">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              alt="Dolan Logo"
-              className="h-7 w-auto object-contain"
-              src={ASSETS.logo}
-            />
-            <span className="type-subtitle tracking-tight text-on-surface">
-              Dolan
-            </span>
+          <Link href={ROUTES.beranda} className="flex items-center" aria-label="DOLAN beranda">
+            <DolanWordmark height={34} className={transparent ? "rounded-lg bg-white/92 px-1" : ""} />
           </Link>
 
         </div>

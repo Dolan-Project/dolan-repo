@@ -11,6 +11,7 @@ export type MapPoint = {
   label: string;
   lat: number;
   lng: number;
+  sequence?: number;
 };
 
 type GoogleMapProps = {
@@ -76,6 +77,8 @@ type GoogleDirectionsService = {
     request: {
       origin: { lat: number; lng: number };
       destination: { lat: number; lng: number };
+      waypoints?: Array<{ location: { lat: number; lng: number }; stopover?: boolean }>;
+      optimizeWaypoints?: boolean;
       travelMode: string;
       provideRouteAlternatives?: boolean;
     },
@@ -86,22 +89,30 @@ type GoogleDirectionsService = {
   ): void;
 };
 
-function requestDrivingPath(
+function requestDrivingRoute(
   maps: NonNullable<Window["google"]>["maps"],
-  origin: { lat: number; lng: number },
-  destination: { lat: number; lng: number },
+  points: Array<{ lat: number; lng: number }>,
 ) {
   return new Promise<Array<{ lat: number; lng: number }>>((resolve) => {
+    if (points.length < 2) {
+      resolve(points);
+      return;
+    }
     const finish = (serviceCtor: (new () => GoogleDirectionsService) | undefined, travelMode: string | undefined) => {
       if (!serviceCtor || !travelMode) {
-        resolve([origin, destination]);
+        resolve(points);
         return;
       }
+      const origin = points[0]!;
+      const destination = points[points.length - 1]!;
+      const waypoints = points.slice(1, -1).map((location) => ({ location, stopover: true }));
       const service = new serviceCtor();
       service.route(
         {
           origin,
           destination,
+          waypoints: waypoints.length ? waypoints : undefined,
+          optimizeWaypoints: false,
           travelMode,
           provideRouteAlternatives: false,
         },
@@ -111,7 +122,7 @@ function requestDrivingPath(
             resolve(path.map((point) => ({ lat: point.lat(), lng: point.lng() })));
             return;
           }
-          resolve([origin, destination]);
+          resolve(points);
         },
       );
     };
@@ -144,9 +155,14 @@ function loadGoogleMaps(apiKey: string) {
   return window.__dolanGoogleMaps;
 }
 
-function destinationPin(selected: boolean, maps: NonNullable<Window["google"]>["maps"], sequence?: number) {
+function destinationPin(
+  selected: boolean,
+  maps: NonNullable<Window["google"]>["maps"],
+  sequence?: number,
+  color?: string,
+) {
   const index = Math.max(0, (sequence ?? 1) - 1);
-  const svg = itineraryPinSvg(index, sequence ?? index + 1, selected);
+  const svg = itineraryPinSvg(index, sequence ?? index + 1, selected, color);
   return {
     url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
     anchor: new maps.Point(16, 40),
@@ -280,7 +296,7 @@ export function GoogleMap({
         map,
         position: { lat: point.lat, lng: point.lng },
         title: point.label,
-        icon: destinationPin(false, maps, index + 1),
+        icon: destinationPin(false, maps, point.sequence ?? index + 1),
         zIndex: 1,
       });
       marker.addListener("click", () => onSelect(point.id));
@@ -294,12 +310,12 @@ export function GoogleMap({
     }
     routeLinesRef.current.forEach((line) => line.setMap(null));
     routeLinesRef.current = [];
-    const addRoadPath = (path: Array<{ lat: number; lng: number }>, geodesic = false) => {
+    const addRoadPath = (path: Array<{ lat: number; lng: number }>) => {
       if (path.length < 2 || cancelled) return;
       const casing = new maps.Polyline({
         map,
         path,
-        geodesic,
+        geodesic: false,
         strokeColor: "#00174b",
         strokeOpacity: 0.9,
         strokeWeight: 8,
@@ -308,7 +324,7 @@ export function GoogleMap({
       const line = new maps.Polyline({
         map,
         path,
-        geodesic,
+        geodesic: false,
         strokeColor: routeColor,
         strokeOpacity: 1,
         strokeWeight: 5,
@@ -328,14 +344,10 @@ export function GoogleMap({
     const groups = (routeGroups?.length ? routeGroups : showRoute ? [points] : []).filter((group) => group.length >= 2);
     void (async () => {
       for (const group of groups) {
-        for (let index = 1; index < group.length; index += 1) {
-          if (cancelled) return;
-          const origin = { lat: group[index - 1]!.lat, lng: group[index - 1]!.lng };
-          const destination = { lat: group[index]!.lat, lng: group[index]!.lng };
-          const path = await requestDrivingPath(maps, origin, destination);
-          if (cancelled) return;
-          addRoadPath(path, path.length < 3);
-        }
+        if (cancelled) return;
+        const path = await requestDrivingRoute(maps, group.map((point) => ({ lat: point.lat, lng: point.lng })));
+        if (cancelled) return;
+        addRoadPath(path);
       }
     })();
     return () => {
@@ -355,16 +367,17 @@ export function GoogleMap({
     }
     markersRef.current.forEach((marker, id) => {
       const selected = id === selectedId;
-      const sequence = points.findIndex((item) => item.id === id) + 1;
+      const mapped = points.find((item) => item.id === id);
+      const sequence = mapped?.sequence ?? points.findIndex((item) => item.id === id) + 1;
       marker.setIcon(destinationPin(selected, maps, sequence > 0 ? sequence : undefined));
       marker.setZIndex(selected ? 1000 : null);
     });
-  }, [mapReady, numberedBadges, points, selectedId, showRoute]);
+  }, [mapReady, numberedBadges, points, routeColor, selectedId, showRoute]);
 
   if (!apiKey || error) {
     return (
-      <div className={`relative overflow-hidden bg-[#dff1f4] ${className}`}>
-        <div className="absolute inset-0 opacity-50 [background-image:linear-gradient(30deg,#b8d8d2_12%,transparent_12.5%,transparent_87%,#b8d8d2_87.5%,#b8d8d2),linear-gradient(150deg,#b8d8d2_12%,transparent_12.5%,transparent_87%,#b8d8d2_87.5%,#b8d8d2),linear-gradient(30deg,#b8d8d2_12%,transparent_12.5%,transparent_87%,#b8d8d2_87.5%,#b8d8d2),linear-gradient(150deg,#b8d8d2_12%,transparent_12.5%,transparent_87%,#b8d8d2_87.5%,#b8d8d2)] [background-position:0_0,0_0,40px_70px,40px_70px] [background-size:80px_140px]" />
+      <div className={`relative overflow-hidden bg-white ${className}`}>
+        <div className="absolute inset-0 bg-slate-50" />
         {points.slice(0, 5).map((point, index) => (
           <button
             key={point.id}
@@ -374,7 +387,7 @@ export function GoogleMap({
             style={{ left: `${18 + ((index * 17) % 60)}%`, top: `${18 + ((index * 21) % 55)}%` }}
             aria-label={`Pilih ${point.label}`}
           >
-            <ItineraryStopPin index={index} sequence={index + 1} selected={point.id === selectedId} />
+            <ItineraryStopPin index={index} sequence={point.sequence ?? index + 1} selected={point.id === selectedId} />
           </button>
         ))}
         <div className={`absolute z-10 rounded-2xl border border-white/70 bg-white/90 p-3 text-center shadow-lg backdrop-blur ${searchOverlay ? "left-4 right-20 top-20 lg:inset-x-4 lg:top-4" : "inset-x-4 top-4"}`}>

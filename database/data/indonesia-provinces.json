@@ -488,50 +488,82 @@
     "featuredRank": 6,
     "places": [
       {
-        "name": "Candi Muaro Jambi",
+        "name": "Gentala Arasy",
         "city": "Jambi",
         "rank": 1,
-        "description": "Candi Muaro Jambi adalah salah satu destinasi populer di Jambi. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "description": "Jembatan dan museum di tepi Batanghari, titik kumpul yang mudah dikenali di pusat Kota Jambi.",
+        "searchQuery": "Gentala Arasy, Jambi, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Gentala%20Arasy%2C%20Jambi%2C%20Indonesia"
+      },
+      {
+        "name": "Masjid Agung Al-Falah Jambi",
+        "city": "Jambi",
+        "rank": 2,
+        "description": "Masjid agung dekat Gentala Arasy, lanjut jalan kaki di koridor sungai.",
+        "searchQuery": "Masjid Agung Al-Falah, Jambi, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Masjid%20Agung%20Al-Falah%2C%20Jambi%2C%20Indonesia"
+      },
+      {
+        "name": "Museum Siginjai",
+        "city": "Jambi",
+        "rank": 3,
+        "description": "Museum negeri Jambi di pusat kota, masih satu koridor dengan Gentala.",
+        "searchQuery": "Museum Siginjai, Jambi, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Museum%20Siginjai%2C%20Jambi%2C%20Indonesia"
+      },
+      {
+        "name": "Candi Muaro Jambi",
+        "city": "Jambi",
+        "rank": 4,
+        "description": "Kompleks candi di pinggir Kota Jambi, satu hari yang sama dengan pusat kota tanpa lompat ke Kerinci.",
         "searchQuery": "Candi Muaro Jambi, Jambi, Indonesia",
         "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Candi%20Muaro%20Jambi%2C%20Jambi%2C%20Indonesia"
       },
       {
         "name": "Gunung Kerinci",
         "city": "Jambi",
-        "rank": 2,
-        "description": "Gunung Kerinci adalah salah satu destinasi populer di Jambi. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "rank": 5,
+        "description": "Puncak tertinggi Sumatera. Dikunjungi bersama danau dan kebun teh di koridor Kerinci, bukan dipasangkan dengan candi kota.",
         "searchQuery": "Gunung Kerinci, Jambi, Indonesia",
         "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Gunung%20Kerinci%2C%20Jambi%2C%20Indonesia"
       },
       {
-        "name": "Danau Kaco",
+        "name": "Kebun Teh Kayu Aro",
         "city": "Jambi",
-        "rank": 3,
-        "description": "Danau Kaco adalah salah satu destinasi populer di Jambi. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
-        "searchQuery": "Danau Kaco, Jambi, Indonesia",
-        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Danau%20Kaco%2C%20Jambi%2C%20Indonesia"
-      },
-      {
-        "name": "Geopark Merangin",
-        "city": "Jambi",
-        "rank": 4,
-        "description": "Geopark Merangin adalah salah satu destinasi populer di Jambi. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
-        "searchQuery": "Geopark Merangin, Jambi, Indonesia",
-        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Geopark%20Merangin%2C%20Jambi%2C%20Indonesia"
+        "rank": 6,
+        "description": "Hamparan teh di kaki Kerinci, lanjut dari view gunung tanpa pindah kabupaten jauh.",
+        "searchQuery": "Kebun Teh Kayu Aro, Kerinci, Jambi, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Kebun%20Teh%20Kayu%20Aro%2C%20Kerinci%2C%20Jambi"
       },
       {
         "name": "Danau Gunung Tujuh",
         "city": "Jambi",
-        "rank": 5,
-        "description": "Danau Gunung Tujuh adalah salah satu destinasi populer di Jambi. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "rank": 7,
+        "description": "Danau kawah di kawasan Kerinci, satu koridor dengan Kayu Aro.",
         "searchQuery": "Danau Gunung Tujuh, Jambi, Indonesia",
         "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Danau%20Gunung%20Tujuh%2C%20Jambi%2C%20Indonesia"
+      },
+      {
+        "name": "Geopark Merangin",
+        "city": "Jambi",
+        "rank": 8,
+        "description": "Fosil dan formasi geologi Merangin. Satu hari bersama Danau Kaco, bukan dicampur Kerinci.",
+        "searchQuery": "Geopark Merangin, Jambi, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Geopark%20Merangin%2C%20Jambi%2C%20Indonesia"
+      },
+      {
+        "name": "Danau Kaco",
+        "city": "Jambi",
+        "rank": 9,
+        "description": "Danau jernih di Merangin, tempuh sewa lokal dari geopark.",
+        "searchQuery": "Danau Kaco, Jambi, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Danau%20Kaco%2C%20Jambi%2C%20Indonesia"
       }
     ],
     "template": {
       "id": "9d5725d4-1848-44ef-9d3a-44ec9aec0eae",
       "title": "Rute Backpacker Jambi",
-      "description": "Rute awal DOLAN untuk mengenal destinasi unggulan Jambi secara efisien.",
+      "description": "Tiga koridor terpisah: kota Jambi, Kerinci, lalu Merangin. Setiap hari 3 titik dari pagi sampai sore, tanpa lompat kabupaten di hari yang sama.",
       "durationDays": 3,
       "transportMode": "Transportasi umum + sewa lokal",
       "budgetLow": 750000,
@@ -540,37 +572,58 @@
         {
           "day": 1,
           "sequence": 1,
-          "name": "Candi Muaro Jambi",
-          "durationMinutes": 150,
-          "notes": "Mulai pagi untuk menghindari antrean dan cuaca terik."
+          "name": "Gentala Arasy",
+          "durationMinutes": 90,
+          "notes": "Mulai pagi di tepi Batanghari. Foto jembatan lalu lanjut ke masjid."
         },
         {
           "day": 1,
           "sequence": 2,
-          "name": "Gunung Kerinci",
-          "durationMinutes": 120,
-          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+          "name": "Masjid Agung Al-Falah Jambi",
+          "durationMinutes": 60,
+          "notes": "Jalan kaki dari Gentala. Istirahat singkat sebelum museum."
+        },
+        {
+          "day": 1,
+          "sequence": 3,
+          "name": "Candi Muaro Jambi",
+          "durationMinutes": 150,
+          "notes": "Sore di kompleks candi pinggir kota. Naik ojek/travel, bukan ke Kerinci."
         },
         {
           "day": 2,
           "sequence": 1,
-          "name": "Danau Kaco",
-          "durationMinutes": 150,
-          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+          "name": "Gunung Kerinci",
+          "durationMinutes": 120,
+          "notes": "Hari koridor Kerinci. View kaki gunung, bukan summit wajib."
         },
         {
           "day": 2,
           "sequence": 2,
-          "name": "Geopark Merangin",
-          "durationMinutes": 120,
-          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+          "name": "Kebun Teh Kayu Aro",
+          "durationMinutes": 90,
+          "notes": "Hamparan teh di kaki Kerinci, lanjut siang."
+        },
+        {
+          "day": 2,
+          "sequence": 3,
+          "name": "Danau Gunung Tujuh",
+          "durationMinutes": 150,
+          "notes": "Trekking ringan danau kawah sampai sore."
         },
         {
           "day": 3,
           "sequence": 1,
-          "name": "Danau Gunung Tujuh",
+          "name": "Geopark Merangin",
+          "durationMinutes": 120,
+          "notes": "Hari koridor Merangin. Cek akses jalan desa."
+        },
+        {
+          "day": 3,
+          "sequence": 2,
+          "name": "Danau Kaco",
           "durationMinutes": 150,
-          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+          "notes": "Danau jernih dekat geopark, tutup sore sebelum gelap."
         }
       ]
     }
@@ -872,50 +925,82 @@
     "featuredRank": 10,
     "places": [
       {
-        "name": "Taman Nasional Way Kambas",
+        "name": "Pantai Mutun",
         "city": "Bandar Lampung",
         "rank": 1,
-        "description": "Taman Nasional Way Kambas adalah salah satu destinasi populer di Lampung. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
-        "searchQuery": "Taman Nasional Way Kambas, Lampung, Indonesia",
-        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Taman%20Nasional%20Way%20Kambas%2C%20Lampung%2C%20Indonesia"
+        "description": "Pantai dekat Bandar Lampung, koridor kota hari pertama.",
+        "searchQuery": "Pantai Mutun, Lampung, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Pantai%20Mutun%2C%20Lampung%2C%20Indonesia"
       },
       {
-        "name": "Pulau Pahawang",
+        "name": "Lampung Walk",
         "city": "Bandar Lampung",
         "rank": 2,
-        "description": "Pulau Pahawang adalah salah satu destinasi populer di Lampung. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
-        "searchQuery": "Pulau Pahawang, Lampung, Indonesia",
-        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Pulau%20Pahawang%2C%20Lampung%2C%20Indonesia"
+        "description": "Koridor kuliner dan jalan-jalan di pusat Bandar Lampung.",
+        "searchQuery": "Lampung Walk, Bandar Lampung, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Lampung%20Walk%2C%20Bandar%20Lampung"
+      },
+      {
+        "name": "Museum Lampung",
+        "city": "Bandar Lampung",
+        "rank": 3,
+        "description": "Museum negeri di pusat kota, satu hari dengan Mutun dan Lampung Walk.",
+        "searchQuery": "Museum Lampung, Bandar Lampung, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Museum%20Lampung%2C%20Bandar%20Lampung"
+      },
+      {
+        "name": "Puncak Mas Lampung",
+        "city": "Bandar Lampung",
+        "rank": 4,
+        "description": "View kota sore hari, masih di Bandar Lampung.",
+        "searchQuery": "Puncak Mas, Bandar Lampung, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Puncak%20Mas%2C%20Bandar%20Lampung"
       },
       {
         "name": "Teluk Kiluan",
         "city": "Bandar Lampung",
-        "rank": 3,
-        "description": "Teluk Kiluan adalah salah satu destinasi populer di Lampung. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "rank": 5,
+        "description": "Teluk lumba-lumba. Satu hari dengan Gigi Hiu di semenanjung selatan, bukan dipasangkan Pahawang.",
         "searchQuery": "Teluk Kiluan, Lampung, Indonesia",
         "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Teluk%20Kiluan%2C%20Lampung%2C%20Indonesia"
       },
       {
         "name": "Pantai Gigi Hiu",
         "city": "Bandar Lampung",
-        "rank": 4,
-        "description": "Pantai Gigi Hiu adalah salah satu destinasi populer di Lampung. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
+        "rank": 6,
+        "description": "Formasi batu dekat Kiluan, lanjut sore di koridor yang sama.",
         "searchQuery": "Pantai Gigi Hiu, Lampung, Indonesia",
         "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Pantai%20Gigi%20Hiu%2C%20Lampung%2C%20Indonesia"
       },
       {
-        "name": "Gunung Anak Krakatau",
+        "name": "Pantai Kelawi",
         "city": "Bandar Lampung",
-        "rank": 5,
-        "description": "Gunung Anak Krakatau adalah salah satu destinasi populer di Lampung. Detail foto, rating, alamat, dan jam buka ditampilkan dari Google Places saat halaman dibuka.",
-        "searchQuery": "Gunung Anak Krakatau, Lampung, Indonesia",
-        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Gunung%20Anak%20Krakatau%2C%20Lampung%2C%20Indonesia"
+        "rank": 7,
+        "description": "Pantai dekat Kiluan untuk menutup hari selatan Lampung.",
+        "searchQuery": "Pantai Kelawi, Lampung, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Pantai%20Kelawi%2C%20Lampung"
+      },
+      {
+        "name": "Dermaga Ketapang Pahawang",
+        "city": "Bandar Lampung",
+        "rank": 8,
+        "description": "Titik berangkat ke Pahawang. Hari pulau terpisah dari Kiluan.",
+        "searchQuery": "Dermaga Ketapang Pahawang, Lampung, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Dermaga%20Ketapang%20Pahawang%2C%20Lampung"
+      },
+      {
+        "name": "Pulau Pahawang",
+        "city": "Bandar Lampung",
+        "rank": 9,
+        "description": "Snorkeling dan desa pulau. Satu hari penuh bersama dermaga, bukan dicampur Way Kambas.",
+        "searchQuery": "Pulau Pahawang, Lampung, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Pulau%20Pahawang%2C%20Lampung%2C%20Indonesia"
       }
     ],
     "template": {
       "id": "99c0744c-330c-4105-900a-c2a6a7fb1a55",
       "title": "Rute Backpacker Lampung",
-      "description": "Rute awal DOLAN untuk mengenal destinasi unggulan Lampung secara efisien.",
+      "description": "Kota Bandar Lampung, semenanjung Kiluan, lalu hari pulau Pahawang. Setiap hari 2–3 titik dari pagi sampai sore.",
       "durationDays": 3,
       "transportMode": "Transportasi umum + sewa lokal",
       "budgetLow": 750000,
@@ -924,37 +1009,58 @@
         {
           "day": 1,
           "sequence": 1,
-          "name": "Taman Nasional Way Kambas",
-          "durationMinutes": 150,
-          "notes": "Mulai pagi untuk menghindari antrean dan cuaca terik."
+          "name": "Pantai Mutun",
+          "durationMinutes": 120,
+          "notes": "Pagi di pantai dekat kota."
         },
         {
           "day": 1,
           "sequence": 2,
-          "name": "Pulau Pahawang",
-          "durationMinutes": 120,
-          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+          "name": "Museum Lampung",
+          "durationMinutes": 90,
+          "notes": "Kembali ke pusat kota, cek jam buka museum."
+        },
+        {
+          "day": 1,
+          "sequence": 3,
+          "name": "Puncak Mas Lampung",
+          "durationMinutes": 90,
+          "notes": "Sore view kota, masih di Bandar Lampung."
         },
         {
           "day": 2,
           "sequence": 1,
           "name": "Teluk Kiluan",
           "durationMinutes": 150,
-          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+          "notes": "Berangkat pagi ke semenanjung selatan. Cek musim lumba-lumba."
         },
         {
           "day": 2,
           "sequence": 2,
           "name": "Pantai Gigi Hiu",
-          "durationMinutes": 120,
-          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+          "durationMinutes": 90,
+          "notes": "Lanjut formasi batu di koridor Kiluan."
+        },
+        {
+          "day": 2,
+          "sequence": 3,
+          "name": "Pantai Kelawi",
+          "durationMinutes": 90,
+          "notes": "Tutup sore sebelum kembali ke penginapan."
         },
         {
           "day": 3,
           "sequence": 1,
-          "name": "Gunung Anak Krakatau",
-          "durationMinutes": 150,
-          "notes": "Periksa waktu tempuh dan jam buka sebelum berangkat."
+          "name": "Dermaga Ketapang Pahawang",
+          "durationMinutes": 60,
+          "notes": "Berangkat pagi, siapkan tiket kapal."
+        },
+        {
+          "day": 3,
+          "sequence": 2,
+          "name": "Pulau Pahawang",
+          "durationMinutes": 240,
+          "notes": "Snorkeling dan keliling desa pulau sampai sore, lalu balik dermaga."
         }
       ]
     }

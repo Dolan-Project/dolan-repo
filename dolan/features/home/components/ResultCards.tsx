@@ -3,6 +3,7 @@ import { Icon } from "@/components/ui/Icon";
 import { ROUTES } from "@/lib/routes";
 import { findProvinceForTemplate, provinceDetailHref } from "@/lib/provinces";
 import { provinceCoverUrl } from "@/lib/province-cover";
+import { TemplateRoutePeek } from "@/components/trip/TemplateRoutePeek";
 import type { ItineraryTemplateResult, PlaceResult, TripResult } from "../types";
 
 function Cover({ src, alt }: { src: string; alt: string }) {
@@ -29,21 +30,35 @@ export function TripCard({ trip }: { trip: TripResult }) {
 }
 
 export function ItineraryTemplateCard({ template }: { template: ItineraryTemplateResult }) {
+  const province = findProvinceForTemplate({ templateId: template.id, city: template.city });
   const href = provinceDetailHref({ templateId: template.id, city: template.city }) ?? `${ROUTES.buatTrip}?templateId=${encodeURIComponent(template.id)}`;
-  const cover = findProvinceForTemplate({ templateId: template.id, city: template.city });
-  const useHref = `${ROUTES.buatTrip}?templateId=${encodeURIComponent(template.id)}`;
+  const destination = province?.name ?? template.city;
+  const useHref = `${ROUTES.buatTrip}?templateId=${encodeURIComponent(template.id)}&destination=${encodeURIComponent(destination)}`;
+  const cover = province ? provinceCoverUrl(province) : template.imageUrl;
   return (
-    <article className="overflow-hidden rounded-3xl border border-sky-100 bg-white shadow-sm">
-      <div className="relative h-36 overflow-hidden">
-        <Cover src={cover ? provinceCoverUrl(cover) : template.imageUrl} alt={cover?.name ?? template.title} />
-        <span className="absolute left-3 top-3 rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-extrabold text-sky-800 shadow-sm backdrop-blur">{template.curated ? "Kurasi Dolan" : "Populer di Dolan"}</span>
+    <article className="group overflow-visible rounded-[24px] border border-white bg-gradient-to-br from-white to-indigo-50/70 shadow-[0_14px_38px_rgba(29,78,116,0.12)] ring-1 ring-indigo-100/80 transition duration-300 hover:-translate-y-1 hover:shadow-[0_22px_50px_rgba(29,78,116,0.18)]">
+      <div className="relative h-40 overflow-hidden rounded-t-[24px] bg-indigo-100">
+        <Cover src={cover} alt={province?.name ?? template.title} />
+        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/45 via-transparent to-transparent" />
+        <span className="absolute left-3 top-3 rounded-full border border-white/70 bg-white/90 px-2.5 py-1 text-[9px] font-extrabold uppercase tracking-[.1em] text-indigo-800 shadow-md backdrop-blur-md">
+          {template.curated ? "Kurasi Dolan" : "Populer di Dolan"}
+        </span>
       </div>
-      <div className="p-4">
-        <h3 className="font-bold text-slate-900">{template.title}</h3>
-        <p className="mt-1 text-xs text-slate-500">{template.durationDays} hari · Dipakai {template.usageCount.toLocaleString("id-ID")} pejalan</p>
-        <div className="mt-3 flex flex-wrap gap-2">
-          <Link href={useHref} className="rounded-full bg-blue-600 px-3 py-2 text-xs font-extrabold text-white">Pakai template</Link>
-          <Link href={href} className="rounded-full bg-sky-100 px-3 py-2 text-xs font-extrabold text-sky-800">Lihat detail</Link>
+      <div className="border-l-4 border-indigo-400 p-5">
+        <p className="flex items-center gap-1 text-[11px] font-bold text-indigo-700">
+          <Icon name="location_on" filled />
+          {destination}
+        </p>
+        <h3 className="mt-1.5 text-xl font-extrabold leading-tight text-slate-900">{template.title}</h3>
+        <p className="mt-2 text-xs text-slate-500">
+          {template.durationDays} hari · Dipakai {template.usageCount.toLocaleString("id-ID")} pejalan
+        </p>
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <Link href={useHref} className="inline-flex items-center gap-1 rounded-full bg-blue-600 px-3 py-2 text-xs font-extrabold text-white shadow-md shadow-blue-200">
+            Pakai template <Icon name="arrow_forward" />
+          </Link>
+          <Link href={href} className="rounded-full bg-indigo-100 px-3 py-2 text-xs font-extrabold text-indigo-800">Lihat detail</Link>
+          {province ? <TemplateRoutePeek province={province} /> : null}
         </div>
       </div>
     </article>

@@ -46,4 +46,13 @@ describe("itinerary editor adapter", () => {
     expect(next.snapshot.activeVersionId).toBe(snapshot.activeVersionId);
     expect(next.snapshot.versions[0].days.flatMap((day) => day.stops).filter((stop) => stop.isLocked).map((stop) => stop.id)).toEqual(lockedIds);
   });
+
+  it("rebuilds a cheaper itinerary instead of only rewriting notes", async () => {
+    const snapshot = createEditorSnapshot("komodo-4d3n");
+    const next = await generateAlternative(snapshot, snapshot.versions[0].days, INITIAL_BUDGET_ITEMS, "cheaper");
+    expect(next.snapshot.versions[0].summary).toMatch(/hemat/i);
+    expect(next.snapshot.versions[0].id).not.toBe(snapshot.activeVersionId);
+    expect(next.snapshot.versions[0].days.flatMap((day) => day.stops).length).toBeGreaterThan(0);
+    expect(next.snapshot.versions[0].days.flatMap((day) => day.stops.map((stop) => stop.notes)).join(" ")).toMatch(/hemat/i);
+  });
 });

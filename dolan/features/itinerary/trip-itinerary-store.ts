@@ -9,7 +9,14 @@ const snapshots = new Map<string, ItineraryEditorSnapshot>();
 function snapshotFromDays(
   tripId: string,
   days: EditableItineraryDay[],
-  meta: { title?: string; destinationCity?: string; startDate?: string | null; endDate?: string | null; summary?: string },
+  meta: {
+    title?: string;
+    destinationCity?: string;
+    startDate?: string | null;
+    endDate?: string | null;
+    summary?: string;
+    checklist?: ItineraryEditorSnapshot["checklist"];
+  },
 ): ItineraryEditorSnapshot {
   const versionId = "wizard-v1";
   const startDate = meta.startDate || "2026-10-01";
@@ -32,7 +39,7 @@ function snapshotFromDays(
       budget: createBudgetSummary(INITIAL_BUDGET_ITEMS),
       createdAt: new Date().toISOString(),
     }],
-    checklist: [],
+    checklist: meta.checklist ?? [],
   };
 }
 
@@ -80,7 +87,59 @@ export function saveMockItinerarySnapshot(
     startDate: previous.startDate,
     endDate: previous.endDate,
     summary: summary ?? previous.versions[0]?.summary ?? undefined,
+    checklist: previous.checklist,
   });
   snapshots.set(tripId, snapshot);
   return snapshot;
+}
+
+export function setMockChecklist(tripId: string, titles: string[]) {
+  const current = getMockItinerarySnapshot(tripId);
+  const checklist = titles
+    .map((title) => title.trim())
+    .filter(Boolean)
+    .map((title, index) => ({
+      id: current.checklist.find((item) => item.title === title)?.id ?? `pack-${index + 1}`,
+      title,
+      dueDate: null as string | null,
+      isCompleted: current.checklist.find((item) => item.title === title)?.isCompleted ?? false,
+    }));
+  const next = { ...current, checklist };
+  snapshots.set(tripId, next);
+  return next;
+}
+
+export function upsertMockChecklistItem(
+  tripId: string,
+  input: { id?: string; title: string; isCompleted?: boolean; dueDate?: string | null },
+) {
+  const current = getMockItinerarySnapshot(tripId);
+  if (input.id) {
+    const checklist = current.checklist.map((item) => (
+      item.id === input.id
+        ? {
+          ...item,
+          title: input.title,
+          isCompleted: input.isCompleted ?? item.isCompleted,
+          dueDate: input.dueDate === undefined ? item.dueDate : input.dueDate,
+        }
+        : item
+    ));
+    snapshots.set(tripId, { ...current, checklist });
+    return checklist.find((item) => item.id === input.id) ?? checklist.at(-1)!;
+  }
+  const title = input.title.trim();
+  const existing = current.checklist.find((item) => item.title === title);
+  if (existing) {
+    if (input.isCompleted === undefined && input.dueDate === undefined) return existing;
+    return upsertMockChecklistItem(tripId, { id: existing.id, title, isCompleted: input.isCompleted, dueDate: input.dueDate });
+  }
+  const item = {
+    id: `pack-${Date.now()}`,
+    title,
+    dueDate: input.dueDate ?? null,
+    isCompleted: Boolean(input.isCompleted),
+  };
+  snapshots.set(tripId, { ...current, checklist: [...current.checklist, item] });
+  return item;
 }

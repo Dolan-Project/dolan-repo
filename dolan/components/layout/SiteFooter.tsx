@@ -1,22 +1,22 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Icon } from "@/components/ui/Icon";
-import { ASSETS } from "@/lib/assets";
+import { DolanWordmark } from "@/components/brand/DolanWordmark";
 import { ROUTES } from "@/lib/routes";
 
 export function SiteFooter() {
+  const pathname = usePathname();
+  if (pathname === "/chat" || /\/trip\/[^/]+\/chat$/.test(pathname)) return null;
+
   return (
     <footer className="border-t border-sky-100 bg-gradient-to-br from-[#eaf7ff] via-white to-[#fff2e8] text-slate-900">
       <div className="mx-auto grid max-w-[1200px] gap-10 px-6 py-12 md:grid-cols-[1.35fr_.7fr_.8fr_1fr] md:px-8">
         <div>
-          <div className="flex items-center gap-2.5">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              alt="Dolan Logo"
-              className="h-8 w-auto rounded-lg bg-white p-1 object-contain"
-              src={ASSETS.logo}
-            />
-            <span className="text-xl font-extrabold">Dolan</span>
-          </div>
+          <Link href={ROUTES.beranda} className="inline-flex" aria-label="DOLAN beranda">
+            <DolanWordmark height={40} />
+          </Link>
           <p className="mt-4 max-w-sm text-sm leading-7 text-slate-600">
             Temukan tujuan, susun itinerary, dan kenalan dengan traveler yang
             punya rencana perjalanan serupa.

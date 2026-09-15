@@ -52,6 +52,7 @@ export function PlacePicker({
   value,
   onChange,
   onSelectPlace,
+  nearbyCity,
   hint,
   error,
   excludeLabel,
@@ -63,6 +64,7 @@ export function PlacePicker({
   value: string;
   onChange: (next: string) => void;
   onSelectPlace?: (place: PlaceSuggestion) => void;
+  nearbyCity?: string;
   hint?: string;
   error?: string;
   excludeLabel?: string;
@@ -77,7 +79,7 @@ export function PlacePicker({
 
   const mockSuggestions = useMemo(
     () =>
-      searchGeoPlaces(value, { excludeLabel }).slice(0, 6).map((place) => ({
+      searchGeoPlaces(value, { excludeLabel, nearbyCity }).slice(0, 6).map((place) => ({
         id: place.id,
         label: place.label,
         city: place.city,
@@ -85,7 +87,7 @@ export function PlacePicker({
         longitude: place.longitude,
         formattedAddress: place.label,
       })),
-    [value, excludeLabel],
+    [value, excludeLabel, nearbyCity],
   );
 
   useEffect(() => {

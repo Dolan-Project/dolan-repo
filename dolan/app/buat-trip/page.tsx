@@ -21,12 +21,14 @@ export default async function BuatTripPage({
   if (!session) {
     return (
       <AppShell>
-        <div className="mx-auto max-w-[560px] px-margin py-12 md:px-margin-desktop">
-          <SaveReturnDraft path={returnPath} />
-          <ReturnToActionBanner
-            nextPath={returnPath}
-            actionLabel="Aksi kamu untuk membuat trip telah diamankan. Masuk dulu, lalu kembali ke form ini."
-          />
+        <div className="min-h-[70dvh] bg-[radial-gradient(circle_at_top_right,rgba(254,137,60,.16),transparent_28%),linear-gradient(180deg,#f4f8ff,white)]">
+          <div className="mx-auto max-w-[560px] px-margin py-12 md:px-margin-desktop">
+            <SaveReturnDraft path={returnPath} />
+            <ReturnToActionBanner
+              nextPath={returnPath}
+              actionLabel="Aksi kamu untuk membuat trip telah diamankan. Masuk dulu, lalu kembali ke form ini."
+            />
+          </div>
         </div>
       </AppShell>
     );
@@ -34,11 +36,13 @@ export default async function BuatTripPage({
 
   return (
     <AppShell>
-      <CreateTripWizard
-        templateId={query.templateId}
-        initialPlaceId={query.placeId}
-        initialDestination={query.destination}
-      />
+      <div className="min-h-[70dvh] bg-[radial-gradient(circle_at_top_right,rgba(254,137,60,.16),transparent_28%),linear-gradient(180deg,#f4f8ff,white)]">
+        <CreateTripWizard
+          templateId={query.templateId}
+          initialPlaceId={query.placeId}
+          initialDestination={query.destination}
+        />
+      </div>
     </AppShell>
   );
 }
