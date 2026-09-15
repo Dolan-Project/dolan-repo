@@ -85,11 +85,11 @@ export class MemorySearchStore implements SearchStore {
   usages: Array<{ templateId: string; userId: string; createdTripId: string }> = [];
   idempotency = new Map<string, StoredIdempotency>();
 
-  constructor() {
-    this.seed();
+  constructor(options?: { seedPublicTrips?: boolean }) {
+    this.seed(options?.seedPublicTrips !== false);
   }
 
-  seed() {
+  seed(seedPublicTrips = true) {
     const malioboro: MemoryPlace = { id: "place-malioboro", ...MEMORY_PLACE_MALIOBORO };
     const prambanan: MemoryPlace = {
       id: "place-prambanan",
@@ -200,6 +200,8 @@ export class MemorySearchStore implements SearchStore {
       days: [],
     });
 
+    if (!seedPublicTrips) return;
+
     // Keep a single Yogyakarta public trip so D2 popularity/soonest tests stay deterministic.
     this.trips.push({
       id: "public-trip-1",
@@ -218,28 +220,6 @@ export class MemorySearchStore implements SearchStore {
       hostUserId: "host-1",
       visitingGooglePlaceIds: [malioboro.googlePlaceId],
     });
-
-    const extraCovers = [bromo, ubud, labuan];
-    for (let i = 0; i < 10; i += 1) {
-      const cover = extraCovers[i % extraCovers.length]!;
-      this.trips.push({
-        id: `public-trip-extra-${i + 1}`,
-        title: `Open trip ${cover.name}`,
-        destinationCity: cover.city,
-        visibility: "PUBLIC",
-        status: i % 4 === 0 ? "ONGOING" : "OPEN",
-        startDate: `2026-11-${String((i % 20) + 1).padStart(2, "0")}`,
-        endDate: `2026-11-${String((i % 20) + 3).padStart(2, "0")}`,
-        participantCount: 2 + (i % 5),
-        pendingRequestCount: i % 3,
-        coverPlace: cachedPlaceSummary(cover),
-        publicMeetingPointLabel: cover.name,
-        publicMeetingPointLatitude: cover.latitude,
-        publicMeetingPointLongitude: cover.longitude,
-        hostUserId: `host-${(i % 4) + 1}`,
-        visitingGooglePlaceIds: [cover.googlePlaceId],
-      });
-    }
     this.trips.push({
       id: "private-trip-1",
       title: "Private Yogyakarta",

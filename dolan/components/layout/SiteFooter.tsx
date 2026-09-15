@@ -25,6 +25,7 @@ export function SiteFooter() {
         <div>
           <h3 className="text-sm font-extrabold">Jelajahi</h3>
           <div className="mt-4 grid gap-3 text-sm text-slate-600">
+            <Link href={ROUTES.provinsi}>38 provinsi</Link>
             <Link href={ROUTES.jelajah}>Destinasi</Link>
             <Link href={`${ROUTES.jelajah}?tab=trip`}>Trip publik</Link>
             <Link href={ROUTES.tripSaya}>Trip Saya</Link>

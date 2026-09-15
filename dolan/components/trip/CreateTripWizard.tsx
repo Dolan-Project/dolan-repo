@@ -10,6 +10,7 @@ import { CreateTripItineraryStep } from "@/components/trip/CreateTripItinerarySt
 import type { EditableItineraryDay, EditableItineraryStop, ItineraryEditorSnapshot, ItineraryTemplateDetail, ItineraryTemplateSummary, UseTemplateResult } from "@dolan/shared";
 import type { ApiError, CreateTripInput, TripDetail } from "@/lib/contracts";
 import { ROUTES } from "@/lib/routes";
+import { shouldUseMockApi } from "@/lib/auth/use-mock";
 import { buildDestinationItinerary, buildProvinceTemplateDays, clampItineraryToDestination, templateMatchesDestination } from "@/lib/destination-itinerary";
 import { INDONESIA_PROVINCES, findProvinceForTemplate } from "@/lib/provinces";
 import { PlacePhoto } from "@/features/explore/PlacePhoto";
@@ -569,7 +570,7 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
       });
       setDays(nextDays);
       setSelectedStopId(nextDays[0]?.stops[0]?.id ?? selectedStopId);
-      setFromGroq(process.env.NEXT_PUBLIC_USE_MOCK_API === "false");
+      setFromGroq(!shouldUseMockApi());
       setRegenerateUsed((used) => used + 1);
     } catch (error) {
       setFormError(error instanceof Error ? error.message : "Regenerate gagal.");

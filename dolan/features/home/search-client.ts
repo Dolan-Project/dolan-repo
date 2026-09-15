@@ -1,4 +1,5 @@
 import type { ApiPage as SharedApiPage, ApiSuccess, CityCandidate, ItineraryTemplateSummary, PlacePhotoMedia, PlaceSummary, TripSummary } from "@dolan/shared";
+import { shouldUseMockApi } from "@/lib/auth/use-mock";
 import { ASSETS } from "@/lib/assets";
 import { buildMockSearchResponse } from "./mock-data";
 import { searchQuerySchema } from "./search-schema";
@@ -102,4 +103,4 @@ async function getJson<T>(url: string, signal?: AbortSignal): Promise<T> {
   return payload as T;
 }
 
-export const searchClient: SearchAdapter = process.env.NEXT_PUBLIC_USE_MOCK_API === "false" ? apiSearchAdapter : mockSearchAdapter;
+export const searchClient: SearchAdapter = shouldUseMockApi() ? mockSearchAdapter : apiSearchAdapter;

@@ -22,6 +22,7 @@
     "db:migrate:undo:all": "npm run migrate:undo:all -w database",
     "db:seed": "npm run seed -w database",
     "db:seed:photos": "npm run seed:photos -w database",
+    "db:seed:catalog": "npm run seed:catalog -w database",
     "db:seed:undo": "npm run seed:undo -w database",
     "db:verify": "npm run verify -w database",
     "db:backup": "npm run backup -w database"

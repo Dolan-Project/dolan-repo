@@ -55,6 +55,32 @@ function loginSession(): AuthSession {
   };
 }
 
+async function fetchExpressSession(accessToken: string): Promise<AuthSession | null> {
+  const origin = process.env.EXPRESS_ORIGIN?.trim();
+  if (!origin) return null;
+  try {
+    const response = await fetch(`${origin.replace(/\/$/, "")}/api/v1/users/me`, {
+      headers: {
+        authorization: `Bearer ${accessToken}`,
+        accept: "application/json",
+      },
+    });
+    if (!response.ok) return null;
+    const json = (await response.json()) as {
+      success?: boolean;
+      data?: AuthSession;
+    };
+    if (!json.success || !json.data?.user) return null;
+    return {
+      user: json.data.user,
+      emailVerified: Boolean(json.data.emailVerified),
+      profileComplete: Boolean(json.data.profileComplete),
+    };
+  } catch {
+    return null;
+  }
+}
+
 async function readBody(request: Request): Promise<unknown> {
   try {
     return await request.json();
@@ -335,8 +361,13 @@ export async function handleCallbackRequest(request: Request): Promise<Response>
   }
 
   if (!shouldUseMockApi()) {
-    const accessToken = extractAccessToken(request) ?? token;
-    const dest = new URL(resolveAfterAuth(loginSession(), next), url.origin);
+    const accessToken = token;
+    const session = (await fetchExpressSession(accessToken)) ?? {
+      user: incompleteUser(),
+      emailVerified: true,
+      profileComplete: false,
+    };
+    const dest = new URL(resolveAfterAuth(session, next), url.origin);
     return new Response(null, {
       status: 302,
       headers: {

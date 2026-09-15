@@ -4,6 +4,9 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   test: {
     environment: "node",
+    env: {
+      NEXT_PUBLIC_USE_MOCK_API: "true",
+    },
   },
   resolve: {
     alias: {
