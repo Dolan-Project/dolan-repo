@@ -8,7 +8,7 @@ export default async function BerandaPage() {
   const feed = session ? await loadHomeFeed() : { ok: true as const, data: emptyHomeFeed() };
 
   return (
-    <AppShell>
+    <AppShell showFooter={false}>
       <HomeFeed session={session} feed={feed} />
     </AppShell>
   );
