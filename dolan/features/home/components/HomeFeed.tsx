@@ -167,6 +167,7 @@ export function HomeFeed({ session, feed }: HomeFeedProps) {
             <h2>Jelajah Nusantara</h2>
             <p>Kurasi lokal dari katalog Dolan — tanpa foto Places.</p>
           </div>
+          <Link href={ROUTES.provinsi}>Lihat semua</Link>
         </div>
         <div className={styles.provinceRail}>
           {provinces.map((province) => (
@@ -191,7 +192,7 @@ export function HomeFeed({ session, feed }: HomeFeedProps) {
             <h2>Template itinerary populer</h2>
             <p>Diurutkan dari pemakaian di Dolan (`usageCount`).</p>
           </div>
-          <Link href={`${ROUTES.jelajah}?tab=template`}>Lihat template</Link>
+          <Link href={ROUTES.provinsi}>Lihat template</Link>
         </div>
         {templates.length === 0 ? (
           <div className={styles.empty}>

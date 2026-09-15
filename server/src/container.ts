@@ -164,6 +164,7 @@ export function createRuntimeSearchService(databaseReady: boolean) {
     placesProvider: env.googleMapsServerKey
       ? new GooglePlacesClient(env.googleMapsServerKey)
       : undefined,
+    store: new MemorySearchStore({ seedPublicTrips: false }),
   });
 }
 

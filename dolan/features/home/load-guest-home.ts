@@ -107,5 +107,5 @@ export async function loadGuestHome(): Promise<GuestHomePayload> {
 }
 
 export function isLiveGuestHome() {
-  return process.env.NEXT_PUBLIC_USE_MOCK_API === "false";
+  return process.env.NEXT_PUBLIC_USE_MOCK_API !== "true";
 }

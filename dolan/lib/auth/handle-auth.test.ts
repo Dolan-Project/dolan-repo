@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   handleCallbackRequest,
   handleForgotPasswordRequest,
@@ -7,6 +7,11 @@ import {
   handleRegisterRequest,
   handleResetPasswordRequest,
 } from "./handle-auth";
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+  vi.unstubAllGlobals();
+});
 
 async function jsonRequest(url: string, body: unknown) {
   return new Request(url, {
@@ -134,5 +139,102 @@ describe("handleCallbackRequest", () => {
     expect(response.headers.get("location")).toContain("/profil/edit");
     expect(response.headers.get("set-cookie")).toContain("dolan_session=pending");
     expect(response.headers.get("set-cookie")).toContain("HttpOnly");
+  });
+
+  it("stores the Express token and follows profileComplete from /users/me", async () => {
+    vi.stubEnv("NEXT_PUBLIC_USE_MOCK_API", "false");
+    vi.stubEnv("EXPRESS_ORIGIN", "http://express.test");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        new Response(
+          JSON.stringify({
+            success: true,
+            data: {
+              emailVerified: true,
+              profileComplete: true,
+              user: {
+                id: "google-user-1",
+                username: "alya_maps",
+                displayName: "Alya Google",
+                avatarUrl: null,
+                coverUrl: null,
+                bio: null,
+                domicile: "Jakarta",
+                instagramUrl: null,
+                tiktokUrl: null,
+                followersCount: 0,
+                followingCount: 0,
+                hostTripCount: 0,
+                participantTripCount: 0,
+                rating: {
+                  overall: null,
+                  communication: null,
+                  attitude: null,
+                  reviewCount: 0,
+                },
+              },
+            },
+          }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        ),
+      ),
+    );
+
+    const response = await handleCallbackRequest(
+      new Request("http://localhost/api/auth/callback?token=express-google-token&next=/trip-saya"),
+    );
+    expect(response.status).toBe(302);
+    expect(response.headers.get("location")).toBe("http://localhost/trip-saya");
+    expect(response.headers.get("set-cookie")).toContain("dolan_session=express-google-token");
+    expect(response.headers.get("set-cookie")).not.toContain("dolan_session=pending");
+  });
+
+  it("sends incomplete Google users to profile edit using the Express session", async () => {
+    vi.stubEnv("NEXT_PUBLIC_USE_MOCK_API", "false");
+    vi.stubEnv("EXPRESS_ORIGIN", "http://express.test");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        new Response(
+          JSON.stringify({
+            success: true,
+            data: {
+              emailVerified: true,
+              profileComplete: false,
+              user: {
+                id: "google-user-2",
+                username: "",
+                displayName: "Fitria",
+                avatarUrl: null,
+                coverUrl: null,
+                bio: null,
+                domicile: null,
+                instagramUrl: null,
+                tiktokUrl: null,
+                followersCount: 0,
+                followingCount: 0,
+                hostTripCount: 0,
+                participantTripCount: 0,
+                rating: {
+                  overall: null,
+                  communication: null,
+                  attitude: null,
+                  reviewCount: 0,
+                },
+              },
+            },
+          }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        ),
+      ),
+    );
+
+    const response = await handleCallbackRequest(
+      new Request("http://localhost/api/auth/callback?token=new-google-token"),
+    );
+    expect(response.status).toBe(302);
+    expect(response.headers.get("location")).toContain("/profil/edit");
+    expect(response.headers.get("set-cookie")).toContain("dolan_session=new-google-token");
   });
 });

@@ -40,6 +40,20 @@ export function findProvinceForTemplate(input: { templateId?: string; city?: str
   });
 }
 
+export function listProvinceCatalog(query = "") {
+  const value = query.trim().toLocaleLowerCase("id-ID");
+  if (!value) return [...INDONESIA_PROVINCES];
+  return INDONESIA_PROVINCES.filter((province) => {
+    const name = province.name.toLocaleLowerCase("id-ID");
+    const capital = province.capital.toLocaleLowerCase("id-ID");
+    return (
+      province.slug.includes(value) ||
+      name.includes(value) ||
+      capital.includes(value)
+    );
+  });
+}
+
 export function provinceDetailHref(input: { templateId?: string; city?: string | null }) {
   const province = findProvinceForTemplate(input);
   return province ? `/provinsi/${province.slug}` : null;

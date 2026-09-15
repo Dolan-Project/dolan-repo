@@ -8,6 +8,7 @@ import { ProvinceItineraryPanel } from "@/components/province/ProvinceItineraryP
 import { TemplateRoutePeek } from "@/components/trip/TemplateRoutePeek";
 import { buildProvinceTemplateDays } from "@/lib/destination-itinerary";
 import { provinceCoverUrl } from "@/lib/province-cover";
+import { ROUTES } from "@/lib/routes";
 
 export function generateStaticParams() {
   return INDONESIA_PROVINCES.map(({ slug }) => ({ slug }));
@@ -111,7 +112,9 @@ export default async function ProvincePage({ params }: { params: Promise<{ slug:
           <div className={`absolute inset-0 bg-gradient-to-br from-[#075fb8]/90 via-[#118acb]/80 to-[#071c32]/75 ${cover ? "" : "from-[#075fb8] via-[#118acb] to-[#74d5e8]"}`} />
           <div className="relative px-6 py-10 md:px-12 md:py-16">
           <p className="type-label font-extrabold uppercase tracking-[.16em] text-white/75">
-            Jelajah 38 Provinsi
+            <Link href={ROUTES.provinsi} className="text-white/75 hover:text-white">
+              Jelajah 38 Provinsi
+            </Link>
           </p>
           <h1 className="mt-3 max-w-3xl text-4xl font-extrabold leading-tight md:text-6xl">
             Petualangan terbaik di {name}

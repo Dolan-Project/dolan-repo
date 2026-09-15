@@ -57,6 +57,9 @@ function addDays(base, days) {
 /** @type {import('sequelize-cli').Seeder} */
 module.exports = {
   async up(queryInterface) {
+    // Skip demo @dolan.demo trips so Explore / Trip Saya stay empty until real users create trips.
+    void queryInterface;
+    return;
     const now = new Date();
     const passwordHash = hashPassword(DEMO_PASSWORD);
     const sequelize = queryInterface.sequelize;
