@@ -5,9 +5,10 @@ import { useState } from "react";
 
 type FollowButtonProps = {
   username: string;
+  compact?: boolean;
 };
 
-export function FollowButton({ username }: FollowButtonProps) {
+export function FollowButton({ username, compact = false }: FollowButtonProps) {
   const router = useRouter();
   const [following, setFollowing] = useState(false);
   const [pending, setPending] = useState(false);
@@ -16,7 +17,7 @@ export function FollowButton({ username }: FollowButtonProps) {
   async function onClick() {
     setPending(true);
     setMessage(null);
-    const response = await fetch(`/api/v1/users/${username}/follow`, {
+    const response = await fetch(`/api/v1/users/${encodeURIComponent(username)}/follow`, {
       method: following ? "DELETE" : "POST",
       credentials: "include",
     });
@@ -33,17 +34,27 @@ export function FollowButton({ username }: FollowButtonProps) {
     router.refresh();
   }
 
+  const label = pending ? "…" : following ? "Mengikuti" : compact ? "Ikuti" : "Follow";
+
   return (
     <div className="flex flex-col items-stretch gap-1">
       <button
         type="button"
-        className={following ? "btn-secondary !min-h-11" : "btn-brand !min-h-11"}
+        className={
+          compact
+            ? following
+              ? "rounded-full border border-outline-variant px-3 py-1 text-[11px] font-bold text-on-surface-variant"
+              : "rounded-full bg-primary px-3 py-1 text-[11px] font-bold text-white"
+            : following
+              ? "btn-secondary !min-h-11"
+              : "btn-brand !min-h-11"
+        }
         disabled={pending}
         onClick={() => void onClick()}
       >
-        {pending ? "Memproses…" : following ? "Mengikuti" : "Follow"}
+        {label}
       </button>
-      {message ? (
+      {message && !compact ? (
         <p className="max-w-[16rem] type-caption text-error">{message}</p>
       ) : null}
     </div>

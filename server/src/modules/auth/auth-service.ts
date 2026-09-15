@@ -10,6 +10,7 @@ import {
   type SessionResponse,
 } from "@dolan/shared";
 import { badRequest, conflict, notFound, unauthorized } from "../../lib/api-error.ts";
+import { isUuid } from "../../lib/is-uuid.ts";
 import { zodFields } from "../../lib/zod-fields.ts";
 import type { AuthAdapter } from "./auth-adapter.ts";
 import { env } from "../../config/env.ts";
@@ -322,8 +323,10 @@ export class AuthService {
   }
 
   async resolveUser(usernameOrId: string) {
-    const byId = await this.users.findById(usernameOrId);
-    if (byId) return byId;
+    if (isUuid(usernameOrId)) {
+      const byId = await this.users.findById(usernameOrId);
+      if (byId) return byId;
+    }
     const byUsername = await this.users.findByUsername(usernameOrId);
     if (!byUsername) throw notFound("NOT_FOUND", "Pengguna tidak ditemukan");
     return byUsername;

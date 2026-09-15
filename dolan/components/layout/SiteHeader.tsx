@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { AuthSession } from "@/lib/contracts";
 import { ROUTES, type NavKey } from "@/lib/routes";
@@ -38,39 +38,49 @@ export function SiteHeader({
   unreadCount?: number;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
   const chatChrome = pathname === "/chat" || /\/trip\/[^/]+\/chat$/.test(pathname);
   const [scrolled, setScrolled] = useState(false);
+  const [query, setQuery] = useState("");
   useEffect(() => {
-    const update = () => setScrolled(window.scrollY > 20);
+    const update = () => setScrolled(window.scrollY > 8);
     update();
     window.addEventListener("scroll", update, { passive: true });
     return () => window.removeEventListener("scroll", update);
   }, []);
-  const transparent = pathname === "/" && !scrolled;
   if (chatChrome) return null;
 
   return (
     <header
-      className={`fixed top-0 z-50 w-full transition-all duration-500 ${
-        transparent
-          ? "border-transparent bg-transparent shadow-none"
-          : "border-b border-white/60 bg-white/82 shadow-[0_8px_30px_rgba(15,59,94,.08)] backdrop-blur-xl"
+      className={`fixed top-0 z-50 w-full border-b border-[#e8edf3] bg-white/94 backdrop-blur-xl ${
+        scrolled ? "shadow-[0_8px_30px_rgba(15,59,94,.06)]" : ""
       }`}
     >
-      <div className="mx-auto flex h-14 max-w-[1240px] items-center justify-between gap-3 px-margin md:h-16 md:px-margin-desktop lg:grid lg:grid-cols-3">
-        <div className="flex min-w-0 items-center gap-6">
-          <Link href={ROUTES.beranda} className="flex items-center" aria-label="DOLAN beranda">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/logo_dolan.png"
-              alt="DOLAN"
-              className={`h-8 w-auto object-contain object-left mix-blend-multiply md:h-9 ${transparent ? "rounded-lg bg-white/92 px-1.5 py-0.5" : ""}`}
-            />
-          </Link>
+      <div className="mx-auto flex h-14 max-w-[1280px] items-center gap-3 px-4 md:h-16 md:px-6">
+        <Link href={ROUTES.beranda} className="flex shrink-0 items-center" aria-label="DOLAN beranda">
+          <DolanWordmark height={32} />
+        </Link>
 
-        </div>
+        <form
+          className="hidden min-w-0 flex-1 items-center gap-2 rounded-full border border-[#e4e9f0] bg-[#f4f6f9] px-3.5 py-2 md:flex md:max-w-[22rem]"
+          action={ROUTES.jelajah}
+          onSubmit={(event) => {
+            event.preventDefault();
+            const next = query.trim();
+            router.push(next ? `${ROUTES.jelajah}?q=${encodeURIComponent(next)}` : ROUTES.jelajah);
+          }}
+        >
+          <Icon name="search" className="text-[18px] text-on-surface-variant" />
+          <input
+            name="q"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            className="min-w-0 flex-1 bg-transparent type-caption text-on-surface outline-none placeholder:text-on-surface-variant/80"
+            placeholder="Cari destinasi, rute, atau kawan dolan..."
+          />
+        </form>
 
-        <nav className="hidden items-center justify-center gap-1 lg:flex">
+        <nav className="ml-auto hidden items-center gap-0.5 lg:flex">
           {desktopLinks.map((link) => {
             const active = isActive(pathname, link.key);
             return (
@@ -78,13 +88,34 @@ export function SiteHeader({
                 key={link.key}
                 href={link.href}
                 aria-current={active ? "page" : undefined}
-                className={active ? "type-label rounded-full bg-surface-container-low px-3.5 py-2 text-primary" : "type-label rounded-full px-3.5 py-2 text-on-surface-variant transition-colors hover:bg-surface-container-low hover:text-on-surface"}
-              >{link.label}</Link>
+                className={
+                  active
+                    ? "type-label rounded-full bg-primary/10 px-3 py-2 text-primary"
+                    : "type-label rounded-full px-3 py-2 text-on-surface-variant transition-colors hover:bg-surface-container-low hover:text-on-surface"
+                }
+              >
+                {link.label}
+              </Link>
             );
           })}
+          <Link
+            href={`${ROUTES.jelajah}?tab=template`}
+            className="type-label hidden rounded-full px-3 py-2 text-on-surface-variant transition-colors hover:bg-surface-container-low hover:text-on-surface xl:inline"
+          >
+            Rute Populer
+          </Link>
         </nav>
 
-        <div className="flex items-center justify-end gap-2 md:gap-3">
+        <div className="flex shrink-0 items-center gap-2 md:gap-3">
+          {session ? (
+            <Link
+              href={ROUTES.buatTrip}
+              className="btn-primary !hidden !min-h-10 !gap-1 !px-4 !py-2 !text-[0.8125rem] md:!inline-flex"
+            >
+              <Icon name="add" className="text-[18px]" />
+              Buat Trip
+            </Link>
+          ) : null}
           <NotificationBell session={session} unreadCount={unreadCount} />
           {session ? (
             <Link href={ROUTES.profil} aria-label="Profil">
@@ -96,29 +127,17 @@ export function SiteHeader({
             </Link>
           ) : (
             <>
-              <Link
-                href={ROUTES.masuk}
-                className="hidden type-label text-on-surface-variant hover:text-on-surface sm:inline"
-              >
+              <Link href={ROUTES.masuk} className="hidden type-label text-on-surface-variant hover:text-on-surface sm:inline">
                 Masuk
               </Link>
               <Link
                 href={ROUTES.daftar}
                 className="btn-primary !hidden !min-h-10 !px-5 !py-2 !text-[0.875rem] sm:!inline-flex"
               >
-                <Icon name="rocket_launch" className="text-[18px]" />
                 Daftar
               </Link>
             </>
           )}
-          {session ? (
-            <Link
-              href={ROUTES.buatTrip}
-              className="btn-primary !hidden !min-h-10 !px-5 !py-2 !text-[0.875rem] md:!inline-flex"
-            >
-              Buat Trip
-            </Link>
-          ) : null}
         </div>
       </div>
     </header>
