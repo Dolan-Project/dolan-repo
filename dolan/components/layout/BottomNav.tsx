@@ -47,6 +47,7 @@ function isActive(pathname: string, key: NavKey) {
 
 export function BottomNav() {
   const pathname = usePathname();
+  if (pathname === "/chat" || /\/trip\/[^/]+\/chat$/.test(pathname)) return null;
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-outline-variant/30 bg-surface-container-lowest/95 pb-safe shadow-[0_-8px_24px_rgba(17,24,39,0.06)] backdrop-blur-xl md:hidden">

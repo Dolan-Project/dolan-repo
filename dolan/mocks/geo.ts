@@ -1,3 +1,8 @@
+import { INDONESIA_PROVINCES } from "@/lib/provinces";
+import { CITY_ROUTES } from "@/lib/destination-itinerary";
+import { resolvePlaceCoordinates } from "@/lib/place-coordinates";
+import { PROVINCE_CENTERS } from "@/lib/template-itinerary";
+
 export type GeoPlace = {
   id: string;
   label: string;
@@ -146,28 +151,104 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
 
+function destinationCatalog(): GeoPlace[] {
+  const extras: GeoPlace[] = [];
+  const seen = new Set(GEO_PLACES.map((place) => place.label.toLocaleLowerCase("id-ID")));
+  const push = (place: GeoPlace) => {
+    const key = place.label.toLocaleLowerCase("id-ID");
+    if (!key || seen.has(key)) return;
+    seen.add(key);
+    extras.push(place);
+  };
+  INDONESIA_PROVINCES.forEach((province) => {
+    const center = PROVINCE_CENTERS[province.name] ?? { lat: -2.5, lng: 118 };
+    push({
+      id: `prov-${province.slug}`,
+      label: province.name,
+      city: province.capital,
+      latitude: center.lat,
+      longitude: center.lng,
+    });
+    push({
+      id: `cap-${province.slug}`,
+      label: province.capital,
+      city: province.capital,
+      latitude: center.lat,
+      longitude: center.lng,
+    });
+    province.places.forEach((place) => {
+      const coords = resolvePlaceCoordinates(place.name, place.city) ?? center;
+      push({
+        id: `place-${province.slug}-${place.rank}`,
+        label: place.name,
+        city: place.city,
+        latitude: coords.lat,
+        longitude: coords.lng,
+      });
+    });
+  });
+  CITY_ROUTES.forEach((route) => {
+    const aliases: Record<string, string> = {
+      dki: "Jakarta",
+      bromo: "Probolinggo",
+      cemoro: "Probolinggo",
+      tengger: "Probolinggo",
+      jogja: "Yogyakarta",
+      dieng: "Wonosobo",
+      rinjani: "Lombok",
+    };
+    const city = aliases[route.match[0]] ?? route.match[0].replace(/\b\w/g, (letter) => letter.toUpperCase());
+    route.stops.forEach((stop, index) => {
+      push({
+        id: `route-${route.match[0]}-${index}`,
+        label: stop.name,
+        city,
+        latitude: stop.lat,
+        longitude: stop.lng,
+      });
+    });
+  });
+  return [...GEO_PLACES, ...extras];
+}
+
 export function searchGeoPlaces(
   query: string,
-  options?: { excludeLabel?: string },
+  options?: { excludeLabel?: string; nearbyCity?: string },
 ): GeoPlace[] {
   const needle = query.trim().toLowerCase();
   const excluded = options?.excludeLabel?.trim().toLowerCase();
-  const pool = GEO_PLACES.filter(
+  const nearby = options?.nearbyCity?.trim().toLowerCase();
+  const nearbyScore = (place: GeoPlace) => {
+    if (!nearby) return 0;
+    const city = place.city.toLowerCase();
+    const label = place.label.toLowerCase();
+    if (city === nearby || label === nearby) return 0;
+    if (city.includes(nearby) || label.includes(nearby)) return 1;
+    return 4;
+  };
+  const pool = destinationCatalog().filter(
     (place) => !excluded || place.label.toLowerCase() !== excluded,
   );
-  if (!needle) return pool.slice(0, 8);
+  if (!needle) {
+    return [...pool].sort((a, b) => nearbyScore(a) - nearbyScore(b) || a.label.length - b.label.length).slice(0, 8);
+  }
   const airportQuery = needle.includes("bandara") || needle.includes("airport");
   return pool
     .map((place) => {
       const label = place.label.toLowerCase();
       const city = place.city.toLowerCase();
+      const labelWords = label.split(/[^a-z0-9]+/).filter(Boolean);
+      const cityWords = city.split(/[^a-z0-9]+/).filter(Boolean);
       let score = -1;
-      if (city === needle || label === needle) score = 0;
-      else if (city.startsWith(needle) || label.startsWith(needle)) score = 1;
-      else if (`${label} ${city}`.split(/[^a-z0-9]+/).some((word) => word.startsWith(needle))) score = 2;
-      else if (label.includes(needle) || city.includes(needle)) score = 3;
+      if (label === needle) score = 0;
+      else if (label.startsWith(needle)) score = 1;
+      else if (city === needle || city.startsWith(needle)) score = 2;
+      else if (labelWords.some((word) => word === needle) || cityWords.some((word) => word === needle)) score = 3;
+      else if (labelWords.some((word) => word.startsWith(needle)) || cityWords.some((word) => word.startsWith(needle))) score = 4;
+      else if (needle.length >= 2 && (label.includes(needle) || city.includes(needle))) score = 5;
       if (score < 0) return null;
       if (!airportQuery && label.startsWith("bandara")) score += 8;
+      score += nearbyScore(place);
       return { place, score };
     })
     .filter((row): row is { place: GeoPlace; score: number } => row !== null)

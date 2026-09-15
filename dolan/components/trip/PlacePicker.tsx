@@ -3,8 +3,12 @@
 import { useEffect, useId, useMemo, useState } from "react";
 import { Field } from "@/components/auth/Field";
 import { Icon } from "@/components/ui/Icon";
+<<<<<<< HEAD
 import { shouldUseMockApi } from "@/lib/auth/use-mock";
 import { searchGeoPlaces } from "@/mocks/geo";
+=======
+import { resolveCityPoint, searchGeoPlaces, type GeoPlace } from "@/mocks/geo";
+>>>>>>> 13c57bd (style: redesign edit page)
 
 type Suggestion = { id: string; label: string; city: string };
 
@@ -34,6 +38,8 @@ export function PlacePicker({
   label,
   value,
   onChange,
+  onSelectPlace,
+  nearbyCity,
   hint,
   error,
   excludeLabel,
@@ -44,6 +50,8 @@ export function PlacePicker({
   label: string;
   value: string;
   onChange: (next: string) => void;
+  onSelectPlace?: (place: GeoPlace) => void;
+  nearbyCity?: string;
   hint?: string;
   error?: string;
   excludeLabel?: string;
@@ -52,6 +60,7 @@ export function PlacePicker({
 }) {
   const listId = useId();
   const [open, setOpen] = useState(false);
+<<<<<<< HEAD
   const [liveSuggestions, setLiveSuggestions] = useState<Suggestion[]>([]);
   const useMock = shouldUseMockApi();
 
@@ -90,10 +99,45 @@ export function PlacePicker({
   }, [value, useMock, excludeLabel]);
 
   const suggestions = useMock ? mockSuggestions : liveSuggestions;
+=======
+  const suggestions = useMemo(
+    () => searchGeoPlaces(value.trim().length < 2 ? "" : value, { excludeLabel, nearbyCity }).slice(0, 8),
+    [value, excludeLabel, nearbyCity],
+  );
+
+  function commitPlace(place: GeoPlace) {
+    onChange(place.label);
+    onSelectPlace?.(place);
+    setOpen(false);
+  }
+
+  function commitTyped() {
+    const name = value.trim();
+    if (!onSelectPlace || name.length < 2) return;
+    const hit = searchGeoPlaces(name, { excludeLabel, nearbyCity })[0];
+    const needle = name.toLocaleLowerCase("id-ID");
+    if (hit) {
+      const labelText = hit.label.toLocaleLowerCase("id-ID");
+      const city = hit.city.toLocaleLowerCase("id-ID");
+      if (labelText === needle || city === needle || labelText.startsWith(needle) || city.startsWith(needle) || (needle.length >= 4 && labelText.includes(needle))) {
+        onSelectPlace(hit);
+        return;
+      }
+    }
+    const fallback = resolveCityPoint(nearbyCity);
+    onSelectPlace({
+      id: `typed-${name}`,
+      label: name,
+      city: nearbyCity || name,
+      latitude: fallback?.latitude ?? 0,
+      longitude: fallback?.longitude ?? 0,
+    });
+  }
+>>>>>>> 13c57bd (style: redesign edit page)
 
   return (
     <Field id={id} label={label} hint={open ? undefined : hint} error={error}>
-      <div className="relative">
+      <div className="relative z-40">
         <input
           id={id}
           className="field-input field-input-icon"
@@ -110,7 +154,10 @@ export function PlacePicker({
             setOpen(true);
           }}
           onBlur={() => {
-            window.setTimeout(() => setOpen(false), 120);
+            window.setTimeout(() => {
+              setOpen(false);
+              commitTyped();
+            }, 150);
           }}
         />
         <Icon name={icon} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[20px] text-primary" />
@@ -118,7 +165,7 @@ export function PlacePicker({
           <ul
             id={listId}
             role="listbox"
-            className="absolute z-20 mt-1 max-h-56 w-full overflow-auto rounded-xl border border-outline-variant/40 bg-surface-container-lowest p-1 shadow-lg"
+            className="absolute z-50 mt-1 max-h-56 w-full overflow-auto rounded-xl border border-outline-variant/40 bg-white p-1 shadow-lg"
           >
             {suggestions.map((place) => (
               <li key={place.id} role="option" aria-selected={place.label === value}>
@@ -126,10 +173,7 @@ export function PlacePicker({
                   type="button"
                   className="flex w-full flex-col rounded-lg px-3 py-2.5 text-left hover:bg-surface-container-low"
                   onMouseDown={(event) => event.preventDefault()}
-                  onClick={() => {
-                    onChange(place.label);
-                    setOpen(false);
-                  }}
+                  onClick={() => commitPlace(place)}
                 >
                   <span className="type-label text-on-surface">{place.label}</span>
                   {place.city ? (

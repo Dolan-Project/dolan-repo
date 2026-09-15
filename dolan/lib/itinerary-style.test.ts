@@ -12,6 +12,9 @@ describe("itinerary style", () => {
     expect(itineraryCircleSvg(0, 1)).toContain("<circle");
     expect(itineraryCircleSvg(0, 1)).toContain(">1</text>");
     expect(itineraryPinSvg(1, 2)).toContain(">2</text>");
+    expect(itineraryPinSvg(1, 2)).toContain("#ef3b69");
+    expect(itineraryPinSvg(1, 2, false, ITINERARY_ROUTE_COLOR)).toContain(ITINERARY_ROUTE_COLOR);
+    expect(itineraryPinSvg(1, 2, false, ITINERARY_ROUTE_COLOR)).not.toContain("#ef3b69");
   });
 });
 

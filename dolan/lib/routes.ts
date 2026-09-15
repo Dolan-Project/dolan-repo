@@ -20,6 +20,7 @@ export const ROUTES = {
   itineraryBali: "/buat-trip?templateId=fc02b73b-20b5-4db9-a559-39280cbac02a",
   notifikasi: "/notifikasi",
   trip: (tripId: string) => `/trip/${tripId}`,
+  chats: "/chat",
   tripChat: (tripId: string) => `/trip/${tripId}/chat`,
   province: (slug: string) => `/provinsi/${slug}`,
 } as const;

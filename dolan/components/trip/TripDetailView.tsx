@@ -10,7 +10,7 @@ import { PlacePhoto } from "@/features/explore/PlacePhoto";
 import { destinationCoverUrl, resolveTripItineraryDays } from "@/lib/destination-itinerary";
 import type { ApiError, JoinRequest, TripComment, TripDetail } from "@/lib/contracts";
 import { ROUTES, tripEditHref, tripItineraryPath } from "@/lib/routes";
-import type { EditableItineraryDay } from "@dolan/shared";
+import type { EditableItineraryDay, TripChecklistItem } from "@dolan/shared";
 import { hydrateItineraryPlaces, itineraryMapMarkers, itineraryMapRouteGroups, visitWindowLabel, googleMapsDirectionsUrl } from "@/lib/template-itinerary";
 import { ItineraryTimeline } from "@/components/trip/ItineraryTimeline";
 import { ItineraryPdfButton } from "./ItineraryPdfButton";
@@ -68,6 +68,7 @@ export function TripDetailView({
   const [comments, setComments] = useState<TripComment[]>([]);
   const [queue, setQueue] = useState<JoinRequest[]>([]);
   const [days, setDays] = useState<EditableItineraryDay[]>([]);
+  const [packing, setPacking] = useState<TripChecklistItem[]>([]);
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
   const [confirmLeave, setConfirmLeave] = useState(false);
@@ -100,7 +101,7 @@ export function TripDetailView({
     if (commentRes.success) {
       setComments(Array.isArray(commentRes.data) ? commentRes.data : commentRes.data.items ?? []);
     }
-    const itineraryDays = (itineraryRes as { success?: boolean; data?: { versions?: Array<{ id: string; days: EditableItineraryDay[] }>; activeVersionId?: string } } | null)?.data;
+    const itineraryDays = (itineraryRes as { success?: boolean; data?: { versions?: Array<{ id: string; days: EditableItineraryDay[] }>; activeVersionId?: string; checklist?: TripChecklistItem[] } } | null)?.data;
     const active = itineraryDays?.versions?.find((version) => version.id === itineraryDays.activeVersionId) ?? itineraryDays?.versions?.[0];
     const nextDays = hydrateItineraryPlaces(resolveTripItineraryDays({
       destination: tripRes.data.destinationCity ?? "",
@@ -109,6 +110,7 @@ export function TripDetailView({
       days: active?.days ?? [],
     }), tripRes.data.destinationCity ?? "");
     setDays(nextDays);
+    setPacking(itineraryDays?.checklist ?? []);
     setActiveDayId((current) => current && nextDays.some((day) => day.id === current) ? current : nextDays[0]?.id ?? null);
     const points = (routeRes as { success?: boolean; data?: { points?: Array<{ id: string; label: string; lat: number; lng: number }> } } | null)?.data?.points ?? [];
     setRouteMarkers(points.map((point, index) => ({ id: point.id, label: point.label, latitude: point.lat, longitude: point.lng, selected: index === 0 })));
@@ -268,6 +270,22 @@ export function TripDetailView({
       window.setTimeout(() => setShareHint(""), 2000);
     } catch {
       setShareHint("");
+    }
+  }
+
+  async function togglePacking(item: TripChecklistItem) {
+    const nextCompleted = !item.isCompleted;
+    setPacking((current) => current.map((entry) => entry.id === item.id ? { ...entry, isCompleted: nextCompleted } : entry));
+    const response = await fetch(`/api/v1/trips/${tripId}/checklist`, {
+      method: "POST",
+      credentials: "include",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ id: item.id, title: item.title, isCompleted: nextCompleted, dueDate: item.dueDate }),
+    });
+    const json = (await response.json()) as { success: boolean; error?: { message: string } };
+    if (!json.success) {
+      setPacking((current) => current.map((entry) => entry.id === item.id ? { ...entry, isCompleted: item.isCompleted } : entry));
+      setError(json.error?.message ?? "Perlengkapan belum bisa diperbarui");
     }
   }
 
@@ -550,6 +568,37 @@ export function TripDetailView({
               </section>
             ) : null}
 
+            {packing.length ? (
+              <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[0_1px_2px_rgba(16,36,58,.04)] md:p-6">
+                <h2 className="mb-1 flex items-center gap-2 text-base font-bold text-on-surface">
+                  <Icon name="luggage" className="text-[20px] text-primary" /> List perlengkapan
+                </h2>
+                <p className="mb-4 text-xs text-on-surface-variant">
+                  {trip.viewerRole === "host" || trip.viewerRole === "participant"
+                    ? "Centang barang yang sudah disiapkan. Daftar ini mengikuti trip, bukan chat publik."
+                    : "Host menyiapkan daftar ini. Checklist terbuka setelah kamu diterima di trip."}
+                </p>
+                <ul className="space-y-2">
+                  {packing.map((item) => {
+                    const canCheck = trip.viewerRole === "host" || trip.viewerRole === "participant";
+                    return (
+                      <li key={item.id}>
+                        <label className={`flex items-center gap-3 rounded-xl px-3 py-2.5 ${canCheck ? "cursor-pointer bg-slate-50 hover:bg-slate-100" : "bg-slate-50"}`}>
+                          <input
+                            type="checkbox"
+                            checked={item.isCompleted}
+                            disabled={!canCheck || pending}
+                            onChange={() => void togglePacking(item)}
+                          />
+                          <span className={`text-sm ${item.isCompleted ? "text-on-surface-variant line-through" : "text-on-surface"}`}>{item.title}</span>
+                        </label>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </section>
+            ) : null}
+
             <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[0_1px_2px_rgba(16,36,58,.04)] md:p-6">
               <div className="mb-4 flex items-center justify-between gap-3">
                 <div>
@@ -684,7 +733,14 @@ export function TripDetailView({
                   <Link href={ROUTES.tripSaya} className="flex w-full items-center justify-center rounded-xl border border-slate-200 py-2.5 text-xs font-bold text-on-surface hover:bg-slate-50">Buka di Trip Saya</Link>
                 </div>
               ) : null}
-              {joinCta === "host" ? <p className="type-body">Kamu host trip ini. Kelola pengajuan di kolom kiri.</p> : null}
+              {joinCta === "host" ? (
+                <div className="space-y-3">
+                  <p className="type-body">Kamu host trip ini. Kelola pengajuan di kolom kiri.</p>
+                  <Link href={ROUTES.tripChat(trip.id)} className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-2.5 text-xs font-bold text-white">
+                    <Icon name="forum" /> Masuk ke grup chat trip
+                  </Link>
+                </div>
+              ) : null}
             </section>
 
             <section className="space-y-2 rounded-2xl border border-sky-100 bg-sky-50/70 p-5 text-xs text-sky-900">

@@ -4,6 +4,12 @@ import { AppShell } from "@/components/layout/AppShell";
 import { Icon } from "@/components/ui/Icon";
 import { INDONESIA_PROVINCES } from "@/lib/provinces";
 import { ProvincePlacesGrid } from "@/components/province/ProvincePlacesGrid";
+<<<<<<< HEAD
+=======
+import { ProvinceItineraryPanel } from "@/components/province/ProvinceItineraryPanel";
+import { TemplateRoutePeek } from "@/components/trip/TemplateRoutePeek";
+import { buildProvinceTemplateDays } from "@/lib/destination-itinerary";
+>>>>>>> 13c57bd (style: redesign edit page)
 import { provinceCoverUrl } from "@/lib/province-cover";
 
 export function generateStaticParams() {
@@ -133,6 +139,7 @@ export default async function ProvincePage({ params }: { params: Promise<{ slug:
           <ProvincePlacesGrid provinceName={name} places={places} />
         </section>
 
+<<<<<<< HEAD
         <section className="mx-auto mt-12 grid max-w-7xl gap-6 rounded-[2rem] border border-primary/10 bg-white p-6 shadow-sm md:grid-cols-[.8fr_1.2fr] md:p-9">
           <div>
             <p className="type-label font-extrabold uppercase tracking-[.13em] text-secondary">
@@ -169,6 +176,26 @@ export default async function ProvincePage({ params }: { params: Promise<{ slug:
                 </div>
               </article>
             ))}
+=======
+        <section className="mx-auto mt-12 max-w-7xl overflow-hidden rounded-[2rem] border border-primary/10 bg-white shadow-sm">
+          <div className="grid gap-0 lg:grid-cols-[minmax(0,1.1fr)_auto]">
+            <div className="p-6 md:p-9">
+              <p className="type-label font-extrabold uppercase tracking-[.13em] text-secondary">Template resmi DOLAN</p>
+              <h2 className="mt-2 text-3xl font-extrabold text-on-surface">{province.template.title}</h2>
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-on-surface-variant">{province.template.description}</p>
+              <div className="mt-4 flex flex-wrap items-center gap-2 text-xs font-bold">
+                <span className="rounded-full bg-primary-fixed px-3 py-2">{province.template.durationDays} hari</span>
+                <span className="rounded-full bg-tertiary-fixed px-3 py-2">Rp{province.template.budgetLow.toLocaleString("id-ID")}–Rp{province.template.budgetHigh.toLocaleString("id-ID")}</span>
+                <TemplateRoutePeek province={province} />
+              </div>
+              <Link href={`/buat-trip?templateId=${encodeURIComponent(templateId)}&destination=${encodeURIComponent(province.name)}`} className="mt-6 inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-primary to-[#198ad8] px-5 py-3 text-sm font-extrabold text-white shadow-lg">
+                <Icon name="add_road" /> Pakai template ini
+              </Link>
+            </div>
+          </div>
+          <div className="border-t border-primary/10 p-6 md:p-9">
+            <ProvinceItineraryPanel days={days} destination={province.name} />
+>>>>>>> 13c57bd (style: redesign edit page)
           </div>
         </section>
       </main>

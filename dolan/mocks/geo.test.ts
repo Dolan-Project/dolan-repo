@@ -24,6 +24,17 @@ describe("searchGeoPlaces", () => {
     expect(hits[0]?.label).toMatch(/Gunung Bromo|Cemoro Lawang/i);
     expect(hits[0]?.latitude).toBeCloseTo(-7.94, 1);
   });
+
+  it("suggests city wisata, not only the city name", () => {
+    const hits = searchGeoPlaces("kota", { nearbyCity: "Jakarta" });
+    expect(hits.some((place) => /Kota Tua/i.test(place.label))).toBe(true);
+    expect(hits[0]?.latitude).not.toBeCloseTo(-6.2088, 3);
+  });
+
+  it("suggests provinces while the name is still being typed", () => {
+    expect(searchGeoPlaces("jam")[0]?.label).toMatch(/Jambi/i);
+    expect(searchGeoPlaces("lamp").some((place) => /Lampung/i.test(place.label))).toBe(true);
+  });
 });
 
 describe("resolveGeoPlace", () => {

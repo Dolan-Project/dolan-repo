@@ -6,11 +6,11 @@ import { Icon } from "@/components/ui/Icon";
 
 export type TripMapMarker = {
   id: string; label: string; latitude: number; longitude: number;
-  selected?: boolean; tone?: "meeting" | "origin";
+  selected?: boolean; tone?: "meeting" | "origin"; sequence?: number;
 };
 
 function toPoints(markers: TripMapMarker[]): MapPoint[] {
-  return markers.map((marker) => ({ id: marker.id, label: marker.label, lat: marker.latitude, lng: marker.longitude }));
+  return markers.map((marker) => ({ id: marker.id, label: marker.label, lat: marker.latitude, lng: marker.longitude, sequence: marker.sequence }));
 }
 
 export function TripBoardMap({

@@ -9,24 +9,32 @@ export function ItineraryStopPin({
   size = 32,
   selected = false,
   shape = "teardrop",
+  color: colorOverride,
+  halo = true,
 }: {
   index: number;
   sequence?: number;
   size?: number;
   selected?: boolean;
   shape?: "teardrop" | "circle";
+  color?: string;
+  halo?: boolean;
 }) {
-  const color = itineraryStopColor(index);
+  const color = colorOverride ?? itineraryStopColor(index);
   const label = String(sequence ?? index + 1);
   if (shape === "circle") {
     return (
       <span
-        className="relative z-[1] grid shrink-0 place-items-center rounded-full font-extrabold text-white shadow-sm"
+        className="relative z-[1] grid shrink-0 place-items-center rounded-full font-extrabold text-white"
         style={{
           width: size,
           height: size,
           backgroundColor: color,
-          boxShadow: selected ? `0 0 0 3px #ffffff, 0 0 0 6px ${color}55` : "0 0 0 3px #ffffff",
+          boxShadow: selected
+            ? `0 0 0 3px ${halo ? "#ffffff" : color}, 0 0 0 6px ${color}55`
+            : halo
+              ? "0 0 0 3px #ffffff"
+              : "none",
           fontSize: Math.round(size * 0.42),
         }}
         aria-hidden="true"

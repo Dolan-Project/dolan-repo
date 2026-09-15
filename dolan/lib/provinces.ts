@@ -11,7 +11,19 @@ export function findProvince(input: string) {
 export function searchProvinces(input: string) {
   const value = input.trim().toLocaleLowerCase("id-ID");
   if (value.length < 2) return [];
-  return INDONESIA_PROVINCES.filter((province) => province.name.toLocaleLowerCase("id-ID").includes(value)).slice(0, 6);
+  return INDONESIA_PROVINCES
+    .map((province) => {
+      const name = province.name.toLocaleLowerCase("id-ID");
+      const capital = province.capital.toLocaleLowerCase("id-ID");
+      let score = -1;
+      if (name.startsWith(value) || capital.startsWith(value)) score = 0;
+      else if (name.includes(value) || capital.includes(value)) score = 1;
+      return score < 0 ? null : { province, score };
+    })
+    .filter((row): row is { province: (typeof INDONESIA_PROVINCES)[number]; score: number } => row !== null)
+    .sort((a, b) => a.score - b.score || a.province.name.localeCompare(b.province.name, "id"))
+    .map((row) => row.province)
+    .slice(0, 8);
 }
 
 export function findProvinceForTemplate(input: { templateId?: string; city?: string | null }) {
