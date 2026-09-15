@@ -13,6 +13,7 @@ import {
   createProductionJobService,
   createProductionSocialStore,
   createProductionTripService,
+  createPostService,
   createRuntimeSearchService,
   createSessionStore,
   createShareLinkService,
@@ -78,10 +79,12 @@ async function main() {
     databaseReady ? new SequelizeQuotaStore() : new MemoryQuotaStore(),
     env.placesMaxRequestsPerUserPerDay,
   );
+  const search = createRuntimeSearchService(databaseReady);
+  const postService = createPostService(trips, search, social, chatService, databaseReady);
   const app = createApp(
     authService,
     sockets.disconnectUser,
-    createRuntimeSearchService(databaseReady),
+    search,
     jobService,
     trips,
     chatService,
@@ -93,6 +96,7 @@ async function main() {
     new ProvinceService(databaseReady),
     routesQuota,
     databaseReady,
+    postService,
   );
 
   httpServer.on("request", app);

@@ -61,6 +61,32 @@ describe("presentInboxNotification", () => {
     });
   });
 
+  it("describes a like and comment on a post", () => {
+    expect(
+      presentInboxNotification({
+        type: "post.liked",
+        targetType: "post",
+        targetId: "p1",
+        data: { actorUsername: "budi" },
+      }),
+    ).toMatchObject({
+      title: "Suka pada momenmu",
+      body: "budi menyukai fotomu.",
+      href: "/#post-p1",
+    });
+
+    expect(
+      presentInboxNotification({
+        type: "post.commented",
+        targetId: "p2",
+        data: { actorUsername: "alya", preview: "Keren banget" },
+      }),
+    ).toMatchObject({
+      body: "alya: Keren banget",
+      href: "/#post-p2",
+    });
+  });
+
   it("treats join.rejected and decision reject as a denial", () => {
     expect(
       presentInboxNotification({

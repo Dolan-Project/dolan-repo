@@ -22,6 +22,11 @@ export function presentInboxNotification(input: {
   const preview = previewText(data);
   const invitePath = typeof data.invitePath === "string" ? data.invitePath : null;
   const decision = data.decision === "accept" || data.decision === "reject" ? data.decision : null;
+  const postId =
+    (typeof data.postId === "string" && data.postId.trim() ? data.postId.trim() : null) ??
+    (input.targetType === "post" && input.targetId ? input.targetId : null) ??
+    (input.type.startsWith("post.") && input.targetId ? input.targetId : null);
+  const postHref = postId ? `/#post-${postId}` : "/#momen";
 
   switch (input.type) {
     case "join_request.created":
@@ -111,6 +116,20 @@ export function presentInboxNotification(input: {
         title: "Pengikut baru",
         body: "Seseorang mulai mengikuti profilmu.",
         href: "/notifikasi",
+        tripId: null,
+      };
+    case "post.liked":
+      return {
+        title: "Suka pada momenmu",
+        body: `${actorName} menyukai fotomu.`,
+        href: postHref,
+        tripId: null,
+      };
+    case "post.commented":
+      return {
+        title: "Komentar pada momenmu",
+        body: preview ? `${actorName}: ${preview}` : `${actorName} mengomentari fotomu.`,
+        href: postHref,
         tripId: null,
       };
     default:

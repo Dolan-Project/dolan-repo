@@ -45,6 +45,7 @@ import {
   UserFollow,
   UserReview,
 } from "./social.ts";
+import { initPostModels, Post, PostComment, PostLike } from "./posts.ts";
 import {
   ApiUsageCounter,
   GenerationJob,
@@ -236,6 +237,17 @@ function applyAssociations() {
 
   ApiUsageCounter.belongsTo(User, { foreignKey: "userId", as: "user" });
   IdempotencyKey.belongsTo(User, { foreignKey: "actorUserId", as: "actor" });
+
+  User.hasMany(Post, { foreignKey: "authorUserId", as: "posts" });
+  Post.belongsTo(User, { foreignKey: "authorUserId", as: "author" });
+  Post.belongsTo(Trip, { foreignKey: "tripId", as: "trip" });
+  Post.belongsTo(ItineraryTemplate, { foreignKey: "templateId", as: "template" });
+  Post.hasMany(PostLike, { foreignKey: "postId", as: "likes" });
+  PostLike.belongsTo(Post, { foreignKey: "postId", as: "post" });
+  PostLike.belongsTo(User, { foreignKey: "userId", as: "user" });
+  Post.hasMany(PostComment, { foreignKey: "postId", as: "comments" });
+  PostComment.belongsTo(Post, { foreignKey: "postId", as: "post" });
+  PostComment.belongsTo(User, { foreignKey: "userId", as: "author" });
 }
 
 export function initModels(sequelize: Sequelize = getSequelize()) {
@@ -254,6 +266,7 @@ export function initModels(sequelize: Sequelize = getSequelize()) {
   initCommunicationModels(sequelize);
   initSocialModels(sequelize);
   initSupportModels(sequelize);
+  initPostModels(sequelize);
   applyAssociations();
   initialized = true;
 
@@ -304,6 +317,9 @@ export function getModels() {
     TripInvitation,
     ApiUsageCounter,
     IdempotencyKey,
+    Post,
+    PostLike,
+    PostComment,
   };
 }
 
@@ -346,4 +362,7 @@ export {
   TripInvitation,
   ApiUsageCounter,
   IdempotencyKey,
+  Post,
+  PostLike,
+  PostComment,
 };

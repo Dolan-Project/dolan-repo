@@ -41,6 +41,10 @@ import { MemorySocialStore, SequelizeSocialStore } from "./modules/social/social
 import { MemoryTripStore } from "./modules/trips/memory-store.ts";
 import { SequelizeTripStore } from "./modules/trips/sequelize-store.ts";
 import { TripService, type TripBlockLookup, type TripRealtime } from "./modules/trips/trip-service.ts";
+import { MemoryPostStore } from "./modules/posts/memory-post-store.ts";
+import { PostService } from "./modules/posts/post-service.ts";
+import { SequelizePostStore } from "./modules/posts/sequelize-post-store.ts";
+import type { SocialQueryStore } from "./modules/social/social-queries.ts";
 
 export function createSessionStore(useDatabase: boolean): SessionStore {
   return useDatabase ? new SequelizeSessionStore() : new MemorySessionStore();
@@ -188,4 +192,20 @@ export function createMemorySocialStore() {
 export function createProductionSocialStore() {
   initModels();
   return new SequelizeSocialStore();
+}
+
+export function createPostService(
+  trips: TripService,
+  search: SearchService,
+  social: SocialQueryStore,
+  chat: ChatService,
+  useDatabase: boolean,
+) {
+  return new PostService(
+    useDatabase ? new SequelizePostStore() : new MemoryPostStore(),
+    trips,
+    search,
+    social,
+    chat,
+  );
 }

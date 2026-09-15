@@ -20,6 +20,7 @@ import {
   type TripViewerRole,
   type UpdateTripBody,
   type VisibilityBody,
+  type PublicUser,
   presentInboxNotification,
 } from "@dolan/shared";
 import {
@@ -113,6 +114,31 @@ export class TripService {
       items.push(await this.toSummary(trip));
     }
     return apiPage(items, page, limit, result.total);
+  }
+
+  async publicAuthor(userId: string): Promise<PublicUser> {
+    const user = await this.store.getUser(userId);
+    return user ? await toPublicUser(user) : placeholderUser(userId);
+  }
+
+  async requireLinkedTrip(actor: SessionActor, tripId: string) {
+    const user = requireUser(actor);
+    const trip = await this.store.getTrip(tripId);
+    if (!trip) throw hiddenTrip();
+    if (trip.hostUserId === user.id) return trip;
+    const members = await this.store.listMembers(tripId);
+    if (members.some((member) => member.userId === user.id && member.membershipStatus === "ACTIVE")) {
+      return trip;
+    }
+    if (await this.actorKnowsTrip(trip, user.id)) {
+      throw forbidden(AuthErrorCode.NOT_MEMBER, "Hanya peserta trip yang bisa menautkan momen ini");
+    }
+    throw hiddenTrip();
+  }
+
+  async tripRef(tripId: string) {
+    const trip = await this.store.getTrip(tripId);
+    return trip ? { id: trip.id, title: trip.title } : null;
   }
 
   async getTrip(actor: SessionActor, tripId: string) {

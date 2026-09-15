@@ -28,6 +28,8 @@ describe("home feed", () => {
     expect(feed.status).toBe(200);
     expect(Array.isArray(feed.body.data.trips)).toBe(true);
     expect(Array.isArray(feed.body.data.templates)).toBe(true);
+    expect(Array.isArray(feed.body.data.stream)).toBe(true);
+    expect(feed.body.data.composer).toMatchObject({ trips: expect.any(Array), templates: expect.any(Array) });
     expect(feed.body.data.provinces.length).toBeGreaterThan(0);
     expect(feed.body.data.tasks).toMatchObject({
       profileComplete: true,

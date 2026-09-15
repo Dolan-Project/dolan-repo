@@ -36,6 +36,9 @@ import { createPushRouter } from "./modules/push/push-routes.ts";
 import type { QuotaService } from "./modules/search/quota.ts";
 import { createHomeRouter } from "./modules/home/home-routes.ts";
 import { HomeFeedService } from "./modules/home/home-service.ts";
+import { createPostRouter } from "./modules/posts/post-routes.ts";
+import { MemoryPostStore } from "./modules/posts/memory-post-store.ts";
+import { PostService } from "./modules/posts/post-service.ts";
 
 export function createApp(
   authService: AuthService,
@@ -52,6 +55,7 @@ export function createApp(
   provinces: ProvinceService = new ProvinceService(false),
   routesQuota?: QuotaService,
   databaseReady = false,
+  posts?: PostService,
 ) {
   const memoryChat = new MemoryChatStore();
   const chat = chatService ?? new ChatService(memoryChat);
@@ -69,7 +73,9 @@ export function createApp(
       email: "hidden@example.com",
     }));
   const itinerary = itineraryExport ?? new ItineraryExportService(chat, async () => null);
-  const home = new HomeFeedService(search, provinces, tripService, chat);
+  const postService =
+    posts ?? new PostService(new MemoryPostStore(), tripService, search, social, chat);
+  const home = new HomeFeedService(search, provinces, tripService, chat, postService);
   const app = express();
   app.disable("x-powered-by");
   if (env.nodeEnv === "production") {
@@ -134,6 +140,7 @@ export function createApp(
   app.use("/api/v1", createSocialRouter(authService, social, tripService));
   app.use("/api/v1", createPushRouter(databaseReady));
   app.use("/api/v1", createHomeRouter(home));
+  app.use("/api/v1", createPostRouter(postService));
 
   app.get("/api/v1/public/ping", requireCapability("read_public"), (_req, res) => {
     res.json(apiSuccess({ ok: true }));

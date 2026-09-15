@@ -1,3 +1,5 @@
+import type { HomeComposerOptions, HomeStreamItem, ItineraryTemplateSummary } from "@dolan/shared";
+
 export type HomeFeedPayload = {
   trips: Array<{
     id: string;
@@ -10,15 +12,7 @@ export type HomeFeedPayload = {
     publicMeetingPointLabel: string | null;
     status: string;
   }>;
-  templates: Array<{
-    id: string;
-    title: string;
-    city: string;
-    durationDays: number;
-    sourceLabel: string;
-    usageCount: number;
-    popularityLabel: string | null;
-  }>;
+  templates: ItineraryTemplateSummary[];
   provinces: Array<{
     id: string;
     slug: string;
@@ -33,4 +27,6 @@ export type HomeFeedPayload = {
     profileComplete: boolean;
     domicile: string | null;
   };
+  stream: HomeStreamItem[];
+  composer: HomeComposerOptions;
 };

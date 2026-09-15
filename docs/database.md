@@ -66,6 +66,7 @@ Scripts:
 6. `trip_comments`, `chat_rooms`, `messages`, `message_read_states`, `notifications`, `push_subscriptions`
 7. `user_follows`, `user_reviews`, `location_shares`, `location_latest`, `user_blocks`, `reports`, `moderation_actions`
 8. `generation_jobs`, `trip_share_links`, `api_usage_counters`, `idempotency_keys`
+9. `posts`, `post_likes`, `post_comments` (momen beranda: foto + caption, like, komentar, tautan trip/template opsional)
 
 ## Constraint penting
 
