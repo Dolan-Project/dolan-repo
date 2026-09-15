@@ -64,13 +64,14 @@ export function authorize(actor: SessionActor, capability: AuthCapability): Auth
   }
 
   if (capability === "approve_join") {
-    return trip?.memberRole === "HOST"
+    if (!trip) return { allowed: true };
+    return isTripHost(user.id, trip)
       ? { allowed: true }
       : deny(403, AuthErrorCode.NOT_HOST, "Only the host can manage participants");
   }
 
   if (capability === "join_trip") {
-    if (trip?.memberRole === "HOST") {
+    if (isTripHost(user.id, trip)) {
       return deny(403, AuthErrorCode.FORBIDDEN, "Host cannot join their own trip");
     }
     return { allowed: true };
@@ -90,13 +91,17 @@ export function authorize(actor: SessionActor, capability: AuthCapability): Auth
   }
 
   if (capability === "edit_itinerary") {
-    if (trip?.memberRole !== "HOST" || trip.membershipStatus !== "ACTIVE") {
+    if (!isTripHost(user.id, trip) || (trip?.membershipStatus && trip.membershipStatus !== "ACTIVE")) {
       return deny(403, AuthErrorCode.NOT_HOST, "Only the host can perform this action");
     }
     return { allowed: true };
   }
 
   return deny(403, AuthErrorCode.FORBIDDEN, "You cannot perform this action");
+}
+
+function isTripHost(userId: string, trip?: { memberRole?: string | null; hostUserId?: string | null } | null) {
+  return trip?.memberRole === "HOST" || trip?.hostUserId === userId;
 }
 
 function deny(status: 401 | 403, code: string, message: string): AuthzDecision {

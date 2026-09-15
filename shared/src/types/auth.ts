@@ -47,6 +47,7 @@ export type TripAccessContext = {
   memberRole: TripMemberRole | null;
   membershipStatus: MembershipStatus | null;
   joinRequestStatus: JoinRequestStatus | null;
+  hostUserId?: string | null;
 };
 
 export type SessionActor =

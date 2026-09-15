@@ -1,4 +1,15 @@
-export type NavStop = { name: string; latitude?: number | null; longitude?: number | null };
+export type NavStop = {
+  name: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  date?: string | null;
+  startTime?: string | null;
+  travelDistanceMeters?: number | null;
+  travelDurationMinutes?: number | null;
+  routeStatus?: string | null;
+  notes?: string | null;
+  meal?: string | null;
+};
 
 function point(stop: NavStop) {
   if (stop.latitude != null && stop.longitude != null) return `${stop.latitude},${stop.longitude}`;

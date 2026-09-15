@@ -11,9 +11,10 @@ import {
   type PlaceSummary,
 } from "@dolan/shared";
 import { env } from "../../config/env.ts";
-import { badRequest, forbidden, notFound } from "../../lib/api-error.ts";
+import { badRequest, forbidden, notFound, unauthorized } from "../../lib/api-error.ts";
 import { buildBudgetSummary } from "../jobs/budget.ts";
 import { GoogleRoutesClient } from "../jobs/routes-adapter.ts";
+import { ZodError } from "zod";
 
 function toPlaceSummary(place: {
   googlePlaceId: string;
@@ -21,6 +22,8 @@ function toPlaceSummary(place: {
   cachedCity?: string | null;
   cachedLatitude?: number | null;
   cachedLongitude?: number | null;
+    cachedPhotoName?: string | null;
+    cachedPhotoUrl?: string | null;
 } | null): PlaceSummary | null {
   if (!place) return null;
   const latitude = place.cachedLatitude ?? 0;
@@ -35,7 +38,8 @@ function toPlaceSummary(place: {
     longitude,
     rating: null,
     userRatingCount: null,
-    photoName: null,
+    photoName: place.cachedPhotoName ?? null,
+    photoUri: place.cachedPhotoUrl ?? null,
     googleMapsUrl: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name)}`,
   };
 }
@@ -56,15 +60,53 @@ async function requireTripAccess(tripId: string, actorId: string | null, asHost:
   return trip;
 }
 
-async function mapVersion(version: {
-  id: string;
-  tripId: string;
-  versionNumber: number;
-  source: "MANUAL" | "AI" | "TEMPLATE" | "REGENERATED";
-  summary: string | null;
-  assumptions: unknown;
-  createdAt: Date;
-}): Promise<EditableItineraryVersion> {
+async function requireTripMember(tripId: string, actorId: string | null) {
+  const { Trip, TripMember } = getModels();
+  const trip = await Trip.findByPk(tripId);
+  if (!trip) throw notFound("TRIP_NOT_FOUND", "Trip tidak ditemukan");
+  if (!actorId) throw unauthorized();
+  if (trip.hostUserId === actorId) return trip;
+  const member = await TripMember.findOne({ where: { tripId, userId: actorId, membershipStatus: "ACTIVE" } });
+  if (!member) throw forbidden("NOT_MEMBER", "Hanya host dan peserta yang dapat mengubah checklist");
+  return trip;
+}
+
+function isoDayDate(value: string | Date | null | undefined, fallback: string) {
+  if (value instanceof Date && !Number.isNaN(value.getTime())) return value.toISOString().slice(0, 10);
+  const text = String(value ?? "").slice(0, 10);
+  return /^\d{4}-\d{2}-\d{2}$/.test(text) ? text : fallback;
+}
+
+function addDaysToIso(startDate: string, dayOffset: number) {
+  const [year, month, day] = startDate.split("-").map(Number);
+  const date = new Date(Date.UTC(year || 2026, (month || 1) - 1, (day || 1) + dayOffset));
+  return date.toISOString().slice(0, 10);
+}
+
+export function fillMissingDayDates<T extends { dayNumber?: number; date?: string | null }>(
+  days: T[],
+  startDate: string | null | undefined,
+): T[] {
+  const base = isoDayDate(startDate, "");
+  return days.map((day, index) => {
+    const offset = Math.max(0, (day.dayNumber ?? index + 1) - 1);
+    const fallback = base ? addDaysToIso(base, offset) : addDaysToIso(new Date().toISOString().slice(0, 10), offset);
+    return { ...day, date: isoDayDate(day.date, fallback) };
+  });
+}
+
+async function mapVersion(
+  version: {
+    id: string;
+    tripId: string;
+    versionNumber: number;
+    source: "MANUAL" | "AI" | "TEMPLATE" | "REGENERATED";
+    summary: string | null;
+    assumptions: unknown;
+    createdAt: Date;
+  },
+  startDate: string | null,
+): Promise<EditableItineraryVersion> {
   const { ItineraryDay, ItineraryStop, Place, BudgetItem } = getModels();
   const days = await ItineraryDay.findAll({ where: { itineraryVersionId: version.id }, order: [["dayNumber", "ASC"]] });
   const mappedDays: EditableItineraryDay[] = [];
@@ -93,7 +135,7 @@ async function mapVersion(version: {
     mappedDays.push({
       id: day.id,
       dayNumber: day.dayNumber,
-      date: day.date ?? "",
+      date: isoDayDate(day.date, startDate ? addDaysToIso(startDate, Math.max(0, day.dayNumber - 1)) : ""),
       title: day.title,
       stops: mappedStops,
     });
@@ -127,10 +169,23 @@ async function mapVersion(version: {
 
 export async function getItinerarySnapshot(tripId: string, actorId: string | null): Promise<ItineraryEditorSnapshot> {
   const trip = await requireTripAccess(tripId, actorId, false);
-  const { ItineraryVersion, TripChecklistItem } = getModels();
+  const { ItineraryVersion, TripChecklistItem, TripChecklistCheck } = getModels();
   const versions = await ItineraryVersion.findAll({ where: { tripId }, order: [["versionNumber", "DESC"]] });
-  const mapped = await Promise.all(versions.map((version) => mapVersion(version.toJSON())));
+  const mapped: EditableItineraryVersion[] = [];
+  for (const version of versions) {
+    try {
+      mapped.push(await mapVersion(version.toJSON(), trip.startDate ?? ""));
+    } catch {
+      continue;
+    }
+  }
   const checklist = await TripChecklistItem.findAll({ where: { tripId }, order: [["createdAt", "ASC"]] });
+  const checks = actorId && checklist.length
+    ? await TripChecklistCheck.findAll({
+        where: { userId: actorId, itemId: checklist.map((item) => item.id) },
+      })
+    : [];
+  const completedIds = new Set(checks.map((row) => row.itemId));
   return {
     tripId: trip.id,
     tripTitle: trip.title,
@@ -143,7 +198,7 @@ export async function getItinerarySnapshot(tripId: string, actorId: string | nul
       id: item.id,
       title: item.title,
       dueDate: item.dueDate,
-      isCompleted: item.isCompleted,
+      isCompleted: actorId ? completedIds.has(item.id) : false,
     })),
   };
 }
@@ -163,6 +218,9 @@ async function applyRoadRoutes(days: EditableItineraryDay[]) {
       );
       if (!leg.ok) {
         day.stops[index]!.routeStatus = "UNAVAILABLE";
+        day.stops[index]!.routePolyline = null;
+        day.stops[index]!.travelDurationMinutes = null;
+        day.stops[index]!.travelDistanceMeters = null;
         continue;
       }
       day.stops[index]!.travelDurationMinutes = leg.durationMinutes;
@@ -177,7 +235,25 @@ async function applyRoadRoutes(days: EditableItineraryDay[]) {
 
 export async function saveItineraryVersion(tripId: string, actorId: string, body: unknown) {
   const trip = await requireTripAccess(tripId, actorId, true);
-  const parsed = saveItineraryVersionSchema.parse(body);
+  const raw = body && typeof body === "object" ? { ...(body as Record<string, unknown>) } : {};
+  if (Array.isArray(raw.days)) {
+    raw.days = fillMissingDayDates(raw.days as Array<{ dayNumber?: number; date?: string | null }>, trip.startDate);
+  }
+  let parsed;
+  try {
+    parsed = saveItineraryVersionSchema.parse(raw);
+  } catch (error) {
+    if (error instanceof ZodError) {
+      const fields = Object.fromEntries(error.issues.map((issue) => [issue.path.join(".") || "body", issue.message]));
+      const first = error.issues[0];
+      throw badRequest(
+        "VALIDATION_ERROR",
+        first ? `Itinerary tidak valid: ${first.path.join(".") || "data"} ${first.message}` : "Itinerary tidak valid",
+        fields,
+      );
+    }
+    throw error;
+  }
   const sequelize = getSequelize();
   const { ItineraryVersion, ItineraryDay, ItineraryStop, Place, BudgetItem, Trip } = getModels();
   const daysWithPlaces: EditableItineraryDay[] = [];
@@ -325,38 +401,40 @@ export async function selectItineraryVersion(tripId: string, actorId: string, bo
 }
 
 export async function upsertChecklist(tripId: string, actorId: string, body: unknown) {
-  await requireTripAccess(tripId, actorId, true);
+  await requireTripMember(tripId, actorId);
   const parsed = checklistMutationSchema.parse(body);
-  const { TripChecklistItem } = getModels();
-  if (parsed.id) {
-    const item = await TripChecklistItem.findOne({ where: { id: parsed.id, tripId } });
-    if (!item) throw notFound("NOT_FOUND", "Checklist tidak ditemukan");
-    await item.update({
-      title: parsed.title,
+  const { TripChecklistItem, TripChecklistCheck } = getModels();
+  const items = await TripChecklistItem.findAll({ where: { tripId } });
+  const needle = parsed.title.trim().toLowerCase();
+  let item = parsed.id
+    ? items.find((row) => row.id === parsed.id) ?? null
+    : items.find((row) => row.title.trim().toLowerCase() === needle) ?? null;
+  if (parsed.id && !item) throw notFound("NOT_FOUND", "Checklist tidak ditemukan");
+  if (!item) {
+    item = await TripChecklistItem.create({
+      tripId,
+      userId: actorId,
+      title: parsed.title.trim(),
       dueDate: parsed.dueDate,
-      isCompleted: parsed.isCompleted,
-      completedAt: parsed.isCompleted ? new Date() : null,
+      isCompleted: false,
+      completedAt: null,
     });
-    return {
-      id: item.id,
-      title: item.title,
-      dueDate: item.dueDate,
-      isCompleted: item.isCompleted,
-    };
+  } else if (item.title !== parsed.title.trim() || item.dueDate !== parsed.dueDate) {
+    await item.update({ title: parsed.title.trim(), dueDate: parsed.dueDate });
   }
-  const created = await TripChecklistItem.create({
-    tripId,
-    userId: actorId,
-    title: parsed.title,
-    dueDate: parsed.dueDate,
-    isCompleted: parsed.isCompleted,
-    completedAt: parsed.isCompleted ? new Date() : null,
-  });
+  if (parsed.isCompleted) {
+    await TripChecklistCheck.findOrCreate({
+      where: { itemId: item.id, userId: actorId },
+      defaults: { itemId: item.id, userId: actorId, completedAt: new Date() },
+    });
+  } else {
+    await TripChecklistCheck.destroy({ where: { itemId: item.id, userId: actorId } });
+  }
   return {
-    id: created.id,
-    title: created.title,
-    dueDate: created.dueDate,
-    isCompleted: created.isCompleted,
+    id: item.id,
+    title: item.title,
+    dueDate: item.dueDate,
+    isCompleted: parsed.isCompleted,
   };
 }
 

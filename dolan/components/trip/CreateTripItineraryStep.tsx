@@ -12,15 +12,34 @@ import {
   itineraryMapRouteGroups,
   placeSummaryFromPick,
   remainingRegenerates,
-  visitWindowLabel,
+  withGlobalStopNumbers,
   type ItineraryBudgetPlan,
   type PickedVisitPlace,
 } from "@/lib/template-itinerary";
 import { ITINERARY_ROUTE_COLOR, itineraryStopColor } from "@/lib/itinerary-style";
 import { ItineraryStopPin } from "@/components/trip/ItineraryTimeline";
+import { encodedRoutePolylines } from "@/lib/route-travel";
+import {
+  activityTypeLabel,
+  formatTravelToStop,
+  stopDescription,
+  stopDisplayNumber,
+  stopPinColorIndex,
+  stopPlaceHeading,
+  visitWindowSummary,
+} from "@/lib/itinerary-stop-view";
 import { searchGeoPlaces } from "@/mocks/geo";
 
 const BUDGET_PRESETS = [750_000, 1_500_000, 2_500_000, 5_000_000];
+
+function foodMealLabel(detail?: string) {
+  const value = (detail ?? "").toLocaleLowerCase("id-ID");
+  if (/camilan|gorengan|es kelapa|teh manis|jajan/.test(value)) return "Makan (jajan)";
+  if (/siang/.test(value)) return "Makan (siang)";
+  if (/malam/.test(value)) return "Makan (malam)";
+  if (/sarapan|pagi|bubur|nasi uduk/.test(value)) return "Makan (pagi)";
+  return "Makan";
+}
 
 function resolveVisitPick(query: string, destinationCity: string): PickedVisitPlace | null {
   const name = query.trim();
@@ -100,14 +119,16 @@ export function CreateTripItineraryStep({
   const [addingDayId, setAddingDayId] = useState<string | null>(null);
   const [addQuery, setAddQuery] = useState("");
   const [routeFilter, setRouteFilter] = useState<"all" | string>("all");
-  const mappedDays = routeFilter === "all" ? days : days.filter((day) => day.id === routeFilter);
-  const visibleDays = mappedDays.length ? mappedDays : days;
+  const numberedDays = withGlobalStopNumbers(days);
+  const mappedDays = routeFilter === "all" ? numberedDays : numberedDays.filter((day) => day.id === routeFilter);
+  const visibleDays = mappedDays.length ? mappedDays : numberedDays;
   const markers = itineraryMapMarkers(visibleDays, selectedStopId ?? editingStopId, destinationCity);
   const routeGroups = itineraryMapRouteGroups(visibleDays, destinationCity);
   const leftover = remainingRegenerates(regenerateUsed);
-  const editing = days.flatMap((day) => day.stops.map((stop) => ({ day, stop }))).find((item) => item.stop.id === editingStopId);
+  const editing = numberedDays.flatMap((day) => day.stops.map((stop) => ({ day, stop }))).find((item) => item.stop.id === editingStopId);
   const usedPercent = budgetPlan.pool > 0 ? Math.min(100, Math.round((budgetPlan.total / budgetPlan.pool) * 100)) : 0;
   const showBudgetEditor = Boolean(onBudgetAmountChange) && typeof budgetAmount === "number";
+  const roadPolylines = encodedRoutePolylines(visibleDays);
 
   function commitAdd(dayId: string, pick: PickedVisitPlace | null) {
     if (!onAddStop || !pick) return;
@@ -118,7 +139,7 @@ export function CreateTripItineraryStep({
 
   return (
     <div className="grid gap-4 bg-white lg:grid-cols-[minmax(0,1fr)_minmax(280px,0.78fr)] lg:items-start">
-      <div className="flex flex-col rounded-2xl border border-slate-200 bg-white p-4 md:p-5">
+      <div className="flex flex-col bg-white p-4 md:p-5">
         <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
           <div className="min-w-0 flex-1">
             <p className="type-micro font-extrabold uppercase tracking-[0.16em] text-primary">Rute, biaya & penjelasan</p>
@@ -131,10 +152,10 @@ export function CreateTripItineraryStep({
             </h2>
             <p className="type-caption mt-1 text-on-surface-variant">
               {fromTemplate
-                ? "Rute kurasi DOLAN. Kamu bisa ganti tempat, jam, atau urutan per hari sebelum lanjut."
+                ? "Rute kurasi DOLAN. Bisa diedit sebelum lanjut."
                 : fromGroq
-                  ? "Disusun Groq dari destinasi, tanggal, jumlah orang, dan budget. Edit manual jika ada tempat yang tidak cocok."
-                  : "Angka 1-2-3 satu garis rute. Tiket hanya muncul kalau tempat memang berbayar — Bundaran HI dan ruang publik tetap gratis."}
+                  ? "Disusun Groq. Edit jika ada tempat yang tidak cocok."
+                  : "Nomor di daftar sama dengan pin di peta."}
             </p>
           </div>
           <button
@@ -162,10 +183,10 @@ export function CreateTripItineraryStep({
             <div className={`h-full rounded-full ${budgetPlan.overBudget ? "bg-secondary" : "bg-primary"}`} style={{ width: `${usedPercent}%` }} />
           </div>
           <p className="type-caption mt-2 text-on-surface">
-            Estimasi makan & transport {formatRupiah(budgetPlan.total)} untuk {partySize} orang.
+            {formatRupiah(budgetPlan.total)} / {partySize} orang
             {budgetPlan.overBudget
-              ? ` Kelebihan ${formatRupiah(Math.abs(budgetPlan.remaining))}. Ubah budget atau regenerasi untuk rute yang lebih hemat.`
-              : ` Sisa ${formatRupiah(Math.max(0, budgetPlan.remaining))}.`}
+              ? ` · lebih ${formatRupiah(Math.abs(budgetPlan.remaining))}`
+              : ` · sisa ${formatRupiah(Math.max(0, budgetPlan.remaining))}`}
           </p>
           {showBudgetEditor ? (
             <div className="mt-3 border-t border-slate-200 pt-3">
@@ -208,7 +229,7 @@ export function CreateTripItineraryStep({
           ) : null}
         </div>
         <div className="space-y-3">
-          {days.length > 1 ? (
+              {numberedDays.length > 1 ? (
             <div className="flex flex-wrap gap-1.5">
               <button
                 type="button"
@@ -217,7 +238,7 @@ export function CreateTripItineraryStep({
               >
                 Semua rute
               </button>
-              {days.map((day) => (
+              {numberedDays.map((day) => (
                 <button
                   key={`list-${day.id}`}
                   type="button"
@@ -247,6 +268,15 @@ export function CreateTripItineraryStep({
                   const meeting = isPublic && day.dayNumber === 1 && index === 0;
                   const last = index === day.stops.length - 1;
                   const placeValue = stop.customTitle || stop.place?.name || "";
+                  const pinNumber = stopDisplayNumber(stop, index);
+                  const pinIndex = stopPinColorIndex(stop, index);
+                  const heading = stopPlaceHeading(stop);
+                  const visit = visitWindowSummary(stop.startTime, stop.durationMinutes);
+                  const travelLabel = formatTravelToStop(stop, day.stops[index - 1], index === 0);
+                  const description = stopDescription(stop);
+                  const ticketLine = cost?.lines.find((line) => line.key === "ticket");
+                  const transportLine = cost?.lines.find((line) => line.key === "transport");
+                  const foodLine = cost?.lines.find((line) => line.key === "food");
                   return (
                     <li
                       key={stop.id}
@@ -261,7 +291,7 @@ export function CreateTripItineraryStep({
                         setDrag(null);
                       }}
                     >
-                      <div className={`grid grid-cols-[2rem_2rem_minmax(0,1fr)] items-stretch gap-x-2 bg-white px-1 ${active ? "rounded-xl ring-1 ring-primary/20" : ""}`}>
+                      <div className="grid grid-cols-[2rem_2rem_minmax(0,1fr)] items-stretch gap-x-2 bg-white px-1">
                         <button
                           type="button"
                           className="mt-3 grid h-8 w-8 shrink-0 cursor-grab place-items-center rounded-lg text-on-surface-variant active:cursor-grabbing"
@@ -276,20 +306,20 @@ export function CreateTripItineraryStep({
                           {!last ? (
                             <span
                               className={`absolute left-1/2 z-0 w-[3px] -translate-x-1/2 ${index === 0 ? "top-7" : "top-0"} bottom-0`}
-                              style={{ backgroundColor: itineraryStopColor(index) }}
+                              style={{ backgroundColor: itineraryStopColor(pinIndex) }}
                               aria-hidden="true"
                             />
                           ) : index > 0 ? (
                             <span
                               className="absolute left-1/2 top-0 z-0 h-7 w-[3px] -translate-x-1/2"
-                              style={{ backgroundColor: itineraryStopColor(index - 1) }}
+                              style={{ backgroundColor: itineraryStopColor(stopPinColorIndex(day.stops[index - 1]!, index - 1)) }}
                               aria-hidden="true"
                             />
                           ) : null}
                           <div className="relative z-10 mt-3">
                             <ItineraryStopPin
-                              index={index}
-                              sequence={stop.sequence}
+                              index={pinIndex}
+                              sequence={pinNumber}
                               selected={active}
                               shape="circle"
                               halo={false}
@@ -297,48 +327,70 @@ export function CreateTripItineraryStep({
                           </div>
                         </div>
                         <div className="min-w-0 bg-white py-3">
-                          <div className="flex flex-wrap items-start justify-between gap-1">
-                            <div>
-                              {meeting ? <p className="mb-0.5 inline-flex rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold text-white">Titik kumpul</p> : null}
-                              <p className="text-sm font-extrabold leading-snug text-on-surface">{placeValue || "Titik rute"}</p>
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              {meeting ? <p className="mb-1 inline-flex rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold text-white">Titik kumpul</p> : null}
+                              <p className="text-sm font-extrabold leading-snug text-on-surface">{heading.name || "Titik rute"}</p>
+                              {heading.subLocation ? (
+                                <p className="type-caption mt-0.5 text-on-surface-variant">{heading.subLocation}</p>
+                              ) : null}
                             </div>
                             <p className="shrink-0 text-sm font-extrabold text-primary">
-                              {cost && cost.ticketCost > 0 ? formatRupiah(cost.ticketCost) : "Gratis masuk"}
+                              {cost && cost.total > 0 ? formatRupiah(cost.total) : "Gratis"}
                             </p>
                           </div>
-                          <p className="type-caption mt-0.5 text-on-surface-variant">
-                            Ideal {visitWindowLabel(stop.startTime, stop.durationMinutes) || `${stop.startTime ?? "—"} · ${stop.durationMinutes} menit`}
-                            {" · "}{stop.activityType}
-                          </p>
-                          {cost?.lines.find((line) => line.key === "transport") ? (
-                            <p className="type-caption mt-0.5 font-bold text-on-surface">
-                              {cost.lines.find((line) => line.key === "transport")!.detail}
-                              {cost.travelCost > 0 ? ` · ${formatRupiah(cost.travelCost)}` : ""}
-                            </p>
-                          ) : null}
-                          {cost ? (
-                            <div className="mt-2 space-y-1 rounded-lg border border-slate-200 bg-white px-2.5 py-2">
-                              <p className="text-[11px] font-extrabold uppercase tracking-wide text-primary">Rincian di titik ini</p>
-                              {cost.ticketCost === 0 ? (
-                                <p className="type-caption font-bold text-on-surface">Masuk gratis, tanpa tiket.</p>
-                              ) : null}
-                              {cost.lines.map((line) => (
-                                <p key={line.key} className="flex items-start justify-between gap-2 type-caption text-on-surface">
-                                  <span>
-                                    <span className="font-bold">{line.label}</span>
-                                    {" · "}
-                                    {line.detail}
-                                  </span>
-                                  <span className="shrink-0 font-extrabold">{formatRupiah(line.amount)}</span>
-                                </p>
-                              ))}
-                              <p className="flex justify-between gap-2 border-t border-slate-200 pt-1 type-caption font-extrabold text-on-surface">
-                                <span>Total estimasi (bukan tiket wajib)</span>
-                                <span>{formatRupiah(cost.total)}</span>
-                              </p>
-                            </div>
-                          ) : null}
-                          {stop.notes ? <p className="type-caption mt-1 line-clamp-2 text-on-surface">{stop.notes}</p> : null}
+                          <div className="mt-1.5 flex flex-wrap gap-1.5">
+                            {visit.window ? (
+                              <span className="rounded-full bg-slate-100 px-2.5 py-1 type-caption font-bold text-on-surface">
+                                {visit.window}
+                              </span>
+                            ) : (
+                              <span className="rounded-full bg-slate-100 px-2.5 py-1 type-caption font-bold text-on-surface">
+                                {visit.label}
+                              </span>
+                            )}
+                            {travelLabel ? (
+                              <span className="rounded-full bg-slate-100 px-2.5 py-1 type-caption font-bold text-on-surface">
+                                {travelLabel}
+                              </span>
+                            ) : null}
+                            {activityTypeLabel(stop.activityType) !== "Kunjungan" ? (
+                              <span className="rounded-full bg-primary/10 px-2.5 py-1 type-caption font-bold text-primary">
+                                {activityTypeLabel(stop.activityType)}
+                              </span>
+                            ) : null}
+                          </div>
+                          {(() => {
+                            const costRows = [
+                              ticketLine ? { key: "ticket", label: "Tiket", amount: ticketLine.amount } : null,
+                              transportLine && transportLine.amount > 0
+                                ? { key: "transport", label: "Transportasi", amount: transportLine.amount }
+                                : null,
+                              foodLine
+                                ? { key: "food", label: foodLine.label || foodMealLabel(foodLine.detail), amount: foodLine.amount }
+                                : null,
+                            ].filter((row): row is { key: string; label: string; amount: number } => Boolean(row));
+                            if (!costRows.length && !description) return null;
+                            return (
+                              <div className="mt-2 rounded-lg border border-slate-200 bg-white py-1">
+                                {costRows.map((row, rowIndex) => {
+                                  const showDivider = rowIndex < costRows.length - 1 || Boolean(description);
+                                  return (
+                                    <div key={row.key}>
+                                      <p className="flex items-baseline justify-between gap-3 px-3 py-2 type-caption text-on-surface">
+                                        <span>{row.label}</span>
+                                        <span className="shrink-0 font-extrabold">{formatRupiah(row.amount)}</span>
+                                      </p>
+                                      {showDivider ? <div className="mx-3 border-b border-slate-200" aria-hidden="true" /> : null}
+                                    </div>
+                                  );
+                                })}
+                                {description ? (
+                                  <p className="px-3 py-2 type-caption text-on-surface-variant">{description}</p>
+                                ) : null}
+                              </div>
+                            );
+                          })()}
                           <div className="mt-1.5 flex flex-wrap gap-1.5">
                             <button type="button" className="btn-ghost !min-h-8 !px-2.5 !text-xs" onClick={() => onEditStop(stop.id)}>
                               <Icon name="edit" className="text-[16px]" />
@@ -490,33 +542,12 @@ export function CreateTripItineraryStep({
           <Icon name="map" className="text-[20px] text-primary" />
           <div>
             <p className="type-caption font-bold text-on-surface">Peta rute</p>
-            <p className="type-caption text-on-surface-variant">Filter hari di bawah. Nomor 1-2-3 berlanjut ke hari berikutnya.</p>
+            <p className="type-caption text-on-surface-variant">Nomor pin sama dengan daftar.</p>
           </div>
         </div>
-        {days.length > 1 ? (
-          <div className="flex flex-wrap gap-1.5 border-b border-slate-200 bg-white px-3 py-2">
-            <button
-              type="button"
-              className={`rounded-full px-3 py-1.5 type-caption ${routeFilter === "all" ? "bg-primary text-white" : "bg-slate-100 text-on-surface"}`}
-              onClick={() => setRouteFilter("all")}
-            >
-              Semua rute
-            </button>
-            {days.map((day) => (
-              <button
-                key={day.id}
-                type="button"
-                className={`rounded-full px-3 py-1.5 type-caption ${routeFilter === day.id ? "bg-primary text-white" : "bg-slate-100 text-on-surface"}`}
-                onClick={() => setRouteFilter(day.id)}
-              >
-                Hari {day.dayNumber}
-              </button>
-            ))}
-          </div>
-        ) : null}
         <div className="h-[280px] bg-white md:h-[340px] lg:h-[420px]">
           {markers.length > 0 ? (
-            <TripBoardMap markers={markers} onSelect={onSelectStop} routeColor={ITINERARY_ROUTE_COLOR} numberedBadges routeGroups={routeGroups} />
+            <TripBoardMap markers={markers} onSelect={onSelectStop} routeColor={ITINERARY_ROUTE_COLOR} numberedBadges routeGroups={routeGroups} encodedPolylines={roadPolylines} routeUnavailable={false} />
           ) : (
             <div className="grid h-full place-items-center bg-white px-6 text-center">
               <p className="type-caption text-on-surface-variant">

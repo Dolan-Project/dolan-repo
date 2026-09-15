@@ -32,7 +32,7 @@ describe("itinerary editor adapter", () => {
     const parsed = saveItineraryVersionSchema.safeParse({
       baseVersionId: "wizard-v1",
       summary: "Rute Bromo",
-      days: toItinerarySaveDays(days),
+      days: toItinerarySaveDays(days, "2026-10-01"),
       budgetItems: [],
     });
     expect(parsed.success).toBe(true);

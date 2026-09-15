@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Icon } from "@/components/ui/Icon";
 import { ROUTES } from "@/lib/routes";
 import { useTripChats } from "./useTripChats";
+import { destinationCoverUrl } from "@/lib/destination-itinerary";
 
 export function TripChatInbox({ activeTripId }: { activeTripId?: string }) {
   const { trips, loading } = useTripChats();
@@ -32,8 +33,9 @@ export function TripChatInbox({ activeTripId }: { activeTripId?: string }) {
               href={ROUTES.tripChat(trip.id)}
               className={`mb-1 flex items-start gap-3 rounded-2xl px-3 py-3 ${active ? "bg-primary-fixed text-primary" : "text-on-surface hover:bg-surface-container-low"}`}
             >
-              <span className={`grid h-12 w-12 shrink-0 place-items-center rounded-2xl text-sm font-extrabold ${active ? "bg-primary text-white" : "bg-surface-container text-primary"}`}>
-                {(trip.destinationCity ?? trip.title).slice(0, 2).toUpperCase()}
+              <span className="relative h-12 w-12 shrink-0 overflow-hidden rounded-2xl bg-surface-container">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={destinationCoverUrl(trip.destinationCity ?? trip.title)} alt="" className="h-full w-full object-cover" />
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block truncate font-extrabold">{trip.title}</span>

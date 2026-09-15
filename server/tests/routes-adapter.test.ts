@@ -63,5 +63,7 @@ describe("route legs", () => {
     );
     expect(next.days[0]?.stops[1]?.travelDurationMinutes).toBeNull();
     expect(next.days[0]?.stops[1]?.notes).toMatch(/garis lurus/);
+    expect(next.days[0]?.stops[1]?.routeStatus).toBe("UNAVAILABLE");
+    expect(next.days[0]?.stops[1]?.routePolyline).toBeNull();
   });
 });

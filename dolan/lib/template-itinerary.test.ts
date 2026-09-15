@@ -76,8 +76,13 @@ describe("create trip wizard helpers", () => {
     const plan = estimateItineraryBudget(days, 200_000, 2);
     expect(plan.total).toBeGreaterThan(0);
     expect(plan.overBudget).toBe(true);
-    expect(plan.byStopId[days[0].stops[0].id].lines.some((line) => line.key === "transport")).toBe(true);
-    expect(plan.byStopId[days[0].stops[0].id].ticketCost).toBeGreaterThan(0);
+    const first = plan.byStopId[days[0].stops[0].id];
+    expect(first.lines.some((line) => line.key === "transport")).toBe(true);
+    expect(first.ticketCost).toBeGreaterThan(0);
+    expect(first.total).toBe(first.ticketCost + first.foodCost + first.travelCost);
+    expect(first.total).toBe(first.lines.reduce((sum, line) => sum + line.amount, 0));
+    expect(first.lines.find((line) => line.key === "ticket")?.detail).toMatch(/perlu dicek/);
+    expect(first.lines.every((line) => !/bukan tiket wajib/i.test(line.detail))).toBe(true);
     const foodAmounts = days[0].stops.map((stop) => plan.byStopId[stop.id].foodCost);
     expect(foodAmounts.some((amount) => amount > 0)).toBe(true);
     expect(new Set(foodAmounts).size).toBeGreaterThan(1);
@@ -299,6 +304,9 @@ describe("create trip wizard helpers", () => {
     const markers = itineraryMapMarkers(days, null, "Bali");
     expect(markers).toHaveLength(4);
     expect(markers.map((marker) => marker.sequence)).toEqual([1, 2, 3, 4]);
+    const dayTwo = days.filter((day) => day.dayNumber === 2);
+    expect(itineraryMapMarkers(dayTwo, null, "Bali").map((marker) => marker.sequence)).toEqual([3, 4]);
+    expect(days[0].stops[1].travelDurationMinutes).toBeNull();
     const url = googleMapsDirectionsUrl(markers);
     expect(url).toMatch(/google\.com\/maps\/dir/);
     expect(url?.split("/").length).toBeGreaterThan(4);

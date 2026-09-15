@@ -7,7 +7,6 @@ import type { AuthSession } from "@/lib/contracts";
 import { ROUTES, type NavKey } from "@/lib/routes";
 import { Icon } from "@/components/ui/Icon";
 import { NotificationBell } from "@/components/layout/NotificationBell";
-import { DolanWordmark } from "@/components/brand/DolanWordmark";
 import { UserAvatar } from "@/components/ui/UserAvatar";
 
 const desktopLinks: { key: NavKey; href: string; label: string }[] = [

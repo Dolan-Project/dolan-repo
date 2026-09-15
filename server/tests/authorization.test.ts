@@ -85,4 +85,27 @@ describe("authorization rules", () => {
     });
     expect(authorize(actor, "read_chat").allowed).toBe(true);
   });
+
+  it("allows the trip owner to approve join even without a HOST membership row", () => {
+    const actor = userActor({}, {
+      tripId: "trip-1",
+      memberRole: null,
+      membershipStatus: null,
+      joinRequestStatus: null,
+      hostUserId: completeUser.id,
+    });
+    expect(authorize(actor, "approve_join").allowed).toBe(true);
+  });
+
+  it("blocks a non-host from approving join when trip context is present", () => {
+    const actor = userActor({}, {
+      tripId: "trip-1",
+      memberRole: "PARTICIPANT",
+      membershipStatus: "ACTIVE",
+      joinRequestStatus: "ACCEPTED",
+      hostUserId: "22222222-2222-4222-8222-222222222222",
+    });
+    const decision = authorize(actor, "approve_join");
+    expect(decision.allowed).toBe(false);
+  });
 });

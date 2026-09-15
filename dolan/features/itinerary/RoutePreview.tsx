@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { EditableItineraryDay } from "@dolan/shared";
 import { Icon } from "@/components/ui/Icon";
 import { GoogleMap } from "@/features/explore/GoogleMap";
+import { itineraryHasUnavailableRoute, ROUTE_UNAVAILABLE_TEXT } from "@/lib/route-travel";
 
 export function RoutePreview({
   days,
@@ -24,6 +25,7 @@ export function RoutePreview({
     () => stops.map((stop) => stop.routePolyline).filter((value): value is string => Boolean(value)),
     [stops],
   );
+  const unavailable = itineraryHasUnavailableRoute(days);
   const [previewPolylines, setPreviewPolylines] = useState<string[]>([]);
   const routePolylines = storedPolylines.length > 0 ? storedPolylines : previewPolylines;
 
@@ -61,6 +63,7 @@ export function RoutePreview({
           numberedBadges
           showRoute={points.length > 1}
           routePolylines={routePolylines}
+          routeUnavailable={unavailable || (points.length > 1 && routePolylines.length === 0)}
           routeColor="#004ac6"
           className="absolute inset-0 h-full w-full"
         />
@@ -76,9 +79,11 @@ export function RoutePreview({
         <div className="absolute bottom-4 left-4 right-4 rounded-2xl bg-[#071c32]/88 p-4 text-white backdrop-blur-md">
           <p className="type-label">Rute mengikuti jalan Google Maps</p>
           <p className="type-caption mt-1 text-white/70">
-            {routePolylines.length > 0
-              ? "Garis biru mengikuti jalan yang tersedia, bukan tarikan lurus antar titik."
-              : "Tambahkan browser key dan server key Google Maps agar garis rute mengikuti jalan."}
+            {unavailable || (points.length > 1 && routePolylines.length === 0)
+              ? ROUTE_UNAVAILABLE_TEXT
+              : routePolylines.length > 0
+                ? "Garis biru mengikuti jalan yang tersedia, bukan tarikan lurus antar titik."
+                : "Tambahkan browser key dan server key Google Maps agar garis rute mengikuti jalan."}
           </p>
         </div>
       </div>

@@ -10,11 +10,12 @@ import { ROUTES } from "@/lib/routes";
 type JoinRequestsModalProps = {
   tripId: string;
   tripTitle: string;
-  onClose: () => void;
+  onClose?: () => void;
   onChanged?: () => void;
+  variant?: "modal" | "panel";
 };
 
-export function JoinRequestsModal({ tripId, tripTitle, onClose, onChanged }: JoinRequestsModalProps) {
+export function JoinRequestsModal({ tripId, tripTitle, onClose, onChanged, variant = "modal" }: JoinRequestsModalProps) {
   const [rows, setRows] = useState<JoinRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [pending, setPending] = useState("");
@@ -62,17 +63,18 @@ export function JoinRequestsModal({ tripId, tripTitle, onClose, onChanged }: Joi
     }
   }
 
-  return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 px-4" role="dialog" aria-modal="true" aria-labelledby="join-requests-title">
-      <div className="w-full max-w-lg rounded-2xl bg-white p-5 shadow-xl">
+  const body = (
+      <div className={variant === "panel" ? "w-full" : "w-full max-w-lg rounded-2xl bg-white p-5 shadow-xl"}>
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="type-micro font-extrabold uppercase tracking-[0.16em] text-primary">Permintaan gabung</p>
             <h2 id="join-requests-title" className="mt-1 text-lg font-extrabold text-on-surface">{tripTitle}</h2>
           </div>
-          <button type="button" className="grid h-9 w-9 place-items-center rounded-full hover:bg-slate-100" onClick={onClose} aria-label="Tutup">
-            <Icon name="close" />
-          </button>
+          {onClose ? (
+            <button type="button" className="grid h-9 w-9 place-items-center rounded-full hover:bg-slate-100" onClick={onClose} aria-label="Tutup">
+              <Icon name="close" />
+            </button>
+          ) : null}
         </div>
         {loading ? <p className="mt-4 type-body text-on-surface-variant">Memuat…</p> : null}
         {error ? <p className="mt-3 type-caption text-error" role="alert">{error}</p> : null}
@@ -106,6 +108,13 @@ export function JoinRequestsModal({ tripId, tripTitle, onClose, onChanged }: Joi
           ))}
         </ul>
       </div>
+  );
+
+  if (variant === "panel") return body;
+
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 px-4" role="dialog" aria-modal="true" aria-labelledby="join-requests-title">
+      {body}
     </div>
   );
 }
