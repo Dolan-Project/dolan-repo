@@ -50,6 +50,7 @@ export interface SocialQueryStore {
   listFollowerIds(userId: string): Promise<string[]>;
   listFollowingIds(userId: string): Promise<string[]>;
   isBlockedEitherWay(userA: string, userB: string): Promise<boolean>;
+  listBlockedUserIds(userId: string): Promise<string[]>;
   block(blockerUserId: string, blockedUserId: string): Promise<BlockRecord>;
   unblock(blockerUserId: string, blockedUserId: string): Promise<boolean>;
   removeFollowsBetween(userA: string, userB: string): Promise<number>;
@@ -132,6 +133,15 @@ export class MemorySocialStore implements SocialQueryStore {
         (row.blockerUserId === userA && row.blockedUserId === userB) ||
         (row.blockerUserId === userB && row.blockedUserId === userA),
     );
+  }
+
+  async listBlockedUserIds(userId: string) {
+    const ids = new Set<string>();
+    for (const row of this.blocks) {
+      if (row.blockerUserId === userId) ids.add(row.blockedUserId);
+      if (row.blockedUserId === userId) ids.add(row.blockerUserId);
+    }
+    return [...ids];
   }
 
   async block(blockerUserId: string, blockedUserId: string) {
@@ -302,6 +312,17 @@ export class SequelizeSocialStore implements SocialQueryStore {
       },
     });
     return count > 0;
+  }
+
+  async listBlockedUserIds(userId: string) {
+    const rows = await UserBlock.findAll({
+      where: { [Op.or]: [{ blockerUserId: userId }, { blockedUserId: userId }] },
+    });
+    const ids = new Set<string>();
+    for (const row of rows) {
+      ids.add(row.blockerUserId === userId ? row.blockedUserId : row.blockerUserId);
+    }
+    return [...ids];
   }
 
   async block(blockerUserId: string, blockedUserId: string) {

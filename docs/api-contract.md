@@ -436,6 +436,48 @@ Notifikasi tersimpan (bukan milik sendiri): `join_request.created`, `join_reques
 
 ---
 
+# Beranda momen (WIRA)
+
+Owner: **Wira**. Beranda `/` = feed foto + kartu rencana. Tamu bisa melihat feed; unggah momen butuh login + profil lengkap.
+
+`GET /home/feed` (login) menambah `stream` (`{ kind: "post" | "plan", post?, template? }`) dan `composer` (`trips`, `templates`). Rail `templates` diurut `usageCount`. Setiap 4 post, `stream` menyisipkan kartu `plan` dari template yang tidak baru tampil di 3 kartu rail.
+
+## `GET /posts`
+
+**Actor:** login  
+**Schema:** `listPostsQuerySchema`  
+**Response:** `ApiPage<PostCard>`  
+Sembunyikan penulis yang di-block (dua arah).
+
+`PostCard`: `id`, `caption`, `imageUrl`, `author`, `trip?`, `template?`, `likeCount`, `commentCount`, `likedByMe`, `comments` (3 terbaru), `createdAt`
+
+## `POST /posts`
+
+**Actor:** login + profil lengkap  
+**Body:** `multipart/form-data` — `file` (JPG/PNG/WebP, max 5MB), `caption?`, `tripId?`, `templateId?`  
+Foto ke ImageKit `/dolan/users/{id}/posts`. `tripId` hanya trip yang penulis host/peserta ACTIVE. `templateId` harus template publik.
+
+**Error:** `PROFILE_INCOMPLETE` (403), `UPLOAD_*` (400), `TEMPLATE_UNAVAILABLE` (400), `NOT_MEMBER`/`TRIP_NOT_FOUND` (403/404)
+
+## `DELETE /posts/:id`
+
+Penulis atau admin. Soft delete + hapus file ImageKit.
+
+## `POST|DELETE /posts/:id/likes`
+
+Toggle like. Like pertama menyimpan notifikasi `post.liked` ke penulis (bukan ke diri sendiri).
+
+## `GET|POST /posts/:id/comments`
+
+**Schema POST:** `createPostCommentBodySchema` — `{ body }`  
+Komentar baru: notifikasi `post.commented`.
+
+## `DELETE /posts/:id/comments/:commentId`
+
+Penulis komentar, penulis post, atau admin.
+
+---
+
 # Database security and release (WIRA-D4)
 
 Owner: **Wira**. Reviewer: **Alya**. Rincian operasi: `docs/release.md`.

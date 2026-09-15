@@ -1,229 +1,312 @@
+"use client";
+
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import type { HomeStreamItem, ItineraryTemplateSummary, PostCard } from "@dolan/shared";
 import { Icon } from "@/components/ui/Icon";
+import { UserAvatar } from "@/components/ui/UserAvatar";
 import type { AuthSession } from "@/lib/contracts";
 import { ROUTES } from "@/lib/routes";
 import type { HomeFeedResult } from "../load-home-feed";
 import styles from "./home-feed.module.css";
 
 type HomeFeedProps = {
-  session: AuthSession;
+  session: AuthSession | null;
   feed: HomeFeedResult;
 };
 
-function formatRange(start: string | null, end: string | null) {
-  if (!start) return "Tanggal fleksibel";
-  const startLabel = new Date(start).toLocaleDateString("id-ID", {
-    day: "numeric",
-    month: "short",
-  });
-  if (!end) return startLabel;
-  const endLabel = new Date(end).toLocaleDateString("id-ID", {
-    day: "numeric",
-    month: "short",
-  });
-  return `${startLabel} – ${endLabel}`;
-}
-
-function provinceTone(slug: string) {
-  const tones = [
-    "linear-gradient(145deg,#0b6e4f,#3dccc7)",
-    "linear-gradient(145deg,#1d4ed8,#60a5fa)",
-    "linear-gradient(145deg,#9a3412,#fb923c)",
-    "linear-gradient(145deg,#6d28d9,#c4b5fd)",
-    "linear-gradient(145deg,#0f766e,#5eead4)",
-    "linear-gradient(145deg,#be123c,#fb7185)",
-  ];
-  let hash = 0;
-  for (let i = 0; i < slug.length; i += 1) hash = (hash + slug.charCodeAt(i) * (i + 1)) % tones.length;
-  return tones[hash] ?? tones[0];
-}
-
 export function HomeFeed({ session, feed }: HomeFeedProps) {
-  const name = session.user.displayName || session.user.username || "Traveler";
-  const { tasks, trips, templates, provinces } = feed.data;
-  const hasTasks =
-    !tasks.profileComplete ||
-    tasks.draftTrips.length > 0 ||
-    tasks.unreadNotifications > 0;
+  const router = useRouter();
+  const { tasks, stream: initialStream, composer } = feed.data;
+  const [stream, setStream] = useState<HomeStreamItem[]>(initialStream);
+  const [error, setError] = useState(feed.ok ? "" : feed.error);
+  const [pending, setPending] = useState(false);
+  const [caption, setCaption] = useState("");
+  const [tripId, setTripId] = useState("");
+  const [templateId, setTemplateId] = useState("");
+  const [photo, setPhoto] = useState<File | null>(null);
+  const preview = useMemo(() => (photo ? URL.createObjectURL(photo) : ""), [photo]);
+  useEffect(() => () => {
+    if (preview) URL.revokeObjectURL(preview);
+  }, [preview]);
+
+  const canPublish = tasks.profileComplete;
+
+  async function onCreate(event: React.FormEvent) {
+    event.preventDefault();
+    if (!photo) {
+      setError("Pilih foto dulu.");
+      return;
+    }
+    setPending(true);
+    setError("");
+    const body = new FormData();
+    body.set("file", photo);
+    body.set("caption", caption);
+    if (tripId) body.set("tripId", tripId);
+    if (templateId) body.set("templateId", templateId);
+    const response = await fetch("/api/v1/posts", { method: "POST", credentials: "include", body });
+    const json = (await response.json()) as { success: true; data: PostCard } | { success: false; error?: { message?: string } };
+    setPending(false);
+    if (!json.success) {
+      setError(json.error?.message ?? "Gagal mengunggah momen.");
+      return;
+    }
+    setCaption("");
+    setTripId("");
+    setTemplateId("");
+    setPhoto(null);
+    setStream((current) => [{ kind: "post", post: json.data }, ...current]);
+    router.refresh();
+  }
+
+  async function toggleLike(post: PostCard) {
+    const method = post.likedByMe ? "DELETE" : "POST";
+    setStream((current) =>
+      current.map((item) =>
+        item.kind === "post" && item.post.id === post.id
+          ? {
+              ...item,
+              post: {
+                ...item.post,
+                likedByMe: !post.likedByMe,
+                likeCount: post.likeCount + (post.likedByMe ? -1 : 1),
+              },
+            }
+          : item,
+      ),
+    );
+    const response = await fetch(`/api/v1/posts/${post.id}/likes`, { method, credentials: "include" });
+    const json = (await response.json()) as { success: true; data: PostCard } | { success: false };
+    if (json.success) {
+      setStream((current) =>
+        current.map((item) => (item.kind === "post" && item.post.id === post.id ? { kind: "post", post: json.data } : item)),
+      );
+    }
+  }
+
+  async function onComment(post: PostCard, body: string) {
+    const response = await fetch(`/api/v1/posts/${post.id}/comments`, {
+      method: "POST",
+      credentials: "include",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ body }),
+    });
+    const json = (await response.json()) as { success: true; data: PostCard["comments"][number] } | { success: false };
+    if (!json.success) return false;
+    setStream((current) =>
+      current.map((item) =>
+        item.kind === "post" && item.post.id === post.id
+          ? {
+              ...item,
+              post: {
+                ...item.post,
+                commentCount: item.post.commentCount + 1,
+                comments: [...item.post.comments, json.data].slice(-3),
+              },
+            }
+          : item,
+      ),
+    );
+    return true;
+  }
 
   return (
-    <div className={styles.page}>
-      <section className={styles.hero}>
-        <div className={styles.heroCopy}>
-          <p className={styles.kicker}>Beranda Dolan</p>
-          <h1>
-            Halo, <em>{name}</em>
-          </h1>
-          <p>
-            {tasks.domicile
-              ? `Rekomendasi dari data Dolan — trip, template, dan provinsi. Domisili profil: ${tasks.domicile}.`
-              : "Temukan trip publik, template itinerary, dan jelajah 38 provinsi — tanpa boros request Places."}
-          </p>
-          <div className={styles.ctaRow}>
-            <Link href={ROUTES.buatTrip} className={styles.ctaPrimary}>
-              <Icon name="add" /> Buat trip
-            </Link>
-            <Link href={ROUTES.tripSaya} className={styles.ctaGhost}>
-              <Icon name="luggage" /> Trip Saya
-            </Link>
-            <Link href={ROUTES.jelajah} className={styles.ctaGhost}>
-              <Icon name="explore" /> Jelajah peta
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {hasTasks ? (
-        <section className={styles.section}>
-          <div className={styles.sectionHead}>
-            <div>
-              <span>Perlu perhatian</span>
-              <h2>Lanjutkan dari sini</h2>
-            </div>
-          </div>
-          <div className={styles.taskGrid}>
-            {!tasks.profileComplete ? (
-              <Link href={ROUTES.profilEdit} className={styles.taskCard}>
-                <Icon name="person" />
-                <div>
-                  <b>Lengkapi profil</b>
-                  <p>Username, nama, dan domisili diperlukan sebelum publish/join.</p>
-                </div>
-              </Link>
-            ) : null}
-            {tasks.draftTrips.map((draft) => (
-              <Link key={draft.id} href={ROUTES.trip(draft.id)} className={styles.taskCard}>
-                <Icon name="edit" />
-                <div>
-                  <b>Lanjutkan draft</b>
-                  <p>
-                    {draft.title}
-                    {draft.destinationCity ? ` · ${draft.destinationCity}` : ""}
-                  </p>
-                </div>
-              </Link>
-            ))}
-            {tasks.unreadNotifications > 0 ? (
-              <Link href={ROUTES.notifikasi} className={styles.taskCard}>
-                <Icon name="notifications" />
-                <div>
-                  <b>{tasks.unreadNotifications} notifikasi baru</b>
-                  <p>Cek join, chat, dan update trip.</p>
-                </div>
-              </Link>
-            ) : null}
-          </div>
-        </section>
+    <div className={styles.page} id="momen">
+      {error ? (
+        <p className={styles.alert} role="alert">
+          {error}
+        </p>
       ) : null}
 
-      <section className={styles.section}>
-        <div className={styles.sectionHead}>
-          <div>
-            <span>Siap digabung</span>
-            <h2>Trip publik berangkat terdekat</h2>
-            <p>Dari database Dolan — bukan hasil Places.</p>
-          </div>
-          <Link href={`${ROUTES.jelajah}?tab=trip`}>Lihat semua</Link>
+      {session ? (
+      <form className={styles.composer} onSubmit={(event) => void onCreate(event)}>
+        <div className={styles.composerTop}>
+          <UserAvatar src={session.user.avatarUrl} alt="" className="h-9 w-9 shrink-0 rounded-full" />
+          <textarea
+            value={caption}
+            onChange={(event) => setCaption(event.target.value)}
+            placeholder="Apa yang sedang kamu dolan?"
+            rows={2}
+            maxLength={2200}
+          />
         </div>
-        {trips.length === 0 ? (
-          <div className={styles.empty}>
-            <b>Belum ada trip publik</b>
-            <p>Jadilah yang pertama membuka slot, atau buat trip dari template.</p>
-            <Link href={ROUTES.buatTrip}>Buat trip</Link>
-          </div>
-        ) : (
-          <div className={styles.tripGrid}>
-            {trips.map((trip) => (
-              <article key={trip.id} className={styles.tripCard}>
-                <div className={styles.tripTop}>
-                  <span>Join gratis</span>
-                  <small>{trip.status}</small>
-                </div>
-                <h3>{trip.title}</h3>
-                <p>
-                  <Icon name="location_on" /> {trip.destinationCity ?? "Kota menyesuaikan"}
-                </p>
-                <p>
-                  <Icon name="calendar_month" /> {formatRange(trip.startDate, trip.endDate)}
-                </p>
-                <p>
-                  <Icon name="group" /> {trip.participantCount} peserta
-                  {trip.pendingRequestCount > 0 ? ` · ${trip.pendingRequestCount} pending` : ""}
-                </p>
-                <div className={styles.tripActions}>
-                  <Link href={ROUTES.trip(trip.id)}>Lihat rencana</Link>
-                  <Link href={`${ROUTES.trip(trip.id)}#join`}>Gabung</Link>
-                </div>
-              </article>
+        <div className={styles.composerMeta}>
+          <select value={templateId} onChange={(event) => setTemplateId(event.target.value)}>
+            <option value="">Template</option>
+            {composer.templates.map((template) => (
+              <option key={template.id} value={template.id}>
+                {template.title}
+              </option>
             ))}
-          </div>
-        )}
-      </section>
-
-      <section className={`${styles.section} ${styles.alt}`}>
-        <div className={styles.sectionHead}>
-          <div>
-            <span>38 provinsi</span>
-            <h2>Jelajah Nusantara</h2>
-            <p>Kurasi lokal dari katalog Dolan — tanpa foto Places.</p>
-          </div>
-          <Link href={ROUTES.provinsi}>Lihat semua</Link>
+          </select>
+          <select value={tripId} onChange={(event) => setTripId(event.target.value)}>
+            <option value="">Trip</option>
+            {composer.trips.map((trip) => (
+              <option key={trip.id} value={trip.id}>
+                {trip.title}
+              </option>
+            ))}
+          </select>
         </div>
-        <div className={styles.provinceRail}>
-          {provinces.map((province) => (
-            <Link
-              key={province.slug}
-              href={ROUTES.province(province.slug)}
-              className={styles.provinceCard}
-              style={{ backgroundImage: provinceTone(province.slug) }}
+        {preview ? (
+          <div className={styles.preview}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={preview} alt="" />
+            <button
+              type="button"
+              className={styles.previewClear}
+              onClick={() => setPhoto(null)}
+              aria-label="Hapus foto"
             >
-              <span>Provinsi</span>
-              <h3>{province.name}</h3>
-              <p>Ibu kota {province.capital}</p>
-            </Link>
-          ))}
-        </div>
-      </section>
-
-      <section className={styles.section}>
-        <div className={styles.sectionHead}>
-          <div>
-            <span>Siap dipakai ulang</span>
-            <h2>Template itinerary populer</h2>
-            <p>Diurutkan dari pemakaian di Dolan (`usageCount`).</p>
+              <Icon name="close" />
+            </button>
           </div>
-          <Link href={ROUTES.provinsi}>Lihat template</Link>
+        ) : null}
+        <div className={styles.composerActions}>
+          <label className={styles.cameraBtn} aria-label="Pilih foto">
+            <Icon name="photo_camera" />
+            <input
+              key={photo?.name ?? "empty"}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              onChange={(event) => setPhoto(event.target.files?.[0] ?? null)}
+            />
+          </label>
+          <button type="submit" disabled={pending || !canPublish} className={styles.publish}>
+            {pending ? "Mengunggah…" : canPublish ? "Unggah" : "Lengkapi profil"}
+          </button>
         </div>
-        {templates.length === 0 ? (
+      </form>
+      ) : (
+        <div className={styles.composer}>
+          <p className={styles.guestHint}>Masuk untuk bagikan momen dan melihat rencana di beranda.</p>
+          <Link href={ROUTES.masuk} className={styles.publish}>
+            Masuk
+          </Link>
+        </div>
+      )}
+
+      <div className={styles.stream}>
+        {stream.length === 0 ? (
           <div className={styles.empty}>
-            <b>Template masih sepi</b>
-            <p>Pakai kurasi provinsi atau buat trip lalu publikasikan sebagai template.</p>
+            <b>Belum ada momen</b>
+            <p>Unggah foto liburan pertamamu di form di atas.</p>
           </div>
         ) : (
-          <div className={styles.templateGrid}>
-            {templates.map((template) => (
-              <article key={template.id} className={styles.templateCard}>
-                <div className={styles.templateIcon}>
-                  <Icon name="alt_route" />
-                </div>
-                <div>
-                  <div className={styles.chips}>
-                    <span>{template.sourceLabel}</span>
-                    {template.popularityLabel ? <span>{template.popularityLabel}</span> : null}
-                  </div>
-                  <h3>{template.title}</h3>
-                  <p>
-                    {template.city} · {template.durationDays} hari · dipakai {template.usageCount}x
-                  </p>
-                  <Link href={`${ROUTES.buatTrip}?templateId=${encodeURIComponent(template.id)}`}>
-                    Pakai template
-                  </Link>
-                </div>
-              </article>
-            ))}
-          </div>
+          stream.map((item) =>
+            item.kind === "plan" ? (
+              <PlanCard key={`plan-${item.template.id}`} template={item.template} />
+            ) : (
+              <MomentCard
+                key={item.post.id}
+                post={item.post}
+                onLike={() => void toggleLike(item.post)}
+                onComment={(body) => onComment(item.post, body)}
+              />
+            ),
+          )
         )}
-      </section>
+      </div>
     </div>
+  );
+}
+
+function PlanCard({ template }: { template: ItineraryTemplateSummary }) {
+  const href = `${ROUTES.buatTrip}?templateId=${encodeURIComponent(template.id)}`;
+  const cover = template.coverPlace?.photoUri;
+  return (
+    <article className={styles.plan}>
+      <div className={styles.planCover} style={cover ? { backgroundImage: `url(${cover})` } : undefined} />
+      <div className={styles.planBody}>
+        <p>Rencana yang sering dipakai</p>
+        <h3>{template.title}</h3>
+        <span>
+          {template.city} · {template.durationDays} hari · dipakai {template.usageCount}x
+        </span>
+        <Link href={href}>Pakai template</Link>
+      </div>
+    </article>
+  );
+}
+
+function MomentCard({
+  post,
+  onLike,
+  onComment,
+}: {
+  post: PostCard;
+  onLike: () => void;
+  onComment: (body: string) => Promise<boolean>;
+}) {
+  const [draft, setDraft] = useState("");
+  return (
+    <article className={styles.post} id={`post-${post.id}`}>
+      <header className={styles.postHead}>
+        <Link href={ROUTES.profilUser(post.author.username)} className={styles.author}>
+          <UserAvatar src={post.author.avatarUrl} alt="" className="h-9 w-9 rounded-full" />
+          <div>
+            <b>{post.author.displayName}</b>
+            <small>@{post.author.username}</small>
+          </div>
+        </Link>
+      </header>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img className={styles.postPhoto} src={post.imageUrl} alt={post.caption || `Momen ${post.author.displayName}`} />
+      <div className={styles.postActions}>
+        <button type="button" onClick={onLike} aria-pressed={post.likedByMe} className={styles.like}>
+          <Icon name="favorite" filled={post.likedByMe} />
+          <span>{post.likeCount}</span>
+        </button>
+        <span className={styles.like}>
+          <Icon name="chat_bubble" />
+          {post.commentCount}
+        </span>
+      </div>
+      {post.caption ? (
+        <p className={styles.caption}>
+          <b>{post.author.username}</b> {post.caption}
+        </p>
+      ) : null}
+      {post.template ? (
+        <Link
+          className={styles.routeCta}
+          href={`${ROUTES.buatTrip}?templateId=${encodeURIComponent(post.template.id)}`}
+        >
+          Pakai rute yang sama · {post.template.title}
+        </Link>
+      ) : post.trip ? (
+        <Link className={styles.routeCta} href={ROUTES.trip(post.trip.id)}>
+          Lihat perjalanan ini · {post.trip.title}
+        </Link>
+      ) : null}
+      <ul className={styles.comments}>
+        {post.comments.map((comment) => (
+          <li key={comment.id}>
+            <b>{comment.author.username}</b> {comment.body}
+          </li>
+        ))}
+      </ul>
+      <form
+        className={styles.commentForm}
+        onSubmit={(event) => {
+          event.preventDefault();
+          const body = draft.trim();
+          if (!body) return;
+          void onComment(body).then((ok) => {
+            if (ok) setDraft("");
+          });
+        }}
+      >
+        <input
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
+          placeholder="Tulis komentar…"
+          maxLength={2000}
+        />
+        <button type="submit">Kirim</button>
+      </form>
+    </article>
   );
 }

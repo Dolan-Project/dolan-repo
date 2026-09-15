@@ -41,4 +41,7 @@ export {
   TripShareLink,
   ApiUsageCounter,
   IdempotencyKey,
+  Post,
+  PostLike,
+  PostComment,
 } from "./models/index.ts";

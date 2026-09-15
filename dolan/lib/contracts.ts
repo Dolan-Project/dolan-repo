@@ -14,6 +14,8 @@ export type {
   JoinReviewDecision,
   TripComment,
   ChatMessage,
+  PostCard,
+  HomeStreamItem,
 } from "../../shared/src/index";
 export {
   AUTH_ERROR_CODES,
@@ -44,7 +46,6 @@ export {
   verifyEmailSchema,
   profileUpdateSchema,
   socialHandleFromUrl,
-  presentInboxNotification,
   joinRequestBodySchema,
   joinReviewBodySchema,
   createCommentBodySchema,
@@ -53,6 +54,7 @@ export {
   ALLOWED_UPLOAD_TYPES,
   validateUploadMeta,
   fieldErrorsFromZod,
+  presentInboxNotification,
   createTripSchema,
   publishTripSchema,
   updateTripSchema,

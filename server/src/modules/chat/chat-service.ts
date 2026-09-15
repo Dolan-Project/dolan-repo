@@ -181,6 +181,16 @@ export class ChatService {
     this.realtime.emitToUser(userId, "notification.created", payload);
   }
 
+  async recordUserNotification(input: Omit<StoredNotification, "id" | "createdAt" | "readAt">) {
+    if (input.actorUserId && input.recipientUserId === input.actorUserId) return null;
+    const notification = await this.store.createNotification(input);
+    this.onNotificationCreated(input.recipientUserId, {
+      ...notification,
+      ...presentInboxNotification(input),
+    });
+    return notification;
+  }
+
   async emitJoinEvent(
     tripId: string,
     event: "join_request.created" | "join_request.reviewed",

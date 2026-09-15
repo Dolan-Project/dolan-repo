@@ -37,14 +37,28 @@ export {
   tiktokProfileUrl,
   socialHandleFromUrl,
 } from "./lib/social-links.ts";
-export { presentInboxNotification } from "./lib/notification-copy.ts";
-export type { InboxNotificationCopy } from "./lib/notification-copy.ts";
 export {
   MAX_UPLOAD_BYTES,
+  MAX_POST_UPLOAD_BYTES,
   ALLOWED_UPLOAD_TYPES,
   validateUploadMeta,
 } from "./schemas/upload.ts";
 export type { UploadMeta, UploadValidation } from "./schemas/upload.ts";
+export type {
+  PostCard,
+  PostComment,
+  PostTripRef,
+  HomeStreamItem,
+  HomeComposerOptions,
+} from "./types/post.ts";
+export {
+  createPostFieldsSchema,
+  createPostCommentBodySchema,
+  listPostsQuerySchema,
+} from "./schemas/post.ts";
+export type { CreatePostFields, CreatePostCommentBody } from "./schemas/post.ts";
+export { presentInboxNotification } from "./lib/notification-copy.ts";
+export type { InboxNotificationCopy } from "./lib/notification-copy.ts";
 export { fieldErrorsFromZod } from "./schemas/zod-fields.ts";
 export type { JoinRequest, JoinReviewDecision } from "./types/join.ts";
 export type { TripComment, ChatMessage } from "./types/chat.ts";

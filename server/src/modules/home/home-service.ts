@@ -1,5 +1,6 @@
-import { apiSuccess, type SessionActor } from "@dolan/shared";
+import { apiSuccess, type HomeComposerOptions, type HomeStreamItem, type ItineraryTemplateSummary, type SessionActor } from "@dolan/shared";
 import type { ChatService } from "../chat/chat-service.ts";
+import type { PostService } from "../posts/post-service.ts";
 import type { ProvinceService } from "../provinces/province-service.ts";
 import type { SearchService } from "../search/search-service.ts";
 import type { TripService } from "../trips/trip-service.ts";
@@ -17,15 +18,7 @@ export type HomeFeedPayload = {
     publicMeetingPointLabel: string | null;
     status: string;
   }>;
-  templates: Array<{
-    id: string;
-    title: string;
-    city: string;
-    durationDays: number;
-    sourceLabel: string;
-    usageCount: number;
-    popularityLabel: string | null;
-  }>;
+  templates: ItineraryTemplateSummary[];
   provinces: Array<{
     id: string;
     slug: string;
@@ -40,6 +33,8 @@ export type HomeFeedPayload = {
     profileComplete: boolean;
     domicile: string | null;
   };
+  stream: HomeStreamItem[];
+  composer: HomeComposerOptions;
 };
 
 export class HomeFeedService {
@@ -48,12 +43,13 @@ export class HomeFeedService {
     private readonly provinces: ProvinceService,
     private readonly trips: TripService,
     private readonly chat: ChatService,
+    private readonly posts?: PostService,
   ) {}
 
   async build(actor: SessionActor): Promise<HomeFeedPayload> {
     const [tripPage, templatePage, provinces] = await Promise.all([
       this.search.searchTrips({ sort: "soonest", page: 1, limit: 6 }),
-      this.search.searchTemplates({ sort: "popular", page: 1, limit: 6 }),
+      this.search.searchTemplates({ sort: "popular", page: 1, limit: 8 }),
       this.provinces.list(""),
     ]);
 
@@ -77,8 +73,26 @@ export class HomeFeedService {
           title: trip.title,
           destinationCity: trip.destinationCity,
         }));
-      unreadNotifications = notifications.unreadCount;
+      unreadNotifications =
+        notifications.unreadCount ?? notifications.items.filter((item) => !item.readAt).length;
     }
+
+    const templates = templatePage.data.map((template) => ({
+      id: template.id,
+      title: template.title,
+      city: template.city,
+      durationDays: template.durationDays,
+      source: template.source,
+      sourceLabel: template.sourceLabel,
+      usageCount: template.usageCount,
+      popularityLabel: template.popularityLabel,
+      coverPlace: template.coverPlace,
+    }));
+
+    const stream = this.posts ? await this.posts.homeStream(actor, templates) : [];
+    const composer = actor.kind === "user" && this.posts
+      ? await this.posts.composerOptions(actor)
+      : { trips: [], templates };
 
     return {
       trips: tripPage.data.map((trip) => ({
@@ -92,15 +106,7 @@ export class HomeFeedService {
         publicMeetingPointLabel: trip.publicMeetingPointLabel,
         status: trip.status,
       })),
-      templates: templatePage.data.map((template) => ({
-        id: template.id,
-        title: template.title,
-        city: template.city,
-        durationDays: template.durationDays,
-        sourceLabel: template.sourceLabel,
-        usageCount: template.usageCount,
-        popularityLabel: template.popularityLabel,
-      })),
+      templates,
       provinces: provinces
         .slice()
         .sort((a, b) => a.featuredRank - b.featuredRank)
@@ -119,6 +125,8 @@ export class HomeFeedService {
         profileComplete,
         domicile,
       },
+      stream,
+      composer,
     };
   }
 }
