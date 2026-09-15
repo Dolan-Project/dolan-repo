@@ -354,7 +354,7 @@ export function TripDetailView({
       return;
     }
     setPending(true);
-    const response = await fetch(`/api/v1/users/${trip.host.username}/follow`, {
+    const response = await fetch(`/api/v1/users/${encodeURIComponent(trip.host.username)}/follow`, {
       method: followingHost ? "DELETE" : "POST",
       credentials: "include",
     });

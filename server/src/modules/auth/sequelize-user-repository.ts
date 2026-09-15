@@ -2,6 +2,7 @@ import { UniqueConstraintError } from "sequelize";
 import { getModels, type User, type UserProfile } from "@dolan/database";
 import type { AuthIdentity, ProfileUpdateInput } from "@dolan/shared";
 import { conflict, notFound } from "../../lib/api-error.ts";
+import { isUuid } from "../../lib/is-uuid.ts";
 import { hashPassword } from "./password.ts";
 import type { CreateLocalUserInput, CreateOAuthUserInput, UpsertUserInput, UserRepository } from "./user-repository.ts";
 
@@ -57,6 +58,7 @@ export class SequelizeUserRepository implements UserRepository {
   }
 
   async findById(userId: string): Promise<AuthIdentity | null> {
+    if (!isUuid(userId)) return null;
     const { User, UserProfile } = getModels();
     const user = await User.findByPk(userId);
     if (!user) return null;
