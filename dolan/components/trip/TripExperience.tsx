@@ -107,7 +107,7 @@ export function TripExperience({
       await fetch(`/api/v1/trips/${tripId}/join-requests`, {
         method: "POST",
         credentials: "include",
-        headers: { "content-type": "application/json" },
+        headers: { "content-type": "application/json", "Idempotency-Key": crypto.randomUUID() },
         body: JSON.stringify({ message: joinMessage || undefined }),
       }),
     );
@@ -137,7 +137,7 @@ export function TripExperience({
     await fetch(`/api/v1/join-requests/${requestId}/review`, {
       method: "POST",
       credentials: "include",
-      headers: { "content-type": "application/json" },
+      headers: { "content-type": "application/json", "Idempotency-Key": crypto.randomUUID() },
       body: JSON.stringify({ decision }),
     });
     setPending(false);

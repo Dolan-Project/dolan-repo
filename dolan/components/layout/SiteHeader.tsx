@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import type { AuthSession } from "@/lib/contracts";
 import { ROUTES, type NavKey } from "@/lib/routes";
 import { Icon } from "@/components/ui/Icon";
+import { NotificationBell } from "@/components/layout/NotificationBell";
 import { DolanWordmark } from "@/components/brand/DolanWordmark";
 import { UserAvatar } from "@/components/ui/UserAvatar";
 
@@ -80,16 +81,7 @@ export function SiteHeader({
         </nav>
 
         <div className="flex items-center justify-end gap-2 md:gap-3">
-          <Link
-            href={ROUTES.notifikasi}
-            aria-label={unreadCount > 0 ? `Notifikasi, ${unreadCount} belum dibaca` : "Notifikasi"}
-            className="relative flex h-10 w-10 items-center justify-center rounded-full text-on-surface-variant transition-colors hover:bg-surface-container hover:text-on-surface"
-          >
-            <Icon name="notifications" className="text-[22px]" />
-            {unreadCount > 0 ? (
-              <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-secondary-container" />
-            ) : null}
-          </Link>
+          <NotificationBell session={session} unreadCount={unreadCount} />
           {session ? (
             <Link href={ROUTES.profil} aria-label="Profil">
               <UserAvatar
