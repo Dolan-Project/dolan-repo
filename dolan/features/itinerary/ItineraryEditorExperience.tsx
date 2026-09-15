@@ -6,12 +6,19 @@ import type { BudgetItemInput, EditableItineraryDay, EditableItineraryStop, Edit
 import { Icon } from "@/components/ui/Icon";
 import { findScheduleConflicts, generateAlternative, getItineraryEditor, saveItineraryVersion, selectItineraryVersion, upsertChecklistItem, deleteChecklistItem } from "./api";
 import { INITIAL_BUDGET_ITEMS } from "./mock-data";
-import { RoutePreview } from "./RoutePreview";
 import { SaveOfflineItineraryButton } from "@/components/offline/SaveOfflineItineraryButton";
-import { PlacePicker, type PlaceSuggestion } from "@/components/trip/PlacePicker";
+import { CreateTripItineraryStep } from "@/components/trip/CreateTripItineraryStep";
 import { ROUTES, tripItineraryPath } from "@/lib/routes";
-import { ItineraryStopPin } from "@/components/trip/ItineraryTimeline";
-import type { PlaceSummary } from "@dolan/shared";
+import {
+  appendVisitStop,
+  availableBudgetPool,
+  estimateItineraryBudget,
+  hydrateItineraryPlaces,
+  packItinerarySchedule,
+  reorderStopsInDay,
+  toItinerarySaveDays,
+  withGlobalStopNumbers,
+} from "@/lib/template-itinerary";
 
 type Tab = "itinerary" | "budget" | "checklist";
 type Notice = { tone: "success" | "error" | "info"; text: string } | null;
@@ -19,29 +26,16 @@ type Notice = { tone: "success" | "error" | "info"; text: string } | null;
 const money = new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 });
 const clone = <T,>(value: T): T => structuredClone(value);
 
-function normalize(days: EditableItineraryDay[]) {
-  return days.map((day, dayIndex) => ({ ...day, dayNumber: dayIndex + 1, stops: day.stops.map((stop, index) => ({ ...stop, sequence: index + 1 })) }));
+function normalize(days: EditableItineraryDay[], city = "") {
+  return withGlobalStopNumbers(
+    hydrateItineraryPlaces(days.map((day, dayIndex) => ({ ...day, dayNumber: dayIndex + 1 })), city),
+  );
 }
 
 function versionBudgetInputs(snapshot: ItineraryEditorSnapshot, versionId: string): BudgetItemInput[] {
   const items = snapshot.versions.find((item) => item.id === versionId)?.budget.items;
   if (!items?.length) return clone(INITIAL_BUDGET_ITEMS);
   return items.map(({ category, label, quantity, unit, unitCostLow, unitCostHigh, sourceType, sourceReference, notes }) => ({ category, label, quantity, unit, unitCostLow, unitCostHigh, sourceType, sourceReference, notes }));
-}
-
-function suggestionToPlace(suggestion: PlaceSuggestion): PlaceSummary {
-  return {
-    googlePlaceId: suggestion.id,
-    name: suggestion.label,
-    formattedAddress: suggestion.formattedAddress ?? (suggestion.city ? `${suggestion.label}, ${suggestion.city}` : suggestion.label),
-    city: suggestion.city || null,
-    latitude: suggestion.latitude ?? 0,
-    longitude: suggestion.longitude ?? 0,
-    rating: null,
-    userRatingCount: null,
-    photoName: null,
-    googleMapsUrl: null,
-  };
 }
 
 export function ItineraryEditorExperience({ tripId }: { tripId: string }) {
@@ -61,6 +55,10 @@ export function ItineraryEditorExperience({ tripId }: { tripId: string }) {
   const [job, setJob] = useState<EditorGenerationStatus | null>(null);
   const [notice, setNotice] = useState<Notice>(null);
   const [newChecklist, setNewChecklist] = useState("");
+  const [selectedStopId, setSelectedStopId] = useState<string | null>(null);
+  const [editingStopId, setEditingStopId] = useState<string | null>(null);
+  const [budgetAmount, setBudgetAmount] = useState(2_000_000);
+  const [budgetBasis, setBudgetBasis] = useState<"PER_PERSON" | "GROUP">("PER_PERSON");
 
   useEffect(() => {
     let cancelled = false;
@@ -71,8 +69,9 @@ export function ItineraryEditorExperience({ tripId }: { tripId: string }) {
         const versionId = data.activeVersionId || data.versions[0]?.id || "";
         setSelectedVersionId(versionId);
         const version = data.versions.find((item) => item.id === versionId);
-        setDays(clone(version?.days ?? []));
+        setDays(normalize(clone(version?.days ?? []), data.destinationCity));
         setBudgetItems(versionId ? versionBudgetInputs(data, versionId) : clone(INITIAL_BUDGET_ITEMS));
+        setSelectedStopId(version?.days?.[0]?.stops[0]?.id ?? null);
         if (!version) {
           setNotice({ tone: "info", text: "Belum ada versi itinerary. Generate atau tambah hari lalu simpan." });
         }
@@ -90,43 +89,22 @@ export function ItineraryEditorExperience({ tripId }: { tripId: string }) {
   }, [tripId]);
 
   const conflicts = useMemo(() => findScheduleConflicts(days), [days]);
+  const budgetPlan = useMemo(
+    () => estimateItineraryBudget(days, availableBudgetPool(budgetAmount, budgetBasis, 2), 2),
+    [days, budgetAmount, budgetBasis],
+  );
   const budgetTotal = useMemo(() => budgetItems.reduce((total, item) => total + Number(item.quantity || 0) * Number(item.unitCostHigh || 0), 0), [budgetItems]);
   const activeVersion = snapshot?.versions.find((item) => item.id === snapshot.activeVersionId);
 
   const changeDays = (next: EditableItineraryDay[]) => {
-    setDays(normalize(next));
+    setDays(normalize(next, snapshot?.destinationCity ?? ""));
     setDirty(true);
     setNotice(null);
   };
 
-  const updateStop = (dayId: string, stopId: string, patch: Partial<EditableItineraryStop>) => changeDays(days.map((day) => day.id === dayId ? { ...day, stops: day.stops.map((stop) => stop.id === stopId ? { ...stop, ...patch } : stop) } : day));
-
-  const moveStop = (dayId: string, index: number, direction: -1 | 1) => {
-    const next = clone(days);
-    const day = next.find((item) => item.id === dayId);
-    if (!day || index + direction < 0 || index + direction >= day.stops.length) return;
-    [day.stops[index], day.stops[index + direction]] = [day.stops[index + direction], day.stops[index]];
-    changeDays(next);
-  };
-
-  const addPlace = (dayId: string, place: PlaceSummary) => {
-    const next = clone(days);
-    const day = next.find((item) => item.id === dayId)!;
-    const last = day.stops.at(-1);
-    const startHour = last?.startTime ? Math.min(20, Number(last.startTime.slice(0, 2)) + Math.ceil((last.durationMinutes + 60) / 60)) : 9;
-    day.stops.push({
-      id: `${dayId}-${place.googlePlaceId}-${day.stops.length + 1}`,
-      sequence: day.stops.length + 1,
-      place,
-      customTitle: null,
-      activityType: "Wisata",
-      startTime: `${String(startHour).padStart(2, "0")}:00`,
-      durationMinutes: 120,
-      travelDurationMinutes: 60,
-      notes: null,
-      isLocked: false,
-    });
-    changeDays(next);
+  const updateStop = (dayId: string, stopId: string, patch: Partial<EditableItineraryStop>) => {
+    const next = days.map((day) => day.id === dayId ? { ...day, stops: day.stops.map((stop) => stop.id === stopId ? { ...stop, ...patch } : stop) } : day);
+    changeDays(patch.place ? packItinerarySchedule(next) : next);
   };
 
   const addDay = () => {
@@ -148,7 +126,7 @@ export function ItineraryEditorExperience({ tripId }: { tripId: string }) {
             customTitle: "Destinasi baru",
             activityType: "Wisata",
             startTime: "09:00",
-            durationMinutes: 120,
+            durationMinutes: 60,
             travelDurationMinutes: 0,
             notes: null,
             isLocked: false,
@@ -159,28 +137,23 @@ export function ItineraryEditorExperience({ tripId }: { tripId: string }) {
   };
 
   const save = async () => {
-    if (!snapshot || Object.keys(conflicts).length) {
+    if (!snapshot) return;
+    const packed = packItinerarySchedule(days);
+    if (Object.keys(findScheduleConflicts(packed)).length) {
       setNotice({ tone: "error", text: "Masih ada jadwal yang bertumpuk. Perbaiki waktu yang ditandai." });
       return;
     }
     setSaving(true);
     try {
       const next = await saveItineraryVersion(snapshot, {
-        baseVersionId: selectedVersionId,
+        baseVersionId: selectedVersionId || snapshot.activeVersionId || "wizard-v1",
         summary: "Perubahan itinerary dari editor My Trip",
-        days: days.map((day) => ({
-          ...day,
-          stops: day.stops.map((stop) => ({
-            ...stop,
-            googlePlaceId: stop.place?.googlePlaceId ?? null,
-            latitude: stop.place?.latitude,
-            longitude: stop.place?.longitude,
-          })),
-        })),
+        days: toItinerarySaveDays(packed),
         budgetItems,
       });
       setSnapshot(next);
       setSelectedVersionId(next.activeVersionId);
+      setDays(normalize(packed, snapshot.destinationCity));
       setDirty(false);
       setNotice({ tone: "success", text: `Versi ${next.versions[0].versionNumber} tersimpan dan menjadi versi aktif.` });
     } catch (error) {
@@ -287,7 +260,7 @@ export function ItineraryEditorExperience({ tripId }: { tripId: string }) {
     const version = snapshot.versions.find((item) => item.id === versionId);
     if (!version) return;
     setSelectedVersionId(versionId);
-    setDays(clone(version.days));
+    setDays(normalize(clone(version.days), snapshot.destinationCity));
     setBudgetItems(versionBudgetInputs(snapshot, versionId));
     setDirty(false);
     if (activate) {
@@ -338,13 +311,43 @@ export function ItineraryEditorExperience({ tripId }: { tripId: string }) {
         {([ ["itinerary", "Itinerary", "alt_route"], ["budget", "Budget", "payments"], ["checklist", "Checklist", "check_circle"] ] as const).map(([key, label, icon]) => <button key={key} type="button" onClick={() => setTab(key)} className={`flex min-h-10 min-w-max flex-1 items-center justify-center gap-2 rounded-xl px-4 type-label transition ${tab === key ? "bg-white text-primary shadow-sm" : "text-on-surface-variant hover:bg-white/60"}`}><Icon name={icon} /> {label}</button>)}
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-[minmax(330px,.82fr)_minmax(520px,1.18fr)]">
-        <RoutePreview days={days} destination={snapshot.destinationCity} />
+      <div className="grid gap-5">
         <section className="min-w-0">
-          {tab === "itinerary" && <div className="space-y-4">
-            {days.map((day) => <DayEditor key={day.id} day={day} conflicts={conflicts} onChangeTitle={(title) => changeDays(days.map((item) => item.id === day.id ? { ...item, title } : item))} onUpdateStop={(stopId, patch) => updateStop(day.id, stopId, patch)} onMove={(index, direction) => moveStop(day.id, index, direction)} onRemove={(stopId) => changeDays(days.map((item) => item.id === day.id ? { ...item, stops: item.stops.filter((stop) => stop.id !== stopId) } : item))} onAdd={(place) => addPlace(day.id, place)} onDeleteDay={() => day.stops.some((stop) => stop.isLocked) ? setNotice({ tone: "error", text: "Hari ini memiliki destinasi terkunci. Buka kunci sebelum menghapus hari." }) : changeDays(days.filter((item) => item.id !== day.id))} />)}
-            <button type="button" onClick={addDay} className="w-full rounded-2xl border-2 border-dashed border-primary/25 bg-primary-fixed/30 py-4 type-label text-primary hover:bg-primary-fixed"><Icon name="add" /> Tambah hari perjalanan</button>
-          </div>}
+          {tab === "itinerary" ? (
+            <CreateTripItineraryStep
+              days={days}
+              selectedStopId={selectedStopId}
+              editingStopId={editingStopId}
+              generating={generating}
+              fromTemplate={false}
+              regenerateUsed={0}
+              budgetPlan={budgetPlan}
+              partySize={2}
+              isPublic={false}
+              destinationCity={snapshot.destinationCity}
+              budgetAmount={budgetAmount}
+              budgetBasis={budgetBasis}
+              heading="Edit itinerary"
+              unlimitedRegenerate
+              onBudgetAmountChange={setBudgetAmount}
+              onBudgetBasisChange={setBudgetBasis}
+              onSelectStop={(id) => {
+                setSelectedStopId(id);
+                setEditingStopId(id);
+              }}
+              onEditStop={(id) => {
+                setSelectedStopId(id);
+                setEditingStopId(id);
+              }}
+              onCloseEdit={() => setEditingStopId(null)}
+              onReorderStops={(dayId, fromIndex, toIndex) => changeDays(reorderStopsInDay(days, dayId, fromIndex, toIndex))}
+              onUpdateStop={updateStop}
+              onAddStop={(dayId, place) => changeDays(appendVisitStop(days, dayId, { ...place, lock: true }))}
+              onRemoveStop={(dayId, stopId) => changeDays(packItinerarySchedule(days.map((day) => day.id === dayId ? { ...day, stops: day.stops.filter((stop) => stop.id !== stopId) } : day)))}
+              onAddDay={addDay}
+              onRegenerate={() => void generate()}
+            />
+          ) : null}
           {tab === "budget" && <BudgetEditor items={budgetItems} total={budgetTotal} onChange={(items) => { setBudgetItems(items); setDirty(true); }} />}
           {tab === "checklist" && <ChecklistEditor snapshot={snapshot} setSnapshot={setSnapshot} title={newChecklist} setTitle={setNewChecklist} setNotice={setNotice} />}
         </section>
@@ -359,37 +362,6 @@ export function ItineraryEditorExperience({ tripId }: { tripId: string }) {
   );
 }
 
-function DayEditor({ day, conflicts, onChangeTitle, onUpdateStop, onMove, onRemove, onAdd, onDeleteDay }: { day: EditableItineraryDay; conflicts: Record<string, string>; onChangeTitle: (value: string) => void; onUpdateStop: (id: string, patch: Partial<EditableItineraryStop>) => void; onMove: (index: number, direction: -1 | 1) => void; onRemove: (id: string) => void; onAdd: (place: PlaceSummary) => void; onDeleteDay: () => void }) {
-  const [query, setQuery] = useState("");
-  return <article className="rounded-[1.5rem] border border-outline-variant/70 bg-white p-4 shadow-sm md:p-5">
-    <div className="flex items-start gap-3"><div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-primary text-white"><span className="type-micro">HARI</span><strong className="-mt-1">{day.dayNumber}</strong></div><div className="min-w-0 flex-1"><input aria-label={`Judul hari ${day.dayNumber}`} value={day.title ?? ""} onChange={(e) => onChangeTitle(e.target.value)} className="w-full border-b border-transparent bg-transparent type-subtitle outline-none hover:border-outline-variant focus:border-primary" /><p className="type-caption mt-1 text-on-surface-variant">{day.date} · {day.stops.length} destinasi</p></div><button type="button" onClick={onDeleteDay} className="rounded-full p-2 text-on-surface-variant hover:bg-error-container hover:text-error" aria-label={`Hapus hari ${day.dayNumber}`}><Icon name="close" /></button></div>
-    <div className="mt-4 space-y-3">{day.stops.map((stop, index) => <div key={stop.id} className={`rounded-2xl border p-3 transition ${conflicts[stop.id] ? "border-error bg-error-container/25" : stop.isLocked ? "border-secondary-container/50 bg-secondary-fixed/20" : "border-outline-variant/70 bg-surface-container-low/45"}`}>
-      <div className="relative flex items-start gap-3">
-        {index < day.stops.length - 1 ? <span className="absolute bottom-0 left-[15px] top-10 w-0.5 bg-slate-300" aria-hidden="true" /> : null}
-        <ItineraryStopPin index={index} sequence={index + 1} /><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><h3 className="type-label-lg">{stop.place?.name ?? stop.customTitle}</h3>{stop.isLocked && <span className="chip bg-secondary-fixed text-secondary"><Icon name="lock" /> Dikunci</span>}</div><p className="type-caption text-on-surface-variant">{stop.place?.formattedAddress}</p></div><div className="flex"><button type="button" onClick={() => onMove(index, -1)} disabled={index === 0} className="rounded-lg px-2 py-1 text-primary disabled:opacity-25" aria-label="Pindah ke atas">↑</button><button type="button" onClick={() => onMove(index, 1)} disabled={index === day.stops.length - 1} className="rounded-lg px-2 py-1 text-primary disabled:opacity-25" aria-label="Pindah ke bawah">↓</button></div></div>
-      <div className="mt-3 grid grid-cols-2 gap-2 md:grid-cols-4"><label className="type-caption text-on-surface-variant">Mulai<input type="time" value={stop.startTime ?? ""} onChange={(e) => onUpdateStop(stop.id, { startTime: e.target.value })} className="mt-1 w-full rounded-xl border border-outline-variant bg-white px-3 py-2 text-on-surface" /></label><label className="type-caption text-on-surface-variant">Durasi (menit)<input type="number" min="15" step="15" value={stop.durationMinutes} onChange={(e) => onUpdateStop(stop.id, { durationMinutes: Number(e.target.value) })} className="mt-1 w-full rounded-xl border border-outline-variant bg-white px-3 py-2 text-on-surface" /></label><label className="type-caption text-on-surface-variant">Perjalanan<input type="number" min="0" step="5" value={stop.travelDurationMinutes ?? 0} onChange={(e) => onUpdateStop(stop.id, { travelDurationMinutes: Number(e.target.value) })} className="mt-1 w-full rounded-xl border border-outline-variant bg-white px-3 py-2 text-on-surface" /></label><label className="type-caption text-on-surface-variant">Aktivitas<input value={stop.activityType} onChange={(e) => onUpdateStop(stop.id, { activityType: e.target.value })} className="mt-1 w-full rounded-xl border border-outline-variant bg-white px-3 py-2 text-on-surface" /></label></div>
-      <textarea aria-label={`Catatan ${stop.place?.name}`} placeholder="Catatan aktivitas?" value={stop.notes ?? ""} onChange={(e) => onUpdateStop(stop.id, { notes: e.target.value || null })} className="mt-2 min-h-16 w-full resize-y rounded-xl border border-outline-variant bg-white px-3 py-2 type-body outline-none focus:border-primary" />
-      {conflicts[stop.id] && <p className="mt-1 type-caption font-semibold text-error">{conflicts[stop.id]}</p>}
-      <div className="mt-2 flex justify-end gap-2"><button type="button" onClick={() => onUpdateStop(stop.id, { isLocked: !stop.isLocked })} className="rounded-full border border-outline-variant px-3 py-1.5 type-label text-on-surface-variant"><Icon name="lock" /> {stop.isLocked ? "Buka kunci" : "Kunci"}</button><button type="button" disabled={stop.isLocked || day.stops.length === 1} onClick={() => onRemove(stop.id)} className="rounded-full px-3 py-1.5 type-label text-error hover:bg-error-container disabled:opacity-30">Hapus</button></div>
-    </div>)}</div>
-    <details className="mt-3">
-      <summary className="cursor-pointer rounded-xl bg-primary-fixed px-3 py-2 type-label text-primary"><Icon name="add" /> Tambah destinasi</summary>
-      <div className="mt-3">
-        <PlacePicker
-          id={`add-place-${day.id}`}
-          label="Cari tempat"
-          value={query}
-          onChange={setQuery}
-          placeholder="Malioboro, Bromo, Ubud…"
-          hint="Pilih hasil pencarian untuk menambah ke hari ini."
-          onSelectPlace={(suggestion) => {
-            onAdd(suggestionToPlace(suggestion));
-            setQuery("");
-          }}
-        />
-      </div>
-    </details>
-  </article>;
 }
 
 function BudgetEditor({ items, total, onChange }: { items: BudgetItemInput[]; total: number; onChange: (items: BudgetItemInput[]) => void }) {

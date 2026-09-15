@@ -166,6 +166,26 @@ export const PLACE_COORDINATES: Record<string, LatLng> = {
   "desa sembalun": { lat: -8.3614, lng: 116.5306 },
   "plawangan sembalun": { lat: -8.3831, lng: 116.4512 },
   "danau segara anak": { lat: -8.4075, lng: 116.4161 },
+  denpasar: { lat: -8.6705, lng: 115.2126 },
+  bali: { lat: -8.4095, lng: 115.1889 },
+  ubud: { lat: -8.5069, lng: 115.2625 },
+  canggu: { lat: -8.6478, lng: 115.1385 },
+  seminyak: { lat: -8.6913, lng: 115.1681 },
+  "pantai kuta bali": { lat: -8.7183, lng: 115.1686 },
+  "pantai sanur": { lat: -8.6905, lng: 115.2633 },
+  "tirta empul": { lat: -8.4154, lng: 115.3153 },
+  tegenungan: { lat: -8.5754, lng: 115.2889 },
+  "garuda wisnu kencana": { lat: -8.8104, lng: 115.1676 },
+
+  cirebon: { lat: -6.732, lng: 108.552 },
+  "keraton kasepuhan": { lat: -6.7265, lng: 108.571 },
+  "keraton kanoman": { lat: -6.7236, lng: 108.5664 },
+  "goa sunyaragi": { lat: -6.7364, lng: 108.542 },
+  "gua sunyaragi": { lat: -6.7364, lng: 108.542 },
+  "masjid agung sang cipta rasa": { lat: -6.7262, lng: 108.5704 },
+  "pantai kejawanan": { lat: -6.7374, lng: 108.5822 },
+  "batik trusmi": { lat: -6.7054, lng: 108.5278 },
+  "taman ade irma suryani": { lat: -6.7284, lng: 108.5572 },
 
   "pulau padar": { lat: -8.6486, lng: 119.5892 },
   "taman nasional komodo": { lat: -8.55, lng: 119.49 },
@@ -308,6 +328,13 @@ const ALIASES: Record<string, string> = {
   "labuan bajo": "pantai pink labuan bajo",
   padar: "pulau padar",
   "pink beach labuan bajo": "pantai pink labuan bajo",
+  kasepuhan: "keraton kasepuhan",
+  kanoman: "keraton kanoman",
+  sunyaragi: "goa sunyaragi",
+  trusmi: "batik trusmi",
+  kejawanan: "pantai kejawanan",
+  gwk: "garuda wisnu kencana",
+  "kuta bali": "pantai kuta bali",
   borobudur: "candi borobudur",
   prambanan: "candi prambanan",
   malioboro: "jalan malioboro",
@@ -343,15 +370,33 @@ function lookupKey(key: string): LatLng | undefined {
   return PLACE_COORDINATES[key] ?? (alias ? PLACE_COORDINATES[alias] : undefined);
 }
 
+function kmBetween(left: LatLng, right: LatLng) {
+  const toRad = (value: number) => (value * Math.PI) / 180;
+  const dLat = toRad(right.lat - left.lat);
+  const dLng = toRad(right.lng - left.lng);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(left.lat)) * Math.cos(toRad(right.lat)) * Math.sin(dLng / 2) ** 2;
+  return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function nearCity(hit: LatLng, city: string) {
+  const hub = lookupKey(normalizePlaceKey(city));
+  if (!hub) return true;
+  return kmBetween(hit, hub) <= 150;
+}
+
 export function resolvePlaceCoordinates(name: string, city = ""): LatLng | undefined {
   const exact = normalizePlaceKey(name);
-  const direct = lookupKey(exact);
+  const accept = (hit: LatLng | undefined) => (hit && (!city || nearCity(hit, city)) ? hit : undefined);
+
+  const direct = accept(lookupKey(exact));
   if (direct) return direct;
 
   const stripped = exact
-    .replace(/^(pura|candi|gunung|gn\.?|tn\.?|taman nasional|pantai|pulau|danau|desa wisata|desa|air terjun|kawah|jembatan)\s+/i, "")
+    .replace(/^(pura|candi|gunung|gn\.?|tn\.?|taman nasional|pantai|pulau|danau|desa wisata|desa|air terjun|kawah|jembatan|keraton|goa|gua)\s+/i, "")
     .trim();
-  const viaStrip = lookupKey(stripped);
+  const viaStrip = accept(lookupKey(stripped));
   if (viaStrip) return viaStrip;
 
   const haystack = `${exact} ${normalizePlaceKey(city)}`.trim();
@@ -359,13 +404,11 @@ export function resolvePlaceCoordinates(name: string, city = ""): LatLng | undef
     .concat(Object.keys(ALIASES))
     .filter((key) => {
       if (key.length < 5) return false;
-      // Require the place name itself to relate to the key — do not match solely via city token
-      // (avoids "… Walk" + Medan accidentally resolving through unrelated "* walk" keys).
       return exact.includes(key) || key.includes(exact) || (exact.length >= 5 && haystack.includes(key) && key.split(/\s+/).some((token) => token.length >= 4 && exact.includes(token)));
     })
-    .sort((a, b) => b.length - a.length)[0];
-  if (named) {
-    const hit = lookupKey(named);
+    .sort((a, b) => b.length - a.length);
+  for (const key of named) {
+    const hit = accept(lookupKey(key));
     if (hit) return hit;
   }
 

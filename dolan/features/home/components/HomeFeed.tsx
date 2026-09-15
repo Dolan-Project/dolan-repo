@@ -48,11 +48,6 @@ export function HomeFeed({ session, feed }: HomeFeedProps) {
 
   return (
     <div className={styles.page}>
-      {!feed.ok ? (
-        <p className="mx-auto mb-4 max-w-5xl rounded-xl bg-error-container px-4 py-3 type-body text-on-error-container" role="alert">
-          {feed.error} Menampilkan data cadangan sementara.
-        </p>
-      ) : null}
       <section className={styles.hero}>
         <div className={styles.heroCopy}>
           <p className={styles.kicker}>Beranda Dolan</p>

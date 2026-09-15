@@ -78,6 +78,16 @@ type LocalAuthPayload = {
   };
 };
 
+async function parseAuthPayload(response: Response): Promise<LocalAuthPayload | null> {
+  try {
+    const json = (await response.json()) as LocalAuthPayload & { success?: boolean };
+    if (!json || json.success === false || !json.data) return null;
+    return json;
+  } catch {
+    return null;
+  }
+}
+
 async function proxyAuthJson(
   request: Request,
   path: string,
@@ -112,7 +122,13 @@ export async function handleRegisterRequest(request: Request): Promise<Response>
   if (!shouldUseMockApi()) {
     const upstream = await proxyAuthJson(request, "/api/v1/auth/register", parsed.data);
     if (!upstream.ok) return upstream;
-    const json = (await upstream.json()) as LocalAuthPayload;
+    const json = await parseAuthPayload(upstream);
+    if (!json) {
+      return jsonResult(
+        createApiError("PROVIDER_UNAVAILABLE", "Layanan auth tidak tersedia"),
+        statusForCode("PROVIDER_UNAVAILABLE"),
+      );
+    }
     const token = json.data.accessToken;
     const session = json.data.session ?? registerSession();
     return jsonResult(
@@ -145,7 +161,13 @@ export async function handleLoginRequest(request: Request): Promise<Response> {
   if (!shouldUseMockApi()) {
     const upstream = await proxyAuthJson(request, "/api/v1/auth/login", parsed.data);
     if (!upstream.ok) return upstream;
-    const json = (await upstream.json()) as LocalAuthPayload;
+    const json = await parseAuthPayload(upstream);
+    if (!json) {
+      return jsonResult(
+        createApiError("PROVIDER_UNAVAILABLE", "Layanan auth tidak tersedia"),
+        statusForCode("PROVIDER_UNAVAILABLE"),
+      );
+    }
     const token = json.data.accessToken;
     const session = json.data.session ?? loginSession();
     return jsonResult({ success: true, data: session }, 200, token ?? undefined);

@@ -56,3 +56,10 @@ describe("resolveCityPoint", () => {
     expect(projected.top).toBeLessThan(90);
   });
 });
+
+describe("Cirebon geo search", () => {
+  it("suggests Cirebon as a destination city", () => {
+    const hits = searchGeoPlaces("cirebon");
+    expect(hits.some((place) => /cirebon/i.test(place.label) || /cirebon/i.test(place.city))).toBe(true);
+  });
+});

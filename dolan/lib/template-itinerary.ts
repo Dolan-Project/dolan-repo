@@ -75,10 +75,14 @@ function hashOffset(seed: string) {
 
 export function placeFromTemplateStop(name: string, city: string): PlaceSummary {
   const known = resolvePlaceCoordinates(name, city);
-  const center = PROVINCE_CENTERS[city] ?? { lat: -2.5, lng: 118 };
+  const hub =
+    resolvePlaceCoordinates(city, "") ??
+    PROVINCE_CENTERS[city] ??
+    Object.entries(PROVINCE_CENTERS).find(([province]) => city.toLocaleLowerCase("id-ID").includes(province.toLocaleLowerCase("id-ID")))?.[1] ??
+    { lat: -6.1754, lng: 106.8272 };
   const offset = hashOffset(`${city}:${name}`);
-  const latitude = known?.lat ?? center.lat + offset.lat;
-  const longitude = known?.lng ?? center.lng + offset.lng;
+  const latitude = known?.lat ?? hub.lat + offset.lat;
+  const longitude = known?.lng ?? hub.lng + offset.lng;
   return {
     googlePlaceId: `tpl-${name.toLocaleLowerCase("id-ID").replace(/[^a-z0-9]+/g, "-")}`,
     name,
@@ -335,27 +339,29 @@ export function withGlobalStopNumbers(days: EditableItineraryDay[]): EditableIti
   }));
 }
 
-export function placeTicketEstimate(name: string) {
+const FREE_PUBLIC_PLACE =
+  /bundaran|hotel indonesia|selamat datang|welcome monument|braga|malioboro|alun-?alun|tugu yogyakarta|^tugu\b|cihampelas|asia afrika|kota tua|suryakencana|taman kencana|gedung sate|monumen nasional|\bmonas\b|plaza monas|lapangan monas|simpang lima|jembatan merah|jodipan|kesawan|merdeka walk|taman ahmad yani|taman suropati|titik nol/;
+
+export function placeTicketEstimate(name: string, notes?: string | null) {
   const value = name.toLocaleLowerCase("id-ID");
+  const note = (notes ?? "").toLocaleLowerCase("id-ID");
+  if (FREE_PUBLIC_PLACE.test(value)) return 0;
+  if (/bromo|ijen|kawah|rinjani|padar|komodo|kerinci|penanjakan/.test(value)) return 150_000;
   if (
-    /bundaran|hotel indonesia|selamat datang|welcome monument|braga|malioboro|alun-?alun|tugu yogyakarta|^tugu\b|cihampelas|asia afrika|kota tua|suryakencana|taman kencana|gedung sate|monumen nasional|\bmonas\b|plaza monas|lapangan monas/.test(
+    /candi|pura|tanah lot|uluwatu|keraton|museum|taman nasional|tangkuban|kebun raya|borobudur|prambanan|lawang sewu|sampoerna|angkut|taman sari|istana|saung|mansion|tjong|tmii|taman mini|ragunan|dufan|seaworld|trans studio|farmhouse|floating market|taman pintar|sonobudoyo|coban|madakaripura|tebing keraton/.test(
       value,
     )
   ) {
-    return 0;
-  }
-  if (/bromo|ijen|kawah|rinjani|padar|komodo|kerinci/.test(value)) return 150_000;
-  if (/candi|pura|tanah lot|uluwatu|keraton|museum|taman nasional|tangkuban|kebun raya|borobudur|prambanan/.test(value)) {
     return 50_000;
   }
-  if (/ancol|pantai|gili/.test(value)) return 25_000;
+  if (/ancol|pantai|gili|aquarium|zoo|kebun binatang/.test(value)) return 25_000;
+  if (/berbayar|tiket masuk|tiket kawasan/.test(note) && !/gratis/.test(note)) return 50_000;
   return 0;
 }
 
 export function packItinerarySchedule(days: EditableItineraryDay[]): EditableItineraryDay[] {
-  const afternoonTarget = 16 * 60 + 30;
-  const dayEnd = 17 * 60 + 30;
-  return days.map((day) => {
+  const visitMinutes = 60;
+  const packed = days.map((day) => {
     const firstName = day.stops[0]?.customTitle || day.stops[0]?.place?.name || "";
     const suggested = suggestedStartMinutes(firstName);
     const specialWindow = suggested < 8 * 60 || suggested >= 15 * 60;
@@ -365,28 +371,23 @@ export function packItinerarySchedule(days: EditableItineraryDay[]): EditableIti
         const travel = index === 0 ? 0 : Math.max(0, Math.min(90, stop.travelDurationMinutes ?? 30));
         cursor += travel;
         const startTime = minutesToClock(cursor);
-        const durationMinutes = Math.max(15, Math.min(240, stop.durationMinutes || 90));
+        const durationMinutes = Math.max(15, Math.min(180, stop.durationMinutes || visitMinutes));
         cursor += durationMinutes;
         return { ...stop, sequence: index + 1, startTime, durationMinutes, travelDurationMinutes: travel };
       });
       return { ...day, stops };
     }
     let cursor = 8 * 60;
-    const count = Math.max(1, day.stops.length);
-    const travelBudget = day.stops.reduce((sum, stop, index) => (
-      sum + (index === 0 ? 0 : Math.max(10, Math.min(45, stop.travelDurationMinutes ?? 20)))
-    ), 0);
-    const visitBudget = Math.max(75 * count, afternoonTarget - cursor - travelBudget);
-    const perStop = Math.min(120, Math.max(75, Math.round(visitBudget / count)));
     const stops = day.stops.map((stop, index) => {
-      const travel = index === 0 ? 0 : Math.max(10, Math.min(45, stop.travelDurationMinutes ?? 20));
+      const travel = index === 0 ? 0 : Math.max(12, Math.min(35, stop.travelDurationMinutes ?? 20));
       cursor += travel;
-      const startTime = minutesToClock(Math.min(dayEnd - 60, cursor));
-      cursor += perStop;
-      return { ...stop, sequence: index + 1, startTime, durationMinutes: perStop, travelDurationMinutes: travel };
+      const startTime = minutesToClock(cursor);
+      cursor += visitMinutes;
+      return { ...stop, sequence: index + 1, startTime, durationMinutes: visitMinutes, travelDurationMinutes: travel };
     });
     return { ...day, stops };
   });
+  return withGlobalStopNumbers(packed);
 }
 
 export function toItinerarySaveDays(days: EditableItineraryDay[]) {
@@ -407,7 +408,7 @@ export function toItinerarySaveDays(days: EditableItineraryDay[]) {
         customTitle: name,
         activityType: stop.activityType?.trim() || "Wisata",
         startTime: stop.startTime,
-        durationMinutes: Math.min(1440, Math.max(15, Math.round(stop.durationMinutes) || 120)),
+        durationMinutes: Math.min(1440, Math.max(15, Math.round(stop.durationMinutes) || 60)),
         travelDurationMinutes: Math.max(0, Math.round(stop.travelDurationMinutes ?? 0)),
         latitude: stop.place?.latitude,
         longitude: stop.place?.longitude,
@@ -496,27 +497,85 @@ export type ItineraryBudgetPlan = {
   overBudget: boolean;
 };
 
-function ticketEstimate(name: string) {
-  const value = name.toLocaleLowerCase("id-ID");
-  if (
-    /bundaran hi|hotel indonesia|braga|malioboro|alun-?alun|tugu yogyakarta|^tugu\b|cihampelas|asia afrika|kota tua|suryakencana|taman kencana|gedung sate|monumen nasional|\bmonas\b|simpang lima|jembatan merah|jodipan/.test(
-      value,
-    )
-  ) {
-    return 0;
-  }
-  if (/bromo|ijen|kawah|rinjani|padar|komodo|kerinci|penanjakan/.test(value)) return 150_000;
-  if (/candi|pura|tanah lot|uluwatu|keraton|museum|taman nasional|tangkuban|kebun raya|borobudur|prambanan|lawang sewu|sampoerna|angkut/.test(value)) {
-    return 50_000;
-  }
-  if (/ancol|pantai|gili|coban/.test(value)) return 25_000;
-  return 0;
+function ticketEstimate(name: string, notes?: string | null) {
+  return placeTicketEstimate(name, notes);
 }
 
-function foodEstimate(name: string) {
+function clockMinutes(time?: string | null) {
+  if (!time) return null;
+  const match = time.trim().match(/^(\d{1,2}):([0-5]\d)/);
+  if (!match) return null;
+  return Number(match[1]) * 60 + Number(match[2]);
+}
+
+function placeFoodBias(name: string): "warung" | "tourist" | "remote" | "street" {
   const value = name.toLocaleLowerCase("id-ID");
-  if (/bromo|ijen|kawah/.test(value)) return 40_000;
-  return 55_000;
+  if (/bromo|ijen|kawah|rinjani|penanjakan|trekking|gunung|pendakian/.test(value)) return "remote";
+  if (/pasar|malioboro|braga|kota tua|alun|warung|petisah|kencana|cihampelas|pecinan|glodok/.test(value)) return "warung";
+  if (/uluwatu|tanah lot|gwk|garuda wisnu|kuta|sanur|ancol|dufan|trans studio|jimbaran|nusa dua|seminyak/.test(value)) return "tourist";
+  return "street";
+}
+
+function foodForMeal(kind: "breakfast" | "lunch" | "snack" | "dinner", bias: ReturnType<typeof placeFoodBias>) {
+  if (kind === "breakfast") {
+    if (bias === "remote") return { amount: 20_000, detail: "Kopi sachet + nasi bungkus di kawasan" };
+    if (bias === "warung") return { amount: 15_000, detail: "Sarapan warung (bubur/nasi uduk + teh)" };
+    if (bias === "tourist") return { amount: 25_000, detail: "Sarapan hemat dekat destinasi (kopi + roti/nasi)" };
+    return { amount: 18_000, detail: "Sarapan kaki lima (roti bakar/nasi + kopi tubruk)" };
+  }
+  if (kind === "lunch") {
+    if (bias === "remote") return { amount: 28_000, detail: "Makan siang bekal/warung kawasan" };
+    if (bias === "warung") return { amount: 22_000, detail: "Makan siang warung (nasi + lauk + es teh)" };
+    if (bias === "tourist") return { amount: 35_000, detail: "Nasi campur/seafood porsi hemat dekat destinasi" };
+    return { amount: 26_000, detail: "Makan siang backpacker (nasi campur / mie ayam)" };
+  }
+  if (kind === "snack") {
+    if (bias === "tourist") return { amount: 12_000, detail: "Es kelapa / camilan di lokasi" };
+    return { amount: 8_000, detail: "Teh manis / es / gorengan sambil jalan" };
+  }
+  if (bias === "remote") return { amount: 30_000, detail: "Makan malam warung kawasan" };
+  if (bias === "warung") return { amount: 25_000, detail: "Makan malam warung (nasi + lauk)" };
+  if (bias === "tourist") return { amount: 42_000, detail: "Makan malam porsi hemat dekat pantai/destinasi" };
+  return { amount: 32_000, detail: "Makan malam kaki lima / warung" };
+}
+
+function mealName(stop: EditableItineraryDay["stops"][number]) {
+  return stop.customTitle || stop.place?.name || "";
+}
+
+/** Backpacker meals: 1 sarapan + 1 makan siang + camilan opsional + makan malam kalau sore/malam — bukan makan di setiap titik. */
+export function assignDayMeals(day: EditableItineraryDay[]) {
+  const byStopId: Record<string, { amount: number; detail: string }> = {};
+  for (const current of day) {
+    const timed = current.stops.map((stop, index) => ({
+      stop,
+      minutes: clockMinutes(stop.startTime) ?? 8 * 60 + index * 75,
+    }));
+    if (!timed.length) continue;
+    const breakfast = timed.find((item) => item.minutes < 10 * 60 + 30);
+    const lunchPool = timed.filter((item) => item.minutes >= 11 * 60 && item.minutes < 15 * 60);
+    const lunch = [...lunchPool].sort((left, right) => Math.abs(left.minutes - 12 * 60) - Math.abs(right.minutes - 12 * 60))[0];
+    const used = new Set<string>();
+    if (breakfast) {
+      byStopId[breakfast.stop.id] = foodForMeal("breakfast", placeFoodBias(mealName(breakfast.stop)));
+      used.add(breakfast.stop.id);
+    }
+    if (lunch && !used.has(lunch.stop.id)) {
+      byStopId[lunch.stop.id] = foodForMeal("lunch", placeFoodBias(mealName(lunch.stop)));
+      used.add(lunch.stop.id);
+    }
+    const snack = timed.find((item) => item.minutes >= 14 * 60 + 30 && item.minutes < 17 * 60 && !used.has(item.stop.id));
+    if (snack) {
+      byStopId[snack.stop.id] = foodForMeal("snack", placeFoodBias(mealName(snack.stop)));
+      used.add(snack.stop.id);
+    }
+    const dinner = [...timed].reverse().find((item) => item.minutes >= 17 * 60 && !used.has(item.stop.id))
+      ?? timed.find((item, index) => index === timed.length - 1 && item.minutes >= 16 * 60 + 30 && !used.has(item.stop.id));
+    if (dinner) {
+      byStopId[dinner.stop.id] = foodForMeal("dinner", placeFoodBias(mealName(dinner.stop)));
+    }
+  }
+  return byStopId;
 }
 
 export type TransportLegEstimate = {
@@ -602,13 +661,15 @@ export function estimateItineraryBudget(
   if (!stops.length) {
     return { byStopId: {}, total: 0, remaining: Math.max(0, pool), pool, overBudget: false };
   }
+  const meals = assignDayMeals(days);
   const byStopId: Record<string, StopBudgetEstimate> = {};
   let allocated = 0;
   days.forEach((day) => {
     day.stops.forEach((stop, index) => {
       const placeName = stop.customTitle || stop.place?.name || "tempat ini";
-      const ticketCost = ticketEstimate(placeName) * people;
-      const foodCost = foodEstimate(placeName) * people;
+      const ticketCost = ticketEstimate(placeName, stop.notes) * people;
+      const meal = meals[stop.id];
+      const foodCost = (meal?.amount ?? 0) * people;
       const previous = day.stops[index - 1];
       const from = previous ? stopCoord(previous) : null;
       const to = stopCoord(stop);
@@ -637,7 +698,9 @@ export function estimateItineraryBudget(
           ...(ticketCost > 0
             ? [{ key: "ticket" as const, label: "Tiket", amount: ticketCost, detail: `Tiket masuk / kawasan ${placeName} × ${people} orang` }]
             : []),
-          { key: "food", label: "Makanan", amount: foodCost, detail: `Makan di sekitar ${placeName} × ${people} orang` },
+          ...(foodCost > 0
+            ? [{ key: "food" as const, label: "Makanan", amount: foodCost, detail: `${meal?.detail ?? `Makan di sekitar ${placeName}`} × ${people} orang` }]
+            : []),
           {
             key: "transport",
             label: "Transportasi",
@@ -685,6 +748,7 @@ export function validateWizardBasics(input: {
   endDate: string;
   budgetAmount: number;
   partySize: number;
+  budgetBasis?: "PER_PERSON" | "GROUP";
 }) {
   const errors: Record<string, string> = {};
   if (!input.destinationCity.trim()) errors.destinationCity = "Destinasi wajib diisi";
@@ -695,6 +759,23 @@ export function validateWizardBasics(input: {
   }
   if (!(input.budgetAmount > 0)) errors.budgetAmount = "Budget harus lebih dari 0";
   if (!Number.isInteger(input.partySize) || input.partySize < 1) errors.partySize = "Minimal 1 orang";
+  if (!errors.startDate && !errors.endDate && !errors.budgetAmount && input.destinationCity.trim()) {
+    const start = new Date(`${input.startDate}T00:00:00Z`).getTime();
+    const end = new Date(`${input.endDate}T00:00:00Z`).getTime();
+    const days = Math.max(1, Math.round((end - start) / 86_400_000) + 1);
+    const basis = input.budgetBasis ?? "PER_PERSON";
+    const dest = input.destinationCity.trim().toLocaleLowerCase("id-ID");
+    const far = /bali|lombok|komodo|labuan|bajo|raja ampat|papua|maluku|flores|sumba|gili|ubud|nusa penida|derawan|wakatobi|bunaken/.test(dest);
+    const perPersonPerDay = far ? 250_000 : 75_000;
+    const people = Math.max(1, input.partySize);
+    const floorPerPerson = perPersonPerDay * days;
+    const floorTotal = floorPerPerson * people;
+    const pool = availableBudgetPool(input.budgetAmount, basis, input.partySize);
+    if (pool < floorTotal) {
+      const shown = basis === "GROUP" ? floorTotal : floorPerPerson;
+      errors.budgetAmount = `Budget di luar jangkauan untuk ${input.destinationCity.trim()}. Minimal sekitar ${formatRupiah(shown)}${basis === "GROUP" ? " untuk rombongan" : " per orang"} agar rute, makan, dan transport masih masuk akal.`;
+    }
+  }
   return errors;
 }
 
@@ -713,26 +794,35 @@ export function moveStopInDay(days: EditableItineraryDay[], dayId: string, index
 export function itineraryMapMarkers(
   days: EditableItineraryDay[],
   selectedStopId: string | null,
+  destinationCity = "",
 ) {
   return days.flatMap((day) =>
     day.stops.flatMap((stop) => {
-      const latitude = stop.place?.latitude ?? 0;
-      const longitude = stop.place?.longitude ?? 0;
-      if (!stop.place || (latitude === 0 && longitude === 0)) return [];
+      const name = stop.customTitle || stop.place?.name || "";
+      const city = destinationCity || stop.place?.city || "";
+      const resolved = name ? placeFromTemplateStop(name, city) : null;
+      const latitude = !placeholderPoint(stop.place?.latitude, stop.place?.longitude)
+        ? stop.place!.latitude
+        : resolved?.latitude ?? 0;
+      const longitude = !placeholderPoint(stop.place?.latitude, stop.place?.longitude)
+        ? stop.place!.longitude
+        : resolved?.longitude ?? 0;
+      if (placeholderPoint(latitude, longitude)) return [];
       return [{
         id: stop.id,
-        label: stop.customTitle || stop.place.name,
+        label: name || "Titik rute",
         latitude,
         longitude,
         selected: stop.id === selectedStopId,
+        sequence: stop.sequence,
       }];
     }),
   );
 }
 
-export function itineraryMapRouteGroups(days: EditableItineraryDay[]) {
+export function itineraryMapRouteGroups(days: EditableItineraryDay[], destinationCity = "") {
   return days
-    .map((day) => itineraryMapMarkers([day], null))
+    .map((day) => itineraryMapMarkers([day], null, destinationCity))
     .filter((group) => group.length >= 2);
 }
 
@@ -743,7 +833,14 @@ type StopWithCoords = EditableItineraryDay["stops"][number] & {
 };
 
 function usableCoord(value: number | null | undefined) {
-  return typeof value === "number" && Number.isFinite(value) && value !== 0;
+  return typeof value === "number" && Number.isFinite(value);
+}
+
+/** Drop nulls, 0,0, and the old Indonesia-ocean placeholder used when coords were missing. */
+function placeholderPoint(lat: number | null | undefined, lng: number | null | undefined) {
+  if (!usableCoord(lat) || !usableCoord(lng)) return true;
+  if (lat === 0 && lng === 0) return true;
+  return Math.abs(lat! - -2.5) < 0.08 && Math.abs(lng! - 118) < 0.08;
 }
 
 export function hydrateItineraryPlaces(days: EditableItineraryDay[], city: string): EditableItineraryDay[] {
@@ -753,14 +850,14 @@ export function hydrateItineraryPlaces(days: EditableItineraryDay[], city: strin
       const stop = item as StopWithCoords;
       const name = stop.customTitle?.trim() || stop.place?.name || "Titik rute";
       const resolved = placeFromTemplateStop(name, city || stop.place?.city || "Indonesia");
-      const latitude = usableCoord(stop.place?.latitude)
+      const latitude = !placeholderPoint(stop.place?.latitude, stop.place?.longitude)
         ? stop.place!.latitude
-        : usableCoord(stop.latitude)
+        : !placeholderPoint(stop.latitude, stop.longitude)
           ? stop.latitude!
           : resolved.latitude;
-      const longitude = usableCoord(stop.place?.longitude)
+      const longitude = !placeholderPoint(stop.place?.latitude, stop.place?.longitude)
         ? stop.place!.longitude
-        : usableCoord(stop.longitude)
+        : !placeholderPoint(stop.latitude, stop.longitude)
           ? stop.longitude!
           : resolved.longitude;
       return {
@@ -782,13 +879,17 @@ export function hydrateItineraryPlaces(days: EditableItineraryDay[], city: strin
   })));
 }
 
-export function googleMapsDirectionsUrl(markers: Array<{ latitude: number; longitude: number }>) {
+export function googleMapsDirectionsUrl(markers: Array<{ latitude: number; longitude: number; label?: string }>) {
   if (!markers.length) return null;
-  const origin = `${markers[0].latitude},${markers[0].longitude}`;
-  if (markers.length === 1) return `https://www.google.com/maps/search/?api=1&query=${origin}`;
-  const destination = markers.at(-1)!;
-  const waypoints = markers.slice(1, -1).slice(0, 8).map((marker) => `${marker.latitude},${marker.longitude}`).join("|");
-  return `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination.latitude},${destination.longitude}${waypoints ? `&waypoints=${encodeURIComponent(waypoints)}` : ""}&travelmode=driving`;
+  const query = (marker: { latitude: number; longitude: number; label?: string }) => {
+    const name = marker.label?.trim();
+    return name
+      ? encodeURIComponent(`${name} ${marker.latitude},${marker.longitude}`)
+      : `${marker.latitude},${marker.longitude}`;
+  };
+  if (markers.length === 1) return `https://www.google.com/maps/search/?api=1&query=${query(markers[0]!)}`;
+  const path = markers.map((marker) => `${marker.latitude},${marker.longitude}`).join("/");
+  return `https://www.google.com/maps/dir/${path}`;
 }
 
 export function applyTemplatePrefill(template: Pick<ItineraryTemplateDetail, "title" | "city" | "transportMode">) {

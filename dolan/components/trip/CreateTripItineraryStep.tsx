@@ -51,6 +51,7 @@ type CreateTripItineraryStepProps = {
   destinationCity: string;
   budgetAmount?: number;
   budgetBasis?: "PER_PERSON" | "GROUP";
+  budgetWarning?: string;
   heading?: string;
   onSelectStop: (id: string) => void;
   onEditStop: (id: string) => void;
@@ -80,6 +81,7 @@ export function CreateTripItineraryStep({
   destinationCity,
   budgetAmount,
   budgetBasis = "PER_PERSON",
+  budgetWarning,
   heading,
   onSelectStop,
   onEditStop,
@@ -97,8 +99,11 @@ export function CreateTripItineraryStep({
   const [drag, setDrag] = useState<{ dayId: string; index: number } | null>(null);
   const [addingDayId, setAddingDayId] = useState<string | null>(null);
   const [addQuery, setAddQuery] = useState("");
-  const markers = itineraryMapMarkers(days, selectedStopId ?? editingStopId);
-  const routeGroups = itineraryMapRouteGroups(days);
+  const [routeFilter, setRouteFilter] = useState<"all" | string>("all");
+  const mappedDays = routeFilter === "all" ? days : days.filter((day) => day.id === routeFilter);
+  const visibleDays = mappedDays.length ? mappedDays : days;
+  const markers = itineraryMapMarkers(visibleDays, selectedStopId ?? editingStopId, destinationCity);
+  const routeGroups = itineraryMapRouteGroups(visibleDays, destinationCity);
   const leftover = remainingRegenerates(regenerateUsed);
   const editing = days.flatMap((day) => day.stops.map((stop) => ({ day, stop }))).find((item) => item.stop.id === editingStopId);
   const usedPercent = budgetPlan.pool > 0 ? Math.min(100, Math.round((budgetPlan.total / budgetPlan.pool) * 100)) : 0;
@@ -141,6 +146,11 @@ export function CreateTripItineraryStep({
             {generating ? "Mengoptimalkan…" : unlimitedRegenerate ? "Regenerate" : leftover > 0 ? `Regenerate (${leftover}x)` : "Batas regenerate"}
           </button>
         </div>
+        {budgetWarning ? (
+          <p className="mb-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2.5 type-caption font-bold text-rose-800" role="alert">
+            {budgetWarning}
+          </p>
+        ) : null}
         <div className={`mb-3 rounded-xl border bg-white px-3 py-2.5 ${budgetPlan.overBudget ? "border-orange-200" : "border-slate-200"}`}>
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className={`type-caption font-bold ${budgetPlan.overBudget ? "text-secondary" : "text-primary"}`}>
@@ -198,7 +208,28 @@ export function CreateTripItineraryStep({
           ) : null}
         </div>
         <div className="space-y-3">
-          {days.map((day) => {
+          {days.length > 1 ? (
+            <div className="flex flex-wrap gap-1.5">
+              <button
+                type="button"
+                className={`rounded-full px-3 py-1.5 type-caption ${routeFilter === "all" ? "bg-primary text-white" : "bg-slate-100 text-on-surface"}`}
+                onClick={() => setRouteFilter("all")}
+              >
+                Semua rute
+              </button>
+              {days.map((day) => (
+                <button
+                  key={`list-${day.id}`}
+                  type="button"
+                  className={`rounded-full px-3 py-1.5 type-caption ${routeFilter === day.id ? "bg-primary text-white" : "bg-slate-100 text-on-surface"}`}
+                  onClick={() => setRouteFilter(day.id)}
+                >
+                  Hari {day.dayNumber}
+                </button>
+              ))}
+            </div>
+          ) : null}
+          {visibleDays.map((day) => {
             const dayTotal = day.stops.reduce((sum, stop) => sum + (budgetPlan.byStopId[stop.id]?.total ?? 0), 0);
             return (
             <section key={day.id} className="rounded-2xl border border-slate-200 bg-white p-3">
@@ -459,9 +490,30 @@ export function CreateTripItineraryStep({
           <Icon name="map" className="text-[20px] text-primary" />
           <div>
             <p className="type-caption font-bold text-on-surface">Peta rute</p>
-            <p className="type-caption text-on-surface-variant">Klik angka di peta untuk edit. Garis biru mengikuti jalan, terpisah per hari.</p>
+            <p className="type-caption text-on-surface-variant">Filter hari di bawah. Nomor 1-2-3 berlanjut ke hari berikutnya.</p>
           </div>
         </div>
+        {days.length > 1 ? (
+          <div className="flex flex-wrap gap-1.5 border-b border-slate-200 bg-white px-3 py-2">
+            <button
+              type="button"
+              className={`rounded-full px-3 py-1.5 type-caption ${routeFilter === "all" ? "bg-primary text-white" : "bg-slate-100 text-on-surface"}`}
+              onClick={() => setRouteFilter("all")}
+            >
+              Semua rute
+            </button>
+            {days.map((day) => (
+              <button
+                key={day.id}
+                type="button"
+                className={`rounded-full px-3 py-1.5 type-caption ${routeFilter === day.id ? "bg-primary text-white" : "bg-slate-100 text-on-surface"}`}
+                onClick={() => setRouteFilter(day.id)}
+              >
+                Hari {day.dayNumber}
+              </button>
+            ))}
+          </div>
+        ) : null}
         <div className="h-[280px] bg-white md:h-[340px] lg:h-[420px]">
           {markers.length > 0 ? (
             <TripBoardMap markers={markers} onSelect={onSelectStop} routeColor={ITINERARY_ROUTE_COLOR} numberedBadges routeGroups={routeGroups} />

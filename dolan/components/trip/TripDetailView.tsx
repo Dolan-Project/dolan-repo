@@ -86,7 +86,6 @@ export function TripDetailView({
   const router = useRouter();
   const [trip, setTrip] = useState<TripDetail | null>(null);
   const [comments, setComments] = useState<TripComment[]>([]);
-  const [queue, setQueue] = useState<JoinRequest[]>([]);
   const [days, setDays] = useState<EditableItineraryDay[]>([]);
   const [packing, setPacking] = useState<TripChecklistItem[]>([]);
   const [error, setError] = useState("");
@@ -136,10 +135,6 @@ export function TripDetailView({
     setActiveDayId((current) => current && nextDays.some((day) => day.id === current) ? current : nextDays[0]?.id ?? null);
     const points = (routeRes as { success?: boolean; data?: { points?: Array<{ id: string; label: string; lat: number; lng: number }> } } | null)?.data?.points ?? [];
     setRouteMarkers(points.map((point, index) => ({ id: point.id, label: point.label, latitude: point.lat, longitude: point.lng, selected: index === 0 })));
-    if (tripRes.data.viewerRole === "host") {
-      const queueRes = await readJson<JoinRequest[] | { items?: JoinRequest[] }>(await fetch(`/api/v1/trips/${tripId}/join-requests`, { credentials: "include" }));
-      if (queueRes.success) setQueue(Array.isArray(queueRes.data) ? queueRes.data : queueRes.data.items ?? []);
-    }
   }
 
   useEffect(() => {
@@ -414,7 +409,7 @@ export function TripDetailView({
   const budget = Number(trip.budgetAmount ?? 0);
   const perPerson = trip.budgetBasis === "PER_PERSON" ? budget : Math.round(budget / Math.max(trip.planningPartySize, 1));
   const meetingLabel = trip.meetingPoint ?? trip.publicMeetingPointLabel;
-  const itineraryMarkers: TripMapMarker[] = itineraryMapMarkers(days, activeDayId).map((marker, index) => ({
+  const itineraryMarkers: TripMapMarker[] = itineraryMapMarkers(days, null, trip.destinationCity ?? "").map((marker, index) => ({
     ...marker,
     selected: index === 0 || marker.selected,
   }));
@@ -426,7 +421,10 @@ export function TripDetailView({
         ? [{ id: "meeting", label: meetingLabel ?? "Titik temu", latitude: trip.publicMeetingPointLatitude, longitude: trip.publicMeetingPointLongitude, selected: true }]
         : [];
   const joinStatus = trip.myJoinRequest?.status === "WITHDRAWN" ? undefined : trip.myJoinRequest?.status;
-  const joinCta = !isLoggedIn ? "login" : trip.viewerRole === "host" ? "host" : trip.viewerRole === "participant" ? "member" : joinStatus ?? "none";
+  const isPublic = trip.visibility === "PUBLIC";
+  const joinCta = !isPublic && trip.viewerRole !== "host" && trip.viewerRole !== "participant"
+    ? "none"
+    : !isLoggedIn ? "login" : trip.viewerRole === "host" ? "host" : trip.viewerRole === "participant" ? "member" : joinStatus ?? "none";
   const members = trip.members ?? [trip.host];
   const genderLabel = trip.genderRule === "FEMALE_ONLY" ? "Khusus perempuan" : trip.genderRule === "MALE_ONLY" ? "Khusus laki-laki" : "Semua gender";
   const duration = durationLabel(trip.startDate, trip.endDate);
@@ -460,7 +458,7 @@ export function TripDetailView({
           <Icon name="arrow_back" className="text-[20px]" />
         </Link>
         <div className="min-w-0 text-center">
-          <p className="type-micro uppercase tracking-wider text-primary">Trip Publik</p>
+          <p className="type-micro uppercase tracking-wider text-primary">{trip.visibility === "PUBLIC" ? "Trip publik" : "Trip privat"}</p>
           <p className="truncate type-label">{trip.title}</p>
         </div>
         <button type="button" className="grid h-8 w-8 place-items-center rounded-full hover:bg-slate-100" aria-label="Bagikan" onClick={() => void onShare()}>
@@ -496,6 +494,9 @@ export function TripDetailView({
             <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/40 to-transparent" />
             <div className="absolute inset-x-4 top-4 flex items-center justify-between gap-2">
               <div className="flex flex-wrap items-center gap-2">
+                <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold shadow-sm ${trip.visibility === "PUBLIC" ? "bg-primary text-white" : "bg-[#071c32] text-white"}`}>
+                  {trip.visibility === "PUBLIC" ? "Publik" : "Private"}
+                </span>
                 <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold shadow-sm ${slotPill.className}`}>
                   {!cancelled && !full ? <span className="h-2 w-2 animate-pulse rounded-full bg-white" /> : null}
                   {slotPill.label}
@@ -573,7 +574,7 @@ export function TripDetailView({
                 <Icon name="payments" className="text-[20px] text-primary" /> Informasi Logistik & Pola Perjalanan
               </h2>
               <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <LogisticCard label="Titik kumpul publik" value={meetingLabel ?? "Belum ditentukan"} hint={trip.timezone} />
+                <LogisticCard label={trip.visibility === "PUBLIC" ? "Titik kumpul publik" : "Titik kumpul"} value={meetingLabel ?? "Belum ditentukan"} hint={trip.timezone} />
                 <LogisticCard label="Aturan peserta" value={genderLabel} hint={trip.visibility === "PUBLIC" ? "Trip publik" : "Trip privat"} />
               </div>
               <div className="border-t border-slate-100 pt-5">
@@ -664,29 +665,6 @@ export function TripDetailView({
               </ul>
               <p className="mt-3 text-[11px] text-on-surface-variant">*Daftar pelamar yang masih ditinjau hanya dapat dilihat secara privat oleh host.</p>
             </section>
-
-            {trip.viewerRole === "host" ? (
-              <section id="join-requests" className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[0_1px_2px_rgba(16,36,58,.04)] md:p-6">
-                <h2 className="text-base font-bold text-on-surface">Pengajuan masuk</h2>
-                {queue.length === 0 ? <p className="mt-2 type-body text-on-surface-variant">Belum ada pengajuan.</p> : (
-                  <ul className="mt-3 flex flex-col gap-3">
-                    {queue.map((row) => (
-                      <li key={row.id} className="rounded-xl bg-slate-50 p-3">
-                        <Link href={ROUTES.profilUser(row.applicant.username)} className="type-label text-primary">@{row.applicant.username}</Link>
-                        <p className="type-body">{row.applicant.displayName}</p>
-                        <p className="type-caption text-on-surface-variant">{row.message || "Tanpa pesan"}</p>
-                        {row.status === "PENDING" ? (
-                          <div className="mt-2 flex flex-wrap gap-2">
-                            <button type="button" className="btn-primary !min-h-10" disabled={pending} onClick={() => void act(`/api/v1/join-requests/${row.id}/review`, { decision: "accept" })}>Terima</button>
-                            <button type="button" className="btn-secondary !min-h-10" disabled={pending} onClick={() => void act(`/api/v1/join-requests/${row.id}/review`, { decision: "reject" })}>Tolak</button>
-                          </div>
-                        ) : <p className="type-micro mt-1 uppercase">{row.status}</p>}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </section>
-            ) : null}
 
             {packing.length ? (
               <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[0_1px_2px_rgba(16,36,58,.04)] md:p-6">
@@ -828,7 +806,7 @@ export function TripDetailView({
 
           <aside className="space-y-6 lg:sticky lg:top-24 lg:col-span-4 lg:self-start">
             <section className="rounded-2xl border-2 border-primary/20 bg-white p-6 shadow-md">
-              {!cancelled && joinCta === "login" ? (
+              {!cancelled && joinCta === "login" && isPublic ? (
                 <div className="space-y-4 text-center">
                   <div className="mx-auto mb-2 grid h-12 w-12 place-items-center rounded-full bg-slate-100 text-on-surface-variant"><Icon name="login" className="text-[24px]" /></div>
                   <h2 className="text-sm font-bold">Masuk untuk mengajukan join</h2>
@@ -842,7 +820,7 @@ export function TripDetailView({
               {!cancelled && joinCta === "none" && full ? (
                 <ClosedJoin title={`Kuota partisipan sudah penuh${trip.maxParticipants ? ` (${trip.activeParticipantCount}/${trip.maxParticipants})` : ""}`} body="Seluruh slot telah terisi oleh traveler terkonfirmasi." action="Pengajuan ditutup (penuh)" />
               ) : null}
-              {!cancelled && joinCta === "none" && !full ? (
+              {!cancelled && joinCta === "none" && !full && isPublic ? (
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold uppercase tracking-wider text-on-surface-variant">Status partisipasi</span>
@@ -899,7 +877,7 @@ export function TripDetailView({
               ) : null}
               {joinCta === "host" ? (
                 <div className="space-y-3">
-                  <p className="type-body">Kamu host trip ini. Kelola pengajuan di kolom kiri.</p>
+                  <p className="type-body">Kamu host trip ini. Tinjau permintaan gabung dari halaman Trip Saya.</p>
                   <Link href={ROUTES.tripChat(trip.id)} className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-2.5 text-xs font-bold text-white">
                     <Icon name="forum" /> Masuk ke grup chat trip
                   </Link>
@@ -914,7 +892,7 @@ export function TripDetailView({
 
             <div className="h-[320px] overflow-hidden rounded-2xl border border-slate-200 md:h-[440px]">
               {markers.length ? (
-                <TripBoardMap markers={markers} numberedBadges routeGroups={itineraryMapRouteGroups(days)} />
+                <TripBoardMap markers={markers} numberedBadges routeGroups={itineraryMapRouteGroups(days, trip.destinationCity ?? "")} />
               ) : (
                 <div className="grid h-full place-items-center bg-surface-container px-4 text-center type-caption text-on-surface-variant">Peta rute muncul setelah itinerary punya koordinat.</div>
               )}

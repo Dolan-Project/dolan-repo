@@ -35,6 +35,10 @@ export const CITY_ROUTES: Array<{ match: string[]; stops: DestinationStopSeed[] 
       { name: "Keraton Yogyakarta", lat: -7.8053, lng: 110.3642, notes: "Kawasan keraton dan alun-alun utara." },
       { name: "Taman Sari", lat: -7.81, lng: 110.3594, notes: "Jalan kaki dari keraton, cek jam kunjungan." },
       { name: "Alun-Alun Kidul", lat: -7.8117, lng: 110.3635, notes: "Sore hari ramai. Naik odong-odong atau jalan kaki." },
+      { name: "Pasar Beringharjo", lat: -7.7989, lng: 110.3653, notes: "Belanja batik dan camilan di koridor Malioboro." },
+      { name: "Titik Nol Kilometer Yogyakarta", lat: -7.8014, lng: 110.3648, notes: "Titik foto ikonik, masuk kawasan gratis." },
+      { name: "Taman Pintar Yogyakarta", lat: -7.8004, lng: 110.3677, notes: "Wahana edukasi berbayar di pusat kota." },
+      { name: "Museum Sonobudoyo", lat: -7.8024, lng: 110.364, notes: "Museum budaya di sisi alun-alun utara. Tiket masuk berbayar." },
     ],
   },
   {
@@ -47,7 +51,10 @@ export const CITY_ROUTES: Array<{ match: string[]; stops: DestinationStopSeed[] 
       { name: "Jalan Braga", lat: -6.9174, lng: 107.609, notes: "Jalan kaki, kuliner, dan foto kawasan Braga." },
       { name: "Jalan Asia Afrika", lat: -6.9212, lng: 107.6097, notes: "Museum KAA dan alun-alun dalam satu koridor." },
       { name: "Alun-Alun Bandung", lat: -6.9218, lng: 107.6071, notes: "Istirahat siang, kuliner, dan Masjid Raya." },
-      { name: "Saung Angklung Udjo", lat: -6.8978, lng: 107.6553, notes: "Pertunjukan angklung sore, masih di dalam kota." },
+      { name: "Saung Angklung Udjo", lat: -6.8978, lng: 107.6553, notes: "Pertunjukan angklung sore, tiket masuk berbayar." },
+      { name: "Taman Lansia Bandung", lat: -6.8989, lng: 107.6276, notes: "Istirahat singkat di taman kota, masuk gratis." },
+      { name: "Cihampelas Skywalk", lat: -6.8938, lng: 107.6042, notes: "Jalan kaki di jembatan Cihampelas." },
+      { name: "Museum Konferensi Asia Afrika", lat: -6.9214, lng: 107.6095, notes: "Museum di Gedung Merdeka, tiket masuk berbayar." },
     ],
   },
   {
@@ -66,6 +73,11 @@ export const CITY_ROUTES: Array<{ match: string[]; stops: DestinationStopSeed[] 
       { name: "Kota Tua Jakarta", lat: -6.1352, lng: 106.8133, notes: "Jalan kaki di Fatahillah. Museum di dalam kawasan berbayar terpisah." },
       { name: "Monumen Nasional", lat: -6.1754, lng: 106.8272, notes: "Plaza Monas gratis. Naik ke puncak opsional dan berbayar." },
       { name: "Bundaran HI", lat: -6.1944, lng: 106.8229, notes: "Titik foto dan kuliner di pusat kota. Masuk kawasan gratis." },
+      { name: "Museum Nasional Indonesia", lat: -6.176, lng: 106.8222, notes: "Museum Gajah. Tiket masuk berbayar." },
+      { name: "Taman Suropati", lat: -6.1994, lng: 106.8328, notes: "Taman Menteng, masuk gratis." },
+      { name: "Plaza Indonesia", lat: -6.1931, lng: 106.8227, notes: "Istirahat dan kuliner di Thamrin." },
+      { name: "Glodok Chinatown", lat: -6.142, lng: 106.8137, notes: "Kuliner dan foto di pecinan, dekat Kota Tua." },
+      { name: "Pasar Baru", lat: -6.1664, lng: 106.8336, notes: "Koridor belanja lama Jakarta Pusat." },
     ],
   },
   {
@@ -109,14 +121,29 @@ export const CITY_ROUTES: Array<{ match: string[]; stops: DestinationStopSeed[] 
     ],
   },
   {
-    match: ["bali", "ubud", "canggu", "seminyak", "kuta", "sanur"],
+    match: ["bali", "ubud", "canggu", "seminyak", "kuta", "sanur", "denpasar"],
     stops: [
       { name: "Pura Tanah Lot", lat: -8.6212, lng: 115.0868, notes: "Sunset di pura laut sisi barat." },
       { name: "Tegallalang Rice Terrace", lat: -8.4312, lng: 115.2792, notes: "Terasering di koridor Ubud." },
       { name: "Ubud Palace", lat: -8.5069, lng: 115.2625, notes: "Titik pusat Ubud sebelum lanjut ke pasar." },
+      { name: "Tirta Empul", lat: -8.4154, lng: 115.3153, notes: "Pura tirta di Tampaksiring, satu koridor Ubud." },
       { name: "Pantai Sanur", lat: -8.6905, lng: 115.2633, notes: "Pantai timur, cocok pagi atau sore." },
-      { name: "Pura Uluwatu", lat: -8.8291, lng: 115.0849, notes: "Bukit selatan — ideal di hari terpisah dari Tanah Lot." },
       { name: "Pantai Kuta", lat: -8.7183, lng: 115.1686, notes: "Koridor selatan dekat bandara." },
+      { name: "Garuda Wisnu Kencana", lat: -8.8104, lng: 115.1676, notes: "Taman budaya di bukit Jimbaran." },
+      { name: "Pura Uluwatu", lat: -8.8291, lng: 115.0849, notes: "Bukit selatan — ideal di hari terpisah dari Tanah Lot." },
+      { name: "Tegenungan Waterfall", lat: -8.5754, lng: 115.2889, notes: "Air terjun dekat Ubud, tiket kawasan berbayar." },
+    ],
+  },
+  {
+    match: ["cirebon", "kasepuhan", "sunyaragi", "trusmi"],
+    stops: [
+      { name: "Keraton Kasepuhan", lat: -6.7265, lng: 108.571, notes: "Keraton tertua Cirebon, tiket masuk berbayar." },
+      { name: "Keraton Kanoman", lat: -6.7236, lng: 108.5664, notes: "Keraton di pusat kota, dekat pasar Kanoman." },
+      { name: "Masjid Agung Sang Cipta Rasa", lat: -6.7262, lng: 108.5704, notes: "Masjid keraton, masuk kawasan gratis." },
+      { name: "Goa Sunyaragi", lat: -6.7364, lng: 108.542, notes: "Taman gua batu kapur, tiket masuk berbayar." },
+      { name: "Taman Ade Irma Suryani", lat: -6.7284, lng: 108.5572, notes: "Taman kota untuk istirahat, masuk gratis." },
+      { name: "Batik Trusmi", lat: -6.7054, lng: 108.5278, notes: "Kampung batik di barat kota." },
+      { name: "Pantai Kejawanan", lat: -6.7374, lng: 108.5822, notes: "Pantai dan kuliner laut di timur kota." },
     ],
   },
   {
@@ -329,7 +356,7 @@ function daysFromSeedClusters(
         customTitle: stop.name,
         activityType: stopIndex === 0 && dayIndex === 0 ? "Titik kumpul" : "Wisata",
         startTime: "08:00",
-        durationMinutes: 90,
+        durationMinutes: 60,
         travelDurationMinutes: travelBetweenSeeds(previous, stop, stopIndex),
         notes: stop.notes ?? `Kunjungan ke ${stop.name}. Ideal ${stopIndex === 0 ? "pagi" : "lanjutan rute"} di koridor terdekat.`,
         isLocked: false,
@@ -390,13 +417,13 @@ export function buildDestinationItinerary(input: {
   const hub = routeHub(input.destination);
   const variant = Math.max(0, input.variant ?? input.rotate ?? 0);
   const cityTrip = !isProvinceDestination(input.destination);
-  const maxRadiusKm = cityTrip ? 18 : 120;
+  const maxRadiusKm = cityTrip ? 22 : 120;
   const localPool = pool.filter((stop) => haversineKm(hub, stop) <= (cityTrip ? 35 : 180));
   const clusters = selectCompactStops(localPool.length ? localPool : pool, daysTotal, hub, {
     excludeNames: input.excludeNames,
     variant,
-    minPerDay: 2,
-    maxPerDay: cityTrip ? 4 : 3,
+    minPerDay: cityTrip ? (daysTotal === 1 ? 7 : 5) : 4,
+    maxPerDay: cityTrip ? (daysTotal === 1 ? 8 : 7) : 6,
     maxRadiusKm,
   });
   const days = clusters.length
@@ -451,16 +478,16 @@ export function ensureMultiStopDays(
   destination: string,
   options?: { minPerDay?: number; maxPerDay?: number },
 ): EditableItineraryDay[] {
-  const minPerDay = options?.minPerDay ?? 2;
-  const maxPerDay = options?.maxPerDay ?? 3;
-  if (!days.length) return days;
   const cityTrip = !isProvinceDestination(destination);
-  const maxKm = cityTrip ? 18 : 40;
+  const minPerDay = options?.minPerDay ?? (cityTrip ? 7 : 5);
+  const maxPerDay = options?.maxPerDay ?? (cityTrip ? 8 : 7);
+  if (!days.length) return days;
+  const maxKm = cityTrip ? 22 : 40;
   const pool = destinationCandidatePool(destination, { minStops: days.length * maxPerDay });
   const usedGlobally = new Set(days.flatMap((day) => day.stops.map(stopLabel)).filter(Boolean));
 
   return days.map((day, dayIndex) => {
-    if (day.stops.length >= minPerDay) return day;
+    if (day.stops.length >= maxPerDay) return day;
     const hubStop = day.stops[0];
     const hub = hasValidCoords(hubStop?.place?.latitude, hubStop?.place?.longitude)
       ? { lat: hubStop!.place!.latitude, lng: hubStop!.place!.longitude }
@@ -496,7 +523,7 @@ export function ensureMultiStopDays(
         customTitle: stop.name,
         activityType: "Wisata",
         startTime: "08:00",
-        durationMinutes: 90,
+        durationMinutes: 60,
         travelDurationMinutes: travelBetweenSeeds(previousSeed, stop, stopIndex),
         notes: stop.notes ?? `Lanjutan hari ini di koridor ${destination}.`,
         isLocked: false,
@@ -504,6 +531,54 @@ export function ensureMultiStopDays(
     });
     return { ...day, dayNumber: day.dayNumber || dayIndex + 1, stops: [...day.stops, ...extraStops] };
   });
+}
+
+const FOREIGN_STOP_RULES: Array<{ pattern: RegExp; unless: RegExp }> = [
+  { pattern: /pulau padar|\bpadar\b|pink beach|bandara komodo|taman nasional komodo|\bkomodo\b|manta point|pulau kanawa|labuan bajo|kelimutu|wae rebo/i, unless: /komodo|labuan|bajo|flores|nusa tenggara timur|\bntt\b|ende|maumere/i },
+];
+
+function stopFitsDestination(stop: EditableItineraryDay["stops"][number], destination: string) {
+  const dest = destination.trim().toLocaleLowerCase("id-ID");
+  const blob = `${stop.customTitle ?? ""} ${stop.place?.name ?? ""} ${stop.place?.city ?? ""}`;
+  for (const rule of FOREIGN_STOP_RULES) {
+    if (rule.pattern.test(blob) && !rule.unless.test(dest)) return false;
+  }
+  const city = (stop.place?.city ?? "").trim();
+  if (!city || isProvinceDestination(destination)) return true;
+  const destProvince = findProvinceForDestination(destination);
+  const cityProvince = findProvinceForDestination(city);
+  if (destProvince && cityProvince && destProvince.slug !== cityProvince.slug) return false;
+  return true;
+}
+
+/** Drop stops that sit in another island/province, then refill from the local corridor. */
+export function clampItineraryToDestination(days: EditableItineraryDay[], destination: string): EditableItineraryDay[] {
+  if (!days.length) {
+    return buildDestinationItinerary({ destination, startDate: "", endDate: "" });
+  }
+  const hub = routeHub(destination);
+  const cityTrip = !isProvinceDestination(destination);
+  const maxKm = cityTrip ? 45 : 140;
+  const filtered = days.map((day) => ({
+    ...day,
+    stops: day.stops.filter((stop) => {
+      if (!stopFitsDestination(stop, destination)) return false;
+      const lat = stop.place?.latitude;
+      const lng = stop.place?.longitude;
+      if (typeof lat !== "number" || typeof lng !== "number" || !Number.isFinite(lat) || !Number.isFinite(lng)) return true;
+      if (Math.abs(lat - -2.5) < 0.08 && Math.abs(lng - 118) < 0.08) return false;
+      return haversineKm(hub, { lat, lng }) <= maxKm;
+    }),
+  }));
+  const remaining = filtered.reduce((sum, day) => sum + day.stops.length, 0);
+  if (!remaining) {
+    return buildDestinationItinerary({
+      destination,
+      startDate: days[0]?.date ?? "",
+      endDate: days.at(-1)?.date ?? days[0]?.date ?? "",
+    });
+  }
+  return ensureMultiStopDays(filtered, destination);
 }
 
 export function destinationCoverUrl(city: string) {

@@ -103,12 +103,7 @@ export async function loadGuestHome(): Promise<GuestHomePayload> {
     image: trip.coverPlace?.photoUri ?? null,
   }));
 
-  const loadError =
-    !tripsPayload && destinations.length === 0
-      ? "Data beranda belum bisa dimuat. Periksa koneksi atau coba lagi sebentar."
-      : null;
-
-  return { destinations, trips, loadError };
+  return { destinations, trips, loadError: null };
 }
 
 export function isLiveGuestHome() {
