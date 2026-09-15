@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildDestinationItinerary, buildProvinceTemplateDays, destinationCoverUrl, destinationStopSeeds, findProvinceForDestination, resolveTripItineraryDays, templateMatchesDestination } from "./destination-itinerary";
+import { buildDestinationItinerary, buildProvinceTemplateDays, destinationCoverUrl, destinationStopSeeds, ensureMultiStopDays, findProvinceForDestination, resolveTripItineraryDays, templateMatchesDestination } from "./destination-itinerary";
 import { INDONESIA_PROVINCES } from "./provinces";
 
 describe("destination itinerary", () => {
@@ -101,6 +101,64 @@ describe("destination itinerary", () => {
     expect(nextNames.join(" ")).not.toBe(used.join(" "));
   });
 
+  it("builds Sumatera Utara with multi-stop days instead of one landmark per day", () => {
+    const days = buildDestinationItinerary({
+      destination: "Sumatera Utara",
+      startDate: "2026-11-01",
+      endDate: "2026-11-02",
+    });
+    expect(days.length).toBeGreaterThanOrEqual(2);
+    expect(days.every((day) => day.stops.length >= 2)).toBe(true);
+    const names = days.flatMap((day) => day.stops.map((stop) => stop.customTitle)).join(" ");
+    expect(names).toMatch(/Maimun|Kesawan|Petisah|Mashun|Tjong/i);
+  });
+
+  it("keeps Medan city trips inside Medan — not Bandung/Cihampelas/Cimahi", () => {
+    const days = buildDestinationItinerary({
+      destination: "Medan",
+      startDate: "2026-11-01",
+      endDate: "2026-11-02",
+    });
+    const names = days.flatMap((day) => day.stops.map((stop) => stop.customTitle ?? "")).join(" ");
+    expect(names).toMatch(/Maimun|Kesawan|Petisah|Mashun|Tjong|Juang/i);
+    expect(names).not.toMatch(/Cihampelas|Cimahi|Braga|Gedung Sate|Bandung|Bogor|Malioboro|Jakarta|Monas/i);
+    expect(days.every((day) => day.stops.length >= 2)).toBe(true);
+    for (const day of days) {
+      for (const stop of day.stops) {
+        const lat = stop.place?.latitude ?? 0;
+        const lng = stop.place?.longitude ?? 0;
+        expect(lat).toBeGreaterThan(3.4);
+        expect(lat).toBeLessThan(3.8);
+        expect(lng).toBeGreaterThan(98.5);
+        expect(lng).toBeLessThan(98.9);
+      }
+    }
+  });
+
+  it("keeps 4-day Medan trips at 2+ nearby stops per day, never 1 landmark all day", () => {
+    const days = buildDestinationItinerary({
+      destination: "Medan",
+      startDate: "2026-11-01",
+      endDate: "2026-11-04",
+    });
+    expect(days).toHaveLength(4);
+    expect(days.every((day) => day.stops.length >= 2)).toBe(true);
+    const names = days.flatMap((day) => day.stops.map((stop) => stop.customTitle ?? "")).join(" ");
+    expect(names).not.toMatch(/Cimahi|Cihampelas|Bandung|Jakarta/i);
+  });
+
+  it("fills a one-stop Medan day with nearby Medan places, not far cities", () => {
+    const thin = buildDestinationItinerary({
+      destination: "Medan",
+      startDate: "2026-11-01",
+      endDate: "2026-11-01",
+    }).map((day) => ({ ...day, stops: day.stops.slice(0, 1) }));
+    const filled = ensureMultiStopDays(thin, "Medan");
+    expect(filled[0]?.stops.length).toBeGreaterThanOrEqual(2);
+    const names = filled.flatMap((day) => day.stops.map((stop) => stop.customTitle ?? "")).join(" ");
+    expect(names).not.toMatch(/Cimahi|Cihampelas|Bandung|Jakarta|Malioboro/i);
+  });
+
   it("orders Jakarta stops along a north-south corridor instead of zigzagging", () => {
     const days = buildDestinationItinerary({
       destination: "Jakarta",
@@ -112,5 +170,25 @@ describe("destination itinerary", () => {
     const goingNorth = lats.every((lat, index) => index === 0 || lat >= lats[index - 1]! - 0.004);
     expect(goingSouth || goingNorth).toBe(true);
     expect(days[0].stops.map((stop) => stop.customTitle).join(" ")).toMatch(/Bundaran HI|Monumen|Kota Tua|Ancol/i);
+  });
+
+  it("builds a 3-day Yogyakarta trip with multi-stop days and non-zero transport for later stops", async () => {
+    const { estimateItineraryBudget } = await import("./template-itinerary");
+    const days = buildDestinationItinerary({
+      destination: "Yogyakarta",
+      startDate: "2026-11-01",
+      endDate: "2026-11-03",
+    });
+    expect(days).toHaveLength(3);
+    const multiStopDays = days.filter((day) => day.stops.length >= 2);
+    expect(multiStopDays.length).toBeGreaterThanOrEqual(2);
+    const secondStops = multiStopDays.flatMap((day) => day.stops.slice(1));
+    expect(secondStops.some((stop) => (stop.travelDurationMinutes ?? 0) > 0)).toBe(true);
+    const plan = estimateItineraryBudget(days, 5_000_000, 1);
+    const transportLines = Object.values(plan.byStopId).flatMap((item) => item.lines.filter((line) => line.key === "transport"));
+    expect(transportLines.some((line) => line.amount > 0)).toBe(true);
+    expect(transportLines.some((line) => /Titik awal hari/i.test(line.detail))).toBe(true);
+    expect(transportLines.every((line) => line.amount === 0 || !/jalan kaki jauh/i.test(line.detail))).toBe(true);
+    expect(transportLines.some((line) => line.amount > 0 && /ojek|antar-kota|jeep/i.test(line.detail))).toBe(true);
   });
 });

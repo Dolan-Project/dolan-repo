@@ -33,6 +33,11 @@ export type { ProfileUpdate } from "./types/profile.ts";
 export { profileUpdateSchema } from "./schemas/profile.ts";
 export type { ProfileUpdateInput } from "./schemas/profile.ts";
 export {
+  instagramProfileUrl,
+  tiktokProfileUrl,
+  socialHandleFromUrl,
+} from "./lib/social-links.ts";
+export {
   MAX_UPLOAD_BYTES,
   ALLOWED_UPLOAD_TYPES,
   validateUploadMeta,

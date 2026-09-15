@@ -17,7 +17,7 @@ Untuk data wisata nyata dan alur P0 tanpa simulasi:
 | `NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_KEY` | Maps JS on Explore / My Trip |
 | `GROQ_API_KEY` (+ optional `GROQ_MODEL`) | AI itinerary / destination candidates |
 | `IMAGEKIT_*` | Avatar/cover CDN |
-| `EMAIL_PROVIDER_API_KEY` / `EMAIL_FROM` | Verifikasi email + reset password (Resend) |
+| `EMAIL_PROVIDER_API_KEY` / `EMAIL_FROM` | Reset password (Resend) |
 
 Auth Express: register/login email+password, atau Google OAuth (`/api/v1/auth/google`). Setelah `npm run db:seed`: `traveler01@dolan.demo` / `password123` (dan traveler02–24), plus `curator@dolan.local` / `password123`. Memory fallback: `verified@dolan.test` / `password123`. Foto destinasi seed tersimpan di `places.cached_photo_url` (+ opsional `dolan/public/seed-places/`); request user biasa tidak memanggil Places Photo bila cache ada. Tanpa Maps server key di runtime, Places jatuh ke `FakePlacesClient`. Cookie `dolan_session` memakai `Secure` saat `NODE_ENV=production`. Supabase Auth tidak dipakai.
 

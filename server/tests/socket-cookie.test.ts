@@ -8,10 +8,7 @@ import { MemoryUserRepository } from "../src/modules/auth/user-repository.ts";
 import { createSocketServer } from "../src/socket/index.ts";
 
 function cookieFor(token: string) {
-  const payload = Buffer.from(JSON.stringify({ access_token: token, refresh_token: "hidden" })).toString(
-    "base64",
-  );
-  return `sb-local-auth-token=base64-${payload}`;
+  return `dolan_session=${token}`;
 }
 
 describe("socket cookie authentication", () => {
@@ -21,7 +18,7 @@ describe("socket cookie authentication", () => {
     await Promise.all(closers.splice(0).map((close) => close()));
   });
 
-  it("accepts a handshake with a valid Supabase cookie and disconnects on logout", async () => {
+  it("accepts a handshake with a valid dolan_session cookie and disconnects on logout", async () => {
     const authService = new AuthService(new MockAuthAdapter(), new MemoryUserRepository());
     const httpServer = createServer();
     const sockets = createSocketServer(httpServer, authService);

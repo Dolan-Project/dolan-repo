@@ -4,4 +4,6 @@ export type ProfileUpdate = {
   domicile: string;
   bio?: string | null;
   coverCaption?: string | null;
+  instagramUrl?: string | null;
+  tiktokUrl?: string | null;
 };

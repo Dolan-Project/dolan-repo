@@ -37,17 +37,6 @@ export function SaveOfflineItineraryButton({
       return;
     }
 
-    try {
-      await fetch("/api/v1/offline/itineraries", {
-        method: "POST",
-        credentials: "include",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-    } catch {
-      /* local cache is enough for offline reading */
-    }
-
     setPending(false);
     setMessage("Itinerary disimpan di perangkat untuk dibaca offline.");
   }

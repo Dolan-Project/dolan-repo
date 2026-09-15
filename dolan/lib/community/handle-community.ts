@@ -55,9 +55,6 @@ export async function handleFollowRequest(request: Request, username: string) {
   if (actor.user.id === target.id) {
     return fail("SELF_FOLLOW", "Tidak bisa follow diri sendiri");
   }
-  if (!actor.emailVerified) {
-    return fail("EMAIL_UNVERIFIED", "Verifikasi email dulu untuk follow");
-  }
   if (isBlockedEitherWay(actor.user.id, target.id)) {
     return fail("BLOCKED_RELATION", "Relasi diblokir");
   }

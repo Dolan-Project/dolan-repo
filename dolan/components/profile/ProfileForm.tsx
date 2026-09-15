@@ -4,6 +4,7 @@ import {
   API_V1_PREFIX,
   EXPRESS_PATHS,
   resolvePostAuthPath,
+  socialHandleFromUrl,
   type ApiError,
   type AuthSession,
   type PublicUser,
@@ -32,37 +33,11 @@ export function ProfileForm({ user, next }: ProfileFormProps) {
   const [username, setUsername] = useState(user.username);
   const [domicile, setDomicile] = useState(user.domicile ?? "");
   const [bio, setBio] = useState(user.bio ?? "");
-  const [coverCaption, setCoverCaption] = useState("");
+  const [instagram, setInstagram] = useState(socialHandleFromUrl(user.instagramUrl));
+  const [tiktok, setTiktok] = useState(socialHandleFromUrl(user.tiktokUrl));
   const [pending, setPending] = useState(false);
   const [formError, setFormError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [uploadError, setUploadError] = useState("");
-  const [avatarUrl, setAvatarUrl] = useState(user.avatarUrl);
-  const [coverUrl, setCoverUrl] = useState(user.coverUrl);
-
-  async function upload(kind: "avatar" | "cover", file: File) {
-    setUploadError("");
-    const form = new FormData();
-    form.append("file", file);
-    const path =
-      kind === "avatar"
-        ? `${API_V1_PREFIX}${EXPRESS_PATHS.usersMeAvatar}`
-        : `${API_V1_PREFIX}${EXPRESS_PATHS.usersMeCover}`;
-    const response = await fetch(path, {
-      method: "POST",
-      credentials: "include",
-      body: form,
-    });
-    const json = (await response.json()) as
-      | { success: true; data: { avatarUrl?: string; coverUrl?: string } }
-      | ApiError;
-    if (!json.success) {
-      setUploadError(json.error.message);
-      return;
-    }
-    if (json.data.avatarUrl) setAvatarUrl(json.data.avatarUrl);
-    if (json.data.coverUrl) setCoverUrl(json.data.coverUrl);
-  }
 
   async function onSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -78,7 +53,8 @@ export function ProfileForm({ user, next }: ProfileFormProps) {
         displayName,
         domicile,
         bio,
-        coverCaption,
+        instagramUrl: instagram,
+        tiktokUrl: tiktok,
       }),
     });
     const json = (await response.json()) as
@@ -96,57 +72,6 @@ export function ProfileForm({ user, next }: ProfileFormProps) {
 
   return (
     <form className="flex flex-col gap-4" onSubmit={onSubmit}>
-      <label className="relative block h-36 cursor-pointer overflow-hidden rounded-2xl bg-surface-container-highest">
-        {coverUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img alt="" className="h-full w-full object-cover" src={coverUrl} />
-        ) : (
-          <span className="flex h-full items-center justify-center type-caption text-on-surface-variant">
-            Unggah foto cover
-          </span>
-        )}
-        <input
-          className="sr-only"
-          type="file"
-          accept="image/jpeg,image/png,image/webp"
-          onChange={(event) => {
-            const file = event.target.files?.[0];
-            if (file) void upload("cover", file);
-          }}
-        />
-      </label>
-
-      <div className="flex items-center gap-4 rounded-2xl bg-surface-container-low p-3">
-        <label className="relative flex h-16 w-16 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-2xl bg-surface-container-highest text-primary">
-          {avatarUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img alt="" className="h-full w-full object-cover" src={avatarUrl} />
-          ) : (
-            <Icon name="person" className="text-[32px]" />
-          )}
-          <input
-            className="sr-only"
-            type="file"
-            accept="image/jpeg,image/png,image/webp"
-            onChange={(event) => {
-              const file = event.target.files?.[0];
-              if (file) void upload("avatar", file);
-            }}
-          />
-        </label>
-        <div>
-          <p className="type-label text-on-surface">Foto Profil (Opsional)</p>
-          <p className="type-caption text-on-surface-variant">
-            JPG, PNG atau WebP maks 2MB. Boleh gunakan foto ransel/lanskap kamu.
-          </p>
-        </div>
-      </div>
-      {uploadError ? (
-        <p className="type-body text-error" role="alert">
-          {uploadError}
-        </p>
-      ) : null}
-
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <Field id="displayName" label="Nama Tampilan" error={fieldErrors.displayName}>
           <input
@@ -222,15 +147,54 @@ export function ProfileForm({ user, next }: ProfileFormProps) {
           onChange={(event) => setBio(event.target.value)}
         />
       </Field>
-      <Field id="coverCaption" label="Caption cover (opsional)" error={fieldErrors.coverCaption}>
-        <input
-          id="coverCaption"
-          className="field-input"
-          maxLength={160}
-          value={coverCaption}
-          onChange={(event) => setCoverCaption(event.target.value)}
-        />
-      </Field>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <Field
+          id="instagram"
+          label="Instagram"
+          error={fieldErrors.instagramUrl}
+          hint="Opsional. Username atau tautan profil."
+        >
+          <div className="relative">
+            <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 type-label text-on-surface-variant">
+              @
+            </span>
+            <input
+              id="instagram"
+              className="field-input pl-8"
+              value={instagram}
+              placeholder="username"
+              autoComplete="off"
+              aria-invalid={Boolean(fieldErrors.instagramUrl)}
+              onChange={(event) => setInstagram(event.target.value)}
+            />
+          </div>
+        </Field>
+        <Field
+          id="tiktok"
+          label="TikTok"
+          error={fieldErrors.tiktokUrl}
+          hint="Opsional. Username atau tautan profil."
+        >
+          <div className="relative">
+            <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 type-label text-on-surface-variant">
+              @
+            </span>
+            <input
+              id="tiktok"
+              className="field-input pl-8"
+              value={tiktok}
+              placeholder="username"
+              autoComplete="off"
+              aria-invalid={Boolean(fieldErrors.tiktokUrl)}
+              onChange={(event) => setTiktok(event.target.value)}
+            />
+          </div>
+        </Field>
+      </div>
+      <p className="type-caption text-on-surface-variant">
+        Traveler lain bisa membuka Instagram atau TikTok-mu untuk menilai apakah
+        akunmu terlihat asli.
+      </p>
       <div className="flex items-center gap-3 rounded-xl bg-surface-container p-3 type-caption text-on-surface-variant">
         <Icon name="verified_user" className="shrink-0 text-[20px] text-primary" />
         <span>

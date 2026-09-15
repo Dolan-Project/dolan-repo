@@ -15,6 +15,8 @@ const completeUser: AuthIdentity = {
   avatarUrl: null,
   coverUrl: null,
   bio: null,
+  instagramUrl: null,
+  tiktokUrl: null,
 };
 
 function userActor(overrides: Partial<AuthIdentity> = {}, trip?: TripAccessContext): SessionActor {
@@ -36,12 +38,10 @@ describe("authorization rules", () => {
     if (!decision.allowed) expect(decision.status).toBe(401);
   });
 
-  it("requires verified email for publish, join, comment, and follow", () => {
+  it("allows publish, join, comment, and follow without a verified email", () => {
     const actor = userActor({ emailVerifiedAt: null });
     for (const capability of ["publish_trip", "join_trip", "comment", "follow"] as const) {
-      const decision = authorize(actor, capability);
-      expect(decision.allowed).toBe(false);
-      if (!decision.allowed) expect(decision.code).toBe("EMAIL_UNVERIFIED");
+      expect(authorize(actor, capability).allowed).toBe(true);
     }
   });
 

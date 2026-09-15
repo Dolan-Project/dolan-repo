@@ -40,6 +40,9 @@ export type TripRealtime = {
   onMemberJoined?(tripId: string, userId: string): Promise<unknown> | unknown;
   onJoinClosed?(tripId: string, userId: string): Promise<unknown> | unknown;
   onCancelled?(tripId: string): Promise<unknown> | unknown;
+  onCommentCreated?(tripId: string, comment: TripComment): Promise<unknown> | unknown;
+  onCommentUpdated?(tripId: string, comment: TripComment): Promise<unknown> | unknown;
+  onCommentDeleted?(tripId: string, payload: { tripId: string; commentId: string }): Promise<unknown> | unknown;
 };
 
 export type TripBlockLookup = {
@@ -557,7 +560,9 @@ export class TripService {
           targetId: tripId,
         });
       }
-      return this.toComment(comment);
+      const created = await this.toComment(comment);
+      await this.realtime?.onCommentCreated?.(tripId, created);
+      return created;
     });
   }
 
@@ -569,7 +574,9 @@ export class TripService {
     if (comment.userId !== user.id) {
       throw forbidden(AuthErrorCode.FORBIDDEN, "Only the author can edit this comment");
     }
-    return this.toComment(await this.store.updateComment(commentId, body));
+    const updated = await this.toComment(await this.store.updateComment(commentId, body));
+    await this.realtime?.onCommentUpdated?.(tripId, updated);
+    return updated;
   }
 
   async deleteComment(actor: SessionActor, tripId: string, commentId: string) {
@@ -581,7 +588,17 @@ export class TripService {
       throw forbidden(AuthErrorCode.FORBIDDEN, "Only the author or host can delete this comment");
     }
     await this.store.softDeleteComment(commentId);
+    await this.realtime?.onCommentDeleted?.(tripId, { tripId, commentId });
     return { deleted: true as const };
+  }
+
+  async assertCommentRoom(tripId: string, userId: string) {
+    const trip = await this.store.getTrip(tripId);
+    if (!trip) throw hiddenTrip();
+    if (trip.visibility !== "PUBLIC" || trip.status === "DRAFT") {
+      if (!(await this.actorKnowsTrip(trip, userId))) throw hiddenTrip();
+      throw forbidden(TripErrorCode.TRIP_NOT_PUBLIC, "Comments are only available on public trips");
+    }
   }
 
   async leaveTrip(actor: SessionActor, tripId: string) {
@@ -761,7 +778,7 @@ export class TripService {
       privateOriginLatitude: isHost ? trip.privateOriginLatitude : null,
       privateOriginLongitude: isHost ? trip.privateOriginLongitude : null,
       preferences: isHost ? trip.preferences : null,
-      host: host ? toPublicUser(host) : placeholderUser(trip.hostUserId),
+      host: host ? await toPublicUser(host) : placeholderUser(trip.hostUserId),
       viewerRole,
       activeParticipantCount: members.filter((member) => member.membershipStatus === "ACTIVE").length,
       pendingRequestCount: joins.filter((row) => row.status === "PENDING").length,
@@ -772,7 +789,7 @@ export class TripService {
           .filter((member) => member.membershipStatus === "ACTIVE")
           .map(async (member) => {
             const user = await this.store.getUser(member.userId);
-            return user ? toPublicUser(user) : placeholderUser(member.userId);
+            return user ? await toPublicUser(user) : placeholderUser(member.userId);
           }),
       ),
       myJoinRequest: myJoin ? await this.toJoin(myJoin) : null,
@@ -797,7 +814,7 @@ export class TripService {
       publicMeetingPointLabel: trip.publicMeetingPointLabel,
       publicMeetingPointLatitude: trip.publicMeetingPointLatitude,
       publicMeetingPointLongitude: trip.publicMeetingPointLongitude,
-      host: host ? toPublicUser(host) : placeholderUser(trip.hostUserId),
+      host: host ? await toPublicUser(host) : placeholderUser(trip.hostUserId),
       maxParticipants: trip.maxParticipants,
       genderRule: trip.genderRule ?? "ALL_GENDERS",
     };
@@ -808,7 +825,7 @@ export class TripService {
     return {
       id: row.id,
       tripId: row.tripId,
-      applicant: applicant ? toPublicUser(applicant) : placeholderUser(row.userId),
+      applicant: applicant ? await toPublicUser(applicant) : placeholderUser(row.userId),
       message: row.message,
       status: row.status,
     };
@@ -819,7 +836,7 @@ export class TripService {
     return {
       id: row.id,
       tripId: row.tripId,
-      author: author ? toPublicUser(author) : placeholderUser(row.userId),
+      author: author ? await toPublicUser(author) : placeholderUser(row.userId),
       parentId: row.parentCommentId,
       body: row.body,
       createdAt: row.createdAt,

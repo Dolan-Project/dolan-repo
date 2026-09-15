@@ -5,11 +5,13 @@ import { useRouter } from "next/navigation";
 import type { BudgetItemInput, EditableItineraryDay, EditableItineraryStop, EditorGenerationStatus, ItineraryEditorSnapshot } from "@dolan/shared";
 import { Icon } from "@/components/ui/Icon";
 import { findScheduleConflicts, generateAlternative, getItineraryEditor, saveItineraryVersion, selectItineraryVersion, upsertChecklistItem, deleteChecklistItem } from "./api";
-import { INITIAL_BUDGET_ITEMS, PLACE_CANDIDATES } from "./mock-data";
+import { INITIAL_BUDGET_ITEMS } from "./mock-data";
 import { RoutePreview } from "./RoutePreview";
 import { SaveOfflineItineraryButton } from "@/components/offline/SaveOfflineItineraryButton";
+import { PlacePicker, type PlaceSuggestion } from "@/components/trip/PlacePicker";
 import { ROUTES, tripItineraryPath } from "@/lib/routes";
 import { ItineraryStopPin } from "@/components/trip/ItineraryTimeline";
+import type { PlaceSummary } from "@dolan/shared";
 
 type Tab = "itinerary" | "budget" | "checklist";
 type Notice = { tone: "success" | "error" | "info"; text: string } | null;
@@ -25,6 +27,21 @@ function versionBudgetInputs(snapshot: ItineraryEditorSnapshot, versionId: strin
   const items = snapshot.versions.find((item) => item.id === versionId)?.budget.items;
   if (!items?.length) return clone(INITIAL_BUDGET_ITEMS);
   return items.map(({ category, label, quantity, unit, unitCostLow, unitCostHigh, sourceType, sourceReference, notes }) => ({ category, label, quantity, unit, unitCostLow, unitCostHigh, sourceType, sourceReference, notes }));
+}
+
+function suggestionToPlace(suggestion: PlaceSuggestion): PlaceSummary {
+  return {
+    googlePlaceId: suggestion.id,
+    name: suggestion.label,
+    formattedAddress: suggestion.formattedAddress ?? (suggestion.city ? `${suggestion.label}, ${suggestion.city}` : suggestion.label),
+    city: suggestion.city || null,
+    latitude: suggestion.latitude ?? 0,
+    longitude: suggestion.longitude ?? 0,
+    rating: null,
+    userRatingCount: null,
+    photoName: null,
+    googleMapsUrl: null,
+  };
 }
 
 export function ItineraryEditorExperience({ tripId }: { tripId: string }) {
@@ -92,13 +109,23 @@ export function ItineraryEditorExperience({ tripId }: { tripId: string }) {
     changeDays(next);
   };
 
-  const addPlace = (dayId: string, placeIndex: number) => {
-    const candidate = PLACE_CANDIDATES[placeIndex];
+  const addPlace = (dayId: string, place: PlaceSummary) => {
     const next = clone(days);
     const day = next.find((item) => item.id === dayId)!;
     const last = day.stops.at(-1);
     const startHour = last?.startTime ? Math.min(20, Number(last.startTime.slice(0, 2)) + Math.ceil((last.durationMinutes + 60) / 60)) : 9;
-    day.stops.push({ id: `${dayId}-${candidate.googlePlaceId}-${day.stops.length + 1}`, sequence: day.stops.length + 1, place: candidate, customTitle: null, activityType: "Wisata", startTime: `${String(startHour).padStart(2, "0")}:00`, durationMinutes: 120, travelDurationMinutes: 60, notes: null, isLocked: false });
+    day.stops.push({
+      id: `${dayId}-${place.googlePlaceId}-${day.stops.length + 1}`,
+      sequence: day.stops.length + 1,
+      place,
+      customTitle: null,
+      activityType: "Wisata",
+      startTime: `${String(startHour).padStart(2, "0")}:00`,
+      durationMinutes: 120,
+      travelDurationMinutes: 60,
+      notes: null,
+      isLocked: false,
+    });
     changeDays(next);
   };
 
@@ -106,7 +133,29 @@ export function ItineraryEditorExperience({ tripId }: { tripId: string }) {
     const date = new Date(`${snapshot?.startDate ?? "2026-10-24"}T00:00:00`);
     date.setDate(date.getDate() + days.length);
     const nextDayNumber = days.length + 1;
-    changeDays([...days, { id: `day-${nextDayNumber}`, dayNumber: nextDayNumber, date: date.toISOString().slice(0, 10), title: "Hari baru", stops: [{ id: `day-${nextDayNumber}-stop-1`, sequence: 1, place: PLACE_CANDIDATES[0], customTitle: null, activityType: "Wisata", startTime: "09:00", durationMinutes: 120, travelDurationMinutes: 0, notes: null, isLocked: false }] }]);
+    changeDays([
+      ...days,
+      {
+        id: `day-${nextDayNumber}`,
+        dayNumber: nextDayNumber,
+        date: date.toISOString().slice(0, 10),
+        title: "Hari baru",
+        stops: [
+          {
+            id: `day-${nextDayNumber}-stop-1`,
+            sequence: 1,
+            place: null,
+            customTitle: "Destinasi baru",
+            activityType: "Wisata",
+            startTime: "09:00",
+            durationMinutes: 120,
+            travelDurationMinutes: 0,
+            notes: null,
+            isLocked: false,
+          },
+        ],
+      },
+    ]);
   };
 
   const save = async () => {
@@ -293,7 +342,7 @@ export function ItineraryEditorExperience({ tripId }: { tripId: string }) {
         <RoutePreview days={days} destination={snapshot.destinationCity} />
         <section className="min-w-0">
           {tab === "itinerary" && <div className="space-y-4">
-            {days.map((day) => <DayEditor key={day.id} day={day} conflicts={conflicts} onChangeTitle={(title) => changeDays(days.map((item) => item.id === day.id ? { ...item, title } : item))} onUpdateStop={(stopId, patch) => updateStop(day.id, stopId, patch)} onMove={(index, direction) => moveStop(day.id, index, direction)} onRemove={(stopId) => changeDays(days.map((item) => item.id === day.id ? { ...item, stops: item.stops.filter((stop) => stop.id !== stopId) } : item))} onAdd={(placeIndex) => addPlace(day.id, placeIndex)} onDeleteDay={() => day.stops.some((stop) => stop.isLocked) ? setNotice({ tone: "error", text: "Hari ini memiliki destinasi terkunci. Buka kunci sebelum menghapus hari." }) : changeDays(days.filter((item) => item.id !== day.id))} />)}
+            {days.map((day) => <DayEditor key={day.id} day={day} conflicts={conflicts} onChangeTitle={(title) => changeDays(days.map((item) => item.id === day.id ? { ...item, title } : item))} onUpdateStop={(stopId, patch) => updateStop(day.id, stopId, patch)} onMove={(index, direction) => moveStop(day.id, index, direction)} onRemove={(stopId) => changeDays(days.map((item) => item.id === day.id ? { ...item, stops: item.stops.filter((stop) => stop.id !== stopId) } : item))} onAdd={(place) => addPlace(day.id, place)} onDeleteDay={() => day.stops.some((stop) => stop.isLocked) ? setNotice({ tone: "error", text: "Hari ini memiliki destinasi terkunci. Buka kunci sebelum menghapus hari." }) : changeDays(days.filter((item) => item.id !== day.id))} />)}
             <button type="button" onClick={addDay} className="w-full rounded-2xl border-2 border-dashed border-primary/25 bg-primary-fixed/30 py-4 type-label text-primary hover:bg-primary-fixed"><Icon name="add" /> Tambah hari perjalanan</button>
           </div>}
           {tab === "budget" && <BudgetEditor items={budgetItems} total={budgetTotal} onChange={(items) => { setBudgetItems(items); setDirty(true); }} />}
@@ -310,9 +359,10 @@ export function ItineraryEditorExperience({ tripId }: { tripId: string }) {
   );
 }
 
-function DayEditor({ day, conflicts, onChangeTitle, onUpdateStop, onMove, onRemove, onAdd, onDeleteDay }: { day: EditableItineraryDay; conflicts: Record<string, string>; onChangeTitle: (value: string) => void; onUpdateStop: (id: string, patch: Partial<EditableItineraryStop>) => void; onMove: (index: number, direction: -1 | 1) => void; onRemove: (id: string) => void; onAdd: (index: number) => void; onDeleteDay: () => void }) {
+function DayEditor({ day, conflicts, onChangeTitle, onUpdateStop, onMove, onRemove, onAdd, onDeleteDay }: { day: EditableItineraryDay; conflicts: Record<string, string>; onChangeTitle: (value: string) => void; onUpdateStop: (id: string, patch: Partial<EditableItineraryStop>) => void; onMove: (index: number, direction: -1 | 1) => void; onRemove: (id: string) => void; onAdd: (place: PlaceSummary) => void; onDeleteDay: () => void }) {
+  const [query, setQuery] = useState("");
   return <article className="rounded-[1.5rem] border border-outline-variant/70 bg-white p-4 shadow-sm md:p-5">
-    <div className="flex items-start gap-3"><div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-primary text-white"><span className="type-micro">HARI</span><strong className="-mt-1">{day.dayNumber}</strong></div><div className="min-w-0 flex-1"><input aria-label={`Judul hari ${day.dayNumber}`} value={day.title ?? ""} onChange={(e) => onChangeTitle(e.target.value)} className="w-full border-b border-transparent bg-transparent type-subtitle outline-none hover:border-outline-variant focus:border-primary" /><p className="type-caption mt-1 text-on-surface-variant">{day.date} ? {day.stops.length} destinasi</p></div><button type="button" onClick={onDeleteDay} className="rounded-full p-2 text-on-surface-variant hover:bg-error-container hover:text-error" aria-label={`Hapus hari ${day.dayNumber}`}><Icon name="close" /></button></div>
+    <div className="flex items-start gap-3"><div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-primary text-white"><span className="type-micro">HARI</span><strong className="-mt-1">{day.dayNumber}</strong></div><div className="min-w-0 flex-1"><input aria-label={`Judul hari ${day.dayNumber}`} value={day.title ?? ""} onChange={(e) => onChangeTitle(e.target.value)} className="w-full border-b border-transparent bg-transparent type-subtitle outline-none hover:border-outline-variant focus:border-primary" /><p className="type-caption mt-1 text-on-surface-variant">{day.date} · {day.stops.length} destinasi</p></div><button type="button" onClick={onDeleteDay} className="rounded-full p-2 text-on-surface-variant hover:bg-error-container hover:text-error" aria-label={`Hapus hari ${day.dayNumber}`}><Icon name="close" /></button></div>
     <div className="mt-4 space-y-3">{day.stops.map((stop, index) => <div key={stop.id} className={`rounded-2xl border p-3 transition ${conflicts[stop.id] ? "border-error bg-error-container/25" : stop.isLocked ? "border-secondary-container/50 bg-secondary-fixed/20" : "border-outline-variant/70 bg-surface-container-low/45"}`}>
       <div className="relative flex items-start gap-3">
         {index < day.stops.length - 1 ? <span className="absolute bottom-0 left-[15px] top-10 w-0.5 bg-slate-300" aria-hidden="true" /> : null}
@@ -322,7 +372,23 @@ function DayEditor({ day, conflicts, onChangeTitle, onUpdateStop, onMove, onRemo
       {conflicts[stop.id] && <p className="mt-1 type-caption font-semibold text-error">{conflicts[stop.id]}</p>}
       <div className="mt-2 flex justify-end gap-2"><button type="button" onClick={() => onUpdateStop(stop.id, { isLocked: !stop.isLocked })} className="rounded-full border border-outline-variant px-3 py-1.5 type-label text-on-surface-variant"><Icon name="lock" /> {stop.isLocked ? "Buka kunci" : "Kunci"}</button><button type="button" disabled={stop.isLocked || day.stops.length === 1} onClick={() => onRemove(stop.id)} className="rounded-full px-3 py-1.5 type-label text-error hover:bg-error-container disabled:opacity-30">Hapus</button></div>
     </div>)}</div>
-    <details className="mt-3"><summary className="cursor-pointer rounded-xl bg-primary-fixed px-3 py-2 type-label text-primary"><Icon name="add" /> Tambah destinasi</summary><div className="mt-2 flex flex-wrap gap-2">{PLACE_CANDIDATES.map((place, index) => <button key={place.googlePlaceId} type="button" onClick={() => onAdd(index)} className="rounded-full border border-outline-variant bg-white px-3 py-2 type-label hover:border-primary hover:text-primary">{place.name}</button>)}</div></details>
+    <details className="mt-3">
+      <summary className="cursor-pointer rounded-xl bg-primary-fixed px-3 py-2 type-label text-primary"><Icon name="add" /> Tambah destinasi</summary>
+      <div className="mt-3">
+        <PlacePicker
+          id={`add-place-${day.id}`}
+          label="Cari tempat"
+          value={query}
+          onChange={setQuery}
+          placeholder="Malioboro, Bromo, Ubud…"
+          hint="Pilih hasil pencarian untuk menambah ke hari ini."
+          onSelectPlace={(suggestion) => {
+            onAdd(suggestionToPlace(suggestion));
+            setQuery("");
+          }}
+        />
+      </div>
+    </details>
   </article>;
 }
 

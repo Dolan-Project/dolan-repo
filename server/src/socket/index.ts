@@ -6,6 +6,7 @@ import { logger } from "../lib/logger.ts";
 import { HttpError } from "../lib/api-error.ts";
 import type { AuthService } from "../modules/auth/auth-service.ts";
 import type { ChatService } from "../modules/chat/chat-service.ts";
+import type { TripService } from "../modules/trips/trip-service.ts";
 import { extractAccessTokenFromCookies } from "./cookie-auth.ts";
 import { SocketSessionRegistry } from "./session-registry.ts";
 
@@ -13,7 +14,16 @@ function roomName(tripId: string) {
   return `trip:${tripId}`;
 }
 
-export function createSocketServer(httpServer: HttpServer, authService: AuthService, chat?: ChatService) {
+function commentsRoom(tripId: string) {
+  return `trip:${tripId}:comments`;
+}
+
+export function createSocketServer(
+  httpServer: HttpServer,
+  authService: AuthService,
+  chat?: ChatService,
+  trips?: Pick<TripService, "assertCommentRoom">,
+) {
   const registry = new SocketSessionRegistry();
   const io = new Server(httpServer, {
     path: env.socketPath,
@@ -25,7 +35,9 @@ export function createSocketServer(httpServer: HttpServer, authService: AuthServ
 
   io.use(async (socket, next) => {
     try {
-      const token = extractAccessTokenFromCookies(socket.handshake.headers.cookie);
+      const handshakeToken =
+        typeof socket.handshake.auth?.token === "string" ? socket.handshake.auth.token.trim() : "";
+      const token = handshakeToken || extractAccessTokenFromCookies(socket.handshake.headers.cookie);
       if (!token) {
         next(new Error(AuthErrorCode.UNAUTHENTICATED));
         return;
@@ -48,6 +60,21 @@ export function createSocketServer(httpServer: HttpServer, authService: AuthServ
         chat.assertCanRead(await chat.accessFor(tripId, userId));
         await socket.join(roomName(tripId));
         ack?.({ ok: true, room: roomName(tripId) });
+      } catch (error) {
+        const code = error instanceof HttpError ? error.code : AuthErrorCode.FORBIDDEN;
+        ack?.({ ok: false, code });
+        socket.emit("error", { code });
+      }
+    });
+
+    socket.on("comments.join", async (payload: { tripId?: string }, ack?: (result: unknown) => void) => {
+      try {
+        const tripId = String(payload?.tripId ?? "");
+        const userId = String(socket.data.userId);
+        if (!trips) throw new Error(AuthErrorCode.FORBIDDEN);
+        await trips.assertCommentRoom(tripId, userId);
+        await socket.join(commentsRoom(tripId));
+        ack?.({ ok: true, room: commentsRoom(tripId) });
       } catch (error) {
         const code = error instanceof HttpError ? error.code : AuthErrorCode.FORBIDDEN;
         ack?.({ ok: false, code });
@@ -85,6 +112,9 @@ export function createSocketServer(httpServer: HttpServer, authService: AuthServ
   chat?.setRealtime({
     emitToRoom(tripId, event, payload) {
       io.to(roomName(tripId)).emit(event, payload);
+    },
+    emitToComments(tripId, event, payload) {
+      io.to(commentsRoom(tripId)).emit(event, payload);
     },
     emitToUser(userId, event, payload) {
       for (const socketId of registry.socketIds(userId)) {

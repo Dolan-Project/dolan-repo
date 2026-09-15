@@ -6,6 +6,7 @@ import { TripBoardMap } from "@/components/trip/TripBoardMap";
 import { Icon } from "@/components/ui/Icon";
 import {
   canRegenerate,
+  dayRouteSummary,
   formatRupiah,
   itineraryMapMarkers,
   itineraryMapRouteGroups,
@@ -21,6 +22,7 @@ type CreateTripItineraryStepProps = {
   editingStopId: string | null;
   generating: boolean;
   fromTemplate: boolean;
+  fromGroq?: boolean;
   regenerateUsed: number;
   budgetPlan: ItineraryBudgetPlan;
   partySize: number;
@@ -39,6 +41,7 @@ export function CreateTripItineraryStep({
   editingStopId,
   generating,
   fromTemplate,
+  fromGroq = false,
   regenerateUsed,
   budgetPlan,
   partySize,
@@ -51,8 +54,10 @@ export function CreateTripItineraryStep({
   onRegenerate,
 }: CreateTripItineraryStepProps) {
   const [drag, setDrag] = useState<{ dayId: string; index: number } | null>(null);
-  const markers = itineraryMapMarkers(days, selectedStopId ?? editingStopId);
-  const routeGroups = itineraryMapRouteGroups(days);
+  const focusStopId = selectedStopId ?? editingStopId;
+  const activeDay = days.find((day) => day.stops.some((stop) => stop.id === focusStopId)) ?? null;
+  const markers = itineraryMapMarkers(days, focusStopId);
+  const routeGroups = itineraryMapRouteGroups(activeDay ? [activeDay] : days);
   const leftover = remainingRegenerates(regenerateUsed);
   const editing = days.flatMap((day) => day.stops.map((stop) => ({ day, stop }))).find((item) => item.stop.id === editingStopId);
   const usedPercent = budgetPlan.pool > 0 ? Math.min(100, Math.round((budgetPlan.total / budgetPlan.pool) * 100)) : 0;
@@ -64,10 +69,18 @@ export function CreateTripItineraryStep({
           <div className="min-w-0 flex-1">
             <p className="type-micro font-extrabold uppercase tracking-[0.16em] text-primary">Rute, biaya & penjelasan</p>
             <h2 className="mt-1 text-lg font-extrabold text-on-surface">
-              {fromTemplate ? "Itinerary dari template" : "Itinerary + estimasi AI"}
+              {fromTemplate
+                ? "Itinerary dari template"
+                : fromGroq
+                  ? "Rekomendasi itinerary Groq"
+                  : "Itinerary cadangan lokal"}
             </h2>
             <p className="type-caption mt-1 text-on-surface-variant">
-              AI menyusun koridor terdekat, jam kunjungan, dan estimasi tiket/makan/transport. Regenerate mencari tempat lain yang lebih hemat jarak atau budget.
+              {fromTemplate
+                ? "Rute kurasi DOLAN. Kamu bisa ganti tempat, jam, atau urutan per hari sebelum lanjut."
+                : fromGroq
+                  ? "Disusun Groq dari destinasi, tanggal, jumlah orang, dan budget. Edit manual jika ada tempat yang tidak cocok; Regenerate meminta opsi lain ke Groq."
+                  : "Bukan hasil Groq — ini katalog lokal agar wizard tetap bisa dilanjutkan. Generate ulang setelah server Groq/Maps sehat, atau edit tempat manual."}
             </p>
           </div>
           <button
@@ -99,15 +112,32 @@ export function CreateTripItineraryStep({
         <div className="space-y-3">
           {days.map((day) => {
             const dayTotal = day.stops.reduce((sum, stop) => sum + (budgetPlan.byStopId[stop.id]?.total ?? 0), 0);
+            const route = dayRouteSummary(day);
+            const dayActive = activeDay?.id === day.id;
             return (
-            <section key={day.id} className="rounded-2xl border border-slate-200 bg-white p-3">
-              <div className="flex items-start justify-between gap-2">
+            <section
+              key={day.id}
+              className={`rounded-2xl border bg-white p-3 ${dayActive ? "border-primary/40 ring-1 ring-primary/15" : "border-slate-200"}`}
+            >
+              <button
+                type="button"
+                className="flex w-full items-start justify-between gap-2 text-left"
+                onClick={() => {
+                  const first = day.stops[0];
+                  if (first) onSelectStop(first.id);
+                }}
+              >
                 <div>
                   <p className="type-micro font-bold text-primary">Hari {day.dayNumber} · {day.date}</p>
                   <p className="type-caption mt-0.5 font-bold text-on-surface">{day.title || "Rencana harian"}</p>
+                  <p className="type-caption mt-1 text-on-surface-variant">
+                    {route.stopCount} destinasi
+                    {route.totalKm > 0 ? ` · ~${route.totalKm} km` : ""}
+                    {route.totalMinutes > 0 ? ` · ~${route.totalMinutes} menit antar titik` : ""}
+                  </p>
                 </div>
                 <p className="type-caption font-extrabold text-primary">{formatRupiah(dayTotal)}</p>
-              </div>
+              </button>
               <ol className="relative mt-2">
                 {day.stops.map((stop, index) => {
                   const active = stop.id === selectedStopId || stop.id === editingStopId;
@@ -115,6 +145,7 @@ export function CreateTripItineraryStep({
                   const meeting = isPublic && day.dayNumber === 1 && index === 0;
                   const colorIndex = Math.max(0, days.flatMap((item) => item.stops).findIndex((item) => item.id === stop.id));
                   const last = index === day.stops.length - 1;
+                  const transportLine = cost?.lines.find((line) => line.key === "transport");
                   return (
                     <li
                       key={stop.id}
@@ -152,18 +183,26 @@ export function CreateTripItineraryStep({
                           </div>
                         </div>
                         <div className="min-w-0 py-3">
-                          <div className="flex flex-wrap items-start justify-between gap-1">
-                            <div>
-                              {meeting ? <p className="mb-0.5 inline-flex rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold text-white">Titik kumpul</p> : null}
-                              <p className="text-sm font-extrabold leading-snug text-on-surface">{stop.customTitle || stop.place?.name || "Titik rute"}</p>
+                          <button type="button" className="w-full text-left" onClick={() => onSelectStop(stop.id)}>
+                            <div className="flex flex-wrap items-start justify-between gap-1">
+                              <div>
+                                {meeting ? <p className="mb-0.5 inline-flex rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold text-white">Titik kumpul</p> : null}
+                                <p className="text-sm font-extrabold leading-snug text-on-surface">{stop.customTitle || stop.place?.name || "Titik rute"}</p>
+                              </div>
+                              <p className="text-sm font-extrabold text-primary">{cost ? formatRupiah(cost.total) : "—"}</p>
                             </div>
-                            <p className="text-sm font-extrabold text-primary">{cost ? formatRupiah(cost.total) : "—"}</p>
-                          </div>
-                          <p className="type-caption mt-0.5 text-on-surface-variant">
-                            Ideal {visitWindowLabel(stop.startTime, stop.durationMinutes) || `${stop.startTime ?? "—"} · ${stop.durationMinutes} menit`}
-                            {" · "}{stop.activityType}
-                            {stop.travelDurationMinutes ? ` · tempuh ${stop.travelDurationMinutes} menit` : ""}
-                          </p>
+                            <p className="type-caption mt-0.5 text-on-surface-variant">
+                              Ideal {visitWindowLabel(stop.startTime, stop.durationMinutes) || `${stop.startTime ?? "—"} · ${stop.durationMinutes} menit`}
+                              {" · "}{stop.activityType}
+                              {stop.travelDurationMinutes ? ` · tempuh ${stop.travelDurationMinutes} menit` : ""}
+                            </p>
+                            {transportLine ? (
+                              <p className="type-caption mt-1 text-on-surface">
+                                {transportLine.detail}
+                                {transportLine.amount > 0 ? ` · ${formatRupiah(transportLine.amount)}` : ""}
+                              </p>
+                            ) : null}
+                          </button>
                           {cost ? (
                             <div className="mt-2 space-y-1 rounded-lg border border-slate-200 bg-white px-2.5 py-2">
                               <p className="text-[11px] font-extrabold uppercase tracking-wide text-primary">Uang terpakai di titik ini</p>
@@ -254,7 +293,11 @@ export function CreateTripItineraryStep({
           <Icon name="map" className="text-[20px] text-primary" />
           <div>
             <p className="type-caption font-bold text-on-surface">Peta rute</p>
-            <p className="type-caption text-on-surface-variant">Klik angka di peta untuk edit. Garis biru mengikuti jalan, terpisah per hari.</p>
+            <p className="type-caption text-on-surface-variant">
+              {activeDay
+                ? `Menyorot Hari ${activeDay.dayNumber}. Klik hari lain atau angka di peta untuk ganti fokus.`
+                : "Klik hari atau angka di peta untuk fokus rute. Garis biru mengikuti urutan stop per hari."}
+            </p>
           </div>
         </div>
         <div className="h-[280px] md:h-[340px] lg:h-[420px]">

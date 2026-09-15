@@ -28,8 +28,8 @@ const input = {
 };
 
 describe("createTripBodyFromInput", () => {
-  it("maps wizard fields onto the Express create-trip body", () => {
-    const body = createTripBodyFromInput(input);
+  it("maps wizard fields onto the Express create-trip body", async () => {
+    const body = await createTripBodyFromInput(input);
     expect(body.originLabel).toBe("Jakarta");
     expect(body.originLatitude).toBeCloseTo(-6.2088, 3);
     expect(body.transportMode).toBe("Kapal Phinisi");
@@ -43,8 +43,8 @@ describe("createTripBodyFromInput", () => {
 });
 
 describe("updateTripBodyFromInput", () => {
-  it("sends origin and meeting point under Express field names", () => {
-    const body = updateTripBodyFromInput(input);
+  it("sends origin and meeting point under Express field names", async () => {
+    const body = await updateTripBodyFromInput(input);
     expect(body.originLabel).toBe("Jakarta");
     expect(body.publicMeetingPointLabel).toBe("Bandara Komodo (LBJ)");
     expect(body.budgetAmount).toBe("2000000");
@@ -103,6 +103,8 @@ describe("aliasTripDetail", () => {
         coverUrl: null,
         bio: null,
         domicile: "Jakarta",
+        instagramUrl: null,
+        tiktokUrl: null,
         followersCount: 0,
         followingCount: 0,
         hostTripCount: 0,

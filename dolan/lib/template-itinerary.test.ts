@@ -94,6 +94,20 @@ describe("create trip wizard helpers", () => {
     expect(plan.byStopId[days[0].stops[0].id].lines.some((line) => line.key === "ticket")).toBe(false);
   });
 
+  it("prices walk / ojek / drive transport legs and labels day starts clearly", async () => {
+    const { estimateTransportLeg } = await import("./template-itinerary");
+    expect(estimateTransportLeg({ km: 0, isFirstOfDay: true }).label).toMatch(/Titik awal hari/i);
+    expect(estimateTransportLeg({ km: 0.4, minutes: 8 }).cost).toBe(0);
+    expect(estimateTransportLeg({ km: 0.4, minutes: 8 }).mode).toBe("walk");
+    const ojek = estimateTransportLeg({ km: 5, minutes: 15 });
+    expect(ojek.mode).toBe("ojek");
+    expect(ojek.cost).toBeGreaterThanOrEqual(12_000);
+    expect(ojek.label).toMatch(/ojek/i);
+    const drive = estimateTransportLeg({ km: 40, minutes: 75 });
+    expect(drive.mode).toBe("drive");
+    expect(drive.cost).toBeGreaterThan(ojek.cost);
+  });
+
   it("caps regenerate at two attempts", () => {
     expect(MAX_ITINERARY_REGENERATES).toBe(2);
     expect(canRegenerate(0)).toBe(true);

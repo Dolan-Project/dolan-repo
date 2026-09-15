@@ -263,7 +263,7 @@ describe("WIRA-D3 trip lifecycle, join, and comments", () => {
     expect(listed.body.data).toHaveLength(2);
   });
 
-  it("rejects publish for unverified users and comments without login", async () => {
+  it("does not block publish on missing email verification and rejects comments without login", async () => {
     const { api } = app();
     const draft = await request(api)
       .post("/api/v1/trips")
@@ -275,7 +275,7 @@ describe("WIRA-D3 trip lifecycle, join, and comments", () => {
       .set("Authorization", UNVERIFIED)
       .set("Idempotency-Key", k("uv-pub"))
       .send({ visibility: "PUBLIC", maxParticipants: 4, publicMeetingPointLabel: "Tugu" });
-    expect(publish.status).toBe(403);
+    expect(publish.body.error?.code).not.toBe("EMAIL_UNVERIFIED");
     const comment = await request(api).post("/api/v1/trips/nope/comments").send({ body: "hi" });
     expect(comment.status).toBe(401);
   });

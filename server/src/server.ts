@@ -73,7 +73,7 @@ async function main() {
     (userId) => trips.profileTripCounts(userId),
   );
   const httpServer = createServer();
-  const sockets = createSocketServer(httpServer, authService, chatService);
+  const sockets = createSocketServer(httpServer, authService, chatService, trips);
   const routesQuota = new QuotaService(
     databaseReady ? new SequelizeQuotaStore() : new MemoryQuotaStore(),
     env.placesMaxRequestsPerUserPerDay,

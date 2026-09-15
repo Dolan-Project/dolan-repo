@@ -59,4 +59,64 @@ describe("route optimize", () => {
       routeLengthKm([stops[0]!, stops[1]!, stops[2]!, stops[3]!]),
     );
   });
+
+  it("keeps 3 Yogyakarta days with at least 2 nearby stops each when the pool is rich", () => {
+    const stops = [
+      { name: "Tugu Yogyakarta", lat: -7.7829, lng: 110.3671 },
+      { name: "Jalan Malioboro", lat: -7.7926, lng: 110.3658 },
+      { name: "Keraton Yogyakarta", lat: -7.8053, lng: 110.3642 },
+      { name: "Taman Sari", lat: -7.81, lng: 110.3594 },
+      { name: "Alun-Alun Kidul", lat: -7.8117, lng: 110.3635 },
+      { name: "Pasar Beringharjo", lat: -7.7989, lng: 110.3655 },
+    ];
+    const days = selectCompactStops(stops, 3, { lat: -7.7956, lng: 110.3695 }, {
+      minPerDay: 2,
+      maxPerDay: 3,
+      maxRadiusKm: 18,
+    });
+    expect(days).toHaveLength(3);
+    days.forEach((day) => {
+      expect(day.length).toBeGreaterThanOrEqual(2);
+      expect(routeLengthKm(day)).toBeLessThan(12);
+    });
+  });
+
+  it("packs 4 compact days with at least 2 nearby stops each", () => {
+    const stops = [
+      { name: "Istana Maimun", lat: 3.5752, lng: 98.6837 },
+      { name: "Masjid Raya Al Mashun", lat: 3.5751, lng: 98.6872 },
+      { name: "Tjong A Fie", lat: 3.5864, lng: 98.6789 },
+      { name: "Kesawan", lat: 3.5895, lng: 98.6735 },
+      { name: "Gedung Juang 45", lat: 3.5878, lng: 98.6781 },
+      { name: "Pasar Petisah", lat: 3.5955, lng: 98.6698 },
+    ];
+    const days = selectCompactStops(stops, 4, { lat: 3.5952, lng: 98.6722 }, {
+      minPerDay: 2,
+      maxPerDay: 4,
+      maxRadiusKm: 18,
+    });
+    expect(days).toHaveLength(4);
+    expect(days.every((day) => day.length >= 2)).toBe(true);
+  });
+
+  it("keeps 3 Bandung days with compact corridors after radius relaxation", () => {
+    const stops = [
+      { name: "Gedung Sate", lat: -6.9025, lng: 107.6187 },
+      { name: "Museum Geologi Bandung", lat: -6.9007, lng: 107.6191 },
+      { name: "Jalan Braga", lat: -6.9174, lng: 107.609 },
+      { name: "Jalan Asia Afrika", lat: -6.9212, lng: 107.6097 },
+      { name: "Alun-Alun Bandung", lat: -6.9218, lng: 107.6071 },
+      { name: "Cihampelas Walk", lat: -6.8956, lng: 107.6046 },
+      { name: "Saung Angklung Udjo", lat: -6.8978, lng: 107.6553 },
+      { name: "Tebing Keraton", lat: -6.8352, lng: 107.663 },
+    ];
+    const days = selectCompactStops(stops, 3, { lat: -6.9175, lng: 107.6191 }, {
+      minPerDay: 2,
+      maxPerDay: 4,
+      maxRadiusKm: 18,
+    });
+    expect(days).toHaveLength(3);
+    expect(days.every((day) => day.length >= 2)).toBe(true);
+    expect(days.flat().map((stop) => stop.name).join(" ")).not.toMatch(/Pangandaran/i);
+  });
 });

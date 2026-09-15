@@ -13,7 +13,6 @@ export function resolveAfterAuth(
   session: AuthSession,
   next?: string | null,
 ): string {
-  if (!session.emailVerified) return withNext("/cek-email", next);
   if (!session.profileComplete) return withNext("/profil/edit", next);
   return resolvePostAuthPath(next);
 }

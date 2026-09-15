@@ -12,6 +12,7 @@ import { senderFromId } from "./memory-chat-store.ts";
 
 export type ChatRealtime = {
   emitToRoom(tripId: string, event: string, payload: unknown): void;
+  emitToComments(tripId: string, event: string, payload: unknown): void;
   emitToUser(userId: string, event: string, payload: unknown): void;
   leaveRoom(userId: string, tripId: string): void;
 };
@@ -21,6 +22,7 @@ export class ChatService {
     private readonly store: ChatStore,
     private realtime: ChatRealtime = {
       emitToRoom() {},
+      emitToComments() {},
       emitToUser() {},
       leaveRoom() {},
     },
@@ -77,6 +79,7 @@ export class ChatService {
       clientMessageId: parsed.clientMessageId,
       body: parsed.body,
     });
+    this.realtime.emitToRoom(tripId, "message.created", message);
     const members = await this.store.listActiveMemberIds(tripId);
     for (const memberId of members) {
       this.realtime.emitToUser(memberId, "message.created", message);
@@ -126,6 +129,18 @@ export class ChatService {
 
   async emitTripEvent(tripId: string, event: string, payload: unknown, skipUserId?: string) {
     await this.emitToActiveMembers(tripId, event, payload, skipUserId);
+  }
+
+  onCommentCreated(tripId: string, comment: unknown) {
+    this.realtime.emitToComments(tripId, "comment.created", comment);
+  }
+
+  onCommentUpdated(tripId: string, comment: unknown) {
+    this.realtime.emitToComments(tripId, "comment.updated", comment);
+  }
+
+  onCommentDeleted(tripId: string, payload: { tripId: string; commentId: string }) {
+    this.realtime.emitToComments(tripId, "comment.deleted", payload);
   }
 
   async emitJoinEvent(

@@ -18,6 +18,8 @@ export type PublicUser = {
   coverUrl: string | null;
   bio: string | null;
   domicile: string | null;
+  instagramUrl: string | null;
+  tiktokUrl: string | null;
   followersCount: number;
   followingCount: number;
   hostTripCount: number;

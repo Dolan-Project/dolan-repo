@@ -56,7 +56,7 @@ export async function proxyCreateTrip(request: Request): Promise<Response> {
   return mapTripDetailResponse(
     await proxyToExpress(request, `${API_V1_PREFIX}${EXPRESS_PATHS.trips}`, {
       method: "POST",
-      json: createTripBodyFromInput(parsed.data),
+      json: await createTripBodyFromInput(parsed.data),
     }),
   );
 }
@@ -87,7 +87,7 @@ export async function proxyUpdateTrip(
   return mapTripDetailResponse(
     await proxyToExpress(request, `${API_V1_PREFIX}${tripPath(tripId)}`, {
       method: "PATCH",
-      json: updateTripBodyFromInput(parsed.data),
+      json: await updateTripBodyFromInput(parsed.data),
     }),
   );
 }

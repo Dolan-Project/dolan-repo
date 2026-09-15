@@ -12,6 +12,7 @@ import { Field } from "@/components/auth/Field";
 import { authStyles as styles } from "@/components/auth/AuthShell";
 import { GoogleMark } from "@/components/auth/GoogleMark";
 import { Icon } from "@/components/ui/Icon";
+import { resolveAfterAuth } from "@/lib/auth/post-auth-path";
 import { ROUTES } from "@/lib/routes";
 
 type RegisterFormProps = {
@@ -57,7 +58,7 @@ export function RegisterForm({ next }: RegisterFormProps) {
       body: JSON.stringify({ email, password, confirmPassword, displayName, username, next }),
     });
     const json = (await response.json()) as
-      | { success: true; data: AuthSession & { debugVerifyToken?: string } }
+      | { success: true; data: AuthSession }
       | ApiError;
     setPending(false);
     if (!json.success) {
@@ -65,10 +66,7 @@ export function RegisterForm({ next }: RegisterFormProps) {
       setFieldErrors(json.error.fields ?? {});
       return;
     }
-    const params = new URLSearchParams({ email });
-    if (next) params.set("next", next);
-    if (json.data.debugVerifyToken) params.set("debugToken", json.data.debugVerifyToken);
-    router.push(`${ROUTES.cekEmail}?${params.toString()}`);
+    router.push(resolveAfterAuth(json.data, next));
     router.refresh();
   }
 

@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { io, type Socket } from "socket.io-client";
-import type { ApiError, ChatMessage, TripDetail } from "@/lib/contracts";
+import type { Socket } from "socket.io-client";
+import type { ApiError, ChatMessage, PublicUser, TripDetail } from "@/lib/contracts";
 import { Icon } from "@/components/ui/Icon";
 import { LocationSharePanel } from "@/components/trip/LocationSharePanel";
 import { ROUTES } from "@/lib/routes";
+import { connectDolanSocket } from "@/lib/realtime/dolan-socket";
 
 type ChatState = "connecting" | "online" | "offline";
 
@@ -32,6 +33,7 @@ export function TripChatRoom({ tripId }: { tripId: string }) {
   const [body, setBody] = useState("");
   const [state, setState] = useState<ChatState>("connecting");
   const [error, setError] = useState("");
+  const [me, setMe] = useState<PublicUser | null>(null);
   const socketRef = useRef<Socket | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const lastMessageIdRef = useRef<string | null>(null);
@@ -45,9 +47,10 @@ export function TripChatRoom({ tripId }: { tripId: string }) {
   useEffect(() => {
     const controller = new AbortController();
     async function hydrate() {
-      const [tripResponse, messageResponse] = await Promise.all([
+      const [tripResponse, messageResponse, meResponse] = await Promise.all([
         fetch(`/api/v1/trips/${tripId}`, { credentials: "include", signal: controller.signal }),
         fetch(`/api/v1/trips/${tripId}/messages?limit=50`, { credentials: "include", signal: controller.signal }),
+        fetch("/api/v1/users/me", { credentials: "include", signal: controller.signal }),
       ]);
       const tripPayload = await tripResponse.json() as { success: true; data: TripDetail } | ApiError;
       const messagePayload = await messageResponse.json() as { success: true; data: ChatMessage[] | { messages: ChatMessage[] } } | ApiError;
@@ -55,6 +58,10 @@ export function TripChatRoom({ tripId }: { tripId: string }) {
       if (!messagePayload.success) throw new Error(messagePayload.error.message);
       setTrip(tripPayload.data);
       setMessages(parseMessagesPayload(messagePayload.data));
+      if (meResponse.ok) {
+        const mePayload = await meResponse.json() as { success?: boolean; data?: { user?: PublicUser } };
+        if (mePayload.success && mePayload.data?.user) setMe(mePayload.data.user);
+      }
     }
     void hydrate().catch((reason) => { if (!controller.signal.aborted) setError(reason instanceof Error ? reason.message : "Chat tidak dapat dimuat"); });
     return () => controller.abort();
@@ -62,8 +69,7 @@ export function TripChatRoom({ tripId }: { tripId: string }) {
 
   useEffect(() => {
     hasJoinedOnceRef.current = false;
-    const origin = process.env.NEXT_PUBLIC_SOCKET_URL ?? "http://localhost:4000";
-    const socket = io(origin, { withCredentials: true, transports: ["websocket", "polling"], reconnection: true });
+    const socket = connectDolanSocket();
     socketRef.current = socket;
 
     async function refetchAfterReconnect() {
@@ -119,7 +125,14 @@ export function TripChatRoom({ tripId }: { tripId: string }) {
     event.preventDefault();
     const content = body.trim(); if (!content || !canChat) return;
     const clientMessageId = crypto.randomUUID();
-    const optimistic: ChatMessage = { id: clientMessageId, tripId, clientMessageId, body: content, sentAt: new Date().toISOString(), sender: trip!.host };
+    const optimistic: ChatMessage = {
+      id: clientMessageId,
+      tripId,
+      clientMessageId,
+      body: content,
+      sentAt: new Date().toISOString(),
+      sender: me ?? trip!.host,
+    };
     stickToBottomRef.current = true;
     setMessages((current) => mergeMessages(current, optimistic)); setBody(""); setError("");
     const socket = socketRef.current;

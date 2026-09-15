@@ -37,12 +37,16 @@ describe("sequelize user mapping", () => {
         avatarUrl: null,
         coverUrl: null,
         bio: "dev",
+        instagramUrl: "https://www.instagram.com/wira",
+        tiktokUrl: null,
       } as never,
     );
 
     expect(identity.username).toBe("wira");
     expect(identity.displayName).toBe("Wira");
     expect(identity.domicile).toBe("Yogyakarta");
+    expect(identity.instagramUrl).toBe("https://www.instagram.com/wira");
+    expect(identity.tiktokUrl).toBeNull();
     expect(identity.role).toBe("ADMIN");
     expect(identity.emailVerifiedAt).toBeNull();
   });

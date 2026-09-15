@@ -52,7 +52,7 @@ describe("comments", () => {
     expect(json.error.code).toBe("UNAUTHORIZED");
   });
 
-  it("rejects unverified comment writes", async () => {
+  it("lets an unverified session write comments", async () => {
     const response = await handleCreateCommentRequest(
       new Request("http://localhost/api/v1/trips/trip_1/comments", {
         method: "POST",
@@ -61,8 +61,8 @@ describe("comments", () => {
       }),
       "trip_1",
     );
-    const json = (await response.json()) as { error: { code: string } };
-    expect(json.error.code).toBe("EMAIL_UNVERIFIED");
+    const json = (await response.json()) as { success: boolean };
+    expect(json.success).toBe(true);
   });
 
   it("lets a pending applicant comment", async () => {

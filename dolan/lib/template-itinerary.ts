@@ -6,7 +6,7 @@ import type {
   TemplateDaySummary,
 } from "@dolan/shared";
 import { resolvePlaceCoordinates } from "@/lib/place-coordinates";
-import { travelMinutesBetween } from "@/lib/route-optimize";
+import { haversineKm, travelMinutesBetween } from "@/lib/route-optimize";
 
 export const MAX_ITINERARY_REGENERATES = 2;
 
@@ -313,17 +313,17 @@ export type ItineraryBudgetPlan = {
 function ticketEstimate(name: string) {
   const value = name.toLocaleLowerCase("id-ID");
   if (
-    /bundaran hi|hotel indonesia|braga|malioboro|alun-?alun|tugu yogyakarta|^tugu\b|cihampelas|asia afrika|kota tua|suryakencana|taman kencana|gedung sate|monumen nasional|\bmonas\b/.test(
+    /bundaran hi|hotel indonesia|braga|malioboro|alun-?alun|tugu yogyakarta|^tugu\b|cihampelas|asia afrika|kota tua|suryakencana|taman kencana|gedung sate|monumen nasional|\bmonas\b|simpang lima|jembatan merah|jodipan/.test(
       value,
     )
   ) {
     return 0;
   }
-  if (/bromo|ijen|kawah|rinjani|padar|komodo|kerinci/.test(value)) return 150_000;
-  if (/candi|pura|tanah lot|uluwatu|keraton|museum|taman nasional|tangkuban|kebun raya|borobudur|prambanan/.test(value)) {
+  if (/bromo|ijen|kawah|rinjani|padar|komodo|kerinci|penanjakan/.test(value)) return 150_000;
+  if (/candi|pura|tanah lot|uluwatu|keraton|museum|taman nasional|tangkuban|kebun raya|borobudur|prambanan|lawang sewu|sampoerna|angkut/.test(value)) {
     return 50_000;
   }
-  if (/ancol|pantai|gili/.test(value)) return 25_000;
+  if (/ancol|pantai|gili|coban/.test(value)) return 25_000;
   return 0;
 }
 
@@ -333,11 +333,77 @@ function foodEstimate(name: string) {
   return 55_000;
 }
 
-function transportEstimate(stop: EditableItineraryDay["stops"][number], name: string) {
-  const minutes = stop.travelDurationMinutes ?? 0;
-  const value = name.toLocaleLowerCase("id-ID");
-  if (/bromo|ijen|penanjakan/.test(value)) return Math.max(minutes ? 180_000 : 0, minutes * 4_000);
-  return minutes ? Math.max(15_000, minutes * 2_500) : 0;
+export type TransportLegEstimate = {
+  mode: "start" | "walk" | "ojek" | "drive";
+  km: number;
+  cost: number;
+  label: string;
+};
+
+export function estimateTransportLeg(input: {
+  km: number;
+  minutes?: number;
+  placeName?: string;
+  isFirstOfDay?: boolean;
+}): TransportLegEstimate {
+  const km = Math.max(0, input.km);
+  const name = (input.placeName ?? "").toLocaleLowerCase("id-ID");
+  if (input.isFirstOfDay || (km <= 0 && !(input.minutes && input.minutes > 0))) {
+    return { mode: "start", km: 0, cost: 0, label: "Titik awal hari" };
+  }
+  if (/bromo|ijen|penanjakan/.test(name)) {
+    const minutes = input.minutes ?? Math.round((km / 32) * 60);
+    return {
+      mode: "drive",
+      km,
+      cost: Math.max(minutes ? 180_000 : 0, minutes * 4_000),
+      label: `Jeep / transport kawasan ~${km.toFixed(1)} km`,
+    };
+  }
+  if (km < 1) {
+    return { mode: "walk", km, cost: 0, label: `Jalan kaki ~${Math.max(0.1, km).toFixed(1)} km` };
+  }
+  if (km <= 25) {
+    return {
+      mode: "ojek",
+      km,
+      cost: Math.max(12_000, Math.round(km * 4_500)),
+      label: `Ojek / transport lokal ~${km.toFixed(1)} km`,
+    };
+  }
+  return {
+    mode: "drive",
+    km,
+    cost: Math.max(75_000, Math.round(km * 6_500)),
+    label: `Perjalanan antar-kota ~${km.toFixed(1)} km`,
+  };
+}
+
+function stopCoord(stop: EditableItineraryDay["stops"][number]) {
+  const lat = stop.place?.latitude;
+  const lng = stop.place?.longitude;
+  if (typeof lat === "number" && typeof lng === "number" && Number.isFinite(lat) && Number.isFinite(lng)) {
+    return { lat, lng };
+  }
+  return null;
+}
+
+export function dayRouteSummary(day: EditableItineraryDay) {
+  let totalKm = 0;
+  let totalMinutes = 0;
+  for (let index = 1; index < day.stops.length; index += 1) {
+    const previous = day.stops[index - 1]!;
+    const stop = day.stops[index]!;
+    const from = stopCoord(previous);
+    const to = stopCoord(stop);
+    if (from && to) totalKm += haversineKm(from, to);
+    totalMinutes += Math.max(0, stop.travelDurationMinutes ?? 0);
+  }
+  return {
+    stopCount: day.stops.length,
+    totalKm: Math.round(totalKm * 10) / 10,
+    totalMinutes,
+  };
 }
 
 export function estimateItineraryBudget(
@@ -352,29 +418,54 @@ export function estimateItineraryBudget(
   }
   const byStopId: Record<string, StopBudgetEstimate> = {};
   let allocated = 0;
-  stops.forEach((stop) => {
-    const placeName = stop.customTitle || stop.place?.name || "tempat ini";
-    const ticketCost = ticketEstimate(placeName) * people;
-    const foodCost = foodEstimate(placeName) * people;
-    const travelCost = transportEstimate(stop, placeName);
-    const visitCost = ticketCost + foodCost;
-    const total = visitCost + travelCost;
-    byStopId[stop.id] = {
-      stopId: stop.id,
-      ticketCost,
-      foodCost,
-      travelCost,
-      visitCost,
-      total,
-      lines: [
-        ...(ticketCost > 0
-          ? [{ key: "ticket" as const, label: "Tiket", amount: ticketCost, detail: `Tiket masuk / kawasan ${placeName} × ${people} orang` }]
-          : []),
-        { key: "food", label: "Makanan", amount: foodCost, detail: `Makan di sekitar ${placeName} × ${people} orang` },
-        { key: "transport", label: "Transportasi", amount: travelCost, detail: stop.travelDurationMinutes ? `Tempuh ~${stop.travelDurationMinutes} menit ke titik ini` : "Jalan kaki / titik awal hari" },
-      ],
-    };
-    allocated += total;
+  days.forEach((day) => {
+    day.stops.forEach((stop, index) => {
+      const placeName = stop.customTitle || stop.place?.name || "tempat ini";
+      const ticketCost = ticketEstimate(placeName) * people;
+      const foodCost = foodEstimate(placeName) * people;
+      const previous = day.stops[index - 1];
+      const from = previous ? stopCoord(previous) : null;
+      const to = stopCoord(stop);
+      const km = from && to
+        ? haversineKm(from, to)
+        : stop.travelDurationMinutes
+          ? (stop.travelDurationMinutes / 60) * 32
+          : 0;
+      const leg = estimateTransportLeg({
+        km,
+        minutes: stop.travelDurationMinutes ?? 0,
+        placeName,
+        isFirstOfDay: index === 0,
+      });
+      const travelCost = leg.cost;
+      const visitCost = ticketCost + foodCost;
+      const total = visitCost + travelCost;
+      byStopId[stop.id] = {
+        stopId: stop.id,
+        ticketCost,
+        foodCost,
+        travelCost,
+        visitCost,
+        total,
+        lines: [
+          ...(ticketCost > 0
+            ? [{ key: "ticket" as const, label: "Tiket", amount: ticketCost, detail: `Tiket masuk / kawasan ${placeName} × ${people} orang` }]
+            : []),
+          { key: "food", label: "Makanan", amount: foodCost, detail: `Makan di sekitar ${placeName} × ${people} orang` },
+          {
+            key: "transport",
+            label: "Transportasi",
+            amount: travelCost,
+            detail: index === 0
+              ? "Titik awal hari"
+              : stop.travelDurationMinutes
+                ? `${leg.label} · ~${stop.travelDurationMinutes} menit`
+                : leg.label,
+          },
+        ],
+      };
+      allocated += total;
+    });
   });
   return {
     byStopId,

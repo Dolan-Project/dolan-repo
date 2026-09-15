@@ -22,6 +22,8 @@ export class UserProfile extends Model<
   declare coverCaption: CreationOptional<string | null>;
   declare bio: CreationOptional<string | null>;
   declare domicile: CreationOptional<string | null>;
+  declare instagramUrl: CreationOptional<string | null>;
+  declare tiktokUrl: CreationOptional<string | null>;
   declare createdAt: CreationOptional<Date>;
   declare updatedAt: CreationOptional<Date>;
 }
@@ -61,6 +63,8 @@ export function initUserProfileModel(sequelize: Sequelize): typeof UserProfile {
       },
       bio: { type: DataTypes.TEXT, allowNull: true },
       domicile: { type: DataTypes.STRING(120), allowNull: true },
+      instagramUrl: { type: DataTypes.TEXT, allowNull: true, field: "instagram_url" },
+      tiktokUrl: { type: DataTypes.TEXT, allowNull: true, field: "tiktok_url" },
       createdAt: DataTypes.DATE,
       updatedAt: DataTypes.DATE,
     },

@@ -38,15 +38,6 @@ export async function sendEmail(input: SendEmailInput): Promise<{ id: string } |
   return { id: payload.id ?? "sent" };
 }
 
-export function verificationEmailHtml(verifyUrl: string) {
-  return `
-    <p>Halo,</p>
-    <p>Terima kasih sudah mendaftar di Dolan. Verifikasi email kamu lewat tautan berikut:</p>
-    <p><a href="${verifyUrl}">Verifikasi email</a></p>
-    <p>Tautan berlaku 24 jam. Jika kamu tidak mendaftar, abaikan email ini.</p>
-  `.trim();
-}
-
 export function resetPasswordEmailHtml(resetUrl: string) {
   return `
     <p>Halo,</p>

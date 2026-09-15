@@ -1,6 +1,7 @@
 import { proxyToExpress } from "@/lib/auth/express-proxy";
 import { jsonResult } from "@/lib/auth/api-response";
 import { shouldUseMockApi } from "@/lib/auth/use-mock";
+import { createApiError } from "@/mocks/scenarios";
 
 type RoutePoint = { lat: number; lng: number };
 
@@ -55,14 +56,16 @@ export async function POST(request: Request) {
   }
 
   const body = (await request.json().catch(() => ({}))) as { points?: RoutePoint[] };
-  const points = Array.isArray(body.points) ? body.points.filter((point) => Number.isFinite(point?.lat) && Number.isFinite(point?.lng)) : [];
-  if (points.length < 2) {
-    return jsonResult({ success: true, data: { segments: [] } }, 200);
-  }
-
+  const points = Array.isArray(body.points)
+    ? body.points.filter((point) => Number.isFinite(point?.lat) && Number.isFinite(point?.lng))
+    : [];
   const key = process.env.GOOGLE_MAPS_SERVER_KEY || process.env.NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_KEY || "";
   if (!key) {
-    return jsonResult({ success: true, data: { segments: [] } }, 200);
+    return jsonResult(createApiError("PROVIDER_UNAVAILABLE", "Google Maps key belum dikonfigurasi untuk preview rute."), 503);
+  }
+
+  if (points.length < 2) {
+    return jsonResult(createApiError("VALIDATION_ERROR", "Minimal dua titik koordinat untuk preview rute."), 400);
   }
 
   const segments = [];

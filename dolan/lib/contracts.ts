@@ -43,6 +43,7 @@ export {
   resetPasswordSchema,
   verifyEmailSchema,
   profileUpdateSchema,
+  socialHandleFromUrl,
   joinRequestBodySchema,
   joinReviewBodySchema,
   createCommentBodySchema,

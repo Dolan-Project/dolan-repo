@@ -214,9 +214,6 @@ export async function handleCreateCommentRequest(request: Request, tripId: strin
   }
   const { session } = actorFromRequest(request);
   if (!session) return fail("UNAUTHORIZED", "Masuk dulu untuk berkomentar");
-  if (!session.emailVerified) {
-    return fail(AuthErrorCode.EMAIL_UNVERIFIED, "Verifikasi email dulu untuk berkomentar");
-  }
   const parsed = createCommentBodySchema.safeParse(await readBody(request));
   if (!parsed.success) return validationError(parsed.error);
   const mock = mockCreateComment({
@@ -234,9 +231,6 @@ export async function handleRequestJoinRequest(request: Request, tripId: string)
   }
   const { session } = actorFromRequest(request);
   if (!session) return fail("UNAUTHORIZED", "Masuk dulu untuk mengajukan join");
-  if (!session.emailVerified) {
-    return fail(AuthErrorCode.EMAIL_UNVERIFIED, "Verifikasi email dulu");
-  }
   if (!session.profileComplete) {
     return fail(AuthErrorCode.PROFILE_INCOMPLETE, "Lengkapi profil dulu");
   }

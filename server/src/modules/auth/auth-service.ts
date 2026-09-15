@@ -13,11 +13,7 @@ import { badRequest, conflict, notFound, unauthorized } from "../../lib/api-erro
 import { zodFields } from "../../lib/zod-fields.ts";
 import type { AuthAdapter } from "./auth-adapter.ts";
 import { env } from "../../config/env.ts";
-import {
-  resetPasswordEmailHtml,
-  sendEmail,
-  verificationEmailHtml,
-} from "../../integrations/email/resend-client.ts";
+import { resetPasswordEmailHtml, sendEmail } from "../../integrations/email/resend-client.ts";
 import { isEmailVerified, isProfileComplete } from "./authorization.ts";
 import {
   buildGoogleAuthorizeUrl,
@@ -67,14 +63,12 @@ export class AuthService {
         password: parsed.data.password,
         username: parsed.data.username,
         displayName: parsed.data.displayName,
-        emailVerifiedAt: null,
+        emailVerifiedAt: new Date().toISOString(),
       });
       const { token } = await this.sessions.createSession(user.id);
-      const verify = await this.issueVerificationEmail(user, parsed.data.next);
       return {
         session: await this.toMeSession(user),
         accessToken: token,
-        ...verify,
       };
     } catch (error) {
       if (error instanceof Error && error.message === "EMAIL_TAKEN") {
@@ -93,13 +87,16 @@ export class AuthService {
     if (!parsed.success) {
       throw badRequest("VALIDATION_ERROR", "Periksa kembali isian form", zodFields(parsed.error));
     }
-    const user = await this.users.findByEmail(parsed.data.email);
+    let user = await this.users.findByEmail(parsed.data.email);
     const hash = user ? await this.users.getPasswordHash(user.id) : null;
     if (!user || !verifyPassword(parsed.data.password, hash)) {
       throw unauthorized(
         "INVALID_CREDENTIALS",
         "Email atau kata sandi belum cocok. Periksa lagi, atau gunakan Lupa Password.",
       );
+    }
+    if (!isEmailVerified(user)) {
+      user = await this.users.markEmailVerified(user.id);
     }
     const { token } = await this.sessions.createSession(user.id);
     return { session: await this.toMeSession(user), accessToken: token };
@@ -174,18 +171,14 @@ export class AuthService {
     return { session: await this.toMeSession(user), verified: true as const };
   }
 
-  async resendVerification(userId: string, next?: string | null) {
+  async resendVerification(userId: string, _next?: string | null) {
     if (!this.sessions) throw badRequest("PROVIDER_UNAVAILABLE", "Local auth is not configured");
     const user = await this.users.findById(userId);
     if (!user) throw notFound("NOT_FOUND", "Pengguna tidak ditemukan");
-    if (isEmailVerified(user)) {
-      return { message: "Email sudah terverifikasi.", alreadyVerified: true as const };
+    if (!isEmailVerified(user)) {
+      await this.users.markEmailVerified(user.id);
     }
-    const verify = await this.issueVerificationEmail(user, next);
-    return {
-      message: "Tautan verifikasi telah dikirim ulang.",
-      ...verify,
-    };
+    return { message: "Email sudah terverifikasi.", alreadyVerified: true as const };
   }
 
   beginGoogleLogin(next: string | null | undefined) {
@@ -212,33 +205,6 @@ export class AuthService {
     return webLoginErrorUrl(message);
   }
 
-  private async issueVerificationEmail(user: AuthIdentity, next?: string | null) {
-    if (!this.sessions) throw badRequest("PROVIDER_UNAVAILABLE", "Local auth is not configured");
-    const { token } = await this.sessions.createEmailVerificationToken(user.id);
-    const params = new URLSearchParams({ token });
-    if (next) params.set("next", next);
-    const verifyUrl = `${env.webUrl}/api/auth/verify-email?${params.toString()}`;
-
-    try {
-      const sent = await sendEmail({
-        to: user.email,
-        subject: "Verifikasi email Dolan",
-        html: verificationEmailHtml(verifyUrl),
-        text: `Verifikasi email Dolan: ${verifyUrl}`,
-      });
-      if (!sent && env.nodeEnv !== "production") {
-        return { debugVerifyToken: token };
-      }
-      return {};
-    } catch (error) {
-      console.error("[auth] failed to send verification email", error);
-      if (env.nodeEnv !== "production") {
-        return { debugVerifyToken: token };
-      }
-      throw badRequest("PROVIDER_UNAVAILABLE", "Gagal mengirim email verifikasi. Coba kirim ulang sebentar lagi.");
-    }
-  }
-
   private async findOrCreateGoogleUser(profile: GoogleProfile) {
     const authReference = `google:${profile.sub}`;
     const existingByRef = await this.users.findByAuthReference(authReference);
@@ -246,7 +212,7 @@ export class AuthService {
       return this.users.upsertFromAuth({
         authReference,
         email: profile.email,
-        emailVerifiedAt: profile.emailVerified ? new Date().toISOString() : existingByRef.emailVerifiedAt,
+        emailVerifiedAt: existingByRef.emailVerifiedAt ?? new Date().toISOString(),
       });
     }
     const existingByEmail = await this.users.findByEmail(profile.email);
@@ -257,7 +223,7 @@ export class AuthService {
       return await this.users.createOAuthUser({
         authReference,
         email: profile.email,
-        emailVerifiedAt: profile.emailVerified ? new Date().toISOString() : null,
+        emailVerifiedAt: new Date().toISOString(),
         displayName: profile.name,
         avatarUrl: profile.picture,
       });
@@ -298,6 +264,8 @@ export class AuthService {
         coverUrl: user.coverUrl,
         bio: user.bio,
         domicile: user.domicile,
+        instagramUrl: user.instagramUrl,
+        tiktokUrl: user.tiktokUrl,
         followersCount: stats.followersCount,
         followingCount: stats.followingCount,
         hostTripCount: stats.hostTripCount,

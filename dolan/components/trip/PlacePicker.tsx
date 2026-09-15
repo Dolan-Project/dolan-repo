@@ -6,9 +6,16 @@ import { Icon } from "@/components/ui/Icon";
 import { shouldUseMockApi } from "@/lib/auth/use-mock";
 import { searchGeoPlaces } from "@/mocks/geo";
 
-type Suggestion = { id: string; label: string; city: string };
+export type PlaceSuggestion = {
+  id: string;
+  label: string;
+  city: string;
+  latitude?: number;
+  longitude?: number;
+  formattedAddress?: string | null;
+};
 
-async function searchLivePlaces(query: string, signal: AbortSignal): Promise<Suggestion[]> {
+async function searchLivePlaces(query: string, signal: AbortSignal): Promise<PlaceSuggestion[]> {
   const baseUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api/v1";
   const params = new URLSearchParams({ q: query, page: "1", limit: "6" });
   const response = await fetch(`${baseUrl}/search/places?${params}`, {
@@ -19,13 +26,23 @@ async function searchLivePlaces(query: string, signal: AbortSignal): Promise<Sug
   if (!response.ok) return [];
   const payload = (await response.json()) as {
     success?: boolean;
-    data?: Array<{ googlePlaceId: string; name: string; city?: string | null }>;
+    data?: Array<{
+      googlePlaceId: string;
+      name: string;
+      city?: string | null;
+      latitude?: number;
+      longitude?: number;
+      formattedAddress?: string | null;
+    }>;
   };
   if (!payload.success || !Array.isArray(payload.data)) return [];
   return payload.data.map((place) => ({
     id: place.googlePlaceId,
     label: place.name,
     city: place.city ?? "",
+    latitude: place.latitude,
+    longitude: place.longitude,
+    formattedAddress: place.formattedAddress ?? null,
   }));
 }
 
@@ -34,6 +51,7 @@ export function PlacePicker({
   label,
   value,
   onChange,
+  onSelectPlace,
   hint,
   error,
   excludeLabel,
@@ -44,6 +62,7 @@ export function PlacePicker({
   label: string;
   value: string;
   onChange: (next: string) => void;
+  onSelectPlace?: (place: PlaceSuggestion) => void;
   hint?: string;
   error?: string;
   excludeLabel?: string;
@@ -52,27 +71,34 @@ export function PlacePicker({
 }) {
   const listId = useId();
   const [open, setOpen] = useState(false);
-  const [liveSuggestions, setLiveSuggestions] = useState<Suggestion[]>([]);
+  const [liveSuggestions, setLiveSuggestions] = useState<PlaceSuggestion[]>([]);
+  const [searchError, setSearchError] = useState("");
   const useMock = shouldUseMockApi();
 
   const mockSuggestions = useMemo(
-    () => searchGeoPlaces(value, { excludeLabel }).slice(0, 6).map((place) => ({
-      id: place.id,
-      label: place.label,
-      city: place.city,
-    })),
+    () =>
+      searchGeoPlaces(value, { excludeLabel }).slice(0, 6).map((place) => ({
+        id: place.id,
+        label: place.label,
+        city: place.city,
+        latitude: place.latitude,
+        longitude: place.longitude,
+        formattedAddress: place.label,
+      })),
     [value, excludeLabel],
   );
 
   useEffect(() => {
     if (useMock || value.trim().length < 2) {
       setLiveSuggestions([]);
+      setSearchError("");
       return;
     }
     const controller = new AbortController();
     const timer = window.setTimeout(() => {
       void searchLivePlaces(value.trim(), controller.signal)
         .then((rows) => {
+          setSearchError("");
           setLiveSuggestions(
             excludeLabel
               ? rows.filter((row) => row.label.toLocaleLowerCase("id-ID") !== excludeLabel.toLocaleLowerCase("id-ID"))
@@ -80,7 +106,10 @@ export function PlacePicker({
           );
         })
         .catch(() => {
-          if (!controller.signal.aborted) setLiveSuggestions([]);
+          if (!controller.signal.aborted) {
+            setLiveSuggestions([]);
+            setSearchError("Pencarian tempat gagal. Coba lagi.");
+          }
         });
     }, 280);
     return () => {
@@ -92,7 +121,7 @@ export function PlacePicker({
   const suggestions = useMock ? mockSuggestions : liveSuggestions;
 
   return (
-    <Field id={id} label={label} hint={open ? undefined : hint} error={error}>
+    <Field id={id} label={label} hint={open ? undefined : hint} error={error || searchError || undefined}>
       <div className="relative">
         <input
           id={id}
@@ -128,6 +157,7 @@ export function PlacePicker({
                   onMouseDown={(event) => event.preventDefault()}
                   onClick={() => {
                     onChange(place.label);
+                    onSelectPlace?.(place);
                     setOpen(false);
                   }}
                 >

@@ -12,7 +12,7 @@ describe("mock fixtures", () => {
   it("builds AuthSession with profileComplete from user fields", () => {
     const session = sampleAuthSession;
     expect(session.user.id).toBe(samplePublicUser.id);
-    expect(session.emailVerified).toBe(false);
+    expect(session.emailVerified).toBe(true);
     expect(session.profileComplete).toBe(true);
   });
 });

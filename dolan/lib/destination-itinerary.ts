@@ -1,7 +1,7 @@
 import type { EditableItineraryDay } from "@dolan/shared";
 import { INDONESIA_PROVINCES, type CuratedProvince } from "@/lib/provinces";
 import { resolvePlaceCoordinates } from "@/lib/place-coordinates";
-import { planEfficientDays, selectCompactStops, travelMinutesBetween } from "@/lib/route-optimize";
+import { haversineKm, orderStopsWithoutBacktrack, planEfficientDays, selectCompactStops, travelMinutesBetween } from "@/lib/route-optimize";
 import { addDaysToIso, packItinerarySchedule, placeFromTemplateStop, PROVINCE_CENTERS } from "@/lib/template-itinerary";
 import { ASSETS } from "@/lib/assets";
 
@@ -13,6 +13,20 @@ export type DestinationStopSeed = {
 };
 
 export const CITY_ROUTES: Array<{ match: string[]; stops: DestinationStopSeed[] }> = [
+  {
+    match: ["medan", "sumatera utara", "sumut"],
+    stops: [
+      { name: "Istana Maimun", lat: 3.5752, lng: 98.6837, notes: "Istana kesultanan di pusat Medan." },
+      { name: "Masjid Raya Al Mashun", lat: 3.5751, lng: 98.6872, notes: "Masjid agung dekat Istana Maimun, jalan kaki." },
+      { name: "Museum Tjong A Fie Mansion", lat: 3.5864, lng: 98.6789, notes: "Rumah sejarah di kawasan Kesawan." },
+      { name: "Kesawan / Merdeka Walk", lat: 3.5895, lng: 98.6735, notes: "Koridor kuliner dan foto di pusat kota." },
+      { name: "Gedung Juang 45 Medan", lat: 3.5878, lng: 98.6781, notes: "Landmark kolonial dekat Kesawan." },
+      { name: "Pasar Petisah", lat: 3.5955, lng: 98.6698, notes: "Pasar lokal untuk oleh-oleh dan makan siang." },
+      { name: "Graha Maria Annai Velangkanni", lat: 3.5676, lng: 98.6195, notes: "Gereja ikonik di Medan, satu koridor barat kota." },
+      { name: "Kuil Shri Mariamman Medan", lat: 3.5837, lng: 98.6816, notes: "Kuil Hindu di pusat kota, dekat Kesawan." },
+      { name: "Taman Ahmad Yani Medan", lat: 3.5848, lng: 98.6712, notes: "Taman kota untuk istirahat siang." },
+    ],
+  },
   {
     match: ["yogyakarta", "jogja"],
     stops: [
@@ -94,6 +108,45 @@ export const CITY_ROUTES: Array<{ match: string[]; stops: DestinationStopSeed[] 
       { name: "Bukit Love", lat: -5.8703, lng: 110.4344 },
     ],
   },
+  {
+    match: ["bali", "ubud", "canggu", "seminyak", "kuta", "sanur"],
+    stops: [
+      { name: "Pura Tanah Lot", lat: -8.6212, lng: 115.0868, notes: "Sunset di pura laut sisi barat." },
+      { name: "Tegallalang Rice Terrace", lat: -8.4312, lng: 115.2792, notes: "Terasering di koridor Ubud." },
+      { name: "Ubud Palace", lat: -8.5069, lng: 115.2625, notes: "Titik pusat Ubud sebelum lanjut ke pasar." },
+      { name: "Pantai Sanur", lat: -8.6905, lng: 115.2633, notes: "Pantai timur, cocok pagi atau sore." },
+      { name: "Pura Uluwatu", lat: -8.8291, lng: 115.0849, notes: "Bukit selatan — ideal di hari terpisah dari Tanah Lot." },
+      { name: "Pantai Kuta", lat: -8.7183, lng: 115.1686, notes: "Koridor selatan dekat bandara." },
+    ],
+  },
+  {
+    match: ["malang", "batu"],
+    stops: [
+      { name: "Jodipan", lat: -7.9835, lng: 112.637, notes: "Kampung warna di dalam kota Malang." },
+      { name: "Alun-Alun Malang", lat: -7.9826, lng: 112.6308, notes: "Titik kumpul pusat kota." },
+      { name: "Museum Angkut", lat: -7.8797, lng: 112.5203, notes: "Batu, satu koridor dengan alun-alun Batu." },
+      { name: "Alun-Alun Batu", lat: -7.8711, lng: 112.5267, notes: "Sore di Batu sebelum kembali ke Malang." },
+      { name: "Coban Rondo", lat: -7.8846, lng: 112.4773, notes: "Air terjun di sisi barat Batu." },
+    ],
+  },
+  {
+    match: ["semarang"],
+    stops: [
+      { name: "Lawang Sewu", lat: -6.984, lng: 110.4108, notes: "Landmark kolonial dekat stasiun." },
+      { name: "Sam Poo Kong", lat: -6.9995, lng: 110.398, notes: "Kelenteng di koridor barat kota." },
+      { name: "Kota Lama Semarang", lat: -6.9683, lng: 110.4281, notes: "Jalan kaki di kawasan bersejarah." },
+      { name: "Simpang Lima Semarang", lat: -6.9903, lng: 110.4229, notes: "Alun-alun modern pusat kota." },
+    ],
+  },
+  {
+    match: ["surabaya"],
+    stops: [
+      { name: "Tugu Pahlawan", lat: -7.2458, lng: 112.7378, notes: "Monumen pusat Surabaya." },
+      { name: "House of Sampoerna", lat: -7.2307, lng: 112.7342, notes: "Museum di kawasan utara kota." },
+      { name: "Jembatan Merah", lat: -7.2356, lng: 112.7365, notes: "Koridor kota lama." },
+      { name: "Tunjungan Plaza", lat: -7.2622, lng: 112.7393, notes: "Titik kuliner dan istirahat di pusat." },
+    ],
+  },
 ];
 
 export function findProvinceForDestination(input: string) {
@@ -172,13 +225,12 @@ function routeHub(destination: string) {
 function matchCityRoute(destination: string) {
   const value = destination.trim().toLocaleLowerCase("id-ID");
   if (!value) return undefined;
-  const byKeyword = CITY_ROUTES.find((route) => route.match.some((item) => value.includes(item)));
-  if (byKeyword) return byKeyword;
+  // Prefer exact / contained city keywords only — never match by unrelated stop names
+  // (that wrongly pulls Bandung/Cihampelas into a Medan trip).
+  const exact = CITY_ROUTES.find((route) => route.match.some((item) => value === item));
+  if (exact) return exact;
   return CITY_ROUTES.find((route) =>
-    route.stops.some((stop) => {
-      const name = stop.name.toLocaleLowerCase("id-ID");
-      return name === value || value.includes(name) || name.includes(value);
-    }),
+    route.match.some((item) => item.length >= 4 && (value.includes(item) || item.includes(value))),
   );
 }
 
@@ -205,6 +257,25 @@ function provinceRouteStops(destination: string): DestinationStopSeed[] {
   });
 }
 
+function nearbyProvinceStops(destination: string, hub: { lat: number; lng: number }, limit = 8): DestinationStopSeed[] {
+  const province = findProvinceForDestination(destination);
+  if (!province) return [];
+  return province.places
+    .map((place) => {
+      const coords = seedCoords(place.name, province.name);
+      return {
+        name: place.name,
+        lat: coords.lat,
+        lng: coords.lng,
+        notes: place.description,
+        distance: haversineKm(hub, coords),
+      };
+    })
+    .sort((left, right) => left.distance - right.distance)
+    .slice(0, limit)
+    .map(({ name, lat, lng, notes }) => ({ name, lat, lng, notes }));
+}
+
 export function destinationStopSeeds(destination: string): DestinationStopSeed[] {
   if (isProvinceDestination(destination)) {
     const provinceStops = provinceRouteStops(destination);
@@ -212,8 +283,13 @@ export function destinationStopSeeds(destination: string): DestinationStopSeed[]
   }
   const cityStops = cityRouteStops(destination);
   if (cityStops.length) return cityStops;
+  const hub = routeHub(destination);
+  const nearby = nearbyProvinceStops(destination, hub, 6);
+  if (nearby.length >= 2) return nearby;
   const named = resolvePlaceCoordinates(destination, destination);
   if (named) {
+    const aroundNamed = nearbyProvinceStops(destination, named, 6);
+    if (aroundNamed.length >= 2) return aroundNamed;
     return [{ name: destination.trim(), lat: named.lat, lng: named.lng, notes: `Kunjungan ke ${destination.trim()}.` }];
   }
   const fallback = seedCoords(destination.trim() || "Indonesia", destination.trim() || "Indonesia");
@@ -225,6 +301,13 @@ function dayCount(startDate: string, endDate: string) {
   const start = new Date(`${startDate}T00:00:00Z`).getTime();
   const end = new Date(`${endDate}T00:00:00Z`).getTime();
   return Math.max(1, Math.round((end - start) / 86_400_000) + 1);
+}
+
+function travelBetweenSeeds(previous: DestinationStopSeed | undefined, stop: DestinationStopSeed, stopIndex: number) {
+  if (stopIndex === 0 || !previous) return 0;
+  const km = haversineKm({ lat: previous.lat, lng: previous.lng }, { lat: stop.lat, lng: stop.lng });
+  if (km < 1) return Math.max(5, Math.round(km * 15));
+  return travelMinutesBetween({ lat: previous.lat, lng: previous.lng }, { lat: stop.lat, lng: stop.lng });
 }
 
 function daysFromSeedClusters(
@@ -247,8 +330,7 @@ function daysFromSeedClusters(
         activityType: stopIndex === 0 && dayIndex === 0 ? "Titik kumpul" : "Wisata",
         startTime: "08:00",
         durationMinutes: 90,
-        travelDurationMinutes:
-          stopIndex === 0 || !previous ? 0 : travelMinutesBetween({ lat: previous.lat, lng: previous.lng }, { lat: stop.lat, lng: stop.lng }),
+        travelDurationMinutes: travelBetweenSeeds(previous, stop, stopIndex),
         notes: stop.notes ?? `Kunjungan ke ${stop.name}. Ideal ${stopIndex === 0 ? "pagi" : "lanjutan rute"} di koridor terdekat.`,
         isLocked: false,
       };
@@ -256,7 +338,7 @@ function daysFromSeedClusters(
   }));
 }
 
-export function destinationCandidatePool(destination: string): DestinationStopSeed[] {
+export function destinationCandidatePool(destination: string, options?: { minStops?: number }): DestinationStopSeed[] {
   const merged: DestinationStopSeed[] = [];
   const seen = new Set<string>();
   const push = (stop: DestinationStopSeed) => {
@@ -266,11 +348,29 @@ export function destinationCandidatePool(destination: string): DestinationStopSe
     const coords = resolvePlaceCoordinates(stop.name, destination) ?? { lat: stop.lat, lng: stop.lng };
     merged.push({ ...stop, lat: coords.lat, lng: coords.lng });
   };
+  const cityTrip = !isProvinceDestination(destination);
   destinationStopSeeds(destination).forEach(push);
-  if (!isProvinceDestination(destination)) {
+  const province = findProvinceForDestination(destination);
+  if (cityTrip) {
+    // City trips stay in the city corridor — do not pull far province landmarks (Toba, etc.).
     cityRouteStops(destination).forEach(push);
+    if (province) cityRouteStops(province.capital).forEach(push);
+  } else if (province) {
+    cityRouteStops(province.capital).forEach(push);
+    cityRouteStops(province.name).forEach(push);
   }
-  return merged;
+  const minStops = Math.max(0, options?.minStops ?? 0);
+  if (!cityTrip && merged.length < minStops) {
+    nearbyProvinceStops(destination, routeHub(destination), Math.max(8, minStops)).forEach(push);
+  }
+  if (merged.length < minStops) {
+    cityRouteStops(province?.capital ?? destination).forEach(push);
+  }
+
+  const hub = routeHub(destination);
+  const maxHubKm = cityTrip ? 35 : 180;
+  const local = merged.filter((stop) => haversineKm(hub, stop) <= maxHubKm);
+  return local.length >= Math.min(2, merged.length) ? local : merged;
 }
 
 export function buildDestinationItinerary(input: {
@@ -282,30 +382,128 @@ export function buildDestinationItinerary(input: {
   excludeNames?: string[];
   preferCheaper?: boolean;
 }): EditableItineraryDay[] {
-  const seeds = destinationCandidatePool(input.destination);
+  const daysTotal = dayCount(input.startDate, input.endDate);
+  const minPool = daysTotal * 2;
+  const seeds = destinationCandidatePool(input.destination, { minStops: minPool });
   const fallback = destinationStopSeeds(input.destination);
   const pool = seeds.length ? seeds : fallback;
-  const daysTotal = dayCount(input.startDate, input.endDate);
   const hub = routeHub(input.destination);
   const variant = Math.max(0, input.variant ?? input.rotate ?? 0);
   const cityTrip = !isProvinceDestination(input.destination);
-  const clusters = selectCompactStops(pool, daysTotal, hub, {
+  const maxRadiusKm = cityTrip ? 18 : 120;
+  const localPool = pool.filter((stop) => haversineKm(hub, stop) <= (cityTrip ? 35 : 180));
+  const clusters = selectCompactStops(localPool.length ? localPool : pool, daysTotal, hub, {
     excludeNames: input.excludeNames,
     variant,
+    minPerDay: 2,
     maxPerDay: cityTrip ? 4 : 3,
-    maxRadiusKm: cityTrip ? 18 : 90,
+    maxRadiusKm,
   });
   const days = clusters.length
     ? clusters
-    : planEfficientDays(pool, daysTotal, hub);
+    : planEfficientDays(localPool.length ? localPool : pool, daysTotal, hub);
   return packItinerarySchedule(
-    daysFromSeedClusters(days, {
-      destination: input.destination,
-      startDate: input.startDate,
-      idPrefix: "dest",
-      titleFor: (dayIndex) => `Jelajah ${input.destination} · hari ${dayIndex + 1}`,
-    }),
+    ensureMultiStopDays(
+      daysFromSeedClusters(days, {
+        destination: input.destination,
+        startDate: input.startDate,
+        idPrefix: "dest",
+        titleFor: (dayIndex) => `Jelajah ${input.destination} · hari ${dayIndex + 1}`,
+      }),
+      input.destination,
+    ),
   );
+}
+
+function stopLabel(stop: { customTitle?: string | null; place?: { name?: string | null } | null }) {
+  return (stop.customTitle || stop.place?.name || "").trim().toLocaleLowerCase("id-ID");
+}
+
+function hasValidCoords(lat?: number | null, lng?: number | null) {
+  return typeof lat === "number" && typeof lng === "number" && !(lat === 0 && lng === 0);
+}
+
+function pickNearbySeeds(
+  pool: DestinationStopSeed[],
+  hub: { lat: number; lng: number },
+  maxKm: number,
+  exclude: Set<string>,
+  take: number,
+) {
+  const extras: DestinationStopSeed[] = [];
+  const nearby = pool
+    .map((seed) => ({ seed, distance: haversineKm(hub, seed) }))
+    .filter(({ seed, distance }) => {
+      const key = seed.name.trim().toLocaleLowerCase("id-ID");
+      return Boolean(key) && !exclude.has(key) && distance <= maxKm;
+    })
+    .sort((left, right) => left.distance - right.distance);
+  for (const { seed } of nearby) {
+    if (extras.length >= take) break;
+    extras.push(seed);
+  }
+  return extras;
+}
+
+/** A full day of travel is never one landmark — fill thin days from the same city corridor. */
+export function ensureMultiStopDays(
+  days: EditableItineraryDay[],
+  destination: string,
+  options?: { minPerDay?: number; maxPerDay?: number },
+): EditableItineraryDay[] {
+  const minPerDay = options?.minPerDay ?? 2;
+  const maxPerDay = options?.maxPerDay ?? 3;
+  if (!days.length) return days;
+  const cityTrip = !isProvinceDestination(destination);
+  const maxKm = cityTrip ? 18 : 40;
+  const pool = destinationCandidatePool(destination, { minStops: days.length * maxPerDay });
+  const usedGlobally = new Set(days.flatMap((day) => day.stops.map(stopLabel)).filter(Boolean));
+
+  return days.map((day, dayIndex) => {
+    if (day.stops.length >= minPerDay) return day;
+    const hubStop = day.stops[0];
+    const hub = hasValidCoords(hubStop?.place?.latitude, hubStop?.place?.longitude)
+      ? { lat: hubStop!.place!.latitude, lng: hubStop!.place!.longitude }
+      : routeHub(destination);
+    const usedToday = new Set(day.stops.map(stopLabel).filter(Boolean));
+    const need = maxPerDay - day.stops.length;
+    let extras = pickNearbySeeds(pool, hub, maxKm, usedGlobally, need);
+    if (extras.length + day.stops.length < minPerDay) {
+      extras = extras.concat(
+        pickNearbySeeds(pool, hub, maxKm, usedToday, need - extras.length).filter(
+          (seed) => !extras.some((item) => item.name === seed.name),
+        ),
+      );
+    }
+    extras.forEach((seed) => usedGlobally.add(seed.name.trim().toLocaleLowerCase("id-ID")));
+    if (!extras.length) return day;
+    const extraStops = extras.map((stop, extraIndex) => {
+      const place = placeFromTemplateStop(stop.name, destination);
+      const previousSeed: DestinationStopSeed = extraIndex === 0
+        ? { name: hubStop?.customTitle ?? "", lat: hub.lat, lng: hub.lng }
+        : extras[extraIndex - 1]!;
+      const stopIndex = day.stops.length + extraIndex;
+      return {
+        id: `${day.id}-fill-${extraIndex + 1}`,
+        sequence: stopIndex + 1,
+        place: {
+          ...place,
+          latitude: stop.lat,
+          longitude: stop.lng,
+          city: destination,
+          formattedAddress: `${stop.name}, ${destination}`,
+        },
+        customTitle: stop.name,
+        activityType: "Wisata",
+        startTime: "08:00",
+        durationMinutes: 90,
+        travelDurationMinutes: travelBetweenSeeds(previousSeed, stop, stopIndex),
+        notes: stop.notes ?? `Lanjutan hari ini di koridor ${destination}.`,
+        isLocked: false,
+      };
+    });
+    return { ...day, dayNumber: day.dayNumber || dayIndex + 1, stops: [...day.stops, ...extraStops] };
+  });
 }
 
 export function destinationCoverUrl(city: string) {
@@ -346,18 +544,72 @@ export function resolveTripItineraryDays(input: {
   });
 }
 
+function daySpanKm(stops: DestinationStopSeed[]) {
+  if (stops.length < 2) return 0;
+  let max = 0;
+  for (let i = 0; i < stops.length; i += 1) {
+    for (let j = i + 1; j < stops.length; j += 1) {
+      max = Math.max(max, haversineKm(stops[i]!, stops[j]!));
+    }
+  }
+  return max;
+}
+
+function clustersFromCuratedDays(
+  stops: Array<DestinationStopSeed & { day: number; sequence: number }>,
+  durationDays: number,
+  hub: { lat: number; lng: number },
+  maxDaySpanKm = 100,
+) {
+  const byDay = new Map<number, Array<DestinationStopSeed & { sequence: number }>>();
+  stops.forEach((stop) => {
+    const day = Math.max(1, stop.day || 1);
+    const list = byDay.get(day) ?? [];
+    list.push(stop);
+    byDay.set(day, list);
+  });
+  const curated = [...byDay.entries()]
+    .sort((left, right) => left[0] - right[0])
+    .map(([, list]) =>
+      [...list]
+        .sort((left, right) => left.sequence - right.sequence)
+        .map(({ name, lat, lng, notes }) => ({ name, lat, lng, notes })),
+    )
+    .filter((chunk) => chunk.length > 0);
+
+  const compact = curated.length > 0 && curated.every((chunk) => daySpanKm(chunk) <= maxDaySpanKm);
+  if (compact) {
+    return curated.map((chunk, index) =>
+      orderStopsWithoutBacktrack(chunk, index === 0 ? hub : curated[index - 1]?.at(-1) ?? hub),
+    );
+  }
+  const unique = stops.filter((stop, index, list) => list.findIndex((item) => item.name === stop.name) === index);
+  return planEfficientDays(
+    unique.map(({ name, lat, lng, notes }) => ({ name, lat, lng, notes })),
+    durationDays,
+    hub,
+  );
+}
+
 export function buildProvinceTemplateDays(province: CuratedProvince, options?: { startDate?: string }): EditableItineraryDay[] {
   const notesByName = new Map(province.template.stops.map((stop) => [stop.name.toLocaleLowerCase("id-ID"), stop.notes]));
   const durationByName = new Map(province.template.stops.map((stop) => [stop.name.toLocaleLowerCase("id-ID"), stop.durationMinutes]));
-  const seeds: DestinationStopSeed[] = province.template.stops.map((stop) => {
+  const seeds = province.template.stops.map((stop) => {
     const coords = seedCoords(stop.name, province.name);
-    return { name: stop.name, lat: coords.lat, lng: coords.lng, notes: stop.notes };
+    return {
+      name: stop.name,
+      lat: coords.lat,
+      lng: coords.lng,
+      notes: stop.notes,
+      day: stop.day,
+      sequence: stop.sequence,
+    };
   });
   const unique = seeds.filter((stop, index, list) => list.findIndex((item) => item.name === stop.name) === index);
   const hub = resolvePlaceCoordinates(unique[0]?.name ?? "", province.name)
     ?? PROVINCE_CENTERS[province.name]
     ?? { lat: unique[0]?.lat ?? -2.5, lng: unique[0]?.lng ?? 118 };
-  const clusters = planEfficientDays(unique, province.template.durationDays, hub);
+  const clusters = clustersFromCuratedDays(unique, province.template.durationDays, hub);
   const startDate = options?.startDate && /^\d{4}-\d{2}-\d{2}$/.test(options.startDate) ? options.startDate : "";
   return packItinerarySchedule(
     clusters.map((chunk, dayIndex) => ({
@@ -369,7 +621,7 @@ export function buildProvinceTemplateDays(province: CuratedProvince, options?: {
         const place = placeFromTemplateStop(stop.name, province.name);
         const previous = chunk[stopIndex - 1];
         const key = stop.name.toLocaleLowerCase("id-ID");
-        const travel = stopIndex === 0 || !previous ? 0 : travelMinutesBetween({ lat: previous.lat, lng: previous.lng }, { lat: stop.lat, lng: stop.lng });
+        const travel = travelBetweenSeeds(previous, stop, stopIndex);
         return {
           id: `${province.slug}-day-${dayIndex + 1}-stop-${stopIndex + 1}`,
           sequence: stopIndex + 1,
