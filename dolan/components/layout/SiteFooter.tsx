@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Icon } from "@/components/ui/Icon";
-import { DolanWordmark } from "@/components/brand/DolanWordmark";
 import { ROUTES } from "@/lib/routes";
 
 export function SiteFooter() {
@@ -15,7 +14,12 @@ export function SiteFooter() {
       <div className="mx-auto grid max-w-[1200px] gap-10 px-6 py-12 md:grid-cols-[1.35fr_.7fr_.8fr_1fr] md:px-8">
         <div>
           <Link href={ROUTES.beranda} className="inline-flex" aria-label="DOLAN beranda">
-            <DolanWordmark height={40} />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/logo_dolan.png"
+              alt="DOLAN"
+              className="h-9 w-auto object-contain object-left mix-blend-multiply"
+            />
           </Link>
           <p className="mt-4 max-w-sm text-sm leading-7 text-slate-600">
             Temukan tujuan, susun itinerary, dan kenalan dengan traveler yang
@@ -44,9 +48,9 @@ export function SiteFooter() {
           <h3 className="text-sm font-extrabold">Temui kami</h3>
           <p className="mt-4 flex gap-2 text-sm leading-6 text-slate-600">
             <Icon name="location_on" className="mt-0.5 text-sky-300" />
-            Jl. Malioboro No. 88,
+            Kebayoran Baru,
             <br />
-            Yogyakarta 55271
+            Jakarta Selatan
           </p>
           <p className="mt-3 flex items-center gap-2 text-sm text-slate-600">
             <Icon name="mail" className="text-sky-300" />

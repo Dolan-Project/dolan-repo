@@ -18,6 +18,7 @@ import {
   reorderStopsInDay,
   toItinerarySaveDays,
   withGlobalStopNumbers,
+  addDaysToIso,
 } from "@/lib/template-itinerary";
 
 type Tab = "itinerary" | "budget" | "checklist";
@@ -26,9 +27,17 @@ type Notice = { tone: "success" | "error" | "info"; text: string } | null;
 const money = new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 });
 const clone = <T,>(value: T): T => structuredClone(value);
 
-function normalize(days: EditableItineraryDay[], city = "") {
+function normalize(days: EditableItineraryDay[], city = "", startDate = "") {
   return withGlobalStopNumbers(
-    hydrateItineraryPlaces(days.map((day, dayIndex) => ({ ...day, dayNumber: dayIndex + 1 })), city),
+    hydrateItineraryPlaces(days.map((day, dayIndex) => ({
+      ...day,
+      dayNumber: dayIndex + 1,
+      date: /^\d{4}-\d{2}-\d{2}$/.test(day.date)
+        ? day.date
+        : startDate
+          ? addDaysToIso(startDate, dayIndex)
+          : day.date,
+    })), city),
   );
 }
 
@@ -69,7 +78,7 @@ export function ItineraryEditorExperience({ tripId }: { tripId: string }) {
         const versionId = data.activeVersionId || data.versions[0]?.id || "";
         setSelectedVersionId(versionId);
         const version = data.versions.find((item) => item.id === versionId);
-        setDays(normalize(clone(version?.days ?? []), data.destinationCity));
+        setDays(normalize(clone(version?.days ?? []), data.destinationCity, data.startDate));
         setBudgetItems(versionId ? versionBudgetInputs(data, versionId) : clone(INITIAL_BUDGET_ITEMS));
         setSelectedStopId(version?.days?.[0]?.stops[0]?.id ?? null);
         if (!version) {
@@ -97,7 +106,7 @@ export function ItineraryEditorExperience({ tripId }: { tripId: string }) {
   const activeVersion = snapshot?.versions.find((item) => item.id === snapshot.activeVersionId);
 
   const changeDays = (next: EditableItineraryDay[]) => {
-    setDays(normalize(next, snapshot?.destinationCity ?? ""));
+    setDays(normalize(next, snapshot?.destinationCity ?? "", snapshot?.startDate ?? ""));
     setDirty(true);
     setNotice(null);
   };
@@ -148,12 +157,12 @@ export function ItineraryEditorExperience({ tripId }: { tripId: string }) {
       const next = await saveItineraryVersion(snapshot, {
         baseVersionId: selectedVersionId || snapshot.activeVersionId || "wizard-v1",
         summary: "Perubahan itinerary dari editor My Trip",
-        days: toItinerarySaveDays(packed),
+        days: toItinerarySaveDays(packed, snapshot.startDate),
         budgetItems,
       });
       setSnapshot(next);
       setSelectedVersionId(next.activeVersionId);
-      setDays(normalize(packed, snapshot.destinationCity));
+      setDays(normalize(packed, snapshot.destinationCity, snapshot.startDate));
       setDirty(false);
       setNotice({ tone: "success", text: `Versi ${next.versions[0].versionNumber} tersimpan dan menjadi versi aktif.` });
     } catch (error) {
@@ -362,8 +371,6 @@ export function ItineraryEditorExperience({ tripId }: { tripId: string }) {
   );
 }
 
-}
-
 function BudgetEditor({ items, total, onChange }: { items: BudgetItemInput[]; total: number; onChange: (items: BudgetItemInput[]) => void }) {
   const update = (index: number, patch: Partial<BudgetItemInput>) => onChange(items.map((item, itemIndex) => itemIndex === index ? { ...item, ...patch } : item));
   const totalLow = items.reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.unitCostLow || 0), 0);
@@ -436,7 +443,12 @@ function ChecklistEditor({
         dueDate: null,
         isCompleted: false,
       });
-      setSnapshot({ ...snapshot, checklist: [...snapshot.checklist, saved] });
+      setSnapshot({
+        ...snapshot,
+        checklist: snapshot.checklist.some((entry) => entry.id === saved.id)
+          ? snapshot.checklist.map((entry) => (entry.id === saved.id ? saved : entry))
+          : [...snapshot.checklist, saved],
+      });
       setTitle("");
     } catch (error) {
       setNotice({

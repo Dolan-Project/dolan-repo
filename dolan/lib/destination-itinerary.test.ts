@@ -188,8 +188,8 @@ describe("destination itinerary", () => {
     const transportLines = Object.values(plan.byStopId).flatMap((item) => item.lines.filter((line) => line.key === "transport"));
     expect(transportLines.some((line) => line.amount > 0)).toBe(true);
     expect(transportLines.some((line) => /Titik awal hari/i.test(line.detail))).toBe(true);
-    expect(transportLines.every((line) => line.amount === 0 || !/jalan kaki jauh/i.test(line.detail))).toBe(true);
-    expect(transportLines.some((line) => line.amount > 0 && /ojek|antar-kota|jeep/i.test(line.detail))).toBe(true);
+    expect(transportLines.every((line) => !/estimasi kasar|belum ada rute/i.test(line.detail))).toBe(true);
+    expect(transportLines.some((line) => line.amount > 0 && /ojek|mobil|jeep|jalan kaki|kapal/i.test(line.detail))).toBe(true);
   });
 
   it("builds Cirebon with local stops, not an empty or Bandung itinerary", () => {

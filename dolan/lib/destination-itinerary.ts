@@ -1,7 +1,7 @@
 import type { EditableItineraryDay } from "@dolan/shared";
 import { INDONESIA_PROVINCES, type CuratedProvince } from "@/lib/provinces";
 import { resolvePlaceCoordinates } from "@/lib/place-coordinates";
-import { haversineKm, orderStopsWithoutBacktrack, planEfficientDays, selectCompactStops, travelMinutesBetween } from "@/lib/route-optimize";
+import { haversineKm, orderStopsWithoutBacktrack, planEfficientDays, selectCompactStops } from "@/lib/route-optimize";
 import { addDaysToIso, packItinerarySchedule, placeFromTemplateStop, PROVINCE_CENTERS } from "@/lib/template-itinerary";
 import { ASSETS } from "@/lib/assets";
 
@@ -330,11 +330,9 @@ function dayCount(startDate: string, endDate: string) {
   return Math.max(1, Math.round((end - start) / 86_400_000) + 1);
 }
 
-function travelBetweenSeeds(previous: DestinationStopSeed | undefined, stop: DestinationStopSeed, stopIndex: number) {
+function travelBetweenSeeds(previous: DestinationStopSeed | undefined, _stop: DestinationStopSeed, stopIndex: number) {
   if (stopIndex === 0 || !previous) return 0;
-  const km = haversineKm({ lat: previous.lat, lng: previous.lng }, { lat: stop.lat, lng: stop.lng });
-  if (km < 1) return Math.max(5, Math.round(km * 15));
-  return travelMinutesBetween({ lat: previous.lat, lng: previous.lng }, { lat: stop.lat, lng: stop.lng });
+  return null;
 }
 
 function daysFromSeedClusters(

@@ -7,7 +7,6 @@ import type { AuthSession } from "@/lib/contracts";
 import { ROUTES, type NavKey } from "@/lib/routes";
 import { Icon } from "@/components/ui/Icon";
 import { NotificationBell } from "@/components/layout/NotificationBell";
-import { DolanWordmark } from "@/components/brand/DolanWordmark";
 import { UserAvatar } from "@/components/ui/UserAvatar";
 
 const desktopLinks: { key: NavKey; href: string; label: string }[] = [
@@ -61,7 +60,12 @@ export function SiteHeader({
       <div className="mx-auto flex h-14 max-w-[1240px] items-center justify-between gap-3 px-margin md:h-16 md:px-margin-desktop lg:grid lg:grid-cols-3">
         <div className="flex min-w-0 items-center gap-6">
           <Link href={ROUTES.beranda} className="flex items-center" aria-label="DOLAN beranda">
-            <DolanWordmark height={34} className={transparent ? "rounded-lg bg-white/92 px-1" : ""} />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/logo_dolan.png"
+              alt="DOLAN"
+              className={`h-8 w-auto object-contain object-left mix-blend-multiply md:h-9 ${transparent ? "rounded-lg bg-white/92 px-1.5 py-0.5" : ""}`}
+            />
           </Link>
 
         </div>

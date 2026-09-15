@@ -21,13 +21,13 @@ export default async function ProvinsiIndexPage({ searchParams }: PageProps) {
           <div className="absolute inset-0 bg-gradient-to-br from-[#075fb8] via-[#118acb] to-[#071c32]" />
           <div className="relative px-6 py-10 md:px-12 md:py-16">
             <p className="type-label font-extrabold uppercase tracking-[.16em] text-white/75">
-              Katalog Dolan
+              Katalog itinerary
             </p>
             <h1 className="mt-3 max-w-3xl text-4xl font-extrabold leading-tight md:text-6xl">
-              38 template itinerary provinsi
+              38 template rute provinsi
             </h1>
             <p className="mt-5 max-w-2xl text-sm leading-7 text-white/85 md:text-base">
-              Pilih provinsi, lihat rute kurasi, lalu pakai template langsung ke Buat Trip.
+              Pilih kartu, lihat cover dan durasi kurasi, lalu pakai template langsung ke Buat Trip.
             </p>
             <form action={ROUTES.provinsi} className="mt-7 flex max-w-xl flex-col gap-3 sm:flex-row">
               <label className="sr-only" htmlFor="province-search">
@@ -83,18 +83,21 @@ export default async function ProvinsiIndexPage({ searchParams }: PageProps) {
                     key={province.slug}
                     className="overflow-hidden rounded-[1.75rem] border border-primary/10 bg-white shadow-sm"
                   >
-                    <Link href={ROUTES.province(province.slug)} className="relative block h-44 overflow-hidden">
+                    <Link href={ROUTES.province(province.slug)} className="relative block h-52 overflow-hidden">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={cover} alt="" className="h-full w-full object-cover" />
+                      <img src={cover} alt="" className="h-full w-full object-cover transition duration-500 hover:scale-[1.04]" />
                       <span className="absolute left-4 top-4 rounded-full bg-black/45 px-3 py-1 text-xs font-bold text-white backdrop-blur">
                         {province.template.durationDays} hari
                       </span>
+                      <span className="absolute bottom-4 left-4 rounded-full bg-white/92 px-3 py-1 text-xs font-extrabold text-primary">
+                        {province.capital}
+                      </span>
                     </Link>
                     <div className="p-5">
-                      <p className="type-label font-extrabold text-secondary">Ibu kota {province.capital}</p>
-                      <h3 className="mt-1 text-xl font-extrabold text-on-surface">{province.name}</h3>
+                      <p className="type-label font-extrabold text-secondary">{province.name}</p>
+                      <h3 className="mt-1 text-xl font-extrabold text-on-surface">{province.template.title}</h3>
                       <p className="mt-2 line-clamp-2 text-sm leading-6 text-on-surface-variant">
-                        {province.template.title}
+                        {province.template.durationDays} hari · ibu kota {province.capital}
                       </p>
                       <div className="mt-4 flex flex-wrap gap-2">
                         <Link

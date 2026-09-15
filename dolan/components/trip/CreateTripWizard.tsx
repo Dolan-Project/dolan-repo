@@ -580,7 +580,7 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
   }
 
   async function savePacking(createdTripId: string) {
-    const titles = packingItems.map((item) => item.trim()).filter(Boolean);
+    const titles = [...new Set(packingItems.map((item) => item.trim()).filter(Boolean))];
     await Promise.all(titles.map((title) => fetch(`/api/v1/trips/${encodeURIComponent(createdTripId)}/checklist`, {
       method: "POST",
       credentials: "include",
@@ -623,7 +623,7 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
       const saved = await saveItineraryVersion(current, {
         baseVersionId: current.activeVersionId || "wizard-v1",
         summary: path === "template" ? "Itinerary dari template, disesuaikan di wizard" : "Itinerary AI yang sudah disetujui sesuai budget",
-        days: toItinerarySaveDays(packed),
+        days: toItinerarySaveDays(packed, startDate),
         budgetItems: items.length ? items : INITIAL_BUDGET_ITEMS,
       });
       await savePacking(createdTripId);
@@ -656,7 +656,7 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
     await saveItineraryVersion(current, {
       baseVersionId: current.activeVersionId || "wizard-v1",
       summary: path === "template" ? "Itinerary dari template, disesuaikan di wizard" : "Itinerary AI yang sudah disetujui sesuai budget",
-      days: toItinerarySaveDays(packed),
+      days: toItinerarySaveDays(packed, startDate),
       budgetItems: items.length ? items : INITIAL_BUDGET_ITEMS,
     });
   }
@@ -770,7 +770,7 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
                 </div>
               </Field>
               {templatesError ? <p className="mt-3 type-caption text-error">{templatesError}</p> : null}
-              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                 {templates.map((template) => {
                   const selected = selectedTemplateId === template.id;
                   const province = findProvinceForTemplate({ templateId: template.id, city: template.city });
@@ -778,8 +778,8 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
                   return (
                     <article
                       key={template.id}
-                      className={`group relative overflow-hidden rounded-[1.35rem] border bg-white text-left shadow-[0_10px_30px_rgba(15,59,94,.08)] transition ${
-                        selected ? "border-primary ring-2 ring-primary" : "border-slate-200 hover:-translate-y-0.5 hover:border-primary/40"
+                      className={`group relative overflow-hidden rounded-[1.5rem] border bg-white text-left shadow-[0_12px_32px_rgba(15,59,94,.1)] transition ${
+                        selected ? "border-primary ring-2 ring-primary ring-offset-2" : "border-slate-200 hover:-translate-y-0.5 hover:border-primary/40"
                       }`}
                     >
                       <button
@@ -787,7 +787,7 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
                         className="block w-full text-left"
                         onClick={() => void chooseTemplateById(template.id)}
                       >
-                        <div className="relative h-36 bg-surface-container">
+                        <div className="relative h-44 bg-surface-container">
                           {cover ? (
                             // eslint-disable-next-line @next/next/no-img-element
                             <img src={cover} alt={template.city} className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]" />
@@ -802,7 +802,7 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
                           ) : (
                             <div className="grid h-full place-items-center text-primary"><Icon name="route" className="text-[28px]" /></div>
                           )}
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-transparent" />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/15 to-transparent" />
                           <span className="absolute left-3 top-3 rounded-full bg-white/92 px-2.5 py-1 text-[10px] font-extrabold text-primary">{template.city}</span>
                           <span className="absolute bottom-3 left-3 rounded-full bg-[#004ac6] px-2.5 py-1 text-[10px] font-extrabold text-white">{template.durationDays} hari</span>
                           {selected ? (
@@ -811,7 +811,7 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
                         </div>
                         <div className="p-3.5 pb-2">
                           <p className="type-subtitle text-on-surface">{template.title}</p>
-                          <p className="type-caption mt-1 text-on-surface-variant">{template.durationDays} hari · dipakai {template.usageCount}x</p>
+                          <p className="type-caption mt-1 text-on-surface-variant">{template.durationDays} hari · {template.city} · dipakai {template.usageCount}x</p>
                         </div>
                       </button>
                       {province ? (

@@ -24,6 +24,7 @@ import {
   ItineraryDay,
   ItineraryStop,
   ItineraryVersion,
+  TripChecklistCheck,
   TripChecklistItem,
 } from "./itinerary.ts";
 import {
@@ -129,6 +130,9 @@ function applyAssociations() {
   Trip.hasMany(TripChecklistItem, { foreignKey: "tripId", as: "checklistItems" });
   TripChecklistItem.belongsTo(Trip, { foreignKey: "tripId", as: "trip" });
   TripChecklistItem.belongsTo(User, { foreignKey: "userId", as: "owner" });
+  TripChecklistItem.hasMany(TripChecklistCheck, { foreignKey: "itemId", as: "checks" });
+  TripChecklistCheck.belongsTo(TripChecklistItem, { foreignKey: "itemId", as: "item" });
+  TripChecklistCheck.belongsTo(User, { foreignKey: "userId", as: "user" });
 
   Place.hasMany(ItineraryTemplate, { foreignKey: "coverPlaceId", as: "coverTemplates" });
   Province.hasMany(ProvincePlace, { foreignKey: "provinceId", as: "places" });
@@ -299,6 +303,7 @@ export function getModels() {
     ItineraryStop,
     BudgetItem,
     TripChecklistItem,
+    TripChecklistCheck,
     TripComment,
     ChatRoom,
     Message,
@@ -344,6 +349,7 @@ export {
   ItineraryStop,
   BudgetItem,
   TripChecklistItem,
+  TripChecklistCheck,
   TripComment,
   ChatRoom,
   Message,

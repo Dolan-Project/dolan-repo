@@ -61,6 +61,7 @@ export type TripDetail = {
   currentItineraryVersionId: string | null;
   members?: PublicUser[];
   myJoinRequest: JoinRequest | null;
+  coverPlace?: PlaceSummary | null;
   origin?: string;
   meetingPoint?: string | null;
   transport?: string;

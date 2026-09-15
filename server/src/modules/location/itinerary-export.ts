@@ -10,8 +10,29 @@ export type ExportItinerary = {
   summary: string | null;
   budgetLine?: string | null;
   checklistLines?: string[];
-  days: Array<{ dayNumber: number; title: string | null; stops: NavStop[] }>;
+  days: Array<{ dayNumber: number; date?: string | null; title: string | null; stops: NavStop[] }>;
 };
+
+function formatMeters(meters: number | null | undefined) {
+  if (meters == null || !Number.isFinite(meters) || meters < 0) return null;
+  return `${(meters / 1000).toFixed(meters >= 10000 ? 0 : 1)} km`;
+}
+
+export function formatExportStopLine(stop: NavStop, index: number) {
+  const bits = [`${index + 1}.`];
+  if (stop.startTime) bits.push(String(stop.startTime).slice(0, 5));
+  bits.push(stop.name);
+  if (stop.routeStatus === "UNAVAILABLE") {
+    bits.push("Rute jalan tidak tersedia");
+  } else {
+    const km = formatMeters(stop.travelDistanceMeters);
+    if (km) bits.push(km);
+    if (stop.travelDurationMinutes) bits.push(`${stop.travelDurationMinutes} menit`);
+  }
+  if (stop.meal) bits.push(stop.meal);
+  if (stop.notes) bits.push(stop.notes);
+  return `  ${bits.join(" ")}`;
+}
 
 export class ItineraryExportService {
   constructor(
@@ -34,8 +55,8 @@ export class ItineraryExportService {
       doc.summary ?? "",
       doc.budgetLine ?? "",
       ...doc.days.flatMap((day) => [
-        `Hari ${day.dayNumber}${day.title ? ` — ${day.title}` : ""}`,
-        ...day.stops.map((stop, index) => `  ${index + 1}. ${stop.name}`),
+        `Hari ${day.dayNumber}${day.date ? ` - ${day.date}` : ""}${day.title ? ` - ${day.title}` : ""}`,
+        ...day.stops.map((stop, index) => formatExportStopLine(stop, index)),
       ]),
       ...(doc.checklistLines?.length ? ["Checklist:", ...doc.checklistLines.map((item) => `  - ${item}`)] : []),
     ].filter(Boolean);

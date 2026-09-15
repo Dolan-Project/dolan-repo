@@ -5,6 +5,7 @@ import { Icon } from "@/components/ui/Icon";
 import { decodePolyline } from "./map-route";
 import { itineraryPinSvg, ITINERARY_ROUTE_COLOR } from "@/lib/itinerary-style";
 import { ItineraryStopPin } from "@/components/trip/ItineraryTimeline";
+import { ROUTE_UNAVAILABLE_TEXT } from "@/lib/route-travel";
 
 export type MapPoint = {
   id: string;
@@ -29,6 +30,7 @@ type GoogleMapProps = {
   routeColor?: string;
   numberedBadges?: boolean;
   routeGroups?: MapPoint[][];
+  routeUnavailable?: boolean;
 };
 
 declare global {
@@ -100,7 +102,7 @@ function requestOnce(
     }
     const finish = (serviceCtor: (new () => GoogleDirectionsService) | undefined, travelMode: string | undefined) => {
       if (!serviceCtor || !travelMode) {
-        resolve(points);
+        resolve([]);
         return;
       }
       const origin = points[0]!;
@@ -122,7 +124,7 @@ function requestOnce(
             resolve(path.map((point) => ({ lat: point.lat(), lng: point.lng() })));
             return;
           }
-          resolve(points);
+          resolve([]);
         },
       );
     };
@@ -140,13 +142,14 @@ async function requestDrivingRoute(
   maps: NonNullable<Window["google"]>["maps"],
   points: Array<{ lat: number; lng: number }>,
 ) {
-  if (points.length < 2) return points;
+  if (points.length < 2) return [];
   const chunkSize = 10;
   if (points.length <= chunkSize) return requestOnce(maps, points);
   const path: Array<{ lat: number; lng: number }> = [];
   for (let index = 0; index < points.length - 1; ) {
     const chunk = points.slice(index, Math.min(index + chunkSize, points.length));
     const piece = await requestOnce(maps, chunk);
+    if (piece.length < 2) return [];
     if (path.length) path.push(...piece.slice(1));
     else path.push(...piece);
     index += chunkSize - 1;
@@ -210,6 +213,7 @@ export function GoogleMap({
   const routeLinesRef = useRef<GooglePolyline[]>([]);
   const [mapReady, setMapReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [missingRoad, setMissingRoad] = useState(false);
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_KEY ?? "";
 
   useEffect(() => {
@@ -328,6 +332,7 @@ export function GoogleMap({
     }
     routeLinesRef.current.forEach((line) => line.setMap(null));
     routeLinesRef.current = [];
+    setMissingRoad(false);
     const addRoadPath = (path: Array<{ lat: number; lng: number }>) => {
       if (path.length < 2 || cancelled) return;
       const casing = new maps.Polyline({
@@ -352,6 +357,7 @@ export function GoogleMap({
     };
     const encodedAvailable = routePolylines.length > 0;
     if (encodedAvailable) {
+      setMissingRoad(false);
       routePolylines.forEach((encoded) => addRoadPath(decodePolyline(encoded)));
       return () => {
         cancelled = true;
@@ -360,13 +366,26 @@ export function GoogleMap({
       };
     }
     const groups = (routeGroups?.length ? routeGroups : showRoute ? [points] : []).filter((group) => group.length >= 2);
+    if (!groups.length) {
+      setMissingRoad(false);
+      return () => {
+        cancelled = true;
+        routeLinesRef.current.forEach((line) => line.setMap(null));
+        routeLinesRef.current = [];
+      };
+    }
     void (async () => {
+      let drew = false;
       for (const group of groups) {
         if (cancelled) return;
         const path = await requestDrivingRoute(maps, group.map((point) => ({ lat: point.lat, lng: point.lng })));
         if (cancelled) return;
-        addRoadPath(path);
+        if (path.length >= 2) {
+          addRoadPath(path);
+          drew = true;
+        }
       }
+      if (!cancelled) setMissingRoad(!drew);
     })();
     return () => {
       cancelled = true;
@@ -416,5 +435,14 @@ export function GoogleMap({
     );
   }
 
-  return <div ref={nodeRef} className={className} aria-label="Peta lokasi wisata" />;
+  return (
+    <div className={`relative ${className}`}>
+      <div ref={nodeRef} className="h-full w-full" aria-label="Peta lokasi wisata" />
+      {missingRoad ? (
+        <p className="absolute inset-x-3 bottom-3 z-10 rounded-xl bg-white/92 px-3 py-2 text-center text-[11px] font-bold text-on-surface shadow-sm">
+          {ROUTE_UNAVAILABLE_TEXT}
+        </p>
+      ) : null}
+    </div>
+  );
 }

@@ -94,6 +94,18 @@ export class TripChecklistItem extends Model<
   declare updatedAt: CreationOptional<Date>;
 }
 
+export class TripChecklistCheck extends Model<
+  InferAttributes<TripChecklistCheck>,
+  InferCreationAttributes<TripChecklistCheck>
+> {
+  declare id: CreationOptional<string>;
+  declare itemId: string;
+  declare userId: string;
+  declare completedAt: CreationOptional<Date>;
+  declare createdAt: CreationOptional<Date>;
+  declare updatedAt: CreationOptional<Date>;
+}
+
 export function initItineraryModels(sequelize: Sequelize) {
   ItineraryVersion.init(
     {
@@ -259,11 +271,30 @@ export function initItineraryModels(sequelize: Sequelize) {
     },
   );
 
+  TripChecklistCheck.init(
+    {
+      id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
+      itemId: { type: DataTypes.UUID, allowNull: false, field: "item_id" },
+      userId: { type: DataTypes.UUID, allowNull: false, field: "user_id" },
+      completedAt: { type: DataTypes.DATE, allowNull: false, field: "completed_at" },
+      createdAt: DataTypes.DATE,
+      updatedAt: DataTypes.DATE,
+    },
+    {
+      sequelize,
+      tableName: "trip_checklist_checks",
+      modelName: "TripChecklistCheck",
+      underscored: true,
+      indexes: [{ unique: true, fields: ["item_id", "user_id"] }],
+    },
+  );
+
   return {
     ItineraryVersion,
     ItineraryDay,
     ItineraryStop,
     BudgetItem,
     TripChecklistItem,
+    TripChecklistCheck,
   };
 }

@@ -6,6 +6,8 @@ export function coverPlaceFromCache(place: {
   cachedCity?: string | null;
   cachedLatitude?: number | null;
   cachedLongitude?: number | null;
+  cachedPhotoName?: string | null;
+  cachedPhotoUrl?: string | null;
 } | null): PlaceSummary | null {
   if (!place) return null;
   return {
@@ -17,7 +19,8 @@ export function coverPlaceFromCache(place: {
     longitude: place.cachedLongitude ?? 0,
     rating: null,
     userRatingCount: null,
-    photoName: null,
+    photoName: place.cachedPhotoName ?? null,
+    photoUri: place.cachedPhotoUrl ?? null,
     googleMapsUrl: null,
     types: [],
   };

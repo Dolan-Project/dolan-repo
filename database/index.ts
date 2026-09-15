@@ -24,6 +24,7 @@ export {
   ItineraryStop,
   BudgetItem,
   TripChecklistItem,
+  TripChecklistCheck,
   TripComment,
   ChatRoom,
   Message,

@@ -682,7 +682,7 @@ export class TripService {
     const trip = await this.store.getTrip(tripId);
     if (!trip) return null;
     if (!userId) {
-      return { tripId, memberRole: null, membershipStatus: null, joinRequestStatus: null };
+      return { tripId, memberRole: null, membershipStatus: null, joinRequestStatus: null, hostUserId: trip.hostUserId };
     }
     const access = await this.loadAccess(trip, userId);
     return {
@@ -690,6 +690,7 @@ export class TripService {
       memberRole: access.memberRole,
       membershipStatus: access.membershipStatus,
       joinRequestStatus: access.joinRequestStatus,
+      hostUserId: trip.hostUserId,
     };
   }
 
@@ -790,10 +791,11 @@ export class TripService {
     const members = await this.store.listMembers(trip.id);
     const member = members.find((row) => row.userId === userId) ?? null;
     const join = await this.store.getJoinByTripUser(trip.id, userId);
+    const isOwner = trip.hostUserId === userId;
     return {
       trip,
-      memberRole: member?.membershipStatus === "ACTIVE" ? member.role : null,
-      membershipStatus: member?.membershipStatus ?? null,
+      memberRole: isOwner ? "HOST" : member?.membershipStatus === "ACTIVE" ? member.role : null,
+      membershipStatus: isOwner ? "ACTIVE" : member?.membershipStatus ?? null,
       joinRequestStatus: join?.status ?? null,
     };
   }
@@ -845,6 +847,7 @@ export class TripService {
           }),
       ),
       myJoinRequest: myJoin ? await this.toJoin(myJoin) : null,
+      coverPlace: await this.store.getCoverPlace(trip.id),
     };
   }
 

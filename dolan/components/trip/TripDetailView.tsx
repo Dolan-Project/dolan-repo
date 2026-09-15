@@ -13,12 +13,14 @@ import { destinationCoverUrl, resolveTripItineraryDays } from "@/lib/destination
 import type { ApiError, JoinRequest, TripComment, TripDetail } from "@/lib/contracts";
 import { ROUTES, tripEditHref, tripItineraryPath } from "@/lib/routes";
 import type { EditableItineraryDay, TripChecklistItem } from "@dolan/shared";
-import { hydrateItineraryPlaces, itineraryMapMarkers, itineraryMapRouteGroups, visitWindowLabel, googleMapsDirectionsUrl } from "@/lib/template-itinerary";
+import { hydrateItineraryPlaces, itineraryMapMarkers, itineraryMapRouteGroups, visitWindowLabel, googleMapsDirectionsUrl, estimateItineraryBudget, availableBudgetPool, formatRupiah } from "@/lib/template-itinerary";
+import { encodedRoutePolylines, formatStopTravel, itineraryHasUnavailableRoute } from "@/lib/route-travel";
 import { ItineraryTimeline } from "@/components/trip/ItineraryTimeline";
 import { ItineraryPdfButton } from "./ItineraryPdfButton";
 import { LocationSharePanel } from "./LocationSharePanel";
 import { ShareLinkPanel } from "./ShareLinkPanel";
 import { TripBoardMap, type TripMapMarker } from "./TripBoardMap";
+import { JoinRequestsModal } from "./JoinRequestsModal";
 
 type Json<T> = { success: true; data: T } | ApiError;
 
@@ -98,12 +100,13 @@ export function TripDetailView({
   const [joinMessage, setJoinMessage] = useState("");
   const [joinAck, setJoinAck] = useState(false);
   const [joinModal, setJoinModal] = useState(false);
+  const [manageOpen, setManageOpen] = useState(false);
+  const [itineraryBudget, setItineraryBudget] = useState<{ food: number; total: number } | null>(null);
   const [activeDayId, setActiveDayId] = useState<string | null>(null);
   const [routeMarkers, setRouteMarkers] = useState<TripMapMarker[]>([]);
   const [followingHost, setFollowingHost] = useState(false);
   const [shareHint, setShareHint] = useState("");
   const [templateMessage, setTemplateMessage] = useState("");
-  const [navPending, setNavPending] = useState(false);
 
   async function loadAll() {
     const tripRes = await readJson<TripDetail>(await fetch(`/api/v1/trips/${tripId}`, { credentials: "include" }));
@@ -132,6 +135,15 @@ export function TripDetailView({
     }), tripRes.data.destinationCity ?? "");
     setDays(nextDays);
     setPacking(itineraryDays?.checklist ?? []);
+    const versionBudget = active?.budget as { items?: Array<{ category: string; unitCostHigh?: string; unitCostLow?: string }>; totalHigh?: string } | undefined;
+    if (versionBudget?.items?.length) {
+      const food = versionBudget.items
+        .filter((item) => item.category === "FOOD")
+        .reduce((sum, item) => sum + Number(item.unitCostHigh ?? item.unitCostLow ?? 0), 0);
+      setItineraryBudget({ food, total: Number(versionBudget.totalHigh ?? 0) || food });
+    } else {
+      setItineraryBudget(null);
+    }
     setActiveDayId((current) => current && nextDays.some((day) => day.id === current) ? current : nextDays[0]?.id ?? null);
     const points = (routeRes as { success?: boolean; data?: { points?: Array<{ id: string; label: string; lat: number; lng: number }> } } | null)?.data?.points ?? [];
     setRouteMarkers(points.map((point, index) => ({ id: point.id, label: point.label, latitude: point.lat, longitude: point.lng, selected: index === 0 })));
@@ -196,35 +208,6 @@ export function TripDetailView({
     const roots = comments.filter((row) => row.parentId === null);
     return roots.map((root) => ({ root, replies: comments.filter((row) => row.parentId === root.id) }));
   }, [comments]);
-
-  async function openNavigation(dayNumber?: number) {
-    if (navPending) return;
-    setNavPending(true);
-    setError("");
-    try {
-      const query = dayNumber ? `?day=${dayNumber}` : "";
-      const response = await fetch(`/api/v1/trips/${tripId}/navigation${query}`, {
-        credentials: "include",
-      });
-      const json = (await response.json()) as
-        | { success: true; data: { url?: string; mapsUrl?: string } }
-        | ApiError;
-      if (!json.success) {
-        setError(json.error.message);
-        return;
-      }
-      const url = json.data.url ?? json.data.mapsUrl;
-      if (!url) {
-        setError("Tautan navigasi belum tersedia untuk itinerary ini.");
-        return;
-      }
-      window.open(url, "_blank", "noopener,noreferrer");
-    } catch {
-      setError("Gagal membuka navigasi Google Maps.");
-    } finally {
-      setNavPending(false);
-    }
-  }
 
   async function act(path: string, body: unknown) {
     setPending(true);
@@ -431,9 +414,13 @@ export function TripDetailView({
   const remaining = trip.maxParticipants != null ? Math.max(0, trip.maxParticipants - trip.activeParticipantCount) : null;
   const full = trip.status === "CLOSED" || (remaining === 0 && trip.maxParticipants != null);
   const cancelled = trip.status === "CANCELLED";
-  const coverStop = days.flatMap((day) => day.stops).find((stop) => stop.place?.photoName);
+  const coverStop = days.flatMap((day) => day.stops).find((stop) => stop.place?.photoUri || stop.place?.photoName);
+  const coverPlace = trip.coverPlace?.photoUri || trip.coverPlace?.photoName ? trip.coverPlace : coverStop?.place ?? null;
   const activeDay = days.find((day) => day.id === activeDayId) ?? days[0];
   const mapsHref = googleMapsDirectionsUrl(markers);
+  const budgetPlan = estimateItineraryBudget(days, availableBudgetPool(budget, trip.budgetBasis, trip.planningPartySize), trip.planningPartySize);
+  const foodTotal = itineraryBudget?.food ?? Object.values(budgetPlan.byStopId).reduce((sum, item) => sum + item.foodCost, 0);
+  const versionTotal = itineraryBudget?.total || budgetPlan.total;
   const slotPill = cancelled
     ? { label: "Dibatalkan", className: "bg-error text-white" }
     : full
@@ -485,8 +472,8 @@ export function TripDetailView({
       <div className="mx-auto max-w-7xl px-margin py-6 md:px-margin-desktop">
         <section className="mb-6 overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_1px_2px_rgba(16,36,58,.04)]">
           <div className="relative h-64 w-full bg-slate-800 sm:h-80 lg:h-96">
-            {coverStop?.place ? (
-              <PlacePhoto googlePlaceId={coverStop.place.googlePlaceId} photoName={coverStop.place.photoName} alt={trip.title} eager className="absolute inset-0 h-full w-full opacity-90" />
+            {coverPlace ? (
+              <PlacePhoto googlePlaceId={coverPlace.googlePlaceId} photoName={coverPlace.photoName} photoUri={coverPlace.photoUri} alt={trip.title} eager className="absolute inset-0 h-full w-full opacity-90" />
             ) : (
               // eslint-disable-next-line @next/next/no-img-element
               <img alt="" src={coverFallback(trip.destinationCity)} className="h-full w-full object-cover opacity-90" />
@@ -585,7 +572,12 @@ export function TripDetailView({
                   </div>
                   <div className="text-right">
                     <p className="text-lg font-extrabold text-primary">~Rp {perPerson.toLocaleString("id-ID")}</p>
-                    <p className="text-xs text-on-surface-variant">/ orang (estimasi)</p>
+                    <p className="text-xs text-on-surface-variant">/ orang (estimasi trip)</p>
+                    {versionTotal > 0 ? (
+                      <p className="mt-1 text-[11px] font-bold text-on-surface">
+                        Makan/jajan {formatRupiah(foodTotal)} · total rute {formatRupiah(versionTotal)}
+                      </p>
+                    ) : null}
                   </div>
                 </div>
                 {trip.communityRules ? <p className="whitespace-pre-line rounded-xl bg-slate-50 p-4 text-xs text-on-surface-variant">{trip.communityRules}</p> : null}
@@ -622,15 +614,24 @@ export function TripDetailView({
                 </div>
                 {activeDay ? (
                   <ItineraryTimeline
-                    items={activeDay.stops.map((stop) => {
+                    items={activeDay.stops.map((stop, stopIndex) => {
                       const colorIndex = Math.max(0, days.flatMap((day) => day.stops).findIndex((item) => item.id === stop.id));
+                      const cost = budgetPlan.byStopId[stop.id];
+                      const travel = formatStopTravel(stop, stopIndex === 0);
+                      const meal = cost?.lines.find((line) => line.key === "food");
                       return {
                         id: stop.id,
                         index: colorIndex,
                         sequence: stop.sequence,
                         title: stop.place?.name ?? stop.customTitle ?? "Titik perjalanan",
-                        meta: visitWindowLabel(stop.startTime, stop.durationMinutes) || undefined,
+                        meta: visitWindowLabel(stop.startTime, stop.durationMinutes) || stop.startTime || undefined,
                         notes: stop.notes ?? undefined,
+                        extra: (
+                          <div className="mt-1 space-y-0.5">
+                            {travel ? <p className={`type-caption font-bold ${stop.routeStatus === "UNAVAILABLE" ? "text-error" : "text-on-surface"}`}>{travel}</p> : null}
+                            {meal ? <p className="type-caption text-on-surface">Makan/jajan · {meal.detail} · {formatRupiah(meal.amount)}</p> : null}
+                          </div>
+                        ),
                       };
                     })}
                   />
@@ -673,7 +674,7 @@ export function TripDetailView({
                 </h2>
                 <p className="mb-4 text-xs text-on-surface-variant">
                   {trip.viewerRole === "host" || trip.viewerRole === "participant"
-                    ? "Centang barang yang sudah disiapkan. Daftar ini mengikuti trip, bukan chat publik."
+                    ? "Centang barang yang sudah kamu siapkan. Ceklis ini milik akunmu, bukan seluruh grup."
                     : "Host menyiapkan daftar ini. Checklist terbuka setelah kamu diterima di trip."}
                 </p>
                 <ul className="space-y-2">
@@ -877,10 +878,11 @@ export function TripDetailView({
               ) : null}
               {joinCta === "host" ? (
                 <div className="space-y-3">
-                  <p className="type-body">Kamu host trip ini. Tinjau permintaan gabung dari halaman Trip Saya.</p>
+                  <p className="type-body">Kamu host trip ini. Terima atau tolak permintaan gabung di sini.</p>
                   <Link href={ROUTES.tripChat(trip.id)} className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-2.5 text-xs font-bold text-white">
                     <Icon name="forum" /> Masuk ke grup chat trip
                   </Link>
+                  <JoinRequestsModal variant="panel" tripId={trip.id} tripTitle={trip.title} onChanged={() => void loadAll()} />
                 </div>
               ) : null}
             </section>
@@ -892,7 +894,13 @@ export function TripDetailView({
 
             <div className="h-[320px] overflow-hidden rounded-2xl border border-slate-200 md:h-[440px]">
               {markers.length ? (
-                <TripBoardMap markers={markers} numberedBadges routeGroups={itineraryMapRouteGroups(days, trip.destinationCity ?? "")} />
+                <TripBoardMap
+                  markers={markers}
+                  numberedBadges
+                  routeGroups={itineraryMapRouteGroups(days, trip.destinationCity ?? "")}
+                  encodedPolylines={encodedRoutePolylines(days)}
+                  routeUnavailable={itineraryHasUnavailableRoute(days)}
+                />
               ) : (
                 <div className="grid h-full place-items-center bg-surface-container px-4 text-center type-caption text-on-surface-variant">Peta rute muncul setelah itinerary punya koordinat.</div>
               )}
@@ -909,28 +917,32 @@ export function TripDetailView({
 
             {(trip.viewerRole === "host" || trip.viewerRole === "participant") ? (
               <>
-                <LocationSharePanel tripId={trip.id} />
-                <ShareLinkPanel tripId={trip.id} />
                 <div className="flex flex-wrap gap-2">
-                  <Link href={ROUTES.tripChat(trip.id)} className="btn-primary"><Icon name="forum" /> Buka grup chat</Link>
-                  <ItineraryPdfButton tripId={trip.id} className="btn-ghost" label="Unduh itinerary PDF" />
-                  <button type="button" className="btn-ghost" disabled={navPending} onClick={() => void openNavigation()}>
-                    <Icon name="map" /> {navPending ? "Menyiapkan peta…" : "Buka Google Maps"}
-                  </button>
+                  <Link href={ROUTES.tripChat(trip.id)} className="btn-primary"><Icon name="forum" /> Chat</Link>
+                  <ItineraryPdfButton tripId={trip.id} className="btn-ghost" label="PDF" />
                   {trip.viewerRole === "host" ? <Link href={tripItineraryPath(trip.id)} className="btn-ghost">Edit itinerary</Link> : null}
-                  {trip.viewerRole === "host" && trip.status !== "CANCELLED" && trip.status !== "COMPLETED" ? <Link href={tripEditHref(trip.id)} className="btn-ghost">Edit trip</Link> : null}
-                  {trip.viewerRole === "host" && trip.status === "DRAFT" ? <button type="button" className="btn-primary" disabled={pending} onClick={() => void act(`/api/v1/trips/${trip.id}/publish`, { confirmPublish: true, visibility: trip.visibility })}>Publish</button> : null}
-                  {trip.viewerRole === "host" && trip.status === "OPEN" ? <button type="button" className="btn-ghost" disabled={pending} onClick={() => void act(`/api/v1/trips/${trip.id}/transition`, { action: "close" })}>Tutup pengajuan</button> : null}
-                  {trip.viewerRole === "host" && trip.status === "CLOSED" ? <button type="button" className="btn-primary" disabled={pending} onClick={() => void act(`/api/v1/trips/${trip.id}/transition`, { action: "reopen" })}>Buka lagi</button> : null}
-                  {trip.viewerRole === "host" && (trip.status === "OPEN" || trip.status === "CLOSED") ? <button type="button" className="btn-ghost" disabled={pending} onClick={() => void act(`/api/v1/trips/${trip.id}/transition`, { action: "start" })}>Mulai trip</button> : null}
-                  {trip.viewerRole === "host" && trip.status === "ONGOING" ? <button type="button" className="btn-primary" disabled={pending} onClick={() => void act(`/api/v1/trips/${trip.id}/transition`, { action: "complete" })}>Selesai</button> : null}
-                  {trip.viewerRole === "host" && trip.status === "COMPLETED" ? (
-                    <button type="button" className="btn-primary" disabled={pending} onClick={() => void act(`/api/v1/trips/${trip.id}/publish-as-template`, {})}>
-                      Publikasikan sebagai template
-                    </button>
+                  {trip.viewerRole === "host" ? (
+                    <div className="relative">
+                      <button type="button" className="btn-ghost" onClick={() => setManageOpen((open) => !open)}>
+                        Kelola
+                      </button>
+                      {manageOpen ? (
+                        <div className="absolute right-0 z-20 mt-2 w-56 space-y-1 rounded-2xl border border-slate-200 bg-white p-2 shadow-xl">
+                          {trip.status === "DRAFT" ? <button type="button" className="w-full rounded-xl px-3 py-2 text-left text-xs font-bold hover:bg-slate-50" disabled={pending} onClick={() => void act(`/api/v1/trips/${trip.id}/publish`, { confirmPublish: true, visibility: trip.visibility })}>Publish</button> : null}
+                          {trip.status === "OPEN" ? <button type="button" className="w-full rounded-xl px-3 py-2 text-left text-xs font-bold hover:bg-slate-50" disabled={pending} onClick={() => void act(`/api/v1/trips/${trip.id}/transition`, { action: "close" })}>Tutup pengajuan</button> : null}
+                          {trip.status === "CLOSED" ? <button type="button" className="w-full rounded-xl px-3 py-2 text-left text-xs font-bold hover:bg-slate-50" disabled={pending} onClick={() => void act(`/api/v1/trips/${trip.id}/transition`, { action: "reopen" })}>Buka lagi</button> : null}
+                          {trip.status === "OPEN" || trip.status === "CLOSED" ? <button type="button" className="w-full rounded-xl px-3 py-2 text-left text-xs font-bold hover:bg-slate-50" disabled={pending} onClick={() => void act(`/api/v1/trips/${trip.id}/transition`, { action: "start" })}>Mulai trip</button> : null}
+                          {trip.status === "ONGOING" ? <button type="button" className="w-full rounded-xl px-3 py-2 text-left text-xs font-bold hover:bg-slate-50" disabled={pending} onClick={() => void act(`/api/v1/trips/${trip.id}/transition`, { action: "complete" })}>Selesai</button> : null}
+                          {trip.status === "COMPLETED" ? <button type="button" className="w-full rounded-xl px-3 py-2 text-left text-xs font-bold hover:bg-slate-50" disabled={pending} onClick={() => void act(`/api/v1/trips/${trip.id}/publish-as-template`, {})}>Jadikan template</button> : null}
+                          {trip.status !== "CANCELLED" && trip.status !== "COMPLETED" ? <button type="button" className="w-full rounded-xl px-3 py-2 text-left text-xs font-bold text-error hover:bg-rose-50" disabled={pending} onClick={() => void act(`/api/v1/trips/${trip.id}/transition`, { action: "cancel" })}>Batalkan</button> : null}
+                          {trip.status !== "CANCELLED" && trip.status !== "COMPLETED" ? <Link href={tripEditHref(trip.id)} className="block rounded-xl px-3 py-2 text-xs font-bold hover:bg-slate-50">Edit trip</Link> : null}
+                          <ShareLinkPanel tripId={trip.id} />
+                          <LocationSharePanel tripId={trip.id} />
+                        </div>
+                      ) : null}
+                    </div>
                   ) : null}
-                  {trip.viewerRole === "host" && trip.status !== "CANCELLED" && trip.status !== "COMPLETED" ? <button type="button" className="btn-ghost" disabled={pending} onClick={() => void act(`/api/v1/trips/${trip.id}/transition`, { action: "cancel" })}>Batalkan</button> : null}
-                  {trip.viewerRole === "participant" && trip.status !== "ONGOING" ? <button type="button" className="btn-ghost" disabled={pending} onClick={() => void act(`/api/v1/trips/${trip.id}/leave`, {})}>Keluar trip</button> : null}
+                  {trip.viewerRole === "participant" && trip.status !== "ONGOING" ? <button type="button" className="btn-ghost" disabled={pending} onClick={() => void act(`/api/v1/trips/${trip.id}/leave`, {})}>Keluar</button> : null}
                   {trip.viewerRole === "participant" && trip.status === "ONGOING" ? (
                     confirmLeave ? (
                       <div className="flex w-full flex-col gap-2 rounded-xl bg-error-container p-4">
@@ -940,7 +952,7 @@ export function TripDetailView({
                           <button type="button" className="btn-ghost" onClick={() => setConfirmLeave(false)}>Batal</button>
                         </div>
                       </div>
-                    ) : <button type="button" className="btn-ghost" disabled={pending} onClick={() => setConfirmLeave(true)}>Keluar trip</button>
+                    ) : <button type="button" className="btn-ghost" disabled={pending} onClick={() => setConfirmLeave(true)}>Keluar</button>
                   ) : null}
                 </div>
               </>
