@@ -9,12 +9,11 @@ type PageProps = {
     next?: string;
     type?: string;
     error?: string;
-    debugToken?: string;
   }>;
 };
 
 export default async function CekEmailPage({ searchParams }: PageProps) {
-  const { email, next, type, error, debugToken } = await searchParams;
+  const { email, next, type, error } = await searchParams;
   const isReset = type === "reset";
 
   return (
@@ -26,20 +25,16 @@ export default async function CekEmailPage({ searchParams }: PageProps) {
       description={
         error
           ? "Tautan tidak valid atau kedaluwarsa. Minta tautan baru."
-          : `Kami telah mengirim tautan ${isReset ? "reset kata sandi" : "verifikasi"}${email ? ` ke ${email}` : ""}. Buka tautan di email, lalu lanjut di sini.`
+          : isReset
+            ? `Kami telah mengirim tautan reset kata sandi${email ? ` ke ${email}` : ""}. Buka tautan di email, lalu lanjut di sini.`
+            : "Kamu sudah bisa masuk tanpa verifikasi email."
       }
     >
       <div className="flex flex-col items-center text-center">
         <div className="mb-2 flex h-16 w-16 items-center justify-center rounded-full bg-primary-fixed text-primary">
           <Icon name="mail" className="text-[32px]" />
         </div>
-        <CekEmailActions
-          email={email}
-          next={next}
-          isReset={isReset}
-          error={error}
-          debugToken={debugToken}
-        />
+        <CekEmailActions email={email} next={next} isReset={isReset} error={error} />
       </div>
     </AuthShell>
   );

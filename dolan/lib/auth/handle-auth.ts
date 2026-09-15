@@ -42,7 +42,7 @@ function registerSession(): AuthSession {
   const user = incompleteUser();
   return {
     user,
-    emailVerified: false,
+    emailVerified: true,
     profileComplete: isProfileComplete(user),
   };
 }

@@ -43,6 +43,7 @@ type CreateTripItineraryStepProps = {
   editingStopId: string | null;
   generating: boolean;
   fromTemplate: boolean;
+  fromGroq?: boolean;
   regenerateUsed: number;
   budgetPlan: ItineraryBudgetPlan;
   partySize: number;
@@ -71,6 +72,7 @@ export function CreateTripItineraryStep({
   editingStopId,
   generating,
   fromTemplate,
+  fromGroq = false,
   regenerateUsed,
   budgetPlan,
   partySize,
@@ -116,10 +118,18 @@ export function CreateTripItineraryStep({
           <div className="min-w-0 flex-1">
             <p className="type-micro font-extrabold uppercase tracking-[0.16em] text-primary">Rute, biaya & penjelasan</p>
             <h2 className="mt-1 text-lg font-extrabold text-on-surface">
-              {heading || (fromTemplate ? "Itinerary dari template" : "Itinerary + estimasi AI")}
+              {heading || (fromTemplate
+                ? "Itinerary dari template"
+                : fromGroq
+                  ? "Rekomendasi itinerary Groq"
+                  : "Itinerary + estimasi AI")}
             </h2>
             <p className="type-caption mt-1 text-on-surface-variant">
-              Angka 1-2-3 satu garis rute. Tiket hanya muncul kalau tempat memang berbayar — Bundaran HI dan ruang publik tetap gratis.
+              {fromTemplate
+                ? "Rute kurasi DOLAN. Kamu bisa ganti tempat, jam, atau urutan per hari sebelum lanjut."
+                : fromGroq
+                  ? "Disusun Groq dari destinasi, tanggal, jumlah orang, dan budget. Edit manual jika ada tempat yang tidak cocok."
+                  : "Angka 1-2-3 satu garis rute. Tiket hanya muncul kalau tempat memang berbayar — Bundaran HI dan ruang publik tetap gratis."}
             </p>
           </div>
           <button

@@ -1,6 +1,6 @@
 import type { AuthIdentity, PublicUser } from "@dolan/shared";
 
-export function toPublicUser(user: AuthIdentity): PublicUser {
+function emptyPublicUser(user: AuthIdentity): PublicUser {
   return {
     id: user.id,
     username: user.username ?? "user",
@@ -9,6 +9,8 @@ export function toPublicUser(user: AuthIdentity): PublicUser {
     coverUrl: user.coverUrl,
     bio: user.bio,
     domicile: user.domicile,
+    instagramUrl: user.instagramUrl,
+    tiktokUrl: user.tiktokUrl,
     followersCount: 0,
     followingCount: 0,
     hostTripCount: 0,
@@ -22,8 +24,35 @@ export function toPublicUser(user: AuthIdentity): PublicUser {
   };
 }
 
+async function loadSocialCounts(userId: string) {
+  try {
+    const { getModels } = await import("@dolan/database");
+    const { UserFollow, Trip, TripMember } = getModels();
+    const [followersCount, followingCount, hostTripCount, participantTripCount] = await Promise.all([
+      UserFollow.count({ where: { followingUserId: userId } }),
+      UserFollow.count({ where: { followerUserId: userId } }),
+      Trip.count({ where: { hostUserId: userId } }),
+      TripMember.count({ where: { userId, membershipStatus: "ACTIVE" } }),
+    ]);
+    return { followersCount, followingCount, hostTripCount, participantTripCount };
+  } catch {
+    return {
+      followersCount: 0,
+      followingCount: 0,
+      hostTripCount: 0,
+      participantTripCount: 0,
+    };
+  }
+}
+
+export async function toPublicUser(user: AuthIdentity): Promise<PublicUser> {
+  const base = emptyPublicUser(user);
+  const counts = await loadSocialCounts(user.id);
+  return { ...base, ...counts };
+}
+
 export function placeholderUser(userId: string): PublicUser {
-  return toPublicUser({
+  return emptyPublicUser({
     id: userId,
     authReference: userId,
     email: "",
@@ -36,5 +65,7 @@ export function placeholderUser(userId: string): PublicUser {
     avatarUrl: null,
     coverUrl: null,
     bio: null,
+    instagramUrl: null,
+    tiktokUrl: null,
   });
 }

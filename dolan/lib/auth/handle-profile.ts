@@ -82,6 +82,8 @@ export async function handlePatchMeRequest(request: Request): Promise<Response> 
     displayName: parsed.data.displayName,
     domicile: parsed.data.domicile,
     bio: parsed.data.bio ?? null,
+    instagramUrl: parsed.data.instagramUrl ?? null,
+    tiktokUrl: parsed.data.tiktokUrl ?? null,
   };
   const session: AuthSession = {
     user,

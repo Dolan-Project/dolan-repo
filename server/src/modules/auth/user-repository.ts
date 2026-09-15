@@ -54,6 +54,8 @@ export function createSeededMemoryUsers(): AuthIdentity[] {
       avatarUrl: null,
       coverUrl: null,
       bio: null,
+      instagramUrl: null,
+      tiktokUrl: null,
     },
     {
       id: "22222222-2222-4222-8222-222222222222",
@@ -68,6 +70,8 @@ export function createSeededMemoryUsers(): AuthIdentity[] {
       avatarUrl: null,
       coverUrl: null,
       bio: null,
+      instagramUrl: null,
+      tiktokUrl: null,
     },
     {
       id: "33333333-3333-4333-8333-333333333333",
@@ -82,6 +86,8 @@ export function createSeededMemoryUsers(): AuthIdentity[] {
       avatarUrl: null,
       coverUrl: null,
       bio: null,
+      instagramUrl: null,
+      tiktokUrl: null,
     },
     {
       id: "44444444-4444-4444-8444-444444444444",
@@ -96,6 +102,8 @@ export function createSeededMemoryUsers(): AuthIdentity[] {
       avatarUrl: null,
       coverUrl: null,
       bio: null,
+      instagramUrl: null,
+      tiktokUrl: null,
     },
     {
       id: "55555555-5555-4555-8555-555555555555",
@@ -110,6 +118,8 @@ export function createSeededMemoryUsers(): AuthIdentity[] {
       avatarUrl: null,
       coverUrl: null,
       bio: null,
+      instagramUrl: null,
+      tiktokUrl: null,
     },
   ];
 }
@@ -166,6 +176,8 @@ export class MemoryUserRepository implements UserRepository {
       avatarUrl: null,
       coverUrl: null,
       bio: null,
+      instagramUrl: null,
+      tiktokUrl: null,
     };
     this.users.set(created.authReference, created);
     this.passwordHashes.set(id, hashPassword(input.password));
@@ -201,6 +213,8 @@ export class MemoryUserRepository implements UserRepository {
       avatarUrl: input.avatarUrl ?? null,
       coverUrl: null,
       bio: null,
+      instagramUrl: null,
+      tiktokUrl: null,
     };
     this.users.set(created.authReference, created);
     return created;
@@ -242,6 +256,9 @@ export class MemoryUserRepository implements UserRepository {
       displayName: input.displayName,
       domicile: input.domicile,
       bio: input.bio ?? null,
+      instagramUrl:
+        input.instagramUrl !== undefined ? input.instagramUrl : existing.instagramUrl,
+      tiktokUrl: input.tiktokUrl !== undefined ? input.tiktokUrl : existing.tiktokUrl,
     };
     this.users.set(existing.authReference, next);
     return next;
@@ -272,6 +289,8 @@ export class MemoryUserRepository implements UserRepository {
       avatarUrl: null,
       coverUrl: null,
       bio: null,
+      instagramUrl: null,
+      tiktokUrl: null,
     };
     this.users.set(input.authReference, created);
     return created;

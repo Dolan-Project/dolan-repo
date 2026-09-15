@@ -15,13 +15,13 @@ Base: `/api/v1`
 
 | Method | Path | Keterangan |
 |---|---|---|
-| POST | `/auth/register` | Email + password (scrypt) → session; kirim email verifikasi (belum verified) |
+| POST | `/auth/register` | Email + password (scrypt) → session (langsung bisa dipakai, tanpa verifikasi email) |
 | POST | `/auth/login` | Email + password → session token |
 | POST | `/auth/logout` | Revoke session |
 | POST | `/auth/forgot-password` | Buat reset token + kirim email (dev tanpa provider: `debugResetToken`) |
 | POST | `/auth/reset-password` | Set password baru |
-| POST | `/auth/verify-email` | Consume token verifikasi → set `email_verified_at` |
-| POST | `/auth/resend-verification` | Bearer wajib; kirim ulang email verifikasi |
+| POST | `/auth/verify-email` | Legacy no-op untuk tautan lama; akun baru tidak membutuhkan ini |
+| POST | `/auth/resend-verification` | Legacy; menandai email terverifikasi tanpa mengirim surat |
 | GET | `/auth/google` | Redirect ke Google OAuth (`?next=/jelajah`) |
 | GET | `/auth/google/callback` | Tukar `code`, buat/link user, redirect ke Next `/api/auth/callback?token=…` |
 | GET | `/auth/session` | Bearer wajib |
@@ -55,7 +55,7 @@ EMAIL_FROM=noreply@your-verified-domain.com
 WEB_URL=http://localhost:3000
 ```
 
-Register mengirim tautan ke `{WEB_URL}/api/auth/verify-email?token=…`. Forgot password mengirim `{WEB_URL}/reset-password?token=…`. Domain pengirim harus terverifikasi di Resend.
+Register **tidak** mengirim email verifikasi. Forgot password mengirim `{WEB_URL}/reset-password?token=…`. Domain pengirim harus terverifikasi di Resend.
 
 ## Guards
 
@@ -63,8 +63,8 @@ Register mengirim tautan ke `{WEB_URL}/api/auth/verify-email?token=…`. Forgot 
 |---|---|
 | Baca public | Guest boleh |
 | Buat draft | Login |
-| Publish / join | Login + email verified + profil lengkap |
-| Komentar / follow | Login + email verified |
+| Publish / join | Login + profil lengkap |
+| Komentar / follow | Login |
 | Chat | Host atau participant `ACTIVE` |
 | Upload avatar/cover | Login dan `ownerUserId` = actor |
 

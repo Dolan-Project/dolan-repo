@@ -57,14 +57,13 @@ describe("follow", () => {
     expect(body.error?.code).toBe("SELF_FOLLOW");
   });
 
-  it("rejects follow when email is not verified", async () => {
+  it("lets an unverified session follow", async () => {
     const response = await handleFollowRequest(
       authed("http://localhost/api/v1/users/wayan/follow", { cookie: "unverified" }),
       "wayan",
     );
     const body = await json(response);
-    expect(body.success).toBe(false);
-    expect(body.error?.code).toBe("EMAIL_UNVERIFIED");
+    expect(body.success).toBe(true);
   });
 
   it("follows, lists followers and following, then unfollows", async () => {

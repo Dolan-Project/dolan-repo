@@ -7,11 +7,12 @@ import { Field } from "@/components/auth/Field";
 import { Icon } from "@/components/ui/Icon";
 import { PlacePicker } from "@/components/trip/PlacePicker";
 import { CreateTripItineraryStep } from "@/components/trip/CreateTripItineraryStep";
-import type { EditableItineraryDay, EditableItineraryStop, ItineraryEditorSnapshot, ItineraryTemplateDetail, UseTemplateResult } from "@dolan/shared";
+import type { EditableItineraryDay, EditableItineraryStop, ItineraryEditorSnapshot, ItineraryTemplateDetail, ItineraryTemplateSummary, UseTemplateResult } from "@dolan/shared";
 import type { ApiError, CreateTripInput, TripDetail } from "@/lib/contracts";
 import { ROUTES } from "@/lib/routes";
-import { buildDestinationItinerary, buildProvinceTemplateDays, templateMatchesDestination } from "@/lib/destination-itinerary";
-import { INDONESIA_PROVINCES, searchProvinces } from "@/lib/provinces";
+import { buildDestinationItinerary, buildProvinceTemplateDays, ensureMultiStopDays, templateMatchesDestination } from "@/lib/destination-itinerary";
+import { INDONESIA_PROVINCES, findProvinceForTemplate } from "@/lib/provinces";
+import { PlacePhoto } from "@/features/explore/PlacePhoto";
 import {
   applyTemplatePrefill,
   applyPublicMeetingPoint,
@@ -32,7 +33,7 @@ import {
   WIZARD_STEPS,
   type WizardPath,
 } from "@/lib/template-itinerary";
-import { generateAlternative, saveItineraryVersion } from "@/features/itinerary/api";
+import { generateAlternative, generateInitialItinerary, saveItineraryVersion } from "@/features/itinerary/api";
 import { INITIAL_BUDGET_ITEMS, createBudgetSummary } from "@/features/itinerary/mock-data";
 import { provinceCoverUrl } from "@/lib/province-cover";
 import { PackingListField } from "@/components/trip/PackingListField";
@@ -76,6 +77,8 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
   const [selectedTemplateId, setSelectedTemplateId] = useState(templateId ?? "");
   const [templateQuery, setTemplateQuery] = useState("");
   const [templateDetail, setTemplateDetail] = useState<ItineraryTemplateDetail | null>(null);
+  const [catalogTemplates, setCatalogTemplates] = useState<ItineraryTemplateSummary[]>([]);
+  const [templatesError, setTemplatesError] = useState("");
   const [connections, setConnections] = useState<Array<{ username: string; displayName: string }>>([]);
   const [tripId, setTripId] = useState("");
   const [snapshot, setSnapshot] = useState<ItineraryEditorSnapshot | null>(null);
@@ -86,6 +89,7 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
   const [regenerateUsed, setRegenerateUsed] = useState(0);
   const [itineraryReady, setItineraryReady] = useState(false);
   const [packingItems, setPackingItems] = useState<string[]>([]);
+  const [fromGroq, setFromGroq] = useState(false);
 
   const tripTitle = tripTitleFromDestination(destinationCity, templateTitle);
   const budgetPlan = useMemo(
@@ -133,6 +137,40 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
     return () => controller.abort();
   }, []);
 
+  useEffect(() => {
+    const controller = new AbortController();
+    const params = new URLSearchParams({ sort: "popular", limit: "24", page: "1" });
+    if (templateQuery.trim()) params.set("city", templateQuery.trim());
+    setTemplatesError("");
+    const timer = window.setTimeout(() => {
+      void fetch(`/api/v1/templates?${params}`, {
+        credentials: "include",
+        headers: { Accept: "application/json" },
+        signal: controller.signal,
+      })
+        .then(async (response) => {
+          const json = (await response.json()) as {
+            success?: boolean;
+            data?: ItineraryTemplateSummary[];
+            error?: { message?: string };
+          };
+          if (!response.ok || !json.success || !Array.isArray(json.data)) {
+            throw new Error(json.error?.message ?? "Gagal memuat template.");
+          }
+          if (!controller.signal.aborted) setCatalogTemplates(json.data);
+        })
+        .catch((error) => {
+          if (controller.signal.aborted) return;
+          setCatalogTemplates([]);
+          setTemplatesError(error instanceof Error ? error.message : "Gagal memuat template.");
+        });
+    }, 200);
+    return () => {
+      controller.abort();
+      window.clearTimeout(timer);
+    };
+  }, [templateQuery]);
+
   function applyChosenTemplate(detail: ItineraryTemplateDetail) {
     const prefill = applyTemplatePrefill(detail);
     setTemplateDetail(detail);
@@ -168,18 +206,17 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
     };
   }
 
-  async function chooseProvinceTemplate(province: (typeof INDONESIA_PROVINCES)[number]) {
+  async function chooseTemplateById(templateIdToUse: string) {
     setFormError("");
     setTemplateLoading(true);
     try {
-      const response = await fetch(`/api/v1/templates/${encodeURIComponent(province.template.id)}`, {
+      const response = await fetch(`/api/v1/templates/${encodeURIComponent(templateIdToUse)}`, {
         credentials: "include",
         headers: { Accept: "application/json" },
       });
       const json = await response.json() as { success: boolean; data?: ItineraryTemplateDetail; error?: { message?: string } };
       if (!response.ok || !json.success || !json.data) throw new Error(json.error?.message ?? "Template tidak tersedia.");
       applyChosenTemplate(json.data);
-      setBudgetAmount(province.template.budgetHigh || budgetAmount);
     } catch (error) {
       setFormError(error instanceof Error ? error.message : "Template tidak dapat dimuat.");
     } finally {
@@ -247,39 +284,124 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
     if (!options?.force && itineraryReady && days.length > 0) return;
     setGenerating(true);
     setFormError("");
+    setFromGroq(false);
     try {
+      const createdTripId = await ensureDraftTrip();
       const province = INDONESIA_PROVINCES.find((item) => item.template.id === selectedTemplateId);
       const useTemplate = path === "template" && Boolean(province) && templateMatchesDestination(province!.name, destinationCity);
-      const nextDays = packItinerarySchedule(
+      const fallbackDays = packItinerarySchedule(
         useTemplate && province
           ? buildProvinceTemplateDays(province, { startDate })
           : buildDestinationItinerary({ destination: destinationCity, startDate, endDate, variant: 0 }),
       );
+
+      // Template path: show curated route immediately (user chose template).
+      // Create / AI path: request Groq (live) or mock stand-in with same API shape.
+      if (useTemplate && province) {
+        const nextDays = packItinerarySchedule(
+          ensureMultiStopDays(
+            visibility === "PUBLIC" ? applyPublicMeetingPoint(fallbackDays, true) : fallbackDays,
+            destinationCity,
+          ),
+        );
+        setDays(nextDays);
+        setSelectedStopId(nextDays[0]?.stops[0]?.id ?? null);
+        setSnapshot({
+          tripId: createdTripId,
+          tripTitle,
+          destinationCity,
+          startDate,
+          endDate,
+          activeVersionId: "wizard-v1",
+          versions: [{
+            id: "wizard-v1",
+            tripId: createdTripId,
+            versionNumber: 1,
+            source: "TEMPLATE",
+            summary: "Rute dari template kurasi DOLAN.",
+            assumptions: ["Estimasi biaya menyesuaikan budget trip"],
+            days: nextDays,
+            budget: createBudgetSummary(INITIAL_BUDGET_ITEMS),
+            createdAt: new Date().toISOString(),
+          }],
+          checklist: [],
+        });
+        setItineraryReady(true);
+        return;
+      }
+
+      const generated = await generateInitialItinerary({
+        tripId: createdTripId,
+        tripTitle,
+        preferences: {
+          destinationCity,
+          startDate,
+          endDate,
+          partySize,
+          budgetAmount,
+          budgetBasis,
+          transport,
+          regenerateMode: "balanced",
+          minStopsPerDay: 2,
+          maxStopsPerDay: 4,
+        },
+        fallbackDays,
+        budgetItems: INITIAL_BUDGET_ITEMS,
+        sourceLabel: "AI",
+      }).catch(async (error) => {
+        // Live Groq often fails on place verification / provider — keep wizard usable.
+        const message = error instanceof Error ? error.message : "Generate Groq gagal.";
+        setFormError(`${message} Menampilkan rute cadangan lokal agar kamu bisa lanjut edit.`);
+        return {
+          snapshot: {
+            tripId: createdTripId,
+            tripTitle,
+            destinationCity,
+            startDate,
+            endDate,
+            activeVersionId: "wizard-fallback",
+            versions: [{
+              id: "wizard-fallback",
+              tripId: createdTripId,
+              versionNumber: 1,
+              source: "AI" as const,
+              summary: `Cadangan lokal untuk ${destinationCity} setelah Groq gagal.`,
+              assumptions: [message],
+              days: fallbackDays,
+              budget: createBudgetSummary(INITIAL_BUDGET_ITEMS),
+              createdAt: new Date().toISOString(),
+            }],
+            checklist: [],
+          },
+          days: fallbackDays,
+          job: null,
+          fromGroq: false as const,
+        };
+      });
+      const nextDays = packItinerarySchedule(
+        ensureMultiStopDays(
+          visibility === "PUBLIC" ? applyPublicMeetingPoint(generated.days, true) : generated.days,
+          destinationCity,
+        ),
+      );
       setDays(nextDays);
       setSelectedStopId(nextDays[0]?.stops[0]?.id ?? null);
       setSnapshot({
-        tripId: tripId || "draft",
+        ...generated.snapshot,
+        tripId: createdTripId,
         tripTitle,
         destinationCity,
         startDate,
         endDate,
-        activeVersionId: "wizard-v1",
-        versions: [{
-          id: "wizard-v1",
-          tripId: tripId || "draft",
-          versionNumber: 1,
-          source: useTemplate ? "TEMPLATE" : "AI",
-          summary: useTemplate ? "Rute dari template kurasi DOLAN." : `Rute dioptimalkan untuk ${destinationCity}.`,
-          assumptions: ["Estimasi biaya menyesuaikan budget trip"],
-          days: nextDays,
-          budget: createBudgetSummary(INITIAL_BUDGET_ITEMS),
-          createdAt: new Date().toISOString(),
-        }],
-        checklist: [],
+        versions: generated.snapshot.versions.map((version, index) =>
+          index === 0 ? { ...version, days: nextDays, tripId: createdTripId } : version,
+        ),
       });
+      setFromGroq(generated.fromGroq);
       setItineraryReady(true);
     } catch (error) {
       setFormError(error instanceof Error ? error.message : "Itinerary belum bisa disusun.");
+      setStep(2);
     } finally {
       setGenerating(false);
     }
@@ -333,21 +455,50 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
         ? currentNames.filter((name) => placeTicketEstimate(name) > 0)
         : currentNames
       ).filter((name) => !lockedKeys.has(name.trim().toLocaleLowerCase("id-ID")));
-      const generated = buildDestinationItinerary({
+      const createdTripId = tripId || (await ensureDraftTrip());
+      const localFallback = buildDestinationItinerary({
         destination: destinationCity,
         startDate,
         endDate,
         variant: regenerateUsed + 1,
         excludeNames,
         preferCheaper: budgetPlan.overBudget,
-        budgetPool: availableBudgetPool(budgetAmount, budgetBasis, partySize),
-        partySize,
       });
-      const nextDays = mergeLockedStops(generated, days);
-      const next = await generateAlternative(snapshot, nextDays, INITIAL_BUDGET_ITEMS, budgetPlan.overBudget ? "cheaper" : "alternative");
-      setSnapshot({ ...next.snapshot, versions: [{ ...next.snapshot.versions[0], days: nextDays }, ...next.snapshot.versions.slice(1)] });
+      const next = await generateAlternative(
+        { ...snapshot, tripId: createdTripId },
+        localFallback,
+        budgetItemsFromPlan(days, budgetPlan).length ? budgetItemsFromPlan(days, budgetPlan) : INITIAL_BUDGET_ITEMS,
+        budgetPlan.overBudget ? "cheaper" : "alternative",
+        {
+          destinationCity,
+          startDate,
+          endDate,
+          partySize,
+          budgetAmount,
+          budgetBasis,
+          transport,
+          minStopsPerDay: 2,
+          maxStopsPerDay: 4,
+        },
+      );
+      const nextDays = packItinerarySchedule(
+        ensureMultiStopDays(
+          mergeLockedStops(
+            visibility === "PUBLIC"
+              ? applyPublicMeetingPoint(next.snapshot.versions[0]?.days ?? localFallback, true)
+              : (next.snapshot.versions[0]?.days ?? localFallback),
+            days,
+          ),
+          destinationCity,
+        ),
+      );
+      setSnapshot({
+        ...next.snapshot,
+        versions: [{ ...next.snapshot.versions[0]!, days: nextDays }, ...next.snapshot.versions.slice(1)],
+      });
       setDays(nextDays);
       setSelectedStopId(nextDays[0]?.stops[0]?.id ?? selectedStopId);
+      setFromGroq(process.env.NEXT_PUBLIC_USE_MOCK_API === "false");
       setRegenerateUsed((used) => used + 1);
     } catch (error) {
       setFormError(error instanceof Error ? error.message : "Regenerate gagal.");
@@ -483,7 +634,7 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
     }
   }
 
-  const templates = templateQuery.trim() ? searchProvinces(templateQuery) : INDONESIA_PROVINCES.slice(0, 12);
+  const templates = catalogTemplates;
 
   return (
     <div className={`${step === 3 ? "mx-auto max-w-6xl rounded-[1.5rem] bg-white" : "mx-auto max-w-3xl"} px-margin py-8 md:px-margin-desktop md:py-12`}>
@@ -534,18 +685,21 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
           </div>
           {path === "template" ? (
             <div className="card-surface mt-5 p-5">
-              <Field id="templateQuery" label="Cari template di database" hint="38 rute kurasi. Ketik nama provinsi untuk menyaring.">
+              <Field id="templateQuery" label="Cari template di database" hint="Ambil dari server. Ketik kota/provinsi untuk menyaring.">
                 <div className="relative">
                   <Icon name="search" className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[20px] text-primary" />
                   <input id="templateQuery" className="field-input field-input-icon" value={templateQuery} onChange={(event) => setTemplateQuery(event.target.value)} placeholder="Bali, Aceh, Yogyakarta…" />
                 </div>
               </Field>
+              {templatesError ? <p className="mt-3 type-caption text-error">{templatesError}</p> : null}
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                {templates.map((province) => {
-                  const selected = selectedTemplateId === province.template.id;
+                {templates.map((template) => {
+                  const selected = selectedTemplateId === template.id;
+                  const province = findProvinceForTemplate({ templateId: template.id, city: template.city });
+                  const cover = province ? provinceCoverUrl(province) : null;
                   return (
                     <article
-                      key={province.slug}
+                      key={template.id}
                       className={`group relative overflow-hidden rounded-[1.35rem] border bg-white text-left shadow-[0_10px_30px_rgba(15,59,94,.08)] transition ${
                         selected ? "border-primary ring-2 ring-primary" : "border-slate-200 hover:-translate-y-0.5 hover:border-primary/40"
                       }`}
@@ -553,43 +707,58 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
                       <button
                         type="button"
                         className="block w-full text-left"
-                        onClick={() => void chooseProvinceTemplate(province)}
+                        onClick={() => void chooseTemplateById(template.id)}
                       >
                         <div className="relative h-36 bg-surface-container">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={provinceCoverUrl(province)} alt={province.name} className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]" />
+                          {cover ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={cover} alt={template.city} className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]" />
+                          ) : template.coverPlace ? (
+                            <PlacePhoto
+                              googlePlaceId={template.coverPlace.googlePlaceId}
+                              photoName={template.coverPlace.photoName}
+                              photoUri={template.coverPlace.photoUri}
+                              alt={template.title}
+                              className="h-full w-full"
+                            />
+                          ) : (
+                            <div className="grid h-full place-items-center text-primary"><Icon name="route" className="text-[28px]" /></div>
+                          )}
                           <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-transparent" />
-                          <span className="absolute left-3 top-3 rounded-full bg-white/92 px-2.5 py-1 text-[10px] font-extrabold text-primary">{province.name}</span>
-                          <span className="absolute bottom-3 left-3 rounded-full bg-[#004ac6] px-2.5 py-1 text-[10px] font-extrabold text-white">{province.template.durationDays} hari</span>
+                          <span className="absolute left-3 top-3 rounded-full bg-white/92 px-2.5 py-1 text-[10px] font-extrabold text-primary">{template.city}</span>
+                          <span className="absolute bottom-3 left-3 rounded-full bg-[#004ac6] px-2.5 py-1 text-[10px] font-extrabold text-white">{template.durationDays} hari</span>
                           {selected ? (
                             <span className="absolute right-14 top-3 rounded-full bg-primary px-2.5 py-1 text-[10px] font-extrabold text-white">Dipilih</span>
                           ) : null}
                         </div>
                         <div className="p-3.5 pb-2">
-                          <p className="type-subtitle text-on-surface">{province.template.title}</p>
-                          <p className="type-caption mt-1 line-clamp-2 text-on-surface-variant">{province.template.description}</p>
-                          <p className="type-caption mt-2 font-bold text-primary">{formatRupiah(province.template.budgetLow)}–{formatRupiah(province.template.budgetHigh)}</p>
+                          <p className="type-subtitle text-on-surface">{template.title}</p>
+                          <p className="type-caption mt-1 text-on-surface-variant">{template.durationDays} hari · dipakai {template.usageCount}x</p>
                         </div>
                       </button>
-                      <div className="absolute right-3 top-3 z-20">
-                        <TemplateRoutePeek province={province} />
-                      </div>
+                      {province ? (
+                        <div className="absolute right-3 top-3 z-20">
+                          <TemplateRoutePeek province={province} />
+                        </div>
+                      ) : null}
                       <div className="flex items-center justify-between gap-2 px-3.5 pb-3.5">
-                        <p className="type-caption text-on-surface-variant">{selected ? "Lanjut ke detail trip." : "Hover ikon peta untuk melihat rute."}</p>
-                        <Link
-                          href={ROUTES.province(province.slug)}
-                          className="btn-ghost !min-h-8 !px-2.5 !text-xs"
-                          onClick={(event) => event.stopPropagation()}
-                        >
-                          Lihat detail
-                        </Link>
+                        <p className="type-caption text-on-surface-variant">{selected ? "Lanjut ke detail trip." : "Klik kartu untuk memilih."}</p>
+                        {province ? (
+                          <Link
+                            href={ROUTES.province(province.slug)}
+                            className="btn-ghost !min-h-8 !px-2.5 !text-xs"
+                            onClick={(event) => event.stopPropagation()}
+                          >
+                            Lihat detail
+                          </Link>
+                        ) : null}
                       </div>
                     </article>
                   );
                 })}
               </div>
               <p className="mt-3 type-caption text-on-surface-variant">
-                Klik kartu untuk memilih template. Tombol lihat detail membuka peta dan rute provinsi, tanpa mengganti pilihan.
+                Template diambil dari API. Pastikan Express + database sudah jalan.
               </p>
             </div>
           ) : null}
@@ -698,9 +867,13 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
       {step === 3 ? (
         <>
           {generating && days.length === 0 ? (
-            <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center">
-              <p className="type-subtitle text-on-surface">AI sedang mengoptimalkan itinerary dan budget…</p>
-              <p className="type-body mt-2 text-on-surface-variant">Rute, peta, dan estimasi per tempat muncul setelah generate selesai.</p>
+            <div className="card-surface p-8 text-center">
+              <p className="type-subtitle text-on-surface">
+                {path === "template" ? "Menyiapkan rute template…" : "Groq sedang menyusun rekomendasi itinerary…"}
+              </p>
+              <p className="type-body mt-2 text-on-surface-variant">
+                Destinasi, tanggal, jumlah orang, dan budget dikirim ke AI. Setelah siap, kamu bisa edit tempat atau urutan per hari.
+              </p>
             </div>
           ) : (
             <CreateTripItineraryStep
@@ -709,6 +882,7 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
               editingStopId={editingStopId}
               generating={generating}
               fromTemplate={path === "template"}
+              fromGroq={fromGroq}
               regenerateUsed={regenerateUsed}
               budgetPlan={budgetPlan}
               partySize={partySize}

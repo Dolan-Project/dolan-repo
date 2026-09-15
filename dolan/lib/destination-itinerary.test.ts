@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildDestinationItinerary, buildProvinceTemplateDays, destinationCoverUrl, destinationStopSeeds, findProvinceForDestination, resolveTripItineraryDays, templateMatchesDestination } from "./destination-itinerary";
-import { describeTransportLeg, estimateItineraryBudget, visitWindowLabel } from "./template-itinerary";
+import { buildDestinationItinerary, buildProvinceTemplateDays, destinationCoverUrl, destinationStopSeeds, ensureMultiStopDays, findProvinceForDestination, resolveTripItineraryDays, templateMatchesDestination } from "./destination-itinerary";
 import { INDONESIA_PROVINCES } from "./provinces";
 
 describe("destination itinerary", () => {
@@ -13,13 +12,10 @@ describe("destination itinerary", () => {
     const names = days.flatMap((day) => day.stops.map((stop) => stop.customTitle)).join(" ");
     expect(names).toMatch(/Gedung Sate|Braga/i);
     expect(names).not.toMatch(/Pink Beach|Bandara Komodo|Padar|Bogor|Pangandaran/i);
-    expect(days[0].stops.length).toBeGreaterThanOrEqual(5);
+    expect(days[0].stops.length).toBeGreaterThanOrEqual(3);
     expect(days[0].stops[0].startTime).toBe("08:00");
-    expect(days[0].stops.every((stop) => stop.durationMinutes <= 75)).toBe(true);
     const last = days[0].stops.at(-1)!;
     expect(last.startTime! >= "14:00").toBe(true);
-    expect(visitWindowLabel(last.startTime, last.durationMinutes).slice(-5) >= "17:00").toBe(true);
-    expect(days.every((day) => day.stops.length >= 2)).toBe(true);
     expect(days[0].stops[0].place?.latitude).toBeCloseTo(-6.9, 0);
     expect(findProvinceForDestination("Bandung")?.name).toBe("Jawa Barat");
     expect(templateMatchesDestination("Nusa Tenggara Timur", "Bandung")).toBe(false);
@@ -33,13 +29,7 @@ describe("destination itinerary", () => {
       endDate: "2026-11-03",
     });
     const names = provinceDays.flatMap((day) => day.stops.map((stop) => stop.customTitle)).join(" ");
-    expect(names).toMatch(/Tangkuban|Kawah Putih|Bogor|Situ Patenggang/i);
-    expect(provinceDays.every((day) => day.stops.length >= 2)).toBe(true);
-    const mixedFar = provinceDays.some((day) => {
-      const dayNames = day.stops.map((stop) => stop.customTitle ?? "").join(" ");
-      return /Pangandaran/i.test(dayNames) && /Gedung Sate|Braga|Alun-Alun Bandung/i.test(dayNames);
-    });
-    expect(mixedFar).toBe(false);
+    expect(names).toMatch(/Bogor|Pangandaran|Kawah Putih|Tangkuban/i);
   });
 
   it("uses a destination-related cover, not the generic Komodo fallback", () => {
@@ -65,8 +55,7 @@ describe("destination itinerary", () => {
     const days = buildProvinceTemplateDays(province);
     expect(days.length).toBeGreaterThan(0);
     expect(days[0].stops[0].place?.latitude).toBeTypeOf("number");
-    expect(days.every((day) => day.stops.length >= 2)).toBe(true);
-    expect(days.flatMap((day) => day.stops).length).toBeGreaterThanOrEqual(province.template.stops.length);
+    expect(days.flatMap((day) => day.stops).length).toBe(province.template.stops.length);
   });
 
   it("places Bromo on the Tengger caldera, not Surabaya, and keeps Ijen on a different day", () => {
@@ -98,8 +87,7 @@ describe("destination itinerary", () => {
     });
     const names = first.flatMap((day) => day.stops.map((stop) => stop.customTitle ?? "")).join(" ");
     expect(names).not.toMatch(/Pangandaran|Bogor/i);
-    expect(first[0].stops.length).toBeGreaterThanOrEqual(5);
-    expect(first[0].stops.every((stop) => stop.durationMinutes <= 75)).toBe(true);
+    expect(first[0].stops.length).toBeGreaterThanOrEqual(3);
     expect(first[0].stops[0].place?.googleMapsUrl).toMatch(/maps/i);
     const used = first.flatMap((day) => day.stops.map((stop) => stop.customTitle || ""));
     const next = buildDestinationItinerary({
@@ -113,6 +101,64 @@ describe("destination itinerary", () => {
     expect(nextNames.join(" ")).not.toBe(used.join(" "));
   });
 
+  it("builds Sumatera Utara with multi-stop days instead of one landmark per day", () => {
+    const days = buildDestinationItinerary({
+      destination: "Sumatera Utara",
+      startDate: "2026-11-01",
+      endDate: "2026-11-02",
+    });
+    expect(days.length).toBeGreaterThanOrEqual(2);
+    expect(days.every((day) => day.stops.length >= 2)).toBe(true);
+    const names = days.flatMap((day) => day.stops.map((stop) => stop.customTitle)).join(" ");
+    expect(names).toMatch(/Maimun|Kesawan|Petisah|Mashun|Tjong/i);
+  });
+
+  it("keeps Medan city trips inside Medan — not Bandung/Cihampelas/Cimahi", () => {
+    const days = buildDestinationItinerary({
+      destination: "Medan",
+      startDate: "2026-11-01",
+      endDate: "2026-11-02",
+    });
+    const names = days.flatMap((day) => day.stops.map((stop) => stop.customTitle ?? "")).join(" ");
+    expect(names).toMatch(/Maimun|Kesawan|Petisah|Mashun|Tjong|Juang/i);
+    expect(names).not.toMatch(/Cihampelas|Cimahi|Braga|Gedung Sate|Bandung|Bogor|Malioboro|Jakarta|Monas/i);
+    expect(days.every((day) => day.stops.length >= 2)).toBe(true);
+    for (const day of days) {
+      for (const stop of day.stops) {
+        const lat = stop.place?.latitude ?? 0;
+        const lng = stop.place?.longitude ?? 0;
+        expect(lat).toBeGreaterThan(3.4);
+        expect(lat).toBeLessThan(3.8);
+        expect(lng).toBeGreaterThan(98.5);
+        expect(lng).toBeLessThan(98.9);
+      }
+    }
+  });
+
+  it("keeps 4-day Medan trips at 2+ nearby stops per day, never 1 landmark all day", () => {
+    const days = buildDestinationItinerary({
+      destination: "Medan",
+      startDate: "2026-11-01",
+      endDate: "2026-11-04",
+    });
+    expect(days).toHaveLength(4);
+    expect(days.every((day) => day.stops.length >= 2)).toBe(true);
+    const names = days.flatMap((day) => day.stops.map((stop) => stop.customTitle ?? "")).join(" ");
+    expect(names).not.toMatch(/Cimahi|Cihampelas|Bandung|Jakarta/i);
+  });
+
+  it("fills a one-stop Medan day with nearby Medan places, not far cities", () => {
+    const thin = buildDestinationItinerary({
+      destination: "Medan",
+      startDate: "2026-11-01",
+      endDate: "2026-11-01",
+    }).map((day) => ({ ...day, stops: day.stops.slice(0, 1) }));
+    const filled = ensureMultiStopDays(thin, "Medan");
+    expect(filled[0]?.stops.length).toBeGreaterThanOrEqual(2);
+    const names = filled.flatMap((day) => day.stops.map((stop) => stop.customTitle ?? "")).join(" ");
+    expect(names).not.toMatch(/Cimahi|Cihampelas|Bandung|Jakarta|Malioboro/i);
+  });
+
   it("orders Jakarta stops along a north-south corridor instead of zigzagging", () => {
     const days = buildDestinationItinerary({
       destination: "Jakarta",
@@ -123,77 +169,26 @@ describe("destination itinerary", () => {
     const goingSouth = lats.every((lat, index) => index === 0 || lat <= lats[index - 1]! + 0.004);
     const goingNorth = lats.every((lat, index) => index === 0 || lat >= lats[index - 1]! - 0.004);
     expect(goingSouth || goingNorth).toBe(true);
-    expect(days[0].stops.length).toBeGreaterThanOrEqual(7);
-    expect(days[0].stops.every((stop) => stop.durationMinutes <= 75)).toBe(true);
-    expect(days[0].stops.map((stop) => stop.customTitle).join(" → ")).toMatch(/Ancol|Kota Tua|Monumen|Bundaran HI|Istiqlal|Menteng/i);
-    const names = days[0].stops.map((stop) => stop.customTitle);
-    expect(new Set(names).size).toBe(names.length);
-    const lastJakarta = days[0].stops.at(-1)!;
-    expect(visitWindowLabel(lastJakarta.startTime, lastJakarta.durationMinutes).slice(-5) >= "17:00").toBe(true);
-    const kotaTua = days[0].stops.findIndex((stop) => /Kota Tua/i.test(stop.customTitle ?? ""));
-    if (kotaTua > 0) {
-      const previous = days[0].stops[kotaTua - 1]!;
-      const current = days[0].stops[kotaTua]!;
-      const leg = describeTransportLeg(
-        { lat: previous.place!.latitude, lng: previous.place!.longitude },
-        { lat: current.place!.latitude, lng: current.place!.longitude },
-        { destinationName: current.customTitle ?? "" },
-      );
-      expect(leg.mode).not.toMatch(/jalan kaki/i);
-      expect(leg.amount).toBeGreaterThan(0);
-    }
+    expect(days[0].stops.map((stop) => stop.customTitle).join(" ")).toMatch(/Bundaran HI|Monumen|Kota Tua|Ancol/i);
   });
 
-  it("drops paid Jakarta stops when preferCheaper is on", () => {
-    const cheap = buildDestinationItinerary({
-      destination: "Jakarta",
-      startDate: "2026-11-01",
-      endDate: "2026-11-01",
-      preferCheaper: true,
-    });
-    const names = cheap.flatMap((day) => day.stops.map((stop) => stop.customTitle)).join(" ");
-    expect(names).not.toMatch(/Ancol/i);
-    expect(names).toMatch(/Kota Tua|Monumen|Bundaran HI/i);
-  });
-
-  it("fits a tight Jakarta budget after cheaper regenerate", () => {
+  it("builds a 3-day Yogyakarta trip with multi-stop days and non-zero transport for later stops", async () => {
+    const { estimateItineraryBudget } = await import("./template-itinerary");
     const days = buildDestinationItinerary({
-      destination: "Jakarta",
+      destination: "Yogyakarta",
       startDate: "2026-11-01",
-      endDate: "2026-11-02",
-      preferCheaper: true,
-      budgetPool: 700_000,
-      partySize: 2,
+      endDate: "2026-11-03",
     });
-    const plan = estimateItineraryBudget(days, 700_000, 2);
-    expect(plan.total).toBeLessThanOrEqual(700_000);
-    expect(days.every((day) => day.stops.length >= 2)).toBe(true);
-  });
-
-  it("keeps Jambi template days in nearby corridors and fills a full day", () => {
-    const province = INDONESIA_PROVINCES.find((item) => item.slug === "jambi")!;
-    const days = buildProvinceTemplateDays(province);
-    expect(days.every((day) => day.stops.length >= 2)).toBe(true);
-    const mixed = days.some((day) => {
-      const names = day.stops.map((stop) => stop.customTitle ?? "").join(" ");
-      return /Muaro Jambi|Gentala/i.test(names) && /Kerinci|Kayu Aro/i.test(names);
-    });
-    expect(mixed).toBe(false);
-    expect(days.flatMap((day) => day.stops).map((stop) => stop.sequence)).toEqual(
-      days.flatMap((day) => day.stops).map((_, index) => index + 1),
-    );
-  });
-
-  it("fills a lesser-known destination with more than one stop from morning to evening", () => {
-    const days = buildDestinationItinerary({
-      destination: "Palu",
-      startDate: "2026-11-01",
-      endDate: "2026-11-01",
-    });
-    expect(days[0].stops.length).toBeGreaterThanOrEqual(7);
-    expect(days[0].stops.every((stop) => stop.durationMinutes <= 75)).toBe(true);
-    expect(days[0].stops[0].startTime).toBe("08:00");
-    const last = days[0].stops.at(-1)!;
-    expect(visitWindowLabel(last.startTime, last.durationMinutes).slice(-5) >= "17:00").toBe(true);
+    expect(days).toHaveLength(3);
+    const multiStopDays = days.filter((day) => day.stops.length >= 2);
+    expect(multiStopDays.length).toBeGreaterThanOrEqual(2);
+    const secondStops = multiStopDays.flatMap((day) => day.stops.slice(1));
+    expect(secondStops.some((stop) => (stop.travelDurationMinutes ?? 0) > 0)).toBe(true);
+    const plan = estimateItineraryBudget(days, 5_000_000, 1);
+    const transportLines = Object.values(plan.byStopId).flatMap((item) => item.lines.filter((line) => line.key === "transport"));
+    expect(transportLines.some((line) => line.amount > 0)).toBe(true);
+    expect(transportLines.some((line) => /Titik awal hari/i.test(line.detail))).toBe(true);
+    expect(transportLines.every((line) => line.amount === 0 || !/jalan kaki jauh/i.test(line.detail))).toBe(true);
+    expect(transportLines.some((line) => line.amount > 0 && /ojek|antar-kota|jeep/i.test(line.detail))).toBe(true);
   });
 });

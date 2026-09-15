@@ -2,42 +2,46 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
-import type { BudgetItemInput, EditableItineraryDay, EditableItineraryStop, ItineraryEditorSnapshot, TripChecklistItem } from "@dolan/shared";
+import type { BudgetItemInput, EditableItineraryDay, EditableItineraryStop, EditorGenerationStatus, ItineraryEditorSnapshot } from "@dolan/shared";
 import { Icon } from "@/components/ui/Icon";
-<<<<<<< HEAD
 import { findScheduleConflicts, generateAlternative, getItineraryEditor, saveItineraryVersion, selectItineraryVersion, upsertChecklistItem, deleteChecklistItem } from "./api";
-import { INITIAL_BUDGET_ITEMS, PLACE_CANDIDATES } from "./mock-data";
-import { RoutePreview } from "./RoutePreview";
-=======
-import { findScheduleConflicts, generateAlternative, getItineraryEditor, saveItineraryVersion, selectItineraryVersion } from "./api";
 import { INITIAL_BUDGET_ITEMS } from "./mock-data";
->>>>>>> 13c57bd (style: redesign edit page)
+import { RoutePreview } from "./RoutePreview";
 import { SaveOfflineItineraryButton } from "@/components/offline/SaveOfflineItineraryButton";
-import { CreateTripItineraryStep } from "@/components/trip/CreateTripItineraryStep";
+import { PlacePicker, type PlaceSuggestion } from "@/components/trip/PlacePicker";
 import { ROUTES, tripItineraryPath } from "@/lib/routes";
-import {
-  appendVisitStop,
-  availableBudgetPool,
-  estimateItineraryBudget,
-  packItinerarySchedule,
-  placeFromTemplateStop,
-  reorderStopsInDay,
-  withGlobalStopNumbers,
-} from "@/lib/template-itinerary";
+import { ItineraryStopPin } from "@/components/trip/ItineraryTimeline";
+import type { PlaceSummary } from "@dolan/shared";
 
+type Tab = "itinerary" | "budget" | "checklist";
 type Notice = { tone: "success" | "error" | "info"; text: string } | null;
 
+const money = new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 });
 const clone = <T,>(value: T): T => structuredClone(value);
 
 function normalize(days: EditableItineraryDay[]) {
-  return withGlobalStopNumbers(days.map((day, dayIndex) => ({ ...day, dayNumber: dayIndex + 1 })));
+  return days.map((day, dayIndex) => ({ ...day, dayNumber: dayIndex + 1, stops: day.stops.map((stop, index) => ({ ...stop, sequence: index + 1 })) }));
 }
 
 function versionBudgetInputs(snapshot: ItineraryEditorSnapshot, versionId: string): BudgetItemInput[] {
   const items = snapshot.versions.find((item) => item.id === versionId)?.budget.items;
   if (!items?.length) return clone(INITIAL_BUDGET_ITEMS);
   return items.map(({ category, label, quantity, unit, unitCostLow, unitCostHigh, sourceType, sourceReference, notes }) => ({ category, label, quantity, unit, unitCostLow, unitCostHigh, sourceType, sourceReference, notes }));
+}
+
+function suggestionToPlace(suggestion: PlaceSuggestion): PlaceSummary {
+  return {
+    googlePlaceId: suggestion.id,
+    name: suggestion.label,
+    formattedAddress: suggestion.formattedAddress ?? (suggestion.city ? `${suggestion.label}, ${suggestion.city}` : suggestion.label),
+    city: suggestion.city || null,
+    latitude: suggestion.latitude ?? 0,
+    longitude: suggestion.longitude ?? 0,
+    rating: null,
+    userRatingCount: null,
+    photoName: null,
+    googleMapsUrl: null,
+  };
 }
 
 export function ItineraryEditorExperience({ tripId }: { tripId: string }) {
@@ -47,20 +51,18 @@ export function ItineraryEditorExperience({ tripId }: { tripId: string }) {
   const [selectedVersionId, setSelectedVersionId] = useState("");
   const [days, setDays] = useState<EditableItineraryDay[]>([]);
   const [budgetItems, setBudgetItems] = useState<BudgetItemInput[]>(clone(INITIAL_BUDGET_ITEMS));
+  const [tab, setTab] = useState<Tab>("itinerary");
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [regenerateMode, setRegenerateMode] = useState<"balanced" | "cheaper" | "alternative">("balanced");
+  const [generatedVersionId, setGeneratedVersionId] = useState<string | null>(null);
+  const [job, setJob] = useState<EditorGenerationStatus | null>(null);
   const [notice, setNotice] = useState<Notice>(null);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [packingTitle, setPackingTitle] = useState("");
-  const [selectedStopId, setSelectedStopId] = useState<string | null>(null);
-  const [editingStopId, setEditingStopId] = useState<string | null>(null);
-  const [budgetAmount, setBudgetAmount] = useState(0);
-  const [budgetBasis, setBudgetBasis] = useState<"PER_PERSON" | "GROUP">("GROUP");
+  const [newChecklist, setNewChecklist] = useState("");
 
   useEffect(() => {
-<<<<<<< HEAD
     let cancelled = false;
     getItineraryEditor(tripId)
       .then((data) => {
@@ -85,26 +87,10 @@ export function ItineraryEditorExperience({ tripId }: { tripId: string }) {
     return () => {
       cancelled = true;
     };
-=======
-    getItineraryEditor(tripId).then((data) => {
-      setSnapshot(data);
-      setSelectedVersionId(data.activeVersionId);
-      const versionDays = clone(data.versions.find((item) => item.id === data.activeVersionId)!.days);
-      setDays(versionDays);
-      setSelectedStopId(versionDays[0]?.stops[0]?.id ?? null);
-      const items = versionBudgetInputs(data, data.activeVersionId);
-      setBudgetItems(items);
-      const high = Number(data.versions.find((item) => item.id === data.activeVersionId)?.budget.totalHigh ?? 0);
-      const itemTotal = items.reduce((total, item) => total + Number(item.quantity || 0) * Number(item.unitCostHigh || 0), 0);
-      setBudgetAmount(high || itemTotal);
-      setBudgetBasis(data.versions.find((item) => item.id === data.activeVersionId)?.budget.basis ?? "GROUP");
-    });
->>>>>>> 13c57bd (style: redesign edit page)
   }, [tripId]);
 
   const conflicts = useMemo(() => findScheduleConflicts(days), [days]);
-  const budgetPool = availableBudgetPool(budgetAmount, budgetBasis, 1);
-  const livePlan = useMemo(() => estimateItineraryBudget(days, budgetPool, 1), [days, budgetPool]);
+  const budgetTotal = useMemo(() => budgetItems.reduce((total, item) => total + Number(item.quantity || 0) * Number(item.unitCostHigh || 0), 0), [budgetItems]);
   const activeVersion = snapshot?.versions.find((item) => item.id === snapshot.activeVersionId);
 
   const changeDays = (next: EditableItineraryDay[]) => {
@@ -113,40 +99,63 @@ export function ItineraryEditorExperience({ tripId }: { tripId: string }) {
     setNotice(null);
   };
 
-  const updateStop = (dayId: string, stopId: string, patch: Partial<EditableItineraryStop>) => {
-    const previous = days.flatMap((day) => day.stops).find((stop) => stop.id === stopId);
-    const next = days.map((day) => day.id === dayId ? { ...day, stops: day.stops.map((stop) => stop.id === stopId ? { ...stop, ...patch } : stop) } : day);
-    const placeChanged = Boolean(patch.place) && (
-      previous?.place?.latitude !== patch.place?.latitude ||
-      previous?.place?.longitude !== patch.place?.longitude ||
-      Boolean(patch.customTitle && patch.customTitle !== (previous?.customTitle || previous?.place?.name))
-    );
-    changeDays(placeChanged ? packItinerarySchedule(next) : next);
+  const updateStop = (dayId: string, stopId: string, patch: Partial<EditableItineraryStop>) => changeDays(days.map((day) => day.id === dayId ? { ...day, stops: day.stops.map((stop) => stop.id === stopId ? { ...stop, ...patch } : stop) } : day));
+
+  const moveStop = (dayId: string, index: number, direction: -1 | 1) => {
+    const next = clone(days);
+    const day = next.find((item) => item.id === dayId);
+    if (!day || index + direction < 0 || index + direction >= day.stops.length) return;
+    [day.stops[index], day.stops[index + direction]] = [day.stops[index + direction], day.stops[index]];
+    changeDays(next);
+  };
+
+  const addPlace = (dayId: string, place: PlaceSummary) => {
+    const next = clone(days);
+    const day = next.find((item) => item.id === dayId)!;
+    const last = day.stops.at(-1);
+    const startHour = last?.startTime ? Math.min(20, Number(last.startTime.slice(0, 2)) + Math.ceil((last.durationMinutes + 60) / 60)) : 9;
+    day.stops.push({
+      id: `${dayId}-${place.googlePlaceId}-${day.stops.length + 1}`,
+      sequence: day.stops.length + 1,
+      place,
+      customTitle: null,
+      activityType: "Wisata",
+      startTime: `${String(startHour).padStart(2, "0")}:00`,
+      durationMinutes: 120,
+      travelDurationMinutes: 60,
+      notes: null,
+      isLocked: false,
+    });
+    changeDays(next);
   };
 
   const addDay = () => {
-    const city = snapshot?.destinationCity ?? "Indonesia";
     const date = new Date(`${snapshot?.startDate ?? "2026-10-24"}T00:00:00`);
     date.setDate(date.getDate() + days.length);
     const nextDayNumber = days.length + 1;
-    changeDays(packItinerarySchedule([...days, {
-      id: `day-${nextDayNumber}`,
-      dayNumber: nextDayNumber,
-      date: date.toISOString().slice(0, 10),
-      title: "Hari baru",
-      stops: [{
-        id: `day-${nextDayNumber}-stop-1`,
-        sequence: 1,
-        place: placeFromTemplateStop(city, city),
-        customTitle: city,
-        activityType: "Wisata",
-        startTime: "08:00",
-        durationMinutes: 90,
-        travelDurationMinutes: 0,
-        notes: null,
-        isLocked: false,
-      }],
-    }]));
+    changeDays([
+      ...days,
+      {
+        id: `day-${nextDayNumber}`,
+        dayNumber: nextDayNumber,
+        date: date.toISOString().slice(0, 10),
+        title: "Hari baru",
+        stops: [
+          {
+            id: `day-${nextDayNumber}-stop-1`,
+            sequence: 1,
+            place: null,
+            customTitle: "Destinasi baru",
+            activityType: "Wisata",
+            startTime: "09:00",
+            durationMinutes: 120,
+            travelDurationMinutes: 0,
+            notes: null,
+            isLocked: false,
+          },
+        ],
+      },
+    ]);
   };
 
   const save = async () => {
@@ -181,27 +190,19 @@ export function ItineraryEditorExperience({ tripId }: { tripId: string }) {
     }
   };
 
-  const generate = async (mode: "balanced" | "cheaper") => {
+  const generate = async () => {
     if (!snapshot || generating) return;
     setGenerating(true);
+    setJob({ id: crypto.randomUUID(), status: "PROCESSING", attemptCount: 1, resultVersionId: null, errorCode: null });
     setNotice({
       tone: "info",
-      text: mode === "cheaper" ? "AI sedang mencari rute yang lebih hemat sesuai budget terbaru." : "AI sedang merapikan urutan rute.",
+      text: regenerateMode === "cheaper"
+        ? "Groq sedang menyusun rute hemat. Draft aktif tetap aman."
+        : "AI sedang mengoptimalkan rute. Draft aktif tetap aman.",
     });
     try {
-      const pool = String(budgetPool);
-      const budgeted = {
-        ...snapshot,
-        versions: snapshot.versions.map((version) => (
-          version.id === snapshot.activeVersionId
-            ? { ...version, budget: { ...version.budget, basis: budgetBasis, totalLow: pool, totalHigh: pool } }
-            : version
-        )),
-      };
-      const next = await generateAlternative(budgeted, days, budgetItems, mode);
-      const generated = next.snapshot.versions[0];
+      const next = await generateAlternative(snapshot, days, budgetItems, regenerateMode);
       setSnapshot(next.snapshot);
-<<<<<<< HEAD
       setGeneratedVersionId(next.snapshot.versions[0]?.id ?? null);
       setJob(next.job
         ? { id: next.job.id, status: next.job.status, attemptCount: next.job.attemptCount, resultVersionId: next.job.resultVersionId, errorCode: next.job.errorCode }
@@ -213,18 +214,6 @@ export function ItineraryEditorExperience({ tripId }: { tripId: string }) {
         tone: "error",
         text: error instanceof Error ? error.message : "Generate gagal. Draft dan versi aktif tidak berubah; silakan coba lagi.",
       });
-=======
-      if (generated) {
-        setSelectedVersionId(generated.id);
-        setDays(clone(generated.days));
-        setSelectedStopId(generated.days[0]?.stops[0]?.id ?? null);
-        setBudgetItems(versionBudgetInputs(next.snapshot, generated.id));
-        setDirty(true);
-      }
-      setNotice({ tone: "success", text: generated?.summary || "Rute baru siap. Simpan jika kamu setuju." });
-    } catch {
-      setNotice({ tone: "error", text: "Generate gagal. Draft aktif tidak berubah." });
->>>>>>> 13c57bd (style: redesign edit page)
     } finally {
       setGenerating(false);
     }
@@ -299,27 +288,23 @@ export function ItineraryEditorExperience({ tripId }: { tripId: string }) {
     if (!version) return;
     setSelectedVersionId(versionId);
     setDays(clone(version.days));
-    setSelectedStopId(version.days[0]?.stops[0]?.id ?? null);
     setBudgetItems(versionBudgetInputs(snapshot, versionId));
-    setBudgetAmount(Number(version.budget.totalHigh) || 0);
-    setBudgetBasis(version.budget.basis);
     setDirty(false);
     if (activate) {
       void selectItineraryVersion(snapshot.tripId, versionId).then((next) => {
         setSnapshot(next ?? { ...snapshot, activeVersionId: versionId });
       });
+      setGeneratedVersionId(null);
       setNotice({ tone: "success", text: `Versi ${version.versionNumber} sekarang menjadi itinerary aktif.` });
     }
   };
 
-  if (!snapshot) return <div className="mx-auto max-w-6xl p-6"><div className="h-[70vh] animate-pulse rounded-[2rem] bg-surface-container" /></div>;
+  if (!snapshot) return <div className="mx-auto max-w-[1440px] p-6"><div className="h-[70vh] animate-pulse rounded-[2rem] bg-surface-container" /></div>;
 
   return (
-    <main className="min-h-screen bg-[#f7fbff]">
-    <div className="mx-auto max-w-6xl px-4 pb-28 pt-6 md:px-8 md:pb-10">
+    <main className="mx-auto max-w-[1480px] px-4 pb-28 pt-5 md:px-8 md:pb-10">
       <header className="mb-5 flex flex-wrap items-start justify-between gap-4">
         <div>
-<<<<<<< HEAD
           <p className="type-micro uppercase tracking-[.16em] text-secondary">Trip saya ? Editor itinerary</p>
           <h1 className="type-title mt-1 md:text-[1.75rem]">{snapshot.tripTitle}</h1>
           <p className="type-body mt-1 text-on-surface-variant"><Icon name="location_on" /> {snapshot.destinationCity} ? {snapshot.startDate} ? {snapshot.endDate}</p>
@@ -348,88 +333,16 @@ export function ItineraryEditorExperience({ tripId }: { tripId: string }) {
 
       {notice && <div role="status" className={`mb-4 rounded-2xl border px-4 py-3 type-label ${notice.tone === "error" ? "border-error/30 bg-error-container text-on-error-container" : notice.tone === "success" ? "border-success/30 bg-emerald-50 text-emerald-800" : "border-primary/20 bg-primary-fixed text-on-primary-fixed"}`}>{notice.text}{generatedVersionId && <><button type="button" className="ml-3 underline" onClick={() => chooseVersion(generatedVersionId)}>Tinjau versi</button><button type="button" className="ml-3 underline" onClick={() => chooseVersion(generatedVersionId, true)}>Jadikan aktif</button></>}</div>}
       {job && <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-outline-variant bg-white px-4 py-3"><span className="type-label">Generation job <code className="text-xs text-on-surface-variant">{job.id}</code></span><span className={`chip ${job.status === "SUCCEEDED" ? "bg-emerald-50 text-emerald-800" : job.status === "FAILED" ? "bg-error-container text-error" : "bg-secondary-fixed text-secondary"}`}>{job.status === "PROCESSING" ? "Sedang diproses" : job.status === "SUCCEEDED" ? "Berhasil" : "Gagal"} ? percobaan {job.attemptCount}</span></div>}
-=======
-          <p className="type-micro font-extrabold uppercase tracking-[0.16em] text-primary">Edit rute</p>
-          <h1 className="mt-1 text-2xl font-extrabold text-on-surface md:text-3xl">{snapshot.tripTitle}</h1>
-          <p className="mt-1 text-sm text-on-surface-variant">{snapshot.destinationCity} · {snapshot.startDate} – {snapshot.endDate}</p>
-        </div>
-        <div className="relative flex flex-wrap items-center gap-2">
-          <button type="button" className="grid h-10 w-10 place-items-center rounded-full border border-slate-200 bg-white" onClick={() => setMenuOpen((open) => !open)} aria-label="Menu lain">
-            <Icon name="more_vert" />
-          </button>
-          {menuOpen ? (
-            <div className="absolute right-0 top-12 z-20 w-56 rounded-2xl border border-slate-200 bg-white p-2 shadow-lg">
-              <select aria-label="Pilih versi itinerary" value={selectedVersionId} onChange={(event) => chooseVersion(event.target.value)} className="mb-2 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm">
-                {snapshot.versions.map((version) => <option key={version.id} value={version.id}>Versi {version.versionNumber}{version.id === snapshot.activeVersionId ? " · Aktif" : ""}</option>)}
-              </select>
-              <SaveOfflineItineraryButton id={tripId} title={snapshot.tripTitle} path={tripItineraryPath(tripId)} />
-              <button type="button" className="mt-1 w-full rounded-xl px-3 py-2 text-left text-sm" onClick={() => void closeSlots()}>Tutup slot</button>
-              <Link href={ROUTES.trip(tripId)} className="block rounded-xl px-3 py-2 text-sm text-on-surface">Lihat detail trip</Link>
-              <button type="button" className="w-full rounded-xl px-3 py-2 text-left text-sm text-error" onClick={() => void deleteDraft()}>Hapus draft</button>
-            </div>
-          ) : null}
-        </div>
-      </header>
 
-      {notice ? <p role="status" className={`mb-4 rounded-2xl px-4 py-3 text-sm ${notice.tone === "error" ? "bg-error-container text-on-error-container" : notice.tone === "success" ? "bg-emerald-50 text-emerald-800" : "bg-primary-fixed text-on-primary-fixed"}`}>{notice.text}</p> : null}
->>>>>>> 13c57bd (style: redesign edit page)
-
-      <CreateTripItineraryStep
-        days={days}
-        selectedStopId={selectedStopId}
-        editingStopId={editingStopId}
-        generating={generating}
-        fromTemplate={activeVersion?.source === "TEMPLATE"}
-        regenerateUsed={0}
-        unlimitedRegenerate
-        budgetPlan={livePlan}
-        partySize={1}
-        isPublic={false}
-        destinationCity={snapshot.destinationCity}
-        budgetAmount={budgetAmount}
-        budgetBasis={budgetBasis}
-        heading="Edit itinerary"
-        onBudgetAmountChange={(amount) => {
-          setBudgetAmount(amount);
-          setDirty(true);
-        }}
-        onBudgetBasisChange={(basis) => {
-          setBudgetBasis(basis);
-          setDirty(true);
-        }}
-        onSelectStop={(id) => {
-          setSelectedStopId(id);
-          setEditingStopId(id);
-        }}
-        onEditStop={(id) => {
-          setSelectedStopId(id);
-          setEditingStopId(id);
-        }}
-        onCloseEdit={() => setEditingStopId(null)}
-        onReorderStops={(dayId, fromIndex, toIndex) => changeDays(reorderStopsInDay(days, dayId, fromIndex, toIndex))}
-        onUpdateStop={updateStop}
-        onAddStop={(dayId, pick) => changeDays(appendVisitStop(days, dayId, { ...pick, city: pick.city || snapshot.destinationCity, lock: true }))}
-        onRemoveStop={(dayId, stopId) => changeDays(packItinerarySchedule(days.map((day) => day.id === dayId ? { ...day, stops: day.stops.filter((stop) => stop.id !== stopId) } : day)))}
-        onAddDay={addDay}
-        onRegenerate={() => void generate(livePlan.overBudget ? "cheaper" : "balanced")}
-      />
-
-      <div className="mt-5">
-        <PackingEditor
-          tripId={tripId}
-          snapshot={snapshot}
-          setSnapshot={(next) => { setSnapshot(next); setDirty(true); }}
-          title={packingTitle}
-          setTitle={setPackingTitle}
-        />
+      <div className="mb-4 flex items-center gap-1 overflow-x-auto rounded-2xl bg-surface-container-low p-1.5">
+        {([ ["itinerary", "Itinerary", "alt_route"], ["budget", "Budget", "payments"], ["checklist", "Checklist", "check_circle"] ] as const).map(([key, label, icon]) => <button key={key} type="button" onClick={() => setTab(key)} className={`flex min-h-10 min-w-max flex-1 items-center justify-center gap-2 rounded-xl px-4 type-label transition ${tab === key ? "bg-white text-primary shadow-sm" : "text-on-surface-variant hover:bg-white/60"}`}><Icon name={icon} /> {label}</button>)}
       </div>
 
-<<<<<<< HEAD
       <div className="grid gap-5 lg:grid-cols-[minmax(330px,.82fr)_minmax(520px,1.18fr)]">
         <RoutePreview days={days} destination={snapshot.destinationCity} />
         <section className="min-w-0">
           {tab === "itinerary" && <div className="space-y-4">
-            {days.map((day) => <DayEditor key={day.id} day={day} conflicts={conflicts} onChangeTitle={(title) => changeDays(days.map((item) => item.id === day.id ? { ...item, title } : item))} onUpdateStop={(stopId, patch) => updateStop(day.id, stopId, patch)} onMove={(index, direction) => moveStop(day.id, index, direction)} onRemove={(stopId) => changeDays(days.map((item) => item.id === day.id ? { ...item, stops: item.stops.filter((stop) => stop.id !== stopId) } : item))} onAdd={(placeIndex) => addPlace(day.id, placeIndex)} onDeleteDay={() => day.stops.some((stop) => stop.isLocked) ? setNotice({ tone: "error", text: "Hari ini memiliki destinasi terkunci. Buka kunci sebelum menghapus hari." }) : changeDays(days.filter((item) => item.id !== day.id))} />)}
+            {days.map((day) => <DayEditor key={day.id} day={day} conflicts={conflicts} onChangeTitle={(title) => changeDays(days.map((item) => item.id === day.id ? { ...item, title } : item))} onUpdateStop={(stopId, patch) => updateStop(day.id, stopId, patch)} onMove={(index, direction) => moveStop(day.id, index, direction)} onRemove={(stopId) => changeDays(days.map((item) => item.id === day.id ? { ...item, stops: item.stops.filter((stop) => stop.id !== stopId) } : item))} onAdd={(place) => addPlace(day.id, place)} onDeleteDay={() => day.stops.some((stop) => stop.isLocked) ? setNotice({ tone: "error", text: "Hari ini memiliki destinasi terkunci. Buka kunci sebelum menghapus hari." }) : changeDays(days.filter((item) => item.id !== day.id))} />)}
             <button type="button" onClick={addDay} className="w-full rounded-2xl border-2 border-dashed border-primary/25 bg-primary-fixed/30 py-4 type-label text-primary hover:bg-primary-fixed"><Icon name="add" /> Tambah hari perjalanan</button>
           </div>}
           {tab === "budget" && <BudgetEditor items={budgetItems} total={budgetTotal} onChange={(items) => { setBudgetItems(items); setDirty(true); }} />}
@@ -441,23 +354,15 @@ export function ItineraryEditorExperience({ tripId }: { tripId: string }) {
         <div className="hidden sm:block"><p className="type-label">{dirty ? "Ada perubahan belum tersimpan" : `Versi aktif: ${activeVersion?.versionNumber}`}</p><p className="type-caption text-on-surface-variant">Penyimpanan membuat versi baru.</p></div>
         <button type="button" onClick={save} disabled={saving || !dirty || Object.keys(conflicts).length > 0} className="btn-brand flex-1 md:flex-none"><Icon name="bookmark_added" /> {saving ? "Menyimpan?" : "Simpan versi baru"}</button>
         <button type="button" onClick={publish} disabled={publishing || saving || dirty || Object.keys(conflicts).length > 0} className="btn-primary flex-1 md:flex-none"><Icon name="publish" /> {publishing ? "Memublikasikan?" : "Publikasikan trip"}</button>
-=======
-      <div className="fixed bottom-4 left-3 right-3 z-30 flex items-center justify-end gap-2 rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-lg backdrop-blur md:static md:mt-6 md:border-0 md:shadow-none">
-        <p className="mr-auto hidden text-sm text-on-surface-variant sm:block">{dirty ? "Ada perubahan belum tersimpan" : "Rute tersimpan"}</p>
-        <button type="button" onClick={save} disabled={saving || !dirty || Object.keys(conflicts).length > 0} className="btn-primary">
-          {saving ? "Menyimpan…" : "Simpan"}
-        </button>
->>>>>>> 13c57bd (style: redesign edit page)
       </div>
-    </div>
     </main>
   );
 }
 
-<<<<<<< HEAD
-function DayEditor({ day, conflicts, onChangeTitle, onUpdateStop, onMove, onRemove, onAdd, onDeleteDay }: { day: EditableItineraryDay; conflicts: Record<string, string>; onChangeTitle: (value: string) => void; onUpdateStop: (id: string, patch: Partial<EditableItineraryStop>) => void; onMove: (index: number, direction: -1 | 1) => void; onRemove: (id: string) => void; onAdd: (index: number) => void; onDeleteDay: () => void }) {
+function DayEditor({ day, conflicts, onChangeTitle, onUpdateStop, onMove, onRemove, onAdd, onDeleteDay }: { day: EditableItineraryDay; conflicts: Record<string, string>; onChangeTitle: (value: string) => void; onUpdateStop: (id: string, patch: Partial<EditableItineraryStop>) => void; onMove: (index: number, direction: -1 | 1) => void; onRemove: (id: string) => void; onAdd: (place: PlaceSummary) => void; onDeleteDay: () => void }) {
+  const [query, setQuery] = useState("");
   return <article className="rounded-[1.5rem] border border-outline-variant/70 bg-white p-4 shadow-sm md:p-5">
-    <div className="flex items-start gap-3"><div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-primary text-white"><span className="type-micro">HARI</span><strong className="-mt-1">{day.dayNumber}</strong></div><div className="min-w-0 flex-1"><input aria-label={`Judul hari ${day.dayNumber}`} value={day.title ?? ""} onChange={(e) => onChangeTitle(e.target.value)} className="w-full border-b border-transparent bg-transparent type-subtitle outline-none hover:border-outline-variant focus:border-primary" /><p className="type-caption mt-1 text-on-surface-variant">{day.date} ? {day.stops.length} destinasi</p></div><button type="button" onClick={onDeleteDay} className="rounded-full p-2 text-on-surface-variant hover:bg-error-container hover:text-error" aria-label={`Hapus hari ${day.dayNumber}`}><Icon name="close" /></button></div>
+    <div className="flex items-start gap-3"><div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-primary text-white"><span className="type-micro">HARI</span><strong className="-mt-1">{day.dayNumber}</strong></div><div className="min-w-0 flex-1"><input aria-label={`Judul hari ${day.dayNumber}`} value={day.title ?? ""} onChange={(e) => onChangeTitle(e.target.value)} className="w-full border-b border-transparent bg-transparent type-subtitle outline-none hover:border-outline-variant focus:border-primary" /><p className="type-caption mt-1 text-on-surface-variant">{day.date} · {day.stops.length} destinasi</p></div><button type="button" onClick={onDeleteDay} className="rounded-full p-2 text-on-surface-variant hover:bg-error-container hover:text-error" aria-label={`Hapus hari ${day.dayNumber}`}><Icon name="close" /></button></div>
     <div className="mt-4 space-y-3">{day.stops.map((stop, index) => <div key={stop.id} className={`rounded-2xl border p-3 transition ${conflicts[stop.id] ? "border-error bg-error-container/25" : stop.isLocked ? "border-secondary-container/50 bg-secondary-fixed/20" : "border-outline-variant/70 bg-surface-container-low/45"}`}>
       <div className="relative flex items-start gap-3">
         {index < day.stops.length - 1 ? <span className="absolute bottom-0 left-[15px] top-10 w-0.5 bg-slate-300" aria-hidden="true" /> : null}
@@ -467,7 +372,23 @@ function DayEditor({ day, conflicts, onChangeTitle, onUpdateStop, onMove, onRemo
       {conflicts[stop.id] && <p className="mt-1 type-caption font-semibold text-error">{conflicts[stop.id]}</p>}
       <div className="mt-2 flex justify-end gap-2"><button type="button" onClick={() => onUpdateStop(stop.id, { isLocked: !stop.isLocked })} className="rounded-full border border-outline-variant px-3 py-1.5 type-label text-on-surface-variant"><Icon name="lock" /> {stop.isLocked ? "Buka kunci" : "Kunci"}</button><button type="button" disabled={stop.isLocked || day.stops.length === 1} onClick={() => onRemove(stop.id)} className="rounded-full px-3 py-1.5 type-label text-error hover:bg-error-container disabled:opacity-30">Hapus</button></div>
     </div>)}</div>
-    <details className="mt-3"><summary className="cursor-pointer rounded-xl bg-primary-fixed px-3 py-2 type-label text-primary"><Icon name="add" /> Tambah destinasi</summary><div className="mt-2 flex flex-wrap gap-2">{PLACE_CANDIDATES.map((place, index) => <button key={place.googlePlaceId} type="button" onClick={() => onAdd(index)} className="rounded-full border border-outline-variant bg-white px-3 py-2 type-label hover:border-primary hover:text-primary">{place.name}</button>)}</div></details>
+    <details className="mt-3">
+      <summary className="cursor-pointer rounded-xl bg-primary-fixed px-3 py-2 type-label text-primary"><Icon name="add" /> Tambah destinasi</summary>
+      <div className="mt-3">
+        <PlacePicker
+          id={`add-place-${day.id}`}
+          label="Cari tempat"
+          value={query}
+          onChange={setQuery}
+          placeholder="Malioboro, Bromo, Ubud…"
+          hint="Pilih hasil pencarian untuk menambah ke hari ini."
+          onSelectPlace={(suggestion) => {
+            onAdd(suggestionToPlace(suggestion));
+            setQuery("");
+          }}
+        />
+      </div>
+    </details>
   </article>;
 }
 
@@ -605,90 +526,5 @@ function ChecklistEditor({
         </button>
       </form>
     </div>
-=======
-async function persistChecklistItem(tripId: string, input: { id?: string; title: string; isCompleted?: boolean; dueDate?: string | null }) {
-  const response = await fetch(`/api/v1/trips/${encodeURIComponent(tripId)}/checklist`, {
-    method: "POST",
-    credentials: "include",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ title: input.title, isCompleted: input.isCompleted ?? false, dueDate: input.dueDate ?? null, ...(input.id ? { id: input.id } : {}) }),
-  });
-  const payload = await response.json() as { success: boolean; data?: TripChecklistItem };
-  return payload.success ? payload.data : undefined;
-}
-
-function PackingEditor({
-  tripId,
-  snapshot,
-  setSnapshot,
-  title,
-  setTitle,
-}: {
-  tripId: string;
-  snapshot: ItineraryEditorSnapshot;
-  setSnapshot: (snapshot: ItineraryEditorSnapshot) => void;
-  title: string;
-  setTitle: (value: string) => void;
-}) {
-  async function addItem(value: string) {
-    const next = value.trim();
-    if (!next) {
-      setTitle(" ");
-      return;
-    }
-    const item = await persistChecklistItem(tripId, { title: next, isCompleted: false, dueDate: null });
-    setSnapshot({
-      ...snapshot,
-      checklist: [...snapshot.checklist, item ?? { id: `pack-${Date.now()}`, title: next, dueDate: null, isCompleted: false }],
-    });
-    setTitle("");
-  }
-
-  return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-4">
-      <div className="flex items-center justify-between">
-        <p className="text-sm font-extrabold text-on-surface">Perlengkapan</p>
-        <button
-          type="button"
-          className="grid h-8 w-8 place-items-center rounded-full bg-primary text-white"
-          aria-label="Tambah perlengkapan"
-          onClick={() => void addItem(title)}
-        >
-          <Icon name="add" />
-        </button>
-      </div>
-      {snapshot.checklist.length === 0 && !title ? <p className="mt-2 type-caption text-on-surface-variant">Opsional. Ketuk + untuk menambah barang.</p> : null}
-      <div className="mt-3 space-y-2">
-        {snapshot.checklist.map((item) => (
-          <label key={item.id} className="flex items-center gap-2 rounded-xl bg-slate-50 px-3 py-2 text-sm">
-            <input
-              type="checkbox"
-              checked={item.isCompleted}
-              onChange={() => {
-                const next = !item.isCompleted;
-                setSnapshot({ ...snapshot, checklist: snapshot.checklist.map((entry) => entry.id === item.id ? { ...entry, isCompleted: next } : entry) });
-                void persistChecklistItem(tripId, { id: item.id, title: item.title, isCompleted: next, dueDate: item.dueDate });
-              }}
-            />
-            <span className={item.isCompleted ? "text-on-surface-variant line-through" : ""}>{item.title}</span>
-          </label>
-        ))}
-        {title !== "" ? (
-          <input
-            className="field-input min-h-10 text-sm"
-            autoFocus
-            placeholder="Contoh: Powerbank"
-            value={title.trimStart()}
-            onChange={(event) => setTitle(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key !== "Enter" || !title.trim()) return;
-              event.preventDefault();
-              void addItem(title);
-            }}
-          />
-        ) : null}
-      </div>
-    </section>
->>>>>>> 13c57bd (style: redesign edit page)
   );
 }

@@ -12,6 +12,8 @@ export const samplePublicUser: PublicUser = {
   coverUrl: null,
   bio: "Traveler",
   domicile: "Jakarta",
+  instagramUrl: null,
+  tiktokUrl: null,
   followersCount: 0,
   followingCount: 0,
   hostTripCount: 0,
@@ -31,10 +33,12 @@ export const sampleOtherUser: PublicUser = {
   displayName: "Wayan",
   domicile: "Bali",
   bio: "Host sailing Komodo",
+  instagramUrl: "https://www.instagram.com/wayan",
+  tiktokUrl: "https://www.tiktok.com/@wayan",
 };
 
 export const sampleAuthSession: AuthSession = {
   user: samplePublicUser,
-  emailVerified: false,
+    emailVerified: true,
   profileComplete: isProfileComplete(samplePublicUser),
 };

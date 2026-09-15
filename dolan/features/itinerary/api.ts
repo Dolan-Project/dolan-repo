@@ -7,13 +7,8 @@ import {
   type SaveItineraryVersionInput,
   type TripChecklistItem,
 } from "@dolan/shared";
-<<<<<<< HEAD
+import { shouldUseMockApi } from "@/lib/auth/use-mock";
 import { createBudgetSummary } from "./mock-data";
-=======
-import { buildDestinationItinerary } from "@/lib/destination-itinerary";
-import { budgetItemsFromPlan, estimateItineraryBudget, hydrateItineraryPlaces, packItinerarySchedule, placeTicketEstimate, withGlobalStopNumbers } from "@/lib/template-itinerary";
-import { createBudgetSummary, createEditorSnapshot } from "./mock-data";
->>>>>>> 13c57bd (style: redesign edit page)
 
 const wait = (ms = 260) => new Promise((resolve) => setTimeout(resolve, ms));
 const clone = <T,>(value: T): T => structuredClone(value);
@@ -169,13 +164,128 @@ async function pollJob(jobId: string) {
   return null;
 }
 
+export type ItineraryGeneratePreferences = {
+  destinationCity: string;
+  startDate: string;
+  endDate: string;
+  partySize: number;
+  budgetAmount: number;
+  budgetBasis: "PER_PERSON" | "GROUP";
+  transport?: string;
+  regenerateMode?: "balanced" | "cheaper" | "alternative";
+  minStopsPerDay?: number;
+  maxStopsPerDay?: number;
+};
+
+function activeDays(snapshot: ItineraryEditorSnapshot): EditableItineraryDay[] {
+  const active = snapshot.versions.find((version) => version.id === snapshot.activeVersionId);
+  return active?.days ?? snapshot.versions[0]?.days ?? [];
+}
+
+/** First-paint / wizard generate: live → Groq job; mock → local multi-stop builder as stand-in. */
+export async function generateInitialItinerary(input: {
+  tripId: string;
+  tripTitle: string;
+  preferences: ItineraryGeneratePreferences;
+  fallbackDays: EditableItineraryDay[];
+  budgetItems: BudgetItemInput[];
+  sourceLabel?: "AI" | "TEMPLATE";
+}) {
+  const useLive = !shouldUseMockApi();
+  const preferences = {
+    ...input.preferences,
+    regenerateMode: input.preferences.regenerateMode ?? "balanced",
+    minStopsPerDay: input.preferences.minStopsPerDay ?? 2,
+    maxStopsPerDay: input.preferences.maxStopsPerDay ?? 4,
+    requireDayCards: true,
+  };
+
+  if (useLive) {
+    const response = await fetch(`/api/v1/trips/${encodeURIComponent(input.tripId)}/generate`, {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "content-type": "application/json",
+        "idempotency-key": crypto.randomUUID(),
+      },
+      body: JSON.stringify({
+        type: "GENERATE_ITINERARY",
+        idempotencyKey: crypto.randomUUID(),
+        preferences,
+      }),
+    });
+    const payload = (await response.json()) as {
+      success: boolean;
+      data?: GenerationJob;
+      error?: { message?: string };
+    };
+    if (!response.ok || !payload.success || !payload.data?.id) {
+      throw new Error(payload.error?.message ?? "Gagal memulai generate itinerary Groq.");
+    }
+    const job = await pollJob(payload.data.id);
+    if (job?.status === "SUCCEEDED") {
+      const snapshot = await getItineraryEditor(input.tripId);
+      const days = activeDays(snapshot);
+      if (!days.length) {
+        throw new Error("Groq selesai tapi itinerary kosong. Coba generate lagi.");
+      }
+      return { snapshot, days, job, fromGroq: true as const };
+    }
+    if (job?.status === "FAILED") {
+      const code = job.errorCode ? ` (${job.errorCode})` : "";
+      if (job.errorCode === "INVALID_GENERATION") {
+        throw new Error(
+          `Generate Groq gagal${code}: hasil AI tidak lolos verifikasi tempat (Place ID). Coba generate lagi.`,
+        );
+      }
+      if (job.errorCode === "PROVIDER_UNAVAILABLE") {
+        throw new Error(
+          `Generate Groq gagal${code}: provider AI/Maps tidak tersedia. Cek GROQ_API_KEY, kuota Groq, dan GOOGLE_MAPS_SERVER_KEY di server.`,
+        );
+      }
+      throw new Error(
+        `Generate Groq gagal${code}. Cek log server (job generation). API key biasanya sudah terisi jika error ini muncul.`,
+      );
+    }
+    throw new Error("Generate Groq masih berjalan terlalu lama. Muat ulang lalu coba lagi.");
+  }
+
+  await wait(900);
+  const days = clone(input.fallbackDays);
+  const snapshot: ItineraryEditorSnapshot = {
+    tripId: input.tripId,
+    tripTitle: input.tripTitle,
+    destinationCity: input.preferences.destinationCity,
+    startDate: input.preferences.startDate,
+    endDate: input.preferences.endDate,
+    activeVersionId: "wizard-v1",
+    versions: [{
+      id: "wizard-v1",
+      tripId: input.tripId,
+      versionNumber: 1,
+      source: input.sourceLabel ?? "AI",
+      summary: `Rekomendasi itinerary untuk ${input.preferences.destinationCity} (mock — set NEXT_PUBLIC_USE_MOCK_API=false untuk Groq live).`,
+      assumptions: [
+        "Mode mock: hasil dari generator lokal multi-stop, bukan Groq.",
+        "Aktifkan live API + GROQ_API_KEY agar rekomendasi dari Groq.",
+      ],
+      days,
+      budget: createBudgetSummary(input.budgetItems),
+      createdAt: new Date().toISOString(),
+    }],
+    checklist: [],
+  };
+  return { snapshot, days, job: null, fromGroq: false as const };
+}
+
 export async function generateAlternative(
   snapshot: ItineraryEditorSnapshot,
   baseDays: EditableItineraryDay[],
   budgetItems: BudgetItemInput[],
   regenerateMode: "balanced" | "cheaper" | "alternative" = "balanced",
+  preferences?: Partial<ItineraryGeneratePreferences>,
 ) {
-  const useLive = process.env.NEXT_PUBLIC_USE_MOCK_API === "false";
+  const useLive = !shouldUseMockApi();
   if (useLive) {
     const response = await fetch(`/api/v1/trips/${encodeURIComponent(snapshot.tripId)}/generate`, {
       method: "POST",
@@ -187,7 +297,18 @@ export async function generateAlternative(
       body: JSON.stringify({
         type: "REGENERATE_ITINERARY",
         idempotencyKey: crypto.randomUUID(),
-        preferences: { regenerateMode },
+        preferences: {
+          regenerateMode,
+          destinationCity: preferences?.destinationCity ?? snapshot.destinationCity,
+          startDate: preferences?.startDate ?? snapshot.startDate,
+          endDate: preferences?.endDate ?? snapshot.endDate,
+          partySize: preferences?.partySize,
+          budgetAmount: preferences?.budgetAmount,
+          budgetBasis: preferences?.budgetBasis,
+          minStopsPerDay: preferences?.minStopsPerDay ?? 2,
+          maxStopsPerDay: preferences?.maxStopsPerDay ?? 4,
+          requireDayCards: true,
+        },
       }),
     });
     const payload = (await response.json()) as {
@@ -204,14 +325,14 @@ export async function generateAlternative(
       return { snapshot: next, job };
     }
     if (job?.status === "FAILED") {
-      throw new Error("Generate gagal. Draft dan versi aktif tidak berubah.");
+      const code = job.errorCode ? ` (${job.errorCode})` : "";
+      throw new Error(`Generate gagal${code}. Draft dan versi aktif tidak berubah.`);
     }
     throw new Error("Generate masih berjalan terlalu lama. Muat ulang halaman lalu cek versi itinerary.");
   }
 
   await wait(900);
   const versionNumber = Math.max(...snapshot.versions.map((item) => item.versionNumber), 0) + 1;
-<<<<<<< HEAD
   const generatedDays = clone(baseDays).map((day) => ({
     ...day,
     stops: day.stops.map((stop, index) => ({
@@ -244,74 +365,5 @@ export async function generateAlternative(
       ],
     },
     job: null,
-=======
-  const lockedNames = new Set(
-    baseDays.flatMap((day) => day.stops.filter((stop) => stop.isLocked).map((stop) => (stop.customTitle || stop.place?.name || "").trim().toLocaleLowerCase("id-ID"))),
-  );
-  const pool = snapshot.versions.find((item) => item.id === snapshot.activeVersionId)?.budget.totalHigh ?? 0;
-  const generatedDays = packItinerarySchedule(
-    hydrateItineraryPlaces(
-      buildDestinationItinerary({
-        destination: snapshot.destinationCity,
-        startDate: snapshot.startDate,
-        endDate: snapshot.endDate,
-        variant: versionNumber,
-        excludeNames: regenerateMode === "alternative"
-          ? baseDays.flatMap((day) => day.stops.filter((stop) => !stop.isLocked).map((stop) => stop.customTitle || stop.place?.name || ""))
-          : regenerateMode === "cheaper"
-            ? baseDays.flatMap((day) => day.stops.filter((stop) => !stop.isLocked).map((stop) => stop.customTitle || stop.place?.name || "")).filter((name) => placeTicketEstimate(name) > 0)
-            : undefined,
-        preferCheaper: regenerateMode === "cheaper",
-        budgetPool: Number(pool) || 0,
-      }).map((day) => ({
-        ...day,
-        stops: day.stops.map((stop) => {
-          const key = (stop.customTitle || stop.place?.name || "").trim().toLocaleLowerCase("id-ID");
-          const locked = baseDays.flatMap((item) => item.stops).find((item) => item.isLocked && (item.customTitle || item.place?.name || "").trim().toLocaleLowerCase("id-ID") === key);
-          return locked ?? {
-            ...stop,
-            notes: `${stop.notes ?? ""} ${regenerateMode === "cheaper" ? "Dipilih opsi lebih hemat." : "Diurutkan ulang supaya rute tidak bolak-balik."}`.trim(),
-          };
-        }),
-      })),
-      snapshot.destinationCity,
-    ),
-  );
-  if (lockedNames.size) {
-    generatedDays.forEach((day) => {
-      day.stops.forEach((stop) => {
-        const key = (stop.customTitle || stop.place?.name || "").trim().toLocaleLowerCase("id-ID");
-        if (lockedNames.has(key)) stop.isLocked = true;
-      });
-    });
-    const usedNames = new Set(
-      generatedDays.flatMap((day) => day.stops.map((stop) => (stop.customTitle || stop.place?.name || "").trim().toLocaleLowerCase("id-ID"))),
-    );
-    const missingLocked = baseDays.flatMap((day) => day.stops).filter((stop) => {
-      const key = (stop.customTitle || stop.place?.name || "").trim().toLocaleLowerCase("id-ID");
-      return stop.isLocked && key && !usedNames.has(key);
-    });
-    if (missingLocked.length && generatedDays[0]) {
-      generatedDays[0] = {
-        ...generatedDays[0],
-        stops: withGlobalStopNumbers([{ ...generatedDays[0], stops: [...missingLocked, ...generatedDays[0].stops] }])[0]!.stops,
-      };
-    }
-  }
-  const plan = estimateItineraryBudget(generatedDays, Number(pool) || 0, 1, { leanMeals: regenerateMode === "cheaper" });
-  const nextBudgetItems = regenerateMode === "cheaper" ? budgetItemsFromPlan(generatedDays, plan) : budgetItems;
-  const generated: EditableItineraryVersion = {
-    id: `version-${versionNumber}`,
-    tripId: snapshot.tripId,
-    versionNumber,
-    source: "REGENERATED",
-    summary: regenerateMode === "cheaper"
-      ? "AI menyusun ulang rute supaya lebih hemat."
-      : "AI mengurutkan ulang rute supaya lebih hemat jarak.",
-    assumptions: ["Destinasi terkunci tidak diubah", "Estimasi biaya bukan tiket resmi"],
-    days: generatedDays,
-    budget: createBudgetSummary(nextBudgetItems.length ? nextBudgetItems : budgetItems),
-    createdAt: new Date().toISOString(),
->>>>>>> 13c57bd (style: redesign edit page)
   };
 }

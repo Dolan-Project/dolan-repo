@@ -38,6 +38,8 @@ export type AuthIdentity = {
   avatarUrl: string | null;
   coverUrl: string | null;
   bio: string | null;
+  instagramUrl: string | null;
+  tiktokUrl: string | null;
 };
 
 export type TripAccessContext = {

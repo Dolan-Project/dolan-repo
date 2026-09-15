@@ -357,7 +357,12 @@ export function resolvePlaceCoordinates(name: string, city = ""): LatLng | undef
   const haystack = `${exact} ${normalizePlaceKey(city)}`.trim();
   const named = Object.keys(PLACE_COORDINATES)
     .concat(Object.keys(ALIASES))
-    .filter((key) => key.length >= 4 && (haystack.includes(key) || key.includes(exact)))
+    .filter((key) => {
+      if (key.length < 5) return false;
+      // Require the place name itself to relate to the key — do not match solely via city token
+      // (avoids "… Walk" + Medan accidentally resolving through unrelated "* walk" keys).
+      return exact.includes(key) || key.includes(exact) || (exact.length >= 5 && haystack.includes(key) && key.split(/\s+/).some((token) => token.length >= 4 && exact.includes(token)));
+    })
     .sort((a, b) => b.length - a.length)[0];
   if (named) {
     const hit = lookupKey(named);

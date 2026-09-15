@@ -11,6 +11,8 @@ const base: AuthSession = {
     coverUrl: null,
     bio: null,
     domicile: "Jakarta",
+    instagramUrl: null,
+    tiktokUrl: null,
     followersCount: 0,
     followingCount: 0,
     hostTripCount: 0,
@@ -27,10 +29,10 @@ const base: AuthSession = {
 };
 
 describe("resolveAfterAuth", () => {
-  it("sends unverified users to cek-email and keeps next", () => {
+  it("does not send unverified users to cek-email", () => {
     expect(
       resolveAfterAuth({ ...base, emailVerified: false }, "/buat-trip"),
-    ).toBe("/cek-email?next=%2Fbuat-trip");
+    ).toBe("/buat-trip");
   });
 
   it("sends incomplete profiles to edit before the intended action", () => {

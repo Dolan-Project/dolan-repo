@@ -16,9 +16,7 @@ export function haversineKm(a: GeoPoint, b: GeoPoint) {
 
 export function travelMinutesBetween(a: GeoPoint, b: GeoPoint) {
   const km = haversineKm(a, b);
-  if (km < 0.8) return Math.min(25, Math.max(5, Math.round((km / 4.5) * 60)));
-  const cityKmh = km < 12 ? 18 : km < 45 ? 28 : 45;
-  return Math.min(240, Math.max(12, Math.round((km / cityKmh) * 60)));
+  return Math.min(480, Math.max(10, Math.round((km / 32) * 60)));
 }
 
 export function routeLengthKm<T extends GeoPoint>(stops: T[]) {
@@ -91,20 +89,9 @@ export function farthestPairIndices<T extends GeoPoint>(stops: T[]): [number, nu
   return [bestA, bestB];
 }
 
-/** Order along a corridor so the path does not bounce back on itself. */
+/** Order along a corridor: start at the diameter end nearer the hub, then NN + 2-opt. */
 export function orderStopsWithoutBacktrack<T extends GeoPoint>(stops: T[], hub?: GeoPoint) {
   if (stops.length <= 2) return [...stops];
-  const lats = stops.map((stop) => stop.lat);
-  const lngs = stops.map((stop) => stop.lng);
-  const latSpan = Math.max(...lats) - Math.min(...lats);
-  const lngSpan = Math.max(...lngs) - Math.min(...lngs);
-  if (latSpan > lngSpan * 1.15 || lngSpan > latSpan * 1.15) {
-    const sorted = [...stops].sort((left, right) => (latSpan >= lngSpan ? right.lat - left.lat : left.lng - right.lng));
-    if (hub && haversineKm(sorted[sorted.length - 1]!, hub) + 0.05 < haversineKm(sorted[0]!, hub)) {
-      return sorted.reverse();
-    }
-    return sorted;
-  }
   const [endA, endB] = farthestPairIndices(stops);
   const startIndex = hub
     ? haversineKm(stops[endA]!, hub) <= haversineKm(stops[endB]!, hub)
@@ -235,14 +222,103 @@ function nameKey<T extends { name?: string }>(stop: T) {
   return (stop.name ?? "").trim().toLocaleLowerCase("id-ID");
 }
 
+function radiusLadder(baseKm: number) {
+  const base = Math.max(8, baseKm);
+  return [base, Math.round(base * 1.55), Math.round(base * 2.2), Math.round(base * 3.2)];
+}
+
+function pickNearestUnused<T extends GeoPoint>(
+  pool: T[],
+  used: Set<number>,
+  origin: GeoPoint,
+  allowIndex: (index: number, distance: number) => boolean,
+) {
+  let best = -1;
+  let bestDistance = Number.POSITIVE_INFINITY;
+  pool.forEach((point, index) => {
+    if (used.has(index)) return;
+    const distance = haversineKm(origin, point);
+    if (!allowIndex(index, distance)) return;
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      best = index;
+    }
+  });
+  return best;
+}
+
+/** Grow day groups until we have `daysTotal` days — prefer leftover points over splitting full days. */
+function ensureDayCount<T extends GeoPoint>(
+  groups: T[][],
+  daysTotal: number,
+  leftover: T[],
+  hub: GeoPoint,
+  minPerDay = 1,
+) {
+  const next = groups.map((group) => [...group]);
+  const queue = [...leftover];
+
+  // Prefer packing leftover into new multi-stop days rather than 1-stop stubs.
+  while (next.length < daysTotal && queue.length) {
+    const day: T[] = [];
+    while (day.length < Math.max(1, minPerDay) && queue.length) {
+      day.push(queue.shift()!);
+    }
+    // If still short, steal from a donor that has spare stops above minPerDay.
+    while (day.length < Math.max(1, minPerDay)) {
+      let donor = -1;
+      let donorSize = minPerDay;
+      next.forEach((group, index) => {
+        if (group.length > donorSize) {
+          donorSize = group.length;
+          donor = index;
+        }
+      });
+      if (donor < 0) break;
+      const moved = next[donor]!.pop();
+      if (!moved) break;
+      day.push(moved);
+    }
+    if (!day.length) break;
+    next.push(day);
+  }
+
+  // Only split an existing day if both sides can keep minPerDay stops.
+  while (next.length < daysTotal) {
+    let donor = -1;
+    next.forEach((group, index) => {
+      if (group.length > minPerDay && (donor < 0 || group.length > next[donor]!.length)) {
+        donor = index;
+      }
+    });
+    if (donor < 0) break;
+    const canTake = next[donor]!.length - minPerDay;
+    if (canTake <= 0) break;
+    const take = Math.min(minPerDay, canTake);
+    const moved: T[] = [];
+    for (let i = 0; i < take; i += 1) {
+      const item = next[donor]!.pop();
+      if (!item) break;
+      moved.push(item);
+    }
+    if (!moved.length) break;
+    next.push(moved.reverse());
+  }
+
+  return orderClustersFromHub(
+    next.filter((group) => group.length > 0).map((group) => orderStopsWithoutBacktrack(group, hub)),
+    hub,
+  ).slice(0, Math.max(1, daysTotal));
+}
+
 export function selectCompactStops<T extends GeoPoint & { name?: string }>(
   candidates: T[],
   dayCount: number,
   hub: GeoPoint,
   options?: {
     excludeNames?: string[];
-    minPerDay?: number;
     maxPerDay?: number;
+    minPerDay?: number;
     maxRadiusKm?: number;
     variant?: number;
   },
@@ -257,65 +333,99 @@ export function selectCompactStops<T extends GeoPoint & { name?: string }>(
     unique.push(candidate);
   });
   let pool = unique.filter((item) => !exclude.has(nameKey(item)));
-  if (pool.length < Math.min(2, unique.length)) pool = unique;
-  const daysWanted = Math.max(1, dayCount);
-  const daysTotal = Math.max(1, Math.min(daysWanted, pool.length));
-  const maxPerDay = Math.max(2, options?.maxPerDay ?? 4);
-  const requestedMin = Math.max(2, options?.minPerDay ?? 3);
-  const minPerDay = Math.max(2, Math.min(requestedMin, Math.max(2, Math.floor(pool.length / daysTotal) || 2)));
-  const maxRadiusKm = options?.maxRadiusKm ?? 80;
+  if (!pool.length) pool = unique;
+  if (!pool.length) return [];
+
+  const daysTotal = Math.max(1, dayCount);
+  const maxPerDay = Math.max(1, options?.maxPerDay ?? 3);
+  const minPerDay = Math.max(1, Math.min(maxPerDay, options?.minPerDay ?? 2));
+  const ladders = radiusLadder(options?.maxRadiusKm ?? 80);
   const variant = Math.max(0, options?.variant ?? 0);
   const ranked = [...pool].sort((left, right) => haversineKm(left, hub) - haversineKm(right, hub));
-  const skip = ranked.length > 1 ? Math.min(variant * Math.max(1, minPerDay), ranked.length - 1) : 0;
-  const startPool = ranked.slice(skip).concat(ranked.slice(0, skip));
+  const skip = Math.min(variant, Math.max(0, ranked.length - Math.max(daysTotal, 1)));
+  const startPool = ranked.slice(skip);
   const used = new Set<number>();
   const groups: T[][] = [];
 
-  const pickIndex = (day: T[], dayHub: GeoPoint, radiusKm: number, requireNear: boolean) => {
-    let best = -1;
-    let bestDistance = Number.POSITIVE_INFINITY;
-    startPool.forEach((point, index) => {
-      if (used.has(index)) return;
-      const origin = day.at(-1) ?? day[0] ?? dayHub;
-      const distance = haversineKm(origin, point);
-      const fromDayStart = day[0] ? haversineKm(day[0], point) : distance;
-      if (requireNear && day.length > 0 && (fromDayStart > radiusKm || distance > radiusKm)) return;
-      if (distance < bestDistance) {
-        bestDistance = distance;
-        best = index;
-      }
-    });
-    return best;
-  };
-
   for (let dayIndex = 0; dayIndex < daysTotal; dayIndex += 1) {
-    const remainingDays = daysTotal - dayIndex;
-    const remainingStops = startPool.length - used.size;
-    const target = Math.min(maxPerDay, Math.max(minPerDay, Math.ceil(remainingStops / remainingDays)));
     const dayHub = groups.at(-1)?.at(-1) ?? hub;
     const day: T[] = [];
-    for (let slot = 0; slot < target; slot += 1) {
-      let best = pickIndex(day, dayHub, maxRadiusKm, slot > 0);
-      if (best < 0) best = pickIndex(day, dayHub, maxRadiusKm * 1.7, slot > 0);
-      if (best < 0) best = pickIndex(day, dayHub, maxRadiusKm * 3, false);
+    const remainingDays = daysTotal - dayIndex;
+    const unused = startPool.length - used.size;
+    if (unused === 0) {
+      const origin = groups.at(-1)?.at(-1) ?? hub;
+      const wrap: T[] = [];
+      const rankedWrap = [...startPool].sort((left, right) => haversineKm(origin, left) - haversineKm(origin, right));
+      for (const point of rankedWrap) {
+        if (wrap.length >= minPerDay) break;
+        wrap.push(point);
+      }
+      if (!wrap.length) break;
+      groups.push(orderStopsWithoutBacktrack(wrap, origin));
+      continue;
+    }
+    // Never reserve so aggressively that today drops to 1 stop while 2+ unused remain.
+    const evenShare = Math.ceil(unused / remainingDays);
+    const dayCap = unused < minPerDay
+      ? unused
+      : Math.min(maxPerDay, Math.max(minPerDay, evenShare));
+
+    for (const maxRadiusKm of ladders) {
+      while (day.length < dayCap) {
+        const origin = day[0] ?? dayHub;
+        const slot = day.length;
+        const best = pickNearestUnused(startPool, used, origin, (index, distance) => {
+          const point = startPool[index]!;
+          const fromHub = haversineKm(hub, point);
+          if (slot === 0) return fromHub <= maxRadiusKm * 2.4;
+          return distance <= maxRadiusKm && fromHub <= maxRadiusKm * 1.8;
+        });
+        if (best < 0) break;
+        used.add(best);
+        day.push(startPool[best]!);
+      }
+      if (day.length >= Math.min(minPerDay, dayCap)) break;
+    }
+
+    while (day.length < Math.min(minPerDay, dayCap)) {
+      const origin = day[0] ?? dayHub;
+      const softRadius = ladders[ladders.length - 1]!;
+      const best = pickNearestUnused(startPool, used, origin, (index, distance) => {
+        const point = startPool[index]!;
+        return distance <= softRadius && haversineKm(hub, point) <= softRadius * 1.5;
+      });
       if (best < 0) break;
       used.add(best);
       day.push(startPool[best]!);
     }
-    if (day.length) groups.push(orderStopsWithoutBacktrack(day, dayHub));
-  }
 
-  for (let index = 0; index < groups.length; index += 1) {
-    while ((groups[index]?.length ?? 0) < minPerDay) {
-      const donor = groups.findIndex((group, groupIndex) => groupIndex !== index && group.length > minPerDay);
-      if (donor < 0) break;
-      const extra = groups[donor]!.pop();
-      if (!extra) break;
-      groups[index]!.push(extra);
-      groups[index] = orderStopsWithoutBacktrack(groups[index]!, hub);
+    // Sparse catalogs: fill minPerDay only with stops still near the trip hub.
+    while (day.length < Math.min(minPerDay, dayCap)) {
+      const origin = day[0] ?? dayHub;
+      const hubLimit = ladders[ladders.length - 1]! * 1.25;
+      const best = pickNearestUnused(startPool, used, origin, (index) => {
+        return haversineKm(hub, startPool[index]!) <= hubLimit;
+      });
+      if (best < 0) break;
+      used.add(best);
+      day.push(startPool[best]!);
     }
+
+    if (!day.length) {
+      const softRadius = ladders[ladders.length - 1]!;
+      const best = pickNearestUnused(startPool, used, dayHub, (index) => {
+        const point = startPool[index]!;
+        return haversineKm(hub, point) <= softRadius * 1.8;
+      });
+      if (best < 0) break;
+      used.add(best);
+      day.push(startPool[best]!);
+    }
+
+    groups.push(orderStopsWithoutBacktrack(day, dayHub));
   }
 
-  return orderClustersFromHub(groups.filter((group) => group.length > 0), hub);
+  const leftover = startPool.filter((_, index) => !used.has(index));
+  return ensureDayCount(groups, Math.min(daysTotal, startPool.length), leftover, hub, minPerDay);
 }
 

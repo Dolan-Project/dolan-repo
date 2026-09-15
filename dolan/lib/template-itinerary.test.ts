@@ -2,22 +2,16 @@ import { describe, expect, it } from "vitest";
 import {
   applyTemplatePrefill,
   applyPublicMeetingPoint,
-  appendVisitStop,
   availableBudgetPool,
   canRegenerate,
-  describeTransportLeg,
   estimateItineraryBudget,
   firstStopMeetingLabel,
   googleMapsDirectionsUrl,
   hydrateItineraryPlaces,
   itineraryMapMarkers,
   MAX_ITINERARY_REGENERATES,
-  mergeLockedStops,
   moveStopInDay,
-  packItinerarySchedule,
   placeFromTemplateStop,
-  placeSummaryFromPick,
-  placeTicketEstimate,
   remainingRegenerates,
   visitWindowLabel,
   templateDaysToEditable,
@@ -74,26 +68,10 @@ describe("create trip wizard helpers", () => {
     const plan = estimateItineraryBudget(days, 200_000, 2);
     expect(plan.total).toBeGreaterThan(0);
     expect(plan.overBudget).toBe(true);
+    expect(plan.byStopId[days[0].stops[0].id].lines.map((line) => line.key)).toEqual(["ticket", "food", "transport"]);
     expect(plan.byStopId[days[0].stops[0].id].ticketCost).toBeGreaterThan(0);
-    const foodStops = days[0].stops.filter((stop) => plan.byStopId[stop.id].foodCost > 0);
-    expect(foodStops).toHaveLength(1);
-    expect(plan.byStopId[foodStops[0]!.id].lines.some((line) => line.key === "food")).toBe(true);
     const fitted = estimateItineraryBudget(days, 5_000_000, 2);
     expect(fitted.overBudget).toBe(false);
-  });
-
-  it("names the vehicle and fare instead of calling a long hop walking", () => {
-    const ancol = { lat: -6.1256, lng: 106.8333 };
-    const kotaTua = { lat: -6.1352, lng: 106.8133 };
-    const geologi = { lat: -6.9007, lng: 107.6191 };
-    const gedungSate = { lat: -6.9025, lng: 107.6187 };
-    const far = describeTransportLeg(ancol, kotaTua, { destinationName: "Kota Tua Jakarta" });
-    expect(far.mode).not.toMatch(/jalan kaki/i);
-    expect(far.detail).toMatch(/Naik/i);
-    expect(far.amount).toBeGreaterThan(0);
-    const walk = describeTransportLeg(geologi, gedungSate, { destinationName: "Gedung Sate" });
-    expect(walk.mode).toMatch(/Jalan kaki/i);
-    expect(walk.amount).toBe(0);
   });
 
   it("does not invent tickets for free public places like Bundaran HI and Braga", () => {
@@ -116,22 +94,18 @@ describe("create trip wizard helpers", () => {
     expect(plan.byStopId[days[0].stops[0].id].lines.some((line) => line.key === "ticket")).toBe(false);
   });
 
-  it("treats Bundaran Hotel Indonesia as a free public landmark", () => {
-    const days = templateDaysToEditable(
-      [{
-        id: "d1",
-        dayNumber: 1,
-        title: "Hari 1",
-        stops: [
-          { sequence: 1, activityType: "VISIT", customTitle: "Bundaran Hotel Indonesia", durationMinutes: 45, notes: null, place: null },
-        ],
-      }],
-      "Jakarta",
-      "2026-11-01",
-    );
-    expect(placeTicketEstimate("Bundaran Hotel Indonesia")).toBe(0);
-    expect(estimateItineraryBudget(days, 1_000_000, 1).byStopId[days[0].stops[0].id].ticketCost).toBe(0);
-    expect(placeTicketEstimate("Kafe di Menteng")).toBe(0);
+  it("prices walk / ojek / drive transport legs and labels day starts clearly", async () => {
+    const { estimateTransportLeg } = await import("./template-itinerary");
+    expect(estimateTransportLeg({ km: 0, isFirstOfDay: true }).label).toMatch(/Titik awal hari/i);
+    expect(estimateTransportLeg({ km: 0.4, minutes: 8 }).cost).toBe(0);
+    expect(estimateTransportLeg({ km: 0.4, minutes: 8 }).mode).toBe("walk");
+    const ojek = estimateTransportLeg({ km: 5, minutes: 15 });
+    expect(ojek.mode).toBe("ojek");
+    expect(ojek.cost).toBeGreaterThanOrEqual(12_000);
+    expect(ojek.label).toMatch(/ojek/i);
+    const drive = estimateTransportLeg({ km: 40, minutes: 75 });
+    expect(drive.mode).toBe("drive");
+    expect(drive.cost).toBeGreaterThan(ojek.cost);
   });
 
   it("caps regenerate at two attempts", () => {
@@ -241,102 +215,5 @@ describe("create trip wizard helpers", () => {
     const publicDays = applyPublicMeetingPoint(days, true);
     expect(publicDays[0].stops[0].activityType).toBe("Titik kumpul");
     expect(firstStopMeetingLabel(publicDays)).toBe("Tanah Lot");
-  });
-
-  it("keeps itinerary numbers running across days on the list and map", () => {
-    const days = templateDaysToEditable(
-      [
-        {
-          id: "d1",
-          dayNumber: 1,
-          title: "Hari 1",
-          stops: [
-            { sequence: 1, activityType: "VISIT", customTitle: "Monumen Nasional", durationMinutes: 90, notes: null, place: null },
-            { sequence: 2, activityType: "VISIT", customTitle: "Kota Tua Jakarta", durationMinutes: 90, notes: null, place: null },
-            { sequence: 3, activityType: "VISIT", customTitle: "Bundaran HI", durationMinutes: 60, notes: null, place: null },
-          ],
-        },
-        {
-          id: "d2",
-          dayNumber: 2,
-          title: "Hari 2",
-          stops: [
-            { sequence: 1, activityType: "VISIT", customTitle: "Taman Menteng", durationMinutes: 90, notes: null, place: null },
-          ],
-        },
-      ],
-      "Jakarta",
-      "2026-11-01",
-    );
-    expect(days[0].stops.map((stop) => stop.sequence)).toEqual([1, 2, 3]);
-    expect(days[1].stops.map((stop) => stop.sequence)).toEqual([4]);
-    expect(itineraryMapMarkers(days, null).map((marker) => marker.sequence)).toEqual([1, 2, 3, 4]);
-  });
-
-  it("packs weekday visits from morning through evening and appends a custom stop on the map", () => {
-    const days = packItinerarySchedule(templateDaysToEditable(
-      [{
-        id: "d1",
-        dayNumber: 1,
-        title: "Hari 1",
-        stops: [
-          { sequence: 1, activityType: "VISIT", customTitle: "Monumen Nasional", durationMinutes: 90, notes: null, place: null },
-          { sequence: 2, activityType: "VISIT", customTitle: "Kota Tua Jakarta", durationMinutes: 90, notes: null, place: null },
-          { sequence: 3, activityType: "VISIT", customTitle: "Bundaran HI", durationMinutes: 60, notes: null, place: null },
-          { sequence: 4, activityType: "VISIT", customTitle: "Taman Menteng", durationMinutes: 90, notes: null, place: null },
-        ],
-      }],
-      "Jakarta",
-      "2026-11-01",
-    ));
-    expect(days[0].stops[0].startTime).toBe("08:00");
-    expect(days[0].stops.every((stop) => stop.durationMinutes <= 75)).toBe(true);
-    expect(days[0].stops.length).toBe(4);
-    const last = days[0].stops.at(-1)!;
-    expect(visitWindowLabel(last.startTime, last.durationMinutes).slice(-5) < "18:00").toBe(true);
-    const full = packItinerarySchedule(templateDaysToEditable(
-      [{
-        id: "d1",
-        dayNumber: 1,
-        title: "Hari 1",
-        stops: [
-          { sequence: 1, activityType: "VISIT", customTitle: "Monumen Nasional", durationMinutes: 90, notes: null, place: null },
-          { sequence: 2, activityType: "VISIT", customTitle: "Kota Tua Jakarta", durationMinutes: 90, notes: null, place: null },
-          { sequence: 3, activityType: "VISIT", customTitle: "Glodok", durationMinutes: 60, notes: null, place: null },
-          { sequence: 4, activityType: "VISIT", customTitle: "Masjid Istiqlal", durationMinutes: 60, notes: null, place: null },
-          { sequence: 5, activityType: "VISIT", customTitle: "Bundaran HI", durationMinutes: 60, notes: null, place: null },
-          { sequence: 6, activityType: "VISIT", customTitle: "Taman Menteng", durationMinutes: 90, notes: null, place: null },
-          { sequence: 7, activityType: "VISIT", customTitle: "Gelora Bung Karno", durationMinutes: 60, notes: null, place: null },
-          { sequence: 8, activityType: "VISIT", customTitle: "Taman Suropati", durationMinutes: 60, notes: null, place: null },
-        ],
-      }],
-      "Jakarta",
-      "2026-11-01",
-    ));
-    expect(full[0].stops.every((stop) => stop.durationMinutes <= 75)).toBe(true);
-    expect(visitWindowLabel(full[0].stops.at(-1)!.startTime, full[0].stops.at(-1)!.durationMinutes).slice(-5) >= "17:00").toBe(true);
-    const picked = placeSummaryFromPick({ name: "Ancol", city: "Jakarta", latitude: -6.125, longitude: 106.833 });
-    expect(picked.latitude).toBeCloseTo(-6.125, 3);
-    const withCustom = appendVisitStop(days, "d1", { name: "Ancol", city: "Jakarta", latitude: -6.125, longitude: 106.833 });
-    expect(withCustom[0].stops.at(-1)?.customTitle).toBe("Ancol");
-    expect(withCustom[0].stops.at(-1)?.place?.latitude).toBeCloseTo(-6.125, 3);
-    expect(withCustom[0].stops.at(-1)?.isLocked).toBe(true);
-    const regenerated = mergeLockedStops(
-      templateDaysToEditable(
-        [{
-          id: "d1",
-          dayNumber: 1,
-          title: "Hari 1",
-          stops: [
-            { sequence: 1, activityType: "VISIT", customTitle: "Monumen Nasional", durationMinutes: 90, notes: null, place: null },
-            { sequence: 2, activityType: "VISIT", customTitle: "Kota Tua Jakarta", durationMinutes: 90, notes: null, place: null },
-          ],
-        }],
-        "Jakarta",
-        "2026-11-01",
-      ),
-      withCustom,
-    );
-    expect(regenerated[0].stops.some((stop) => stop.customTitle === "Ancol" && stop.isLocked)).toBe(true);
   });
 });

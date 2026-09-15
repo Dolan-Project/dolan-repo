@@ -1,8 +1,12 @@
 import { SearchErrorCode, type PlaceDetails, type PlacePhotoMedia, type PlaceSummary } from "@dolan/shared";
-import { providerUnavailable, tooManyRequests } from "../../lib/api-error.ts";
+import { notFound, providerUnavailable, tooManyRequests } from "../../lib/api-error.ts";
 import { logger } from "../../lib/logger.ts";
 import { looksLikeLodgingOrFoodQuery } from "../../modules/search/place-rank.ts";
 import { extractAttributions, toPlaceDetails, toPlaceSummary, type GooglePlace } from "./places-mapper.ts";
+
+export function normalizeGooglePlaceId(googlePlaceId: string) {
+  return googlePlaceId.startsWith("places/") ? googlePlaceId.slice("places/".length) : googlePlaceId;
+}
 
 const PLACES_BASE = "https://places.googleapis.com/v1";
 const SEARCH_FIELD_MASK = [
@@ -40,6 +44,8 @@ export type PlacesSearchInput = {
   latitude?: number;
   longitude?: number;
   sort?: "relevance" | "popular" | "nearest";
+  /** Skip tourist_attraction filter — used when resolving AI place names. */
+  loose?: boolean;
 };
 
 export function photoMediaPath(photoName: string) {
@@ -61,7 +67,7 @@ export class GooglePlacesClient implements PlacesProvider {
 
   async searchText(input: PlacesSearchInput): Promise<PlaceSummary[]> {
     const lodgingOrFood = looksLikeLodgingOrFoodQuery(input.query);
-    const wisataHint = lodgingOrFood ? "" : " wisata";
+    const wisataHint = lodgingOrFood || input.loose ? "" : " wisata";
     const textQuery = input.city
       ? `${input.query}${wisataHint} in ${input.city}, Indonesia`
       : `${input.query}${wisataHint} Indonesia`;
@@ -71,7 +77,7 @@ export class GooglePlacesClient implements PlacesProvider {
       regionCode: "ID",
       pageSize: 20,
     };
-    if (!lodgingOrFood) {
+    if (!lodgingOrFood && !input.loose) {
       body.includedType = "tourist_attraction";
       body.strictTypeFiltering = false;
     }
@@ -93,11 +99,15 @@ export class GooglePlacesClient implements PlacesProvider {
       body,
     });
 
-    return (payload.places ?? []).map(toPlaceSummary).filter((place): place is PlaceSummary => Boolean(place));
+    return (payload.places ?? [])
+      .map(toPlaceSummary)
+      .filter((place): place is PlaceSummary => Boolean(place))
+      .map((place) => ({ ...place, googlePlaceId: normalizeGooglePlaceId(place.googlePlaceId) }));
   }
 
   async getDetails(googlePlaceId: string): Promise<PlaceDetails> {
-    const payload = await this.request<GooglePlace>(`places/${encodeURIComponent(googlePlaceId)}`, {
+    const id = normalizeGooglePlaceId(googlePlaceId);
+    const payload = await this.request<GooglePlace>(`places/${encodeURIComponent(id)}`, {
       method: "GET",
       fieldMask: DETAIL_FIELD_MASK,
     });
@@ -105,7 +115,10 @@ export class GooglePlacesClient implements PlacesProvider {
     if (!details) {
       throw providerUnavailable(SearchErrorCode.PROVIDER_UNAVAILABLE, "Place details were incomplete", 502);
     }
-    return details;
+    return {
+      ...details,
+      googlePlaceId: normalizeGooglePlaceId(details.googlePlaceId),
+    };
   }
 
   async getPhotoMedia(photoName: string): Promise<PlacePhotoMedia> {
@@ -151,6 +164,9 @@ export class GooglePlacesClient implements PlacesProvider {
 
     if (response.status === 429) {
       throw tooManyRequests(SearchErrorCode.QUOTA_EXCEEDED, "Google Places quota was exceeded");
+    }
+    if (response.status === 404) {
+      throw notFound(SearchErrorCode.PLACE_NOT_FOUND, "Place was not found");
     }
     if (!response.ok) {
       logger.error("Google Places request failed", {

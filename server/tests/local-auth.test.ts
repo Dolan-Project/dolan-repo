@@ -28,6 +28,7 @@ describe("local password auth", () => {
       });
     expect(registered.status).toBe(201);
     expect(registered.body.data.accessToken).toBeTruthy();
+    expect(registered.body.data.session.emailVerified).toBe(true);
 
     const me = await request(api)
       .get("/api/v1/users/me")

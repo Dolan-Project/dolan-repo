@@ -72,10 +72,19 @@ export class GroqAdapter implements GenerationModel {
         : mode === "alternative"
           ? "Buat rute alternatif yang berbeda urutan/tempatnya dari rencana umum, tetap realistis untuk backpacker, dan hindari pengulangan destinasi yang terlalu klise jika ada opsi setara."
           : "Buat rute seimbang antara waktu, biaya, dan pengalaman populer.";
+    const minStops = Number(input.preferences?.minStopsPerDay ?? 2);
+    const maxStops = Number(input.preferences?.maxStopsPerDay ?? 4);
     const response = await this.client.chat.completions.create({
-      model: this.model, temperature: mode === "alternative" ? 0.5 : 0.2,
+      model: this.model,
+      temperature: mode === "alternative" ? 0.5 : 0.2,
+      max_completion_tokens: 8192,
       messages: [
-        { role: "system", content: `Kamu adalah perencana perjalanan backpacker Indonesia. ${style} Kembalikan JSON sesuai schema. Budget merupakan estimasi, bukan harga paket. Gunakan tempat nyata yang selanjutnya diverifikasi server. Kategori budget hanya: TRANSPORT_ROUNDTRIP, TRANSPORT_LOCAL, LODGING, FOOD, ACTIVITIES, OTHER, RESERVE.` },
+        {
+          role: "system",
+          content: `Kamu adalah perencana perjalanan backpacker Indonesia. ${style} Kembalikan JSON sesuai schema. Budget merupakan estimasi, bukan harga paket. Kategori budget hanya: TRANSPORT_ROUNDTRIP, TRANSPORT_LOCAL, LODGING, FOOD, ACTIVITIES, OTHER, RESERVE.
+Penting untuk place: isi name + city dengan nama tempat wisata nyata yang akurat (bahasa lokal/umum). Field googlePlaceId boleh placeholder berawalan ChIJ; server akan resolve ID resmi via Google Places dari nama. Jangan mengarang ID yang tidak kamu pastikan.
+Aturan rute wajib: buat tepat satu day card per hari perjalanan (dayNumber berurutan). DILARANG 1 destinasi per hari — wisatawan tidak menghabiskan seharian di satu tempat. Tiap hari WAJIB ${minStops}-${maxStops} tempat populer yang berdekatan (jalan kaki/ojek, koridor yang sama). Kalau landmark besar (Danau Toba, Bukit Lawang), tambahkan 2-3 tempat di kawasan itu (desa, museum, pasar, air terjun terdekat), jangan pindah ke kota jauh. Semua place WAJIB di/dekat destinasi trip (contoh: Medan tidak boleh Cimahi/Bandung). Urutkan nearest-neighbor. travelDurationMinutes 0 hanya untuk stop pertama tiap hari. Sertakan estimasi TRANSPORT_LOCAL / ACTIVITIES / FOOD per kunjungan.`,
+        },
         { role: "user", content: `Susun itinerary optimal untuk trip ${input.tripId}. Preferensi: ${JSON.stringify(input.preferences ?? {})}` },
       ],
       response_format: { type: "json_schema", json_schema: { name: "dolan_itinerary", strict: true, schema: GROQ_ITINERARY_RESPONSE_SCHEMA } },
@@ -89,11 +98,12 @@ export class GroqAdapter implements GenerationModel {
     const response = await this.client.chat.completions.create({
       model: this.model,
       temperature: 0.3,
+      max_completion_tokens: 4096,
       messages: [
         {
           role: "system",
           content:
-            "Kamu merekomendasikan destinasi backpacker di Indonesia. Kembalikan JSON sesuai schema. Setiap kandidat wajib punya googlePlaceId nyata berawalan ChIJ (bukan fiktif). Sertakan 3–5 destinasi berbeda dengan estimasi budget IDR sebagai string desimal.",
+            "Kamu merekomendasikan destinasi backpacker di Indonesia. Kembalikan JSON sesuai schema. Prioritaskan name + city akurat; googlePlaceId boleh placeholder ChIJ karena server resolve via Google Places. Sertakan 3–5 destinasi berbeda dengan estimasi budget IDR sebagai string desimal.",
         },
         {
           role: "user",

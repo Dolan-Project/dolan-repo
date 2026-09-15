@@ -4,6 +4,10 @@ import type { HomeFeedPayload } from "./home-feed-types";
 
 export type { HomeFeedPayload } from "./home-feed-types";
 
+export type HomeFeedResult =
+  | { ok: true; data: HomeFeedPayload }
+  | { ok: false; error: string; data: HomeFeedPayload };
+
 function emptyFeed(): HomeFeedPayload {
   return {
     trips: [],
@@ -25,7 +29,7 @@ function emptyFeed(): HomeFeedPayload {
   };
 }
 
-export async function loadHomeFeed(): Promise<HomeFeedPayload> {
+export async function loadHomeFeed(): Promise<HomeFeedResult> {
   const cookie = (await cookies())
     .getAll()
     .map((item) => `${item.name}=${item.value}`)
@@ -37,19 +41,38 @@ export async function loadHomeFeed(): Promise<HomeFeedPayload> {
       headers: cookie ? { cookie, accept: "application/json" } : { accept: "application/json" },
       cache: "no-store",
     });
-    if (!response.ok) return emptyFeed();
+    if (!response.ok) {
+      return {
+        ok: false,
+        error: `Feed tidak tersedia (${response.status}).`,
+        data: emptyFeed(),
+      };
+    }
     const json = (await response.json()) as
       | { success: true; data: HomeFeedPayload }
-      | { success: false };
-    if (!json.success) return emptyFeed();
+      | { success: false; error?: { message?: string } };
+    if (!json.success) {
+      return {
+        ok: false,
+        error: json.error?.message ?? "Feed gagal dimuat.",
+        data: emptyFeed(),
+      };
+    }
     return {
-      ...json.data,
-      provinces:
-        json.data.provinces.length > 0
-          ? json.data.provinces
-          : emptyFeed().provinces,
+      ok: true,
+      data: {
+        ...json.data,
+        provinces:
+          json.data.provinces.length > 0
+            ? json.data.provinces
+            : emptyFeed().provinces,
+      },
     };
   } catch {
-    return emptyFeed();
+    return {
+      ok: false,
+      error: "Tidak bisa menghubungi server feed.",
+      data: emptyFeed(),
+    };
   }
 }

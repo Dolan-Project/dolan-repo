@@ -30,5 +30,35 @@ describe("profileUpdateSchema", () => {
       coverCaption: "Sunrise Rinjani",
     });
     expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.instagramUrl).toBeNull();
+      expect(result.data.tiktokUrl).toBeNull();
+    }
+  });
+
+  it("normalizes Instagram and TikTok handles to profile URLs", () => {
+    const result = profileUpdateSchema.safeParse({
+      username: "salsa.trek",
+      displayName: "Salsa",
+      domicile: "Jakarta",
+      instagramUrl: "@salsa.trek",
+      tiktokUrl: "https://www.tiktok.com/@salsa_trek",
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.instagramUrl).toBe("https://www.instagram.com/salsa.trek");
+      expect(result.data.tiktokUrl).toBe("https://www.tiktok.com/@salsa_trek");
+    }
+  });
+
+  it("rejects invalid Instagram or TikTok values", () => {
+    const result = profileUpdateSchema.safeParse({
+      username: "salsa.trek",
+      displayName: "Salsa",
+      domicile: "Jakarta",
+      instagramUrl: "https://example.com/salsa",
+      tiktokUrl: "x",
+    });
+    expect(result.success).toBe(false);
   });
 });

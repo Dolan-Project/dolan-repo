@@ -1,11 +1,9 @@
 import Link from "next/link";
 import { AppShell } from "@/components/layout/AppShell";
 import { ProfileView } from "@/components/profile/ProfileView";
-import { getSession } from "@/lib/auth/get-session";
-import { handleGetPublicProfileRequest } from "@/lib/auth/handle-profile";
+import { getPublicProfile, getSession } from "@/lib/auth/get-session";
 import { profilePrimaryAction } from "@/lib/profile/owner";
 import { ROUTES } from "@/lib/routes";
-import type { PublicUser } from "@/lib/contracts";
 
 type PageProps = {
   params: Promise<{ username: string }>;
@@ -13,13 +11,9 @@ type PageProps = {
 
 export default async function PublicProfilPage({ params }: PageProps) {
   const { username } = await params;
-  const session = await getSession();
-  const response = await handleGetPublicProfileRequest(username);
-  const json = (await response.json()) as
-    | { success: true; data: PublicUser }
-    | { success: false };
+  const [session, user] = await Promise.all([getSession(), getPublicProfile(username)]);
 
-  if (!json.success) {
+  if (!user) {
     return (
       <AppShell>
         <div className="mx-auto max-w-[560px] px-margin py-16 text-center">
@@ -35,11 +29,11 @@ export default async function PublicProfilPage({ params }: PageProps) {
     );
   }
 
-  const action = profilePrimaryAction(session?.user.username, json.data.username);
+  const action = profilePrimaryAction(session?.user.username, user.username);
 
   return (
     <AppShell>
-      <ProfileView user={json.data} action={action} />
+      <ProfileView user={user} action={action} />
     </AppShell>
   );
 }

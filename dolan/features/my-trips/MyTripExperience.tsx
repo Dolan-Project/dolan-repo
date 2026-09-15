@@ -566,17 +566,9 @@ function TripCard({
           </button>
         )}
         {trip.visibility === "PUBLIC" && trip.role !== "PENDING" && (
-          <button
-            type="button"
-            onClick={() =>
-              onNotice(
-                "Room chat akan aktif setelah wiring Socket.IO dan membership."
-              )
-            }
-            className="rounded-full bg-surface-container px-3 py-2 type-label"
-          >
+          <Link href={ROUTES.tripChat(trip.id)} className="rounded-full bg-surface-container px-3 py-2 type-label">
             <Icon name="forum" /> Grup Chat
-          </button>
+          </Link>
         )}
         {trip.role === "HOST" && trip.id === "komodo-4d3n" && (
           <Link

@@ -16,10 +16,7 @@ const PENDING = "33333333-3333-4333-8333-333333333333";
 const TRIP = "trip-socket-1";
 
 function cookieFor(token: string) {
-  const payload = Buffer.from(JSON.stringify({ access_token: token, refresh_token: "hidden" })).toString(
-    "base64",
-  );
-  return `sb-local-auth-token=base64-${payload}`;
+  return `dolan_session=${token}`;
 }
 
 describe("chat socket rooms", () => {
@@ -118,6 +115,81 @@ describe("chat socket rooms", () => {
 
     closers.push(async () => {
       member.close();
+      sockets.io.close();
+      await new Promise<void>((resolve, reject) =>
+        httpServer.close((error) => (error ? reject(error) : resolve())),
+      );
+    });
+  });
+
+  it("fans comment.created to viewers who joined the comments room", async () => {
+    const chat = new ChatService(new MemoryChatStore());
+    const trips = createMemoryTripService(undefined, chat);
+    const auth = new AuthService(new MockAuthAdapter(), new MemoryUserRepository());
+    const httpServer = createServer();
+    const sockets = createSocketServer(httpServer, auth, chat, trips);
+    const app = createApp(
+      auth,
+      sockets.disconnectUser,
+      createMemorySearchService(),
+      createJobService(),
+      trips,
+      chat,
+    );
+    httpServer.on("request", app);
+    await new Promise<void>((resolve) => httpServer.listen(0, resolve));
+    const address = httpServer.address();
+    if (!address || typeof address === "string") throw new Error("no port");
+    const url = `http://127.0.0.1:${address.port}`;
+
+    const { default: request } = await import("supertest");
+    const created = await request(app)
+      .post("/api/v1/trips")
+      .set("Authorization", "Bearer mock-verified-complete")
+      .set("Idempotency-Key", "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa")
+      .send({
+        title: "Open Yogya",
+        visibility: "PUBLIC",
+        startDate: "2026-10-01",
+        endDate: "2026-10-03",
+        destinationCity: "Yogyakarta",
+        maxParticipants: 4,
+        publicMeetingPointLabel: "Stasiun Tugu",
+      });
+    expect(created.status).toBe(201);
+    const published = await request(app)
+      .post(`/api/v1/trips/${created.body.data.id}/publish`)
+      .set("Authorization", "Bearer mock-verified-complete")
+      .set("Idempotency-Key", "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb")
+      .send({ visibility: "PUBLIC" });
+    expect(published.status).toBe(200);
+    const tripId = published.body.data.id as string;
+
+    const host = await connectClient(url, cookieFor("mock-verified-complete"));
+    const visitor = await connectClient(url, cookieFor("mock-verified-budi"));
+    const hostJoined = await new Promise<{ ok: boolean }>((resolve) => {
+      host.emit("comments.join", { tripId }, resolve);
+    });
+    const visitorJoined = await new Promise<{ ok: boolean }>((resolve) => {
+      visitor.emit("comments.join", { tripId }, resolve);
+    });
+    expect(hostJoined.ok).toBe(true);
+    expect(visitorJoined.ok).toBe(true);
+
+    const incoming = new Promise<{ body: string }>((resolve) => {
+      host.on("comment.created", (payload: { body: string }) => resolve(payload));
+    });
+    const posted = await request(app)
+      .post(`/api/v1/trips/${tripId}/comments`)
+      .set("Authorization", "Bearer mock-verified-budi")
+      .set("Idempotency-Key", "cccccccc-cccc-4ccc-8ccc-cccccccccccc")
+      .send({ body: "Boleh join?" });
+    expect(posted.status).toBe(201);
+    await expect(incoming).resolves.toMatchObject({ body: "Boleh join?" });
+
+    closers.push(async () => {
+      host.close();
+      visitor.close();
       sockets.io.close();
       await new Promise<void>((resolve, reject) =>
         httpServer.close((error) => (error ? reject(error) : resolve())),

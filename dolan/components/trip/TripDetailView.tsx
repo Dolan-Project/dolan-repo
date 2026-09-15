@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { connectDolanSocket } from "@/lib/realtime/dolan-socket";
 import { Icon } from "@/components/ui/Icon";
+import { ProfileSocialLinks } from "@/components/profile/ProfileSocialLinks";
 import { AttendanceConfirm } from "@/components/trips/AttendanceConfirm";
 import { ReportTargetButton } from "@/components/moderation/ReportTargetButton";
 import { PlacePhoto } from "@/features/explore/PlacePhoto";
@@ -54,14 +56,24 @@ function initials(name: string) {
   return name.slice(0, 2).toUpperCase();
 }
 
+function mergeComment(current: TripComment[], incoming: TripComment) {
+  const index = current.findIndex((row) => row.id === incoming.id);
+  if (index < 0) return [...current, incoming];
+  const next = [...current];
+  next[index] = incoming;
+  return next;
+}
+
+function removeComment(current: TripComment[], commentId: string) {
+  return current.filter((row) => row.id !== commentId && row.parentId !== commentId);
+}
+
 export function TripDetailView({
   tripId,
   isLoggedIn,
-  emailVerified,
 }: {
   tripId: string;
   isLoggedIn: boolean;
-  emailVerified: boolean;
 }) {
   const router = useRouter();
   const [trip, setTrip] = useState<TripDetail | null>(null);
@@ -74,6 +86,8 @@ export function TripDetailView({
   const [confirmLeave, setConfirmLeave] = useState(false);
   const [commentBody, setCommentBody] = useState("");
   const [replyTo, setReplyTo] = useState<string | null>(null);
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [meId, setMeId] = useState<string | null>(null);
   const [joinMessage, setJoinMessage] = useState("");
   const [joinAck, setJoinAck] = useState(false);
   const [joinModal, setJoinModal] = useState(false);
@@ -124,6 +138,45 @@ export function TripDetailView({
     void loadAll();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tripId]);
+
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    const socket = connectDolanSocket();
+    const join = () => {
+      socket.emit("comments.join", { tripId });
+    };
+    socket.on("connect", join);
+    socket.on("comment.created", (comment: TripComment) => {
+      if (comment.tripId !== tripId) return;
+      setComments((current) => mergeComment(current, comment));
+    });
+    socket.on("comment.updated", (comment: TripComment) => {
+      if (comment.tripId !== tripId) return;
+      setComments((current) => mergeComment(current, comment));
+    });
+    socket.on("comment.deleted", (payload: { tripId?: string; commentId?: string }) => {
+      if (payload.tripId !== tripId || !payload.commentId) return;
+      setComments((current) => removeComment(current, payload.commentId!));
+    });
+    return () => {
+      socket.disconnect();
+    };
+  }, [tripId, isLoggedIn]);
+
+  useEffect(() => {
+    if (!isLoggedIn) {
+      setMeId(null);
+      return;
+    }
+    const controller = new AbortController();
+    void fetch("/api/v1/users/me", { credentials: "include", signal: controller.signal })
+      .then(async (response) => (response.ok ? response.json() : null))
+      .then((payload: { success?: boolean; data?: { user?: { id?: string } } } | null) => {
+        if (!controller.signal.aborted) setMeId(payload?.data?.user?.id ?? null);
+      })
+      .catch(() => undefined);
+    return () => controller.abort();
+  }, [isLoggedIn]);
 
   const threads = useMemo(() => {
     const roots = comments.filter((row) => row.parentId === null);
@@ -198,20 +251,57 @@ export function TripDetailView({
     event.preventDefault();
     setPending(true);
     setError("");
-    const response = await readJson<TripComment>(await fetch(`/api/v1/trips/${tripId}/comments`, {
-      method: "POST",
-      credentials: "include",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ body: commentBody, parentId: replyTo ?? undefined }),
-    }));
+    const editing = Boolean(editingCommentId);
+    const response = await readJson<TripComment>(
+      await fetch(
+        editing
+          ? `/api/v1/trips/${tripId}/comments/${encodeURIComponent(editingCommentId!)}`
+          : `/api/v1/trips/${tripId}/comments`,
+        {
+          method: editing ? "PATCH" : "POST",
+          credentials: "include",
+          headers: {
+            "content-type": "application/json",
+            ...(editing ? {} : { "Idempotency-Key": crypto.randomUUID() }),
+          },
+          body: JSON.stringify(
+            editing
+              ? { body: commentBody }
+              : { body: commentBody, parentId: replyTo ?? undefined },
+          ),
+        },
+      ),
+    );
     setPending(false);
     if (!response.success) {
       setError(response.error.message);
       return;
     }
+    setComments((current) => mergeComment(current, response.data));
     setCommentBody("");
     setReplyTo(null);
-    await loadAll();
+    setEditingCommentId(null);
+  }
+
+  async function onDeleteComment(commentId: string) {
+    setPending(true);
+    setError("");
+    const response = await readJson<{ deleted?: boolean }>(
+      await fetch(`/api/v1/trips/${tripId}/comments/${encodeURIComponent(commentId)}`, {
+        method: "DELETE",
+        credentials: "include",
+      }),
+    );
+    setPending(false);
+    if (!response.success) {
+      setError(response.error.message);
+      return;
+    }
+    if (editingCommentId === commentId) {
+      setEditingCommentId(null);
+      setCommentBody("");
+    }
+    setComments((current) => removeComment(current, commentId));
   }
 
   async function onJoin(event: React.FormEvent) {
@@ -312,7 +402,7 @@ export function TripDetailView({
         ? [{ id: "meeting", label: meetingLabel ?? "Titik temu", latitude: trip.publicMeetingPointLatitude, longitude: trip.publicMeetingPointLongitude, selected: true }]
         : [];
   const joinStatus = trip.myJoinRequest?.status === "WITHDRAWN" ? undefined : trip.myJoinRequest?.status;
-  const joinCta = !isLoggedIn ? "login" : !emailVerified ? "unverified" : trip.viewerRole === "host" ? "host" : trip.viewerRole === "participant" ? "member" : joinStatus ?? "none";
+  const joinCta = !isLoggedIn ? "login" : trip.viewerRole === "host" ? "host" : trip.viewerRole === "participant" ? "member" : joinStatus ?? "none";
   const members = trip.members ?? [trip.host];
   const genderLabel = trip.genderRule === "FEMALE_ONLY" ? "Khusus perempuan" : trip.genderRule === "MALE_ONLY" ? "Khusus laki-laki" : "Semua gender";
   const duration = durationLabel(trip.startDate, trip.endDate);
@@ -427,6 +517,12 @@ export function TripDetailView({
                       <span className="rounded border border-primary/20 bg-primary-fixed px-2 py-0.5 text-xs font-semibold text-primary">Host Inisiator</span>
                     </div>
                     <p className="type-caption text-on-surface-variant">@{trip.host.username}{trip.host.domicile ? ` · ${trip.host.domicile}` : ""}</p>
+                    <ProfileSocialLinks
+                      instagramUrl={trip.host.instagramUrl}
+                      tiktokUrl={trip.host.tiktokUrl}
+                      compact
+                      className="mt-1.5"
+                    />
                     <div className="mt-1 flex flex-wrap items-center gap-3 text-xs">
                       <span className="inline-flex items-center gap-1 font-bold text-on-surface">
                         <Icon name="star" className="text-[16px] text-amber-500" filled />
@@ -610,17 +706,38 @@ export function TripDetailView({
                   <ReportTargetButton targetType="trip" targetId={trip.id} label="Laporkan trip" />
                 </div>
               </div>
-              {isLoggedIn && emailVerified ? (
+              {isLoggedIn ? (
                 <form className="mb-6 rounded-xl border border-slate-100 bg-slate-50 p-4" onSubmit={onComment}>
-                  {replyTo ? <p className="mb-2 type-caption">Membalas satu tingkat. <button type="button" className="font-semibold text-primary" onClick={() => setReplyTo(null)}>Batal</button></p> : null}
-                  <textarea className="field-input min-h-20 text-xs" required value={commentBody} onChange={(event) => setCommentBody(event.target.value)} placeholder={`Tulis pertanyaan untuk host ${trip.host.displayName}…`} />
+                  {editingCommentId ? (
+                    <p className="mb-2 type-caption">
+                      Mengedit komentar.{" "}
+                      <button
+                        type="button"
+                        className="font-semibold text-primary"
+                        onClick={() => {
+                          setEditingCommentId(null);
+                          setCommentBody("");
+                        }}
+                      >
+                        Batal
+                      </button>
+                    </p>
+                  ) : replyTo ? (
+                    <p className="mb-2 type-caption">
+                      Membalas satu tingkat.{" "}
+                      <button type="button" className="font-semibold text-primary" onClick={() => setReplyTo(null)}>
+                        Batal
+                      </button>
+                    </p>
+                  ) : null}
+                  <textarea className="field-input min-h-20 text-xs" required value={commentBody} onChange={(event) => setCommentBody(event.target.value)} placeholder={editingCommentId ? "Perbarui komentar…" : `Tulis pertanyaan untuk host ${trip.host.displayName}…`} />
                   <div className="mt-2 flex items-center justify-between">
                     <span className="text-[11px] text-on-surface-variant">Diskusi ini dapat dibaca oleh publik</span>
-                    <button type="submit" className="rounded-lg bg-primary px-4 py-1.5 text-xs font-bold text-white" disabled={pending}>Kirim komentar</button>
+                    <button type="submit" className="rounded-lg bg-primary px-4 py-1.5 text-xs font-bold text-white" disabled={pending}>{editingCommentId ? "Simpan perubahan" : "Kirim komentar"}</button>
                   </div>
                 </form>
               ) : (
-                <p className="mb-6 rounded-xl bg-slate-50 p-4 type-body text-on-surface-variant">{isLoggedIn ? "Verifikasi email dulu untuk menulis komentar." : <>Masuk untuk menulis komentar. <Link className="font-semibold text-primary" href={`${ROUTES.masuk}?next=${encodeURIComponent(ROUTES.trip(tripId))}`}>Masuk</Link></>}</p>
+                <p className="mb-6 rounded-xl bg-slate-50 p-4 type-body text-on-surface-variant">Masuk untuk menulis komentar. <Link className="font-semibold text-primary" href={`${ROUTES.masuk}?next=${encodeURIComponent(ROUTES.trip(tripId))}`}>Masuk</Link></p>
               )}
               {threads.length === 0 ? (
                 <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 py-8 text-center">
@@ -637,9 +754,33 @@ export function TripDetailView({
                           <p className="text-xs font-bold text-on-surface">@{root.author.username}</p>
                           {root.author.id === trip.host.id ? <span className="text-[10px] font-bold text-primary">Host</span> : null}
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                           <ReportTargetButton targetType="comment" targetId={root.id} label="Laporkan" />
-                          <button type="button" className="text-[11px] font-semibold text-on-surface-variant hover:text-primary" onClick={() => setReplyTo(root.id)}>Balas</button>
+                          {meId && root.author.id === meId ? (
+                            <>
+                              <button
+                                type="button"
+                                className="text-[11px] font-semibold text-on-surface-variant hover:text-primary"
+                                onClick={() => {
+                                  setEditingCommentId(root.id);
+                                  setReplyTo(null);
+                                  setCommentBody(root.body);
+                                }}
+                              >
+                                Edit
+                              </button>
+                              <button
+                                type="button"
+                                className="text-[11px] font-semibold text-error hover:underline"
+                                disabled={pending}
+                                onClick={() => void onDeleteComment(root.id)}
+                              >
+                                Hapus
+                              </button>
+                            </>
+                          ) : (
+                            <button type="button" className="text-[11px] font-semibold text-on-surface-variant hover:text-primary" onClick={() => setReplyTo(root.id)}>Balas</button>
+                          )}
                         </div>
                       </div>
                       <p className="pl-0 text-xs text-on-surface sm:pl-0">{root.body}</p>
@@ -671,7 +812,6 @@ export function TripDetailView({
                   <Link href={`${ROUTES.masuk}?next=${encodeURIComponent(ROUTES.trip(tripId))}`} className="flex w-full items-center justify-center rounded-xl bg-primary py-3 text-sm font-bold text-white">Masuk / Daftar akun</Link>
                 </div>
               ) : null}
-              {!cancelled && joinCta === "unverified" ? <p className="type-body">Verifikasi email dulu untuk mengajukan join.</p> : null}
               {cancelled && joinCta !== "host" ? (
                 <ClosedJoin title="Trip resmi dibatalkan" body="Tidak menerima pengajuan baru karena rencana perjalanan telah dibatalkan." action="Trip tidak aktif" />
               ) : null}

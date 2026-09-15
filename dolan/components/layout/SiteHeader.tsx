@@ -4,10 +4,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { AuthSession } from "@/lib/contracts";
-import { ASSETS } from "@/lib/assets";
 import { ROUTES, type NavKey } from "@/lib/routes";
 import { Icon } from "@/components/ui/Icon";
 import { DolanWordmark } from "@/components/brand/DolanWordmark";
+import { UserAvatar } from "@/components/ui/UserAvatar";
 
 const desktopLinks: { key: NavKey; href: string; label: string }[] = [
   { key: "beranda", href: ROUTES.beranda, label: "Beranda" },
@@ -47,7 +47,6 @@ export function SiteHeader({
     return () => window.removeEventListener("scroll", update);
   }, []);
   const transparent = pathname === "/" && !scrolled;
-  const avatar = session?.user.avatarUrl ?? ASSETS.profile;
   if (chatChrome) return null;
 
   return (
@@ -93,11 +92,10 @@ export function SiteHeader({
           </Link>
           {session ? (
             <Link href={ROUTES.profil} aria-label="Profil">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                alt=""
-                className="h-8 w-8 rounded-full object-cover ring-2 ring-primary-fixed"
-                src={avatar}
+              <UserAvatar
+                src={session.user.avatarUrl}
+                className="h-8 w-8 rounded-full ring-2 ring-primary-fixed"
+                iconClassName="text-[18px]"
               />
             </Link>
           ) : (
