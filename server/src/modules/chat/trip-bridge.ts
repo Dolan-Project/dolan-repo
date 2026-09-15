@@ -11,17 +11,25 @@ export function tripChatBridge(store: MemoryChatStore, chat: ChatService): TripR
     onPublished(tripId, hostUserId) {
       if (!store.trips.has(tripId)) store.seedTrip({ tripId, hostUserId });
     },
-    onJoinRequested(tripId, userId) {
+    onJoinRequested(tripId, userId, join) {
       store.addPending(tripId, userId);
+      return chat.onJoinRequested(tripId, userId, join);
+    },
+    onJoinReviewed(tripId, userId, join, decision) {
+      return chat.onJoinReviewed(tripId, userId, join, decision);
     },
     onMemberJoined(tripId, userId) {
       store.addParticipant(tripId, userId);
     },
     onJoinClosed(tripId, userId) {
       store.clearPending(tripId, userId);
+      return chat.onJoinClosed(tripId, userId);
     },
     onCancelled(tripId) {
       store.setReadOnly(tripId, true);
+    },
+    onNotificationCreated(userId, payload) {
+      return chat.onNotificationCreated(userId, payload);
     },
   };
 }

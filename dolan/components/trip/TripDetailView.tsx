@@ -68,6 +68,14 @@ function removeComment(current: TripComment[], commentId: string) {
   return current.filter((row) => row.id !== commentId && row.parentId !== commentId);
 }
 
+function apiErrorText(error: { code?: string; message: string } | undefined, fallback: string) {
+  if (!error?.message) return fallback;
+  if (error.code === "PROFILE_INCOMPLETE") {
+    return "Lengkapi profil dulu (nama, username, dan domisili) sebelum mengajukan join.";
+  }
+  return error.message;
+}
+
 export function TripDetailView({
   tripId,
   isLoggedIn,
@@ -158,7 +166,18 @@ export function TripDetailView({
       if (payload.tripId !== tripId || !payload.commentId) return;
       setComments((current) => removeComment(current, payload.commentId!));
     });
+    let reloadTimer: number | undefined;
+    const reloadTrip = (payload: { tripId?: string }) => {
+      if (payload.tripId !== tripId) return;
+      window.clearTimeout(reloadTimer);
+      reloadTimer = window.setTimeout(() => {
+        void loadAll();
+      }, 80);
+    };
+    socket.on("join_request.created", reloadTrip);
+    socket.on("join_request.reviewed", reloadTrip);
     return () => {
+      window.clearTimeout(reloadTimer);
       socket.disconnect();
     };
   }, [tripId, isLoggedIn]);
@@ -218,7 +237,7 @@ export function TripDetailView({
     const response = await fetch(path, {
       method: "POST",
       credentials: "include",
-      headers: { "content-type": "application/json" },
+      headers: { "content-type": "application/json", "Idempotency-Key": crypto.randomUUID() },
       body: JSON.stringify(body),
     });
     const json = (await response.json()) as {
@@ -312,21 +331,26 @@ export function TripDetailView({
     }
     setPending(true);
     setError("");
-    const response = await readJson<JoinRequest>(await fetch(`/api/v1/trips/${tripId}/join-requests`, {
-      method: "POST",
-      credentials: "include",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ message: joinMessage || undefined }),
-    }));
-    setPending(false);
-    if (!response.success) {
-      setError(response.error.message);
-      return;
+    try {
+      const response = await readJson<JoinRequest>(await fetch(`/api/v1/trips/${tripId}/join-requests`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "content-type": "application/json", "Idempotency-Key": crypto.randomUUID() },
+        body: JSON.stringify({ message: joinMessage || undefined }),
+      }));
+      if (!response.success) {
+        setError(apiErrorText(response.error, "Pengajuan gagal dikirim. Coba lagi."));
+        return;
+      }
+      setJoinMessage("");
+      setJoinAck(false);
+      setJoinModal(false);
+      await loadAll();
+    } catch {
+      setError("Pengajuan gagal dikirim. Coba lagi.");
+    } finally {
+      setPending(false);
     }
-    setJoinMessage("");
-    setJoinAck(false);
-    setJoinModal(false);
-    await loadAll();
   }
 
   async function onFollowHost() {
@@ -975,9 +999,10 @@ export function TripDetailView({
                 <input className="mt-0.5" type="checkbox" checked={joinAck} onChange={(event) => setJoinAck(event.target.checked)} required />
                 <span className="text-[11px] leading-snug text-amber-900">Saya memahami bahwa trip ini adalah <strong>kegiatan swadaya mandiri (bukan paket tur)</strong> dan saya berkomitmen menanggung pengeluaran logistik pribadi sekitar <strong>~Rp {perPerson.toLocaleString("id-ID")}</strong>.</span>
               </label>
+              {error ? <p className="rounded-xl bg-error-container px-3 py-2.5 text-xs text-on-error-container" role="alert">{error}</p> : null}
               <div className="flex items-center justify-end gap-3 pt-2">
                 <button type="button" className="rounded-xl px-4 py-2 text-xs font-bold text-on-surface-variant hover:bg-slate-100" onClick={() => setJoinModal(false)}>Batal</button>
-                <button type="submit" className="rounded-xl bg-[#ff8a3d] px-5 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-[#ea580c]" disabled={pending}>Kirim pengajuan ke host</button>
+                <button type="submit" className="rounded-xl bg-[#ff8a3d] px-5 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-[#ea580c] disabled:opacity-60" disabled={pending}>{pending ? "Mengirim…" : "Kirim pengajuan ke host"}</button>
               </div>
             </form>
           </div>

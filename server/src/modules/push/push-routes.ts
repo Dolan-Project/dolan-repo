@@ -25,14 +25,12 @@ export function createPushRouter(_databaseReady = false) {
             authEncrypted: parsed.data.keys.auth,
           },
         });
-        if (row.userId !== req.authUser!.id) {
-          await row.update({
-            userId: req.authUser!.id,
-            p256dhEncrypted: parsed.data.keys.p256dh,
-            authEncrypted: parsed.data.keys.auth,
-            revokedAt: null,
-          });
-        }
+        await row.update({
+          userId: req.authUser!.id,
+          p256dhEncrypted: parsed.data.keys.p256dh,
+          authEncrypted: parsed.data.keys.auth,
+          revokedAt: null,
+        });
         res.status(201).json(apiSuccess({ id: row.id, endpoint: row.endpoint }));
       } catch (error) {
         throw providerUnavailable("DATABASE_UNAVAILABLE", "Push subscription could not be saved", 503);

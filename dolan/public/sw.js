@@ -23,17 +23,22 @@ self.addEventListener("message", (event) => {
 });
 
 self.addEventListener("push", (event) => {
-  let payload = { title: "Dolan", body: "Ada pembaruan trip." };
+  let payload = { title: "Dolan", body: "Ada pembaruan trip.", url: "/notifikasi" };
   try {
     if (event.data) payload = { ...payload, ...event.data.json() };
   } catch {
     /* keep default */
   }
+  const url = payload.url || (payload.data && payload.data.url) || "/notifikasi";
   event.waitUntil(
-    self.registration.showNotification(payload.title || "Dolan", {
-      body: payload.body || "",
-      data: payload.data || {},
-    }),
+    self.registration
+      .showNotification(payload.title || "Dolan", {
+        body: payload.body || "",
+        tag: "dolan-push",
+        renotify: true,
+        data: { ...(payload.data || {}), url },
+      })
+      .catch(() => undefined),
   );
 });
 
