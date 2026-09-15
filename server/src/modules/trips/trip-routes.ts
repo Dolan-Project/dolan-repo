@@ -192,7 +192,7 @@ export function createTripRouter(trips: TripService) {
     try {
       const channel = req.body?.channel === "WHATSAPP" ? "WHATSAPP" : "DOLAN";
       const username = typeof req.body?.username === "string" ? req.body.username.trim().replace(/^@/, "") : "";
-      const { Notification, TripInvitation, UserFollow, UserProfile } = getModels();
+      const { TripInvitation, UserFollow, UserProfile } = getModels();
       let invitedUserId: string | null = null;
       if (channel === "DOLAN") {
         if (!username) throw badRequest(TripErrorCode.INVALID_PLAN_INPUT, "Username teman wajib diisi");
@@ -213,23 +213,10 @@ export function createTripRouter(trips: TripService) {
         tokenHash, channel, status: "PENDING", expiresAt: new Date(Date.now() + 7 * 86_400_000),
       });
       if (invitedUserId) {
-        await Notification.create({
-          recipientUserId: invitedUserId,
-          actorUserId: req.authUser!.id,
-          type: "trip.invited",
-          targetType: "trip",
-          targetId: param(req.params.id),
-          data: { invitationId: invitation.id, invitePath: `/undangan/${token}` },
+        await trips.notifyUser(invitedUserId, req.authUser!.id, "trip.invited", "trip", param(req.params.id), {
+          invitationId: invitation.id,
+          invitePath: `/undangan/${token}`,
         });
-        void import("../push/push-delivery.ts").then(({ deliverPushNotification }) =>
-          deliverPushNotification({
-            recipientUserId: invitedUserId,
-            type: "trip.invited",
-            targetType: "trip",
-            targetId: param(req.params.id),
-            data: { invitationId: invitation.id, invitePath: `/undangan/${token}` },
-          }),
-        );
       }
       res.status(201).json(apiSuccess({ id: invitation.id, channel, invitePath: `/undangan/${token}`, expiresAt: invitation.expiresAt?.toISOString() ?? null }));
     } catch (error) { next(error); }

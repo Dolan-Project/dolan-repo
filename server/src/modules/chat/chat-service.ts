@@ -2,8 +2,11 @@ import {
   AuthErrorCode,
   listMessagesQuerySchema,
   markReadSchema,
+  presentInboxNotification,
   sendMessageSchema,
   type ChatMessage,
+  type JoinRequest,
+  type JoinReviewDecision,
   type PublicUser,
 } from "@dolan/shared";
 import { HttpError } from "../../lib/api-error.ts";
@@ -81,6 +84,9 @@ export class ChatService {
     });
     this.realtime.emitToRoom(tripId, "message.created", message);
     const members = await this.store.listActiveMemberIds(tripId);
+    const tripTitle = access.tripTitle ?? null;
+    const actorName = message.sender.displayName || message.sender.username || "Seseorang";
+    const actorUsername = message.sender.username?.trim() || "";
     for (const memberId of members) {
       this.realtime.emitToUser(memberId, "message.created", message);
       if (memberId === userId) continue;
@@ -90,9 +96,18 @@ export class ChatService {
         type: "message.created",
         targetType: "trip",
         targetId: tripId,
-        data: { messageId: message.id },
+        data: {
+          messageId: message.id,
+          preview: message.body,
+          actorName,
+          ...(actorUsername ? { actorUsername } : {}),
+          ...(tripTitle ? { tripTitle } : {}),
+        },
       });
-      this.realtime.emitToUser(memberId, "notification.created", notification);
+      this.onNotificationCreated(memberId, {
+        ...notification,
+        ...presentInboxNotification(notification),
+      });
     }
     return { message, created: true };
   }
@@ -141,6 +156,29 @@ export class ChatService {
 
   onCommentDeleted(tripId: string, payload: { tripId: string; commentId: string }) {
     this.realtime.emitToComments(tripId, "comment.deleted", payload);
+  }
+
+  onJoinRequested(tripId: string, userId: string, join?: JoinRequest) {
+    const payload = { tripId, userId, join };
+    this.realtime.emitToComments(tripId, "join_request.created", payload);
+    return this.emitJoinEvent(tripId, "join_request.created", payload, userId);
+  }
+
+  onJoinReviewed(tripId: string, userId: string, join: JoinRequest, decision: JoinReviewDecision) {
+    const payload = { tripId, userId, join, decision };
+    this.realtime.emitToComments(tripId, "join_request.reviewed", payload);
+    this.realtime.emitToUser(userId, "join_request.reviewed", payload);
+    return this.emitJoinEvent(tripId, "join_request.reviewed", payload);
+  }
+
+  onJoinClosed(tripId: string, userId: string) {
+    const payload = { tripId, userId, decision: "withdrawn" };
+    this.realtime.emitToComments(tripId, "join_request.reviewed", payload);
+    return this.emitJoinEvent(tripId, "join_request.reviewed", payload);
+  }
+
+  onNotificationCreated(userId: string, payload: unknown) {
+    this.realtime.emitToUser(userId, "notification.created", payload);
   }
 
   async emitJoinEvent(

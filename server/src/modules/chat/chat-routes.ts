@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { apiPage, apiSuccess } from "@dolan/shared";
+import { apiPage, apiSuccess, presentInboxNotification } from "@dolan/shared";
 import { requireLogin } from "../../middleware/authenticate.ts";
 import { requireCapability, withTripContext } from "../../middleware/authorize.ts";
 import type { ChatService } from "./chat-service.ts";
@@ -67,7 +67,11 @@ export function createChatRouter(chat: ChatService) {
       const page = Number(req.query.page ?? 1);
       const limit = Number(req.query.limit ?? 20);
       const result = await chat.listNotifications(req.authUser!.id, page, limit);
-      res.json(apiPage(result.items, page, limit, result.total));
+      const items = result.items.map((item) => ({
+        ...item,
+        ...presentInboxNotification(item),
+      }));
+      res.json({ ...apiPage(items, page, limit, result.total), unreadCount: result.unreadCount });
     } catch (error) {
       next(error);
     }

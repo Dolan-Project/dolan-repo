@@ -1,7 +1,9 @@
 import { BottomNav } from "@/components/layout/BottomNav";
 import { SiteFooter } from "@/components/layout/SiteFooter";
 import { SiteHeader } from "@/components/layout/SiteHeader";
+import { NotificationToaster } from "@/components/notifications/NotificationToaster";
 import { getSession } from "@/lib/auth/get-session";
+import { parseNotificationsResponse } from "@/lib/notifications";
 import { socialRouteHandlers } from "@/lib/social/adapter";
 import { cookies } from "next/headers";
 
@@ -21,30 +23,17 @@ export async function AppShell({
   const session = await getSession();
   let unreadCount = 0;
   if (session) {
-    try {
-      const cookie = (await cookies())
-        .getAll()
-        .map((item) => `${item.name}=${item.value}`)
-        .join("; ");
-      const response = await socialRouteHandlers.notifications.GET(
-        new Request("http://localhost/api/v1/notifications", {
-          headers: cookie ? { cookie } : {},
-        }),
-      );
-      const json = (await response.json()) as
-        | { success: true; data: Array<{ readAt?: string | null }>; pagination?: { totalItems: number } }
-        | { success: true; data: { unreadCount: number } }
-        | { success: false };
-      if (json.success) {
-        if (Array.isArray(json.data)) {
-          unreadCount = json.data.filter((item) => !item.readAt).length;
-        } else if ("unreadCount" in json.data) {
-          unreadCount = json.data.unreadCount;
-        }
-      }
-    } catch {
-      unreadCount = 0;
-    }
+    const cookie = (await cookies())
+      .getAll()
+      .map((item) => `${item.name}=${item.value}`)
+      .join("; ");
+    const response = await socialRouteHandlers.notifications.GET(
+      new Request("http://localhost/api/v1/notifications", {
+        headers: cookie ? { cookie } : {},
+      }),
+    );
+    const json = (await response.json()) as unknown;
+    unreadCount = parseNotificationsResponse(json).unreadCount;
   }
 
   return (
@@ -60,6 +49,7 @@ export async function AppShell({
       </main>
       {showFooter ? <SiteFooter /> : null}
       <BottomNav />
+      <NotificationToaster session={session} />
     </div>
   );
 }

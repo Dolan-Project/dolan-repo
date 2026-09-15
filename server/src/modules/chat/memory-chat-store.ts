@@ -9,6 +9,7 @@ type Member = {
 
 type MemoryTrip = {
   status: string;
+  title: string | null;
   readOnly: boolean;
   roomId: string;
   members: Map<string, Member>;
@@ -27,6 +28,7 @@ export class MemoryChatStore implements ChatStore {
     participants?: string[];
     pending?: string[];
     status?: string;
+    title?: string;
     readOnly?: boolean;
   }) {
     const members = new Map<string, Member>();
@@ -36,6 +38,7 @@ export class MemoryChatStore implements ChatStore {
     }
     this.trips.set(input.tripId, {
       status: input.status ?? "OPEN",
+      title: input.title ?? null,
       readOnly: Boolean(input.readOnly),
       roomId: `room-${input.tripId}`,
       members,
@@ -85,6 +88,7 @@ export class MemoryChatStore implements ChatStore {
       memberRole: member?.role ?? null,
       membershipStatus: member?.status ?? null,
       joinRequestStatus: trip.pending.has(userId) ? "PENDING" : null,
+      tripTitle: trip.title,
     };
   }
 
@@ -166,7 +170,11 @@ export class MemoryChatStore implements ChatStore {
       .filter((item) => item.recipientUserId === userId)
       .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
     const start = (page - 1) * limit;
-    return { items: items.slice(start, start + limit), total: items.length };
+    return {
+      items: items.slice(start, start + limit),
+      total: items.length,
+      unreadCount: items.filter((item) => item.readAt === null).length,
+    };
   }
 
   async evictMember(tripId: string, userId: string, status: "LEFT" | "REMOVED" = "LEFT"): Promise<void> {

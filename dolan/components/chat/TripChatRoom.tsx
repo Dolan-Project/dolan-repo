@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { Socket } from "socket.io-client";
 import type { ApiError, ChatMessage, PublicUser, TripDetail } from "@/lib/contracts";
 import { Icon } from "@/components/ui/Icon";
+import { UserAvatar } from "@/components/ui/UserAvatar";
 import { LocationSharePanel } from "@/components/trip/LocationSharePanel";
 import { ROUTES } from "@/lib/routes";
 import { connectDolanSocket } from "@/lib/realtime/dolan-socket";
@@ -25,6 +26,16 @@ function mergeMessageList(current: ChatMessage[], incoming: ChatMessage[]) {
 
 function parseMessagesPayload(data: ChatMessage[] | { messages: ChatMessage[] }) {
   return Array.isArray(data) ? data : data.messages;
+}
+
+function isOwnMessage(message: ChatMessage, me: PublicUser | null, trip: TripDetail | null) {
+  if (me?.id && message.sender.id === me.id) return true;
+  if (me?.username && message.sender.username === me.username) return true;
+  return Boolean(trip?.viewerRole === "host" && message.sender.id === trip.host.id);
+}
+
+function formatMessageTime(sentAt: string) {
+  return new Intl.DateTimeFormat("id-ID", { hour: "2-digit", minute: "2-digit" }).format(new Date(sentAt));
 }
 
 export function TripChatRoom({ tripId }: { tripId: string }) {
@@ -57,11 +68,11 @@ export function TripChatRoom({ tripId }: { tripId: string }) {
       if (!tripPayload.success) throw new Error(tripPayload.error.message);
       if (!messagePayload.success) throw new Error(messagePayload.error.message);
       setTrip(tripPayload.data);
-      setMessages(parseMessagesPayload(messagePayload.data));
       if (meResponse.ok) {
         const mePayload = await meResponse.json() as { success?: boolean; data?: { user?: PublicUser } };
         if (mePayload.success && mePayload.data?.user) setMe(mePayload.data.user);
       }
+      setMessages(parseMessagesPayload(messagePayload.data));
     }
     void hydrate().catch((reason) => { if (!controller.signal.aborted) setError(reason instanceof Error ? reason.message : "Chat tidak dapat dimuat"); });
     return () => controller.abort();
@@ -150,7 +161,26 @@ export function TripChatRoom({ tripId }: { tripId: string }) {
   return <main className="min-h-[calc(100dvh-5rem)] bg-surface px-margin py-5 md:px-margin-desktop md:py-8"><section className="mx-auto grid h-[calc(100dvh-8rem)] max-w-6xl overflow-hidden rounded-[2rem] border border-outline-variant/50 bg-white shadow-xl md:grid-cols-[280px_1fr]">
     <aside className="hidden min-h-0 space-y-4 overflow-y-auto border-r border-outline-variant/45 bg-surface-container-low p-5 md:block"><Link href={ROUTES.trip(tripId)} className="inline-flex items-center gap-2 text-sm font-bold text-primary"><Icon name="arrow_back" /> Detail trip</Link><div className="rounded-2xl bg-gradient-to-br from-primary to-[#1397d4] p-5 text-white"><p className="text-xs font-bold text-white/70">ROOM TRIP</p><h1 className="mt-2 text-xl font-extrabold">{trip?.title ?? "Memuat trip…"}</h1><p className="mt-3 text-xs leading-5 text-white/80">{trip?.destinationCity}</p></div><p className="text-xs leading-5 text-on-surface-variant">Chat hanya dapat dibaca host dan peserta yang sudah diterima.</p>{canChat ? <LocationSharePanel tripId={tripId} /> : null}</aside>
     <div className="flex min-h-0 flex-col"><header className="flex items-center gap-3 border-b border-outline-variant/45 px-4 py-3 md:px-6"><Link href={ROUTES.trip(tripId)} className="grid h-10 w-10 place-items-center rounded-full bg-surface-container md:hidden"><Icon name="arrow_back" /></Link><div className="min-w-0 flex-1"><h1 className="truncate font-extrabold text-on-surface">{trip?.title ?? "Grup perjalanan"}</h1><p className="text-xs text-on-surface-variant"><span className={`mr-1 inline-block h-2 w-2 rounded-full ${state === "online" ? "bg-emerald-500" : "bg-amber-500"}`} />{statusLabel}</p></div></header>
-      <div ref={listRef} onScroll={onListScroll} className="min-h-0 flex-1 space-y-3 overflow-y-auto bg-[#f4f8fc] p-4 md:p-6">{error ? <p className="rounded-xl bg-error-container px-4 py-3 text-sm text-on-error-container" role="alert">{error}</p> : null}{messages.map((message) => <article key={message.id} className="max-w-[82%] rounded-2xl rounded-bl-md bg-white px-4 py-3 shadow-sm"><p className="text-xs font-extrabold text-primary">@{message.sender.username}</p><p className="mt-1 text-sm leading-6 text-on-surface">{message.body}</p><time className="mt-1 block text-[10px] text-on-surface-variant">{new Intl.DateTimeFormat("id-ID", { hour: "2-digit", minute: "2-digit" }).format(new Date(message.sentAt))}</time></article>)}</div>
+      <div ref={listRef} onScroll={onListScroll} className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto bg-[#f4f8fc] p-4 md:p-6">{error ? <p className="rounded-xl bg-error-container px-4 py-3 text-sm text-on-error-container" role="alert">{error}</p> : null}{messages.map((message) => {
+        const mine = isOwnMessage(message, me, trip);
+        return (
+          <article key={message.id} className={`flex max-w-[82%] items-end gap-2 ${mine ? "ml-auto flex-row-reverse" : "mr-auto"}`}>
+            {mine ? null : (
+              <UserAvatar
+                src={message.sender.avatarUrl}
+                alt={message.sender.displayName}
+                className="mb-0.5 h-8 w-8 shrink-0 rounded-full"
+                iconClassName="text-[16px]"
+              />
+            )}
+            <div className={`min-w-0 rounded-2xl px-4 py-3 ${mine ? "rounded-br-md bg-primary text-white" : "rounded-bl-md bg-white text-on-surface shadow-sm"}`}>
+              {mine ? null : <p className="text-xs font-extrabold text-primary">@{message.sender.username}</p>}
+              <p className={`text-sm leading-6 ${mine ? "" : "mt-1"}`}>{message.body}</p>
+              <time className={`mt-1 block text-[10px] ${mine ? "text-right text-white/70" : "text-on-surface-variant"}`}>{formatMessageTime(message.sentAt)}</time>
+            </div>
+          </article>
+        );
+      })}</div>
       <form onSubmit={send} className="flex gap-2 border-t border-outline-variant/45 bg-white p-3 md:p-4"><input className="field-input min-w-0 flex-1 !rounded-full" value={body} onChange={(event) => setBody(event.target.value)} placeholder={canChat ? "Tulis pesan…" : "Khusus anggota trip"} disabled={!canChat}/><button className="grid h-12 w-12 flex-none place-items-center rounded-full bg-primary text-white disabled:opacity-40" disabled={!canChat || !body.trim()} aria-label="Kirim pesan"><Icon name="send" filled /></button></form>
     </div>
   </section></main>;

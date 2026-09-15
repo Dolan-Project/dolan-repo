@@ -44,6 +44,7 @@ export {
   verifyEmailSchema,
   profileUpdateSchema,
   socialHandleFromUrl,
+  presentInboxNotification,
   joinRequestBodySchema,
   joinReviewBodySchema,
   createCommentBodySchema,
@@ -60,4 +61,5 @@ export type {
   CreateTripInput,
   PublishTripInput,
   UpdateTripInput,
+  InboxNotificationCopy,
 } from "../../shared/src/index";

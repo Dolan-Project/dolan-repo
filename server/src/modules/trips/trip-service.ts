@@ -20,6 +20,7 @@ import {
   type TripViewerRole,
   type UpdateTripBody,
   type VisibilityBody,
+  presentInboxNotification,
 } from "@dolan/shared";
 import {
   badRequest,
@@ -36,13 +37,20 @@ const IDEMPOTENCY_TTL_MS = 24 * 60 * 60 * 1000;
 export type TripRealtime = {
   evictFromRoom?(tripId: string, userId: string): Promise<unknown> | unknown;
   onPublished?(tripId: string, hostUserId: string): Promise<unknown> | unknown;
-  onJoinRequested?(tripId: string, userId: string): Promise<unknown> | unknown;
+  onJoinRequested?(tripId: string, userId: string, join?: JoinRequest): Promise<unknown> | unknown;
+  onJoinReviewed?(
+    tripId: string,
+    userId: string,
+    join: JoinRequest,
+    decision: JoinReviewDecision,
+  ): Promise<unknown> | unknown;
   onMemberJoined?(tripId: string, userId: string): Promise<unknown> | unknown;
   onJoinClosed?(tripId: string, userId: string): Promise<unknown> | unknown;
   onCancelled?(tripId: string): Promise<unknown> | unknown;
   onCommentCreated?(tripId: string, comment: TripComment): Promise<unknown> | unknown;
   onCommentUpdated?(tripId: string, comment: TripComment): Promise<unknown> | unknown;
   onCommentDeleted?(tripId: string, payload: { tripId: string; commentId: string }): Promise<unknown> | unknown;
+  onNotificationCreated?(userId: string, payload: unknown): Promise<unknown> | unknown;
 };
 
 export type TripBlockLookup = {
@@ -228,12 +236,13 @@ export class TripService {
     for (const member of members) {
       if (member.membershipStatus !== "ACTIVE") continue;
       if (member.userId === user.id) continue;
-      await this.store.createNotification({
+      await this.recordNotification({
         recipientUserId: member.userId,
         actorUserId: user.id,
         type: "feedback.invite",
         targetType: "trip",
         targetId: tripId,
+        data: { tripTitle: detail.title },
       });
     }
     return detail;
@@ -245,14 +254,20 @@ export class TripService {
     type: string,
     targetType: string,
     targetId: string,
+    data?: Record<string, unknown>,
   ) {
-    if (recipientUserId === actorUserId) return;
-    await this.store.createNotification({
+    const extra = { ...(data ?? {}) };
+    if (targetType === "trip" && typeof extra.tripTitle !== "string") {
+      const trip = await this.store.getTrip(targetId);
+      if (trip?.title) extra.tripTitle = trip.title;
+    }
+    await this.recordNotification({
       recipientUserId,
       actorUserId,
       type,
       targetType,
       targetId,
+      data: extra,
     });
   }
 
@@ -378,7 +393,7 @@ export class TripService {
   async requestJoin(actor: SessionActor, tripId: string, message: string | undefined, idempotencyKey: string | undefined) {
     const user = requireUser(actor);
     return this.idempotent(user.id, "trips.join", idempotencyKey, { tripId, message }, async () => {
-      return this.store.withTripLock(tripId, async (trip) => {
+      const created = await this.store.withTripLock(tripId, async (trip) => {
         await this.store.upsertUser(user);
         if (trip.hostUserId === user.id) {
           throw forbidden(AuthErrorCode.FORBIDDEN, "Host cannot join their own trip");
@@ -425,17 +440,18 @@ export class TripService {
                 reviewedByUserId: null,
                 reviewedAt: null,
               });
-        await this.store.createNotification({
+        await this.recordNotification({
           recipientUserId: trip.hostUserId,
           actorUserId: user.id,
           type: "join_request.created",
           targetType: "trip",
           targetId: tripId,
+          data: { tripTitle: trip.title },
         });
-        const created = await this.toJoin(join);
-        await this.realtime?.onJoinRequested?.(tripId, user.id);
-        return created;
+        return this.toJoin(join);
       });
+      await this.realtime?.onJoinRequested?.(tripId, user.id, created);
+      return created;
     });
   }
 
@@ -453,7 +469,7 @@ export class TripService {
     return this.idempotent(user.id, "trips.join.review", idempotencyKey, { requestId, decision }, async () => {
       const request = await this.store.getJoinRequest(requestId);
       if (!request) throw hiddenTrip();
-      return this.store.withTripLock(request.tripId, async (trip) => {
+      const reviewed = await this.store.withTripLock(request.tripId, async (trip) => {
         await this.assertHost(trip, user);
         const locked = await this.store.getJoinRequest(requestId);
         if (!locked || locked.status !== "PENDING") {
@@ -477,19 +493,20 @@ export class TripService {
           reviewedByUserId: user.id,
           reviewedAt: new Date().toISOString(),
         });
-        await this.store.createNotification({
+        await this.recordNotification({
           recipientUserId: locked.userId,
           actorUserId: user.id,
           type: "join_request.reviewed",
-          targetType: "join_request",
-          targetId: locked.id,
-          data: { decision },
+          targetType: "trip",
+          targetId: trip.id,
+          data: { decision, tripTitle: trip.title, joinRequestId: locked.id },
         });
-        const reviewed = await this.toJoin(updated);
-        if (decision === "accept") await this.realtime?.onMemberJoined?.(trip.id, locked.userId);
-        else await this.realtime?.onJoinClosed?.(trip.id, locked.userId);
-        return reviewed;
+        return { tripId: trip.id, applicantId: locked.userId, join: await this.toJoin(updated) };
       });
+      if (decision === "accept") await this.realtime?.onMemberJoined?.(reviewed.tripId, reviewed.applicantId);
+      else await this.realtime?.onJoinClosed?.(reviewed.tripId, reviewed.applicantId);
+      await this.realtime?.onJoinReviewed?.(reviewed.tripId, reviewed.applicantId, reviewed.join, decision);
+      return reviewed.join;
     });
   }
 
@@ -552,12 +569,18 @@ export class TripService {
         ? (await this.store.getComment(body.parentId))?.userId
         : trip.hostUserId;
       if (recipient) {
-        await this.store.createNotification({
+        await this.recordNotification({
           recipientUserId: recipient,
           actorUserId: user.id,
           type: "comment.created",
           targetType: "trip",
           targetId: tripId,
+          data: {
+            tripTitle: trip.title,
+            actorName: user.displayName || user.username || "Seseorang",
+            ...(user.username ? { actorUsername: user.username } : {}),
+            preview: body.body,
+          },
         });
       }
       const created = await this.toComment(comment);
@@ -615,12 +638,13 @@ export class TripService {
         throw hiddenTrip();
       }
       await this.store.revokeTripLocation(user.id, tripId);
-      await this.store.createNotification({
+      await this.recordNotification({
         recipientUserId: trip.hostUserId,
         actorUserId: user.id,
         type: "member.left",
         targetType: "trip",
         targetId: tripId,
+        data: { tripTitle: trip.title },
       });
       return this.toDetail(trip, user);
     });
@@ -657,7 +681,9 @@ export class TripService {
         throw badRequest(TripErrorCode.INVALID_TRANSITION, `Cannot move from ${trip.status} to ${next}`);
       }
       const updated = await this.store.updateTrip(tripId, { status: next });
-      await this.notifyMembers(updated, user, "trip.updated");
+      const notifyType =
+        next === "CANCELLED" ? "trip.cancelled" : next === "COMPLETED" ? null : "trip.updated";
+      if (notifyType) await this.notifyMembers(updated, user, notifyType);
       return this.toDetail(updated, user);
     });
   }
@@ -866,14 +892,38 @@ export class TripService {
     }
     recipients.delete(actor.id);
     for (const recipientUserId of recipients) {
-      await this.store.createNotification({
+      await this.recordNotification({
         recipientUserId,
         actorUserId: actor.id,
         type,
         targetType: "trip",
         targetId: trip.id,
+        data: { tripTitle: trip.title },
       });
     }
+  }
+
+  private async recordNotification(input: {
+    recipientUserId: string;
+    actorUserId: string;
+    type: string;
+    targetType: string;
+    targetId: string;
+    data?: Record<string, unknown>;
+  }) {
+    if (input.recipientUserId === input.actorUserId) return;
+    const data = input.data ?? {};
+    await this.store.createNotification({ ...input, data });
+    await this.realtime?.onNotificationCreated?.(input.recipientUserId, {
+      type: input.type,
+      targetType: input.targetType,
+      targetId: input.targetId,
+      data,
+      actorUserId: input.actorUserId,
+      recipientUserId: input.recipientUserId,
+      readAt: null,
+      ...presentInboxNotification({ ...input, data }),
+    });
   }
 
   private async idempotent<T>(

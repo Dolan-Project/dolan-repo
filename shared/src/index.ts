@@ -37,6 +37,8 @@ export {
   tiktokProfileUrl,
   socialHandleFromUrl,
 } from "./lib/social-links.ts";
+export { presentInboxNotification } from "./lib/notification-copy.ts";
+export type { InboxNotificationCopy } from "./lib/notification-copy.ts";
 export {
   MAX_UPLOAD_BYTES,
   ALLOWED_UPLOAD_TYPES,
