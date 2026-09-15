@@ -196,6 +196,103 @@ describe("chat socket rooms", () => {
       );
     });
   });
+
+  it("fans join request and review events to the trip page", async () => {
+    const chat = new ChatService(new MemoryChatStore());
+    const trips = createMemoryTripService(undefined, chat);
+    const auth = new AuthService(new MockAuthAdapter(), new MemoryUserRepository());
+    const httpServer = createServer();
+    const sockets = createSocketServer(httpServer, auth, chat, trips);
+    const app = createApp(
+      auth,
+      sockets.disconnectUser,
+      createMemorySearchService(),
+      createJobService(),
+      trips,
+      chat,
+    );
+    httpServer.on("request", app);
+    await new Promise<void>((resolve) => httpServer.listen(0, resolve));
+    const address = httpServer.address();
+    if (!address || typeof address === "string") throw new Error("no port");
+    const url = `http://127.0.0.1:${address.port}`;
+
+    const { default: request } = await import("supertest");
+    const created = await request(app)
+      .post("/api/v1/trips")
+      .set("Authorization", "Bearer mock-verified-complete")
+      .set("Idempotency-Key", "dddddddd-dddd-4ddd-8ddd-dddddddddddd")
+      .send({
+        title: "Open Bandung",
+        visibility: "PUBLIC",
+        startDate: "2026-10-01",
+        endDate: "2026-10-03",
+        destinationCity: "Bandung",
+        maxParticipants: 4,
+        publicMeetingPointLabel: "Taman Sejarah",
+      });
+    expect(created.status).toBe(201);
+    const published = await request(app)
+      .post(`/api/v1/trips/${created.body.data.id}/publish`)
+      .set("Authorization", "Bearer mock-verified-complete")
+      .set("Idempotency-Key", "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee")
+      .send({ visibility: "PUBLIC" });
+    expect(published.status).toBe(200);
+    const tripId = published.body.data.id as string;
+
+    const host = await connectClient(url, cookieFor("mock-verified-complete"));
+    const applicant = await connectClient(url, cookieFor("mock-verified-budi"));
+    const hostJoined = await new Promise<{ ok: boolean }>((resolve) => {
+      host.emit("comments.join", { tripId }, resolve);
+    });
+    const applicantJoined = await new Promise<{ ok: boolean }>((resolve) => {
+      applicant.emit("comments.join", { tripId }, resolve);
+    });
+    expect(hostJoined.ok).toBe(true);
+    expect(applicantJoined.ok).toBe(true);
+
+    const createdEvent = new Promise<{ tripId: string }>((resolve) => {
+      host.on("join_request.created", (payload: { tripId: string }) => resolve(payload));
+    });
+    const hostInbox = new Promise<{ title: string; tripId: string | null }>((resolve) => {
+      host.on("notification.created", (payload: { title: string; tripId: string | null }) => resolve(payload));
+    });
+    const joined = await request(app)
+      .post(`/api/v1/trips/${tripId}/join-requests`)
+      .set("Authorization", "Bearer mock-verified-budi")
+      .set("Idempotency-Key", "ffffffff-ffff-4fff-8fff-ffffffffffff")
+      .send({ message: "Boleh ikut?" });
+    expect(joined.status).toBe(201);
+    await expect(createdEvent).resolves.toMatchObject({ tripId });
+    await expect(hostInbox).resolves.toMatchObject({
+      title: "Pengajuan join trip",
+      tripId,
+    });
+
+    const reviewedEvent = new Promise<{ tripId: string; decision?: string }>((resolve) => {
+      applicant.on("join_request.reviewed", (payload: { tripId: string; decision?: string }) => resolve(payload));
+    });
+    const applicantInbox = new Promise<{ title: string }>((resolve) => {
+      applicant.on("notification.created", (payload: { title: string }) => resolve(payload));
+    });
+    const reviewed = await request(app)
+      .post(`/api/v1/join-requests/${joined.body.data.id}/review`)
+      .set("Authorization", "Bearer mock-verified-complete")
+      .set("Idempotency-Key", "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaa11")
+      .send({ decision: "accept" });
+    expect(reviewed.status).toBe(200);
+    await expect(reviewedEvent).resolves.toMatchObject({ tripId, decision: "accept" });
+    await expect(applicantInbox).resolves.toMatchObject({ title: "Pengajuan diterima" });
+
+    closers.push(async () => {
+      host.close();
+      applicant.close();
+      sockets.io.close();
+      await new Promise<void>((resolve, reject) =>
+        httpServer.close((error) => (error ? reject(error) : resolve())),
+      );
+    });
+  });
 });
 
 function connectClient(url: string, cookie: string): Promise<ClientSocket> {

@@ -1,5 +1,6 @@
 import webpush from "web-push";
 import { getModels } from "@dolan/database";
+import { presentInboxNotification } from "@dolan/shared";
 import { env } from "../../config/env.ts";
 import { logger } from "../../lib/logger.ts";
 
@@ -20,29 +21,8 @@ export function pushContentForNotification(input: {
   targetId: string;
   data?: Record<string, unknown>;
 }) {
-  const tripPath = input.targetType === "trip" ? `/trip/${input.targetId}` : "/notifikasi";
-  switch (input.type) {
-    case "message.created":
-      return { title: "Pesan trip baru", body: "Ada pesan baru di grup perjalananmu.", url: tripPath };
-    case "join.requested":
-      return { title: "Pengajuan join trip", body: "Seseorang ingin bergabung ke trip-mu.", url: tripPath };
-    case "join.accepted":
-      return { title: "Pengajuan diterima", body: "Host menerima pengajuan join trip-mu.", url: tripPath };
-    case "join.rejected":
-      return { title: "Pengajuan ditolak", body: "Host menolak pengajuan join trip-mu.", url: tripPath };
-    case "follower.created":
-      return { title: "Pengikut baru", body: "Seseorang mulai mengikuti profilmu.", url: "/notifikasi" };
-    case "feedback.invite":
-      return { title: "Trip selesai", body: "Bantu komunitas dengan memberi ulasan.", url: tripPath };
-    case "trip.invited":
-      return {
-        title: "Undangan trip",
-        body: "Kamu diundang ke trip baru.",
-        url: typeof input.data?.invitePath === "string" ? input.data.invitePath : tripPath,
-      };
-    default:
-      return { title: "Notifikasi Dolan", body: "Ada pembaruan untukmu.", url: "/notifikasi" };
-  }
+  const copy = presentInboxNotification(input);
+  return { title: copy.title, body: copy.body, url: copy.href };
 }
 
 export async function deliverPushNotification(input: {
@@ -52,7 +32,10 @@ export async function deliverPushNotification(input: {
   targetId: string;
   data?: Record<string, unknown>;
 }) {
-  if (!ensureVapid()) return;
+  if (!ensureVapid()) {
+    logger.warn("Web push skipped: VAPID keys missing");
+    return;
+  }
   const content = pushContentForNotification(input);
   const payload = JSON.stringify(content);
 
@@ -61,6 +44,10 @@ export async function deliverPushNotification(input: {
     const subscriptions = await PushSubscription.findAll({
       where: { userId: input.recipientUserId, revokedAt: null },
     });
+    if (subscriptions.length === 0) {
+      logger.info("Web push skipped: no subscription", { userId: input.recipientUserId, type: input.type });
+      return;
+    }
     await Promise.allSettled(
       subscriptions.map(async (subscription) => {
         try {

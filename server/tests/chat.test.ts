@@ -22,6 +22,7 @@ function setup() {
     hostUserId: HOST,
     participants: [MEMBER],
     pending: [PENDING],
+    title: "Trip ke Bandung",
   });
   const chat = new ChatService(store);
   const auth = new AuthService(new MockAuthAdapter(), new MemoryUserRepository());
@@ -87,6 +88,9 @@ describe("chat and notifications", () => {
     expect(memberInbox.body.data).toHaveLength(1);
     expect(memberInbox.body.data[0].type).toBe("message.created");
     expect(memberInbox.body.data[0].actorUserId).toBe(HOST);
+    expect(memberInbox.body.data[0].title).toBe("Trip ke Bandung");
+    expect(memberInbox.body.data[0].body).toBe("alya: ping");
+    expect(memberInbox.body.unreadCount).toBe(1);
 
     const read = await request(app)
       .post(`/api/v1/notifications/${memberInbox.body.data[0].id}/read`)

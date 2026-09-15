@@ -39,6 +39,7 @@ export class SequelizeChatStore implements ChatStore {
       memberRole: member?.role ?? (isHost ? "HOST" : null),
       membershipStatus: member?.membershipStatus ?? (isHost ? "ACTIVE" : null),
       joinRequestStatus: pending?.status ?? null,
+      tripTitle: trip.title,
     };
   }
 
@@ -160,7 +161,11 @@ export class SequelizeChatStore implements ChatStore {
       offset: (page - 1) * limit,
       limit,
     });
-    return { items: rows.map(toNotification), total: count };
+    const unreadCount = await Notification.count({
+      where: { recipientUserId: userId, readAt: null },
+    });
+    const items = await Promise.all(rows.map((row) => hydrateNotification(toNotification(row))));
+    return { items, total: count, unreadCount };
   }
 
   async markNotificationRead(userId: string, id: string) {
@@ -219,8 +224,74 @@ function toNotification(row: {
     type: row.type,
     targetType: row.targetType,
     targetId: row.targetId,
-    data: row.data ?? {},
+    data: parseNotificationData(row.data),
     readAt: row.readAt ? row.readAt.toISOString() : null,
     createdAt: row.createdAt.toISOString(),
   };
+}
+
+function parseNotificationData(raw: unknown): Record<string, unknown> {
+  if (!raw) return {};
+  if (typeof raw === "string") {
+    try {
+      const parsed = JSON.parse(raw) as unknown;
+      return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+        ? (parsed as Record<string, unknown>)
+        : {};
+    } catch {
+      return {};
+    }
+  }
+  if (typeof raw === "object" && !Array.isArray(raw)) return raw as Record<string, unknown>;
+  return {};
+}
+
+async function hydrateNotification(item: StoredNotification): Promise<StoredNotification> {
+  const data = parseNotificationData(item.data);
+  const needsTitle = typeof data.tripTitle !== "string" || !data.tripTitle.trim();
+  const needsActor =
+    (typeof data.actorName !== "string" || !data.actorName.trim()) &&
+    (typeof data.actorUsername !== "string" || !data.actorUsername.trim());
+  const needsPreview = typeof data.preview !== "string" || !data.preview.trim();
+  if (!needsTitle && !needsActor && !needsPreview) {
+    return { ...item, data };
+  }
+
+  const { Trip, UserProfile, Message, TripComment } = getModels();
+  const tripId =
+    item.targetType === "trip" && item.targetId
+      ? item.targetId
+      : typeof data.tripId === "string"
+        ? data.tripId
+        : null;
+
+  if (needsTitle && tripId) {
+    const trip = await Trip.findByPk(tripId);
+    if (trip?.title) data.tripTitle = trip.title;
+  }
+
+  if (needsActor && item.actorUserId) {
+    const profile = await UserProfile.findOne({ where: { userId: item.actorUserId } });
+    if (profile?.username) data.actorUsername = profile.username;
+    if (profile?.displayName) data.actorName = profile.displayName;
+    else if (profile?.username) data.actorName = profile.username;
+  }
+
+  if (needsPreview && item.type === "message.created") {
+    const messageId = typeof data.messageId === "string" ? data.messageId : null;
+    if (messageId) {
+      const message = await Message.findByPk(messageId);
+      if (message?.body) data.preview = message.body;
+    }
+  }
+
+  if (needsPreview && item.type === "comment.created" && tripId && item.actorUserId) {
+    const comment = await TripComment.findOne({
+      where: { tripId, userId: item.actorUserId, deletedAt: null },
+      order: [["createdAt", "DESC"]],
+    });
+    if (comment?.body) data.preview = comment.body;
+  }
+
+  return { ...item, data };
 }

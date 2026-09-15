@@ -77,7 +77,7 @@ export class HomeFeedService {
           title: trip.title,
           destinationCity: trip.destinationCity,
         }));
-      unreadNotifications = notifications.items.filter((item) => !item.readAt).length;
+      unreadNotifications = notifications.unreadCount;
     }
 
     return {
