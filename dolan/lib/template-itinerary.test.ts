@@ -11,6 +11,7 @@ import {
   itineraryMapMarkers,
   MAX_ITINERARY_REGENERATES,
   moveStopInDay,
+  packItinerarySchedule,
   placeFromTemplateStop,
   remainingRegenerates,
   visitWindowLabel,
@@ -47,6 +48,13 @@ describe("create trip wizard helpers", () => {
       budgetAmount: 1_500_000,
       partySize: 3,
     })).toEqual({});
+    expect(validateWizardBasics({
+      destinationCity: "Bali",
+      startDate: "2026-10-21",
+      endDate: "2026-10-24",
+      budgetAmount: 10_000,
+      partySize: 2,
+    }).budgetAmount).toMatch(/jangkauan/i);
   });
 
   it("builds a trip title from destination and estimates per-stop ticket, food, and transport", () => {
@@ -68,8 +76,12 @@ describe("create trip wizard helpers", () => {
     const plan = estimateItineraryBudget(days, 200_000, 2);
     expect(plan.total).toBeGreaterThan(0);
     expect(plan.overBudget).toBe(true);
-    expect(plan.byStopId[days[0].stops[0].id].lines.map((line) => line.key)).toEqual(["ticket", "food", "transport"]);
+    expect(plan.byStopId[days[0].stops[0].id].lines.some((line) => line.key === "transport")).toBe(true);
     expect(plan.byStopId[days[0].stops[0].id].ticketCost).toBeGreaterThan(0);
+    const foodAmounts = days[0].stops.map((stop) => plan.byStopId[stop.id].foodCost);
+    expect(foodAmounts.some((amount) => amount > 0)).toBe(true);
+    expect(new Set(foodAmounts).size).toBeGreaterThan(1);
+    expect(foodAmounts.every((amount) => amount !== 55_000 * 2)).toBe(true);
     const fitted = estimateItineraryBudget(days, 5_000_000, 2);
     expect(fitted.overBudget).toBe(false);
   });
@@ -92,6 +104,48 @@ describe("create trip wizard helpers", () => {
     expect(plan.byStopId[days[0].stops[0].id].ticketCost).toBe(0);
     expect(plan.byStopId[days[0].stops[1].id].ticketCost).toBe(0);
     expect(plan.byStopId[days[0].stops[0].id].lines.some((line) => line.key === "ticket")).toBe(false);
+  });
+
+  it("charges tickets for paid venues like Ancol, Istana, and Taman Sari", async () => {
+    const { placeTicketEstimate } = await import("./template-itinerary");
+    expect(placeTicketEstimate("Ancol")).toBeGreaterThan(0);
+    expect(placeTicketEstimate("Istana Maimun")).toBeGreaterThan(0);
+    expect(placeTicketEstimate("Taman Sari")).toBeGreaterThan(0);
+    expect(placeTicketEstimate("Museum Nasional Indonesia")).toBeGreaterThan(0);
+    expect(placeTicketEstimate("Bundaran HI")).toBe(0);
+  });
+
+  it("packs a city day with short visits from morning into late afternoon", async () => {
+    const { packItinerarySchedule } = await import("./template-itinerary");
+    const packed = packItinerarySchedule(
+      templateDaysToEditable(
+        [{
+          id: "d1",
+          dayNumber: 1,
+          title: "Hari 1",
+          stops: Array.from({ length: 8 }, (_, index) => ({
+            sequence: index + 1,
+            activityType: "VISIT",
+            customTitle: `Tempat ${index + 1}`,
+            durationMinutes: 180,
+            notes: null,
+            place: null,
+          })),
+        }],
+        "Jakarta",
+        "2026-11-01",
+      ),
+    );
+    expect(packed[0].stops).toHaveLength(8);
+    expect(packed[0].stops.every((stop) => stop.durationMinutes <= 75)).toBe(true);
+    expect(packed[0].stops[0].startTime).toBe("08:00");
+    expect(packed[0].stops.at(-1)!.startTime! >= "16:00").toBe(true);
+    const plan = estimateItineraryBudget(packed, 5_000_000, 1);
+    const foods = packed[0].stops.map((stop) => plan.byStopId[stop.id].foodCost);
+    expect(foods.filter((amount) => amount > 0).length).toBeGreaterThanOrEqual(2);
+    expect(foods.filter((amount) => amount > 0).length).toBeLessThan(foods.length);
+    expect(foods.reduce((sum, amount) => sum + amount, 0)).toBeLessThan(55_000 * foods.length);
+    expect(new Set(foods.filter((amount) => amount > 0)).size).toBeGreaterThan(1);
   });
 
   it("prices walk / ojek / drive transport legs and labels day starts clearly", async () => {
@@ -215,5 +269,38 @@ describe("create trip wizard helpers", () => {
     const publicDays = applyPublicMeetingPoint(days, true);
     expect(publicDays[0].stops[0].activityType).toBe("Titik kumpul");
     expect(firstStopMeetingLabel(publicDays)).toBe("Tanah Lot");
+  });
+
+  it("keeps stop numbers continuous across days and maps every hydrated stop", () => {
+    const days = packItinerarySchedule([
+      {
+        id: "d1",
+        dayNumber: 1,
+        date: "2026-11-01",
+        title: "Hari 1",
+        stops: [
+          { id: "s1", sequence: 1, place: null, customTitle: "Tanah Lot", activityType: "VISIT", startTime: "08:00", durationMinutes: 60, travelDurationMinutes: 0, notes: null, isLocked: false },
+          { id: "s2", sequence: 2, place: null, customTitle: "Uluwatu", activityType: "VISIT", startTime: "10:00", durationMinutes: 60, travelDurationMinutes: 0, notes: null, isLocked: false },
+        ],
+      },
+      {
+        id: "d2",
+        dayNumber: 2,
+        date: "2026-11-02",
+        title: "Hari 2",
+        stops: [
+          { id: "s3", sequence: 1, place: null, customTitle: "Tirta Empul", activityType: "VISIT", startTime: "08:00", durationMinutes: 60, travelDurationMinutes: 0, notes: null, isLocked: false },
+          { id: "s4", sequence: 2, place: null, customTitle: "GWK", activityType: "VISIT", startTime: "10:00", durationMinutes: 60, travelDurationMinutes: 0, notes: null, isLocked: false },
+        ],
+      },
+    ], "Bali");
+    expect(days[0].stops.map((stop) => stop.sequence)).toEqual([1, 2]);
+    expect(days[1].stops.map((stop) => stop.sequence)).toEqual([3, 4]);
+    const markers = itineraryMapMarkers(days, null, "Bali");
+    expect(markers).toHaveLength(4);
+    expect(markers.map((marker) => marker.sequence)).toEqual([1, 2, 3, 4]);
+    const url = googleMapsDirectionsUrl(markers);
+    expect(url).toMatch(/google\.com\/maps\/dir/);
+    expect(url?.split("/").length).toBeGreaterThan(4);
   });
 });

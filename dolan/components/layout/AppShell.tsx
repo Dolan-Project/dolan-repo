@@ -21,25 +21,29 @@ export async function AppShell({
   const session = await getSession();
   let unreadCount = 0;
   if (session) {
-    const cookie = (await cookies())
-      .getAll()
-      .map((item) => `${item.name}=${item.value}`)
-      .join("; ");
-    const response = await socialRouteHandlers.notifications.GET(
-      new Request("http://localhost/api/v1/notifications", {
-        headers: cookie ? { cookie } : {},
-      }),
-    );
-    const json = (await response.json()) as
-      | { success: true; data: Array<{ readAt?: string | null }>; pagination?: { totalItems: number } }
-      | { success: true; data: { unreadCount: number } }
-      | { success: false };
-    if (json.success) {
-      if (Array.isArray(json.data)) {
-        unreadCount = json.data.filter((item) => !item.readAt).length;
-      } else if ("unreadCount" in json.data) {
-        unreadCount = json.data.unreadCount;
+    try {
+      const cookie = (await cookies())
+        .getAll()
+        .map((item) => `${item.name}=${item.value}`)
+        .join("; ");
+      const response = await socialRouteHandlers.notifications.GET(
+        new Request("http://localhost/api/v1/notifications", {
+          headers: cookie ? { cookie } : {},
+        }),
+      );
+      const json = (await response.json()) as
+        | { success: true; data: Array<{ readAt?: string | null }>; pagination?: { totalItems: number } }
+        | { success: true; data: { unreadCount: number } }
+        | { success: false };
+      if (json.success) {
+        if (Array.isArray(json.data)) {
+          unreadCount = json.data.filter((item) => !item.readAt).length;
+        } else if ("unreadCount" in json.data) {
+          unreadCount = json.data.unreadCount;
+        }
       }
+    } catch {
+      unreadCount = 0;
     }
   }
 

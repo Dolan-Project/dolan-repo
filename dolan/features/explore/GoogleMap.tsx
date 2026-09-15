@@ -89,7 +89,7 @@ type GoogleDirectionsService = {
   ): void;
 };
 
-function requestDrivingRoute(
+function requestOnce(
   maps: NonNullable<Window["google"]>["maps"],
   points: Array<{ lat: number; lng: number }>,
 ) {
@@ -134,6 +134,24 @@ function requestDrivingRoute(
     }
     finish(maps.DirectionsService, maps.TravelMode?.DRIVING);
   });
+}
+
+async function requestDrivingRoute(
+  maps: NonNullable<Window["google"]>["maps"],
+  points: Array<{ lat: number; lng: number }>,
+) {
+  if (points.length < 2) return points;
+  const chunkSize = 10;
+  if (points.length <= chunkSize) return requestOnce(maps, points);
+  const path: Array<{ lat: number; lng: number }> = [];
+  for (let index = 0; index < points.length - 1; ) {
+    const chunk = points.slice(index, Math.min(index + chunkSize, points.length));
+    const piece = await requestOnce(maps, chunk);
+    if (path.length) path.push(...piece.slice(1));
+    else path.push(...piece);
+    index += chunkSize - 1;
+  }
+  return path;
 }
 
 function loadGoogleMaps(apiKey: string) {
@@ -378,13 +396,13 @@ export function GoogleMap({
     return (
       <div className={`relative overflow-hidden bg-white ${className}`}>
         <div className="absolute inset-0 bg-slate-50" />
-        {points.slice(0, 5).map((point, index) => (
+        {points.map((point, index) => (
           <button
             key={point.id}
             type="button"
             onClick={() => onSelect(point.id)}
             className="absolute z-10"
-            style={{ left: `${18 + ((index * 17) % 60)}%`, top: `${18 + ((index * 21) % 55)}%` }}
+            style={{ left: `${12 + ((index * 11) % 76)}%`, top: `${14 + ((index * 13) % 68)}%` }}
             aria-label={`Pilih ${point.label}`}
           >
             <ItineraryStopPin index={index} sequence={point.sequence ?? index + 1} selected={point.id === selectedId} />

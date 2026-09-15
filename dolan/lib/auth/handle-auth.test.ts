@@ -68,6 +68,18 @@ describe("handleLoginRequest", () => {
       "Email atau kata sandi belum cocok. Periksa lagi, atau gunakan Lupa Password.",
     );
   });
+
+  it("returns a session for a valid login", async () => {
+    const response = await handleLoginRequest(
+      await jsonRequest("http://localhost/api/auth/login", {
+        email: "fitria@dolan.id",
+        password: "dolan123",
+      }),
+    );
+    const json = await readJson(response);
+    expect(json.success).toBe(true);
+    expect(response.headers.get("set-cookie")).toContain("HttpOnly");
+  });
 });
 
 describe("handleForgotPasswordRequest", () => {

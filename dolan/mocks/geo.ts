@@ -104,6 +104,13 @@ export const GEO_PLACES: GeoPlace[] = [
     longitude: 107.609,
   },
   {
+    id: "cirebon",
+    label: "Cirebon",
+    city: "Cirebon",
+    latitude: -6.732,
+    longitude: 108.552,
+  },
+  {
     id: "lbj",
     label: "Bandara Komodo (LBJ)",
     city: "Labuan Bajo",
@@ -129,6 +136,7 @@ const CITY_POINTS: Record<string, { latitude: number; longitude: number }> = {
   Dieng: { latitude: -7.207, longitude: 109.912 },
   "Labuan Bajo": { latitude: -8.4539, longitude: 119.8694 },
   Bandung: { latitude: -6.9175, longitude: 107.6191 },
+  Cirebon: { latitude: -6.732, longitude: 108.552 },
 };
 
 const ID_BOUNDS = {
@@ -198,6 +206,13 @@ function destinationCatalog(): GeoPlace[] {
       rinjani: "Lombok",
     };
     const city = aliases[route.match[0]] ?? route.match[0].replace(/\b\w/g, (letter) => letter.toUpperCase());
+    push({
+      id: `city-route-${route.match[0]}`,
+      label: city,
+      city,
+      latitude: route.stops[0]?.lat ?? 0,
+      longitude: route.stops[0]?.lng ?? 0,
+    });
     route.stops.forEach((stop, index) => {
       push({
         id: `route-${route.match[0]}-${index}`,

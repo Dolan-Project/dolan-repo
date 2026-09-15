@@ -35,31 +35,44 @@ export function LoginForm({ next, initialError }: LoginFormProps) {
     setPending(true);
     setFormError("");
     setFieldErrors({});
-    const response = await fetch(AUTH_PATHS.login, {
-      method: "POST",
-      credentials: "include",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ email, password, next }),
-    });
-    const json = (await response.json()) as
-      | { success: true; data: AuthSession }
-      | ApiError;
-    setPending(false);
-    if (!json.success) {
-      const code = json.error.code;
-      const friendly =
-        code === "INVALID_CREDENTIALS"
-          ? "Email atau kata sandi belum cocok. Periksa lagi, atau gunakan Lupa Password."
-          : code === "INVALID_TOKEN" || /invalid or expired session/i.test(json.error.message)
-            ? "Sesi sebelumnya sudah tidak berlaku. Masuk lagi dengan email dan kata sandi kamu."
-            : json.error.message;
-      setFormError(friendly);
-      setFieldErrors(json.error.fields ?? {});
-      return;
+    try {
+      const response = await fetch(AUTH_PATHS.login, {
+        method: "POST",
+        credentials: "include",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email, password, next }),
+      });
+      const json = (await response.json()) as
+        | { success: true; data: AuthSession }
+        | ApiError;
+      if (!json.success) {
+        const code = json.error.code;
+        const friendly =
+          code === "INVALID_CREDENTIALS"
+            ? "Email atau kata sandi belum cocok. Periksa lagi, atau gunakan Lupa Password."
+            : code === "PROVIDER_UNAVAILABLE"
+              ? "Layanan masuk sedang sibuk. Coba beberapa detik lagi."
+              : code === "VALIDATION_ERROR"
+                ? json.error.message || "Periksa kembali email dan kata sandi."
+                : code === "INVALID_TOKEN" || /invalid or expired session/i.test(json.error.message)
+                  ? "Sesi sebelumnya sudah tidak berlaku. Masuk lagi dengan email dan kata sandi kamu."
+                  : json.error.message;
+        setFormError(friendly);
+        setFieldErrors(json.error.fields ?? {});
+        return;
+      }
+      if (!json.data) {
+        setFormError("Layanan masuk sedang sibuk. Coba beberapa detik lagi.");
+        return;
+      }
+      void remember;
+      router.push(resolveAfterAuth(json.data, next));
+      router.refresh();
+    } catch {
+      setFormError("Layanan masuk sedang sibuk. Coba beberapa detik lagi.");
+    } finally {
+      setPending(false);
     }
-    void remember;
-    router.push(resolveAfterAuth(json.data, next));
-    router.refresh();
   }
 
   const googleHref = next

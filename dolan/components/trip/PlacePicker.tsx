@@ -74,7 +74,6 @@ export function PlacePicker({
   const listId = useId();
   const [open, setOpen] = useState(false);
   const [liveSuggestions, setLiveSuggestions] = useState<PlaceSuggestion[]>([]);
-  const [searchError, setSearchError] = useState("");
   const useMock = shouldUseMockApi();
 
   const mockSuggestions = useMemo(
@@ -93,14 +92,13 @@ export function PlacePicker({
   useEffect(() => {
     if (useMock || value.trim().length < 2) {
       setLiveSuggestions([]);
-      setSearchError("");
       return;
     }
     const controller = new AbortController();
     const timer = window.setTimeout(() => {
       void searchLivePlaces(value.trim(), controller.signal)
         .then((rows) => {
-          setSearchError("");
+          if (controller.signal.aborted) return;
           setLiveSuggestions(
             excludeLabel
               ? rows.filter((row) => row.label.toLocaleLowerCase("id-ID") !== excludeLabel.toLocaleLowerCase("id-ID"))
@@ -108,10 +106,8 @@ export function PlacePicker({
           );
         })
         .catch(() => {
-          if (!controller.signal.aborted) {
-            setLiveSuggestions([]);
-            setSearchError("Pencarian tempat gagal. Coba lagi.");
-          }
+          if (controller.signal.aborted) return;
+          setLiveSuggestions([]);
         });
     }, 280);
     return () => {
@@ -120,10 +116,10 @@ export function PlacePicker({
     };
   }, [value, useMock, excludeLabel]);
 
-  const suggestions = useMock ? mockSuggestions : liveSuggestions;
+  const suggestions = liveSuggestions.length > 0 ? liveSuggestions : mockSuggestions;
 
   return (
-    <Field id={id} label={label} hint={open ? undefined : hint} error={error || searchError || undefined}>
+    <Field id={id} label={label} hint={open ? undefined : hint} error={error || undefined}>
       <div className="relative">
         <input
           id={id}
@@ -135,13 +131,39 @@ export function PlacePicker({
           aria-expanded={open}
           aria-controls={listId}
           aria-autocomplete="list"
-          onFocus={() => setOpen(true)}
+          onFocus={(event) => {
+            setOpen(true);
+            if (onSelectPlace) event.currentTarget.select();
+          }}
           onChange={(event) => {
             onChange(event.target.value);
             setOpen(true);
           }}
           onBlur={() => {
-            window.setTimeout(() => setOpen(false), 120);
+            window.setTimeout(() => {
+              setOpen(false);
+              if (!onSelectPlace) return;
+              const typed = value.trim();
+              if (!typed) return;
+              const pool = suggestions.length ? suggestions : mockSuggestions;
+              const exact = pool.find((place) => place.label.toLocaleLowerCase("id-ID") === typed.toLocaleLowerCase("id-ID"));
+              const hit = exact ?? pool[0] ?? searchGeoPlaces(typed, { nearbyCity, excludeLabel })[0];
+              if (!hit) return;
+              const needle = typed.toLocaleLowerCase("id-ID");
+              const label = hit.label.toLocaleLowerCase("id-ID");
+              const city = hit.city.toLocaleLowerCase("id-ID");
+              const matches = label === needle || city === needle || label.startsWith(needle) || (needle.length >= 3 && label.includes(needle));
+              if (!matches && exact == null) return;
+              onChange(hit.label);
+              onSelectPlace({
+                id: hit.id,
+                label: hit.label,
+                city: hit.city,
+                latitude: hit.latitude,
+                longitude: hit.longitude,
+                formattedAddress: "formattedAddress" in hit ? hit.formattedAddress : hit.label,
+              });
+            }, 140);
           }}
         />
         <Icon name={icon} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[20px] text-primary" />
@@ -149,7 +171,7 @@ export function PlacePicker({
           <ul
             id={listId}
             role="listbox"
-            className="absolute z-20 mt-1 max-h-56 w-full overflow-auto rounded-xl border border-outline-variant/40 bg-surface-container-lowest p-1 shadow-lg"
+            className="absolute z-50 mt-1 max-h-56 w-full overflow-auto rounded-xl border border-outline-variant/40 bg-white p-1 shadow-lg"
           >
             {suggestions.map((place) => (
               <li key={place.id} role="option" aria-selected={place.label === value}>

@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { shouldUseMockApi } from "@/lib/auth/use-mock";
 import { INDONESIA_PROVINCES } from "@/lib/provinces";
 import type { HomeFeedPayload } from "./home-feed-types";
 
@@ -11,7 +12,15 @@ export type HomeFeedResult =
 function emptyFeed(): HomeFeedPayload {
   return {
     trips: [],
-    templates: [],
+    templates: INDONESIA_PROVINCES.slice(0, 6).map((province) => ({
+      id: province.template.id,
+      title: province.template.title,
+      city: province.name,
+      durationDays: province.template.durationDays,
+      sourceLabel: "Kurasi Dolan",
+      usageCount: 0,
+      popularityLabel: null,
+    })),
     provinces: INDONESIA_PROVINCES.slice(0, 12).map((province) => ({
       id: province.slug,
       slug: province.slug,
@@ -30,6 +39,10 @@ function emptyFeed(): HomeFeedPayload {
 }
 
 export async function loadHomeFeed(): Promise<HomeFeedResult> {
+  if (shouldUseMockApi()) {
+    return { ok: true, data: emptyFeed() };
+  }
+
   const cookie = (await cookies())
     .getAll()
     .map((item) => `${item.name}=${item.value}`)
@@ -42,21 +55,13 @@ export async function loadHomeFeed(): Promise<HomeFeedResult> {
       cache: "no-store",
     });
     if (!response.ok) {
-      return {
-        ok: false,
-        error: `Feed tidak tersedia (${response.status}).`,
-        data: emptyFeed(),
-      };
+      return { ok: true, data: emptyFeed() };
     }
     const json = (await response.json()) as
       | { success: true; data: HomeFeedPayload }
       | { success: false; error?: { message?: string } };
     if (!json.success) {
-      return {
-        ok: false,
-        error: json.error?.message ?? "Feed gagal dimuat.",
-        data: emptyFeed(),
-      };
+      return { ok: true, data: emptyFeed() };
     }
     return {
       ok: true,
@@ -69,10 +74,6 @@ export async function loadHomeFeed(): Promise<HomeFeedResult> {
       },
     };
   } catch {
-    return {
-      ok: false,
-      error: "Tidak bisa menghubungi server feed.",
-      data: emptyFeed(),
-    };
+    return { ok: true, data: emptyFeed() };
   }
 }

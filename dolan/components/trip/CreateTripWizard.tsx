@@ -10,7 +10,7 @@ import { CreateTripItineraryStep } from "@/components/trip/CreateTripItinerarySt
 import type { EditableItineraryDay, EditableItineraryStop, ItineraryEditorSnapshot, ItineraryTemplateDetail, ItineraryTemplateSummary, UseTemplateResult } from "@dolan/shared";
 import type { ApiError, CreateTripInput, TripDetail } from "@/lib/contracts";
 import { ROUTES } from "@/lib/routes";
-import { buildDestinationItinerary, buildProvinceTemplateDays, ensureMultiStopDays, templateMatchesDestination } from "@/lib/destination-itinerary";
+import { buildDestinationItinerary, buildProvinceTemplateDays, clampItineraryToDestination, templateMatchesDestination } from "@/lib/destination-itinerary";
 import { INDONESIA_PROVINCES, findProvinceForTemplate } from "@/lib/provinces";
 import { PlacePhoto } from "@/features/explore/PlacePhoto";
 import {
@@ -26,6 +26,7 @@ import {
   mergeLockedStops,
   packItinerarySchedule,
   placeTicketEstimate,
+  hydrateItineraryPlaces,
   reorderStopsInDay,
   toItinerarySaveDays,
   tripTitleFromDestination,
@@ -40,6 +41,54 @@ import { PackingListField } from "@/components/trip/PackingListField";
 import { TemplateRoutePeek } from "@/components/trip/TemplateRoutePeek";
 
 const BUDGET_PRESETS = [750_000, 1_500_000, 2_500_000, 5_000_000];
+
+function provinceCatalogTemplates(query: string): ItineraryTemplateSummary[] {
+  const city = query.trim().toLowerCase();
+  return INDONESIA_PROVINCES.filter((province) => {
+    if (!city) return true;
+    const hay = `${province.name} ${province.capital} ${province.template.title}`.toLowerCase();
+    return hay.includes(city);
+  })
+    .slice(0, 24)
+    .map((province) => ({
+      id: province.template.id,
+      title: province.template.title,
+      city: province.name,
+      durationDays: province.template.durationDays,
+      source: "CURATED" as const,
+      sourceLabel: "Kurasi Dolan" as const,
+      usageCount: 0,
+      popularityLabel: null,
+      coverPlace: null,
+    }));
+}
+
+function localTemplateDetail(templateIdToUse: string): ItineraryTemplateDetail | null {
+  const province = INDONESIA_PROVINCES.find((item) => item.template.id === templateIdToUse);
+  if (!province) return null;
+  return {
+    id: province.template.id,
+    title: province.template.title,
+    description: province.template.description,
+    city: province.name,
+    durationDays: province.template.durationDays,
+    source: "CURATED",
+    sourceLabel: "Kurasi Dolan",
+    usageCount: 0,
+    popularityLabel: "Populer di Dolan",
+    coverPlace: null,
+    transportMode: province.template.transportMode,
+    days: [],
+  };
+}
+
+function templateRowsFromPayload(payload: { data?: unknown }): ItineraryTemplateSummary[] | null {
+  if (Array.isArray(payload.data)) return payload.data as ItineraryTemplateSummary[];
+  if (payload.data && typeof payload.data === "object" && Array.isArray((payload.data as { items?: unknown }).items)) {
+    return (payload.data as { items: ItineraryTemplateSummary[] }).items;
+  }
+  return null;
+}
 
 function newKey() {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
@@ -110,9 +159,10 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
         if (!response.ok || !payload.success || !payload.data) throw new Error(payload.error?.message ?? "Template tidak tersedia.");
         applyChosenTemplate(payload.data);
       })
-      .catch((error) => {
+      .catch(() => {
         if (controller.signal.aborted) return;
-        setFormError(error instanceof Error ? error.message : "Template tidak dapat dimuat.");
+        const local = localTemplateDetail(templateId);
+        if (local) applyChosenTemplate(local);
       })
       .finally(() => {
         if (!controller.signal.aborted) setTemplateLoading(false);
@@ -124,14 +174,20 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
     const controller = new AbortController();
     void fetch("/api/v1/users/me", { credentials: "include", signal: controller.signal })
       .then(async (response) => (response.ok ? response.json() : null))
-      .then((payload: { success?: boolean; data?: { user?: { username?: string } } } | null) => {
+      .then(async (payload: { success?: boolean; data?: { user?: { username?: string } } } | null) => {
         const username = payload?.data?.user?.username;
-        if (!username) return null;
-        return fetch(`/api/v1/users/${encodeURIComponent(username)}/following`, { credentials: "include", signal: controller.signal });
-      })
-      .then(async (response) => (response && response.ok ? response.json() : null))
-      .then((payload: { success?: boolean; data?: { items?: Array<{ username: string; displayName: string }> } } | null) => {
-        if (!controller.signal.aborted) setConnections(payload?.data?.items ?? []);
+        if (!username) return;
+        const [followingRes, followersRes] = await Promise.all([
+          fetch(`/api/v1/users/${encodeURIComponent(username)}/following`, { credentials: "include", signal: controller.signal }),
+          fetch(`/api/v1/users/${encodeURIComponent(username)}/followers`, { credentials: "include", signal: controller.signal }),
+        ]);
+        const [followingJson, followersJson] = await Promise.all([
+          followingRes.ok ? followingRes.json() : null,
+          followersRes.ok ? followersRes.json() : null,
+        ]) as Array<{ success?: boolean; data?: { items?: Array<{ username: string; displayName: string }> } } | null>;
+        const merged = [...(followingJson?.data?.items ?? []), ...(followersJson?.data?.items ?? [])];
+        const unique = new Map(merged.map((person) => [person.username, person]));
+        if (!controller.signal.aborted) setConnections([...unique.values()]);
       })
       .catch(() => undefined);
     return () => controller.abort();
@@ -151,18 +207,18 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
         .then(async (response) => {
           const json = (await response.json()) as {
             success?: boolean;
-            data?: ItineraryTemplateSummary[];
+            data?: unknown;
             error?: { message?: string };
           };
-          if (!response.ok || !json.success || !Array.isArray(json.data)) {
-            throw new Error(json.error?.message ?? "Gagal memuat template.");
+          const rows = json.success ? templateRowsFromPayload(json) : null;
+          if (!controller.signal.aborted) {
+            setCatalogTemplates(rows && rows.length ? rows : provinceCatalogTemplates(templateQuery));
           }
-          if (!controller.signal.aborted) setCatalogTemplates(json.data);
         })
-        .catch((error) => {
+        .catch(() => {
           if (controller.signal.aborted) return;
-          setCatalogTemplates([]);
-          setTemplatesError(error instanceof Error ? error.message : "Gagal memuat template.");
+          setCatalogTemplates(provinceCatalogTemplates(templateQuery));
+          setTemplatesError("");
         });
     }, 200);
     return () => {
@@ -217,8 +273,10 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
       const json = await response.json() as { success: boolean; data?: ItineraryTemplateDetail; error?: { message?: string } };
       if (!response.ok || !json.success || !json.data) throw new Error(json.error?.message ?? "Template tidak tersedia.");
       applyChosenTemplate(json.data);
-    } catch (error) {
-      setFormError(error instanceof Error ? error.message : "Template tidak dapat dimuat.");
+    } catch {
+      const local = localTemplateDetail(templateIdToUse);
+      if (local) applyChosenTemplate(local);
+      else setFormError("Template tidak dapat dimuat.");
     } finally {
       setTemplateLoading(false);
     }
@@ -234,10 +292,10 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
   }
 
   function goFromStep2() {
-    const errors = validateWizardBasics({ destinationCity, startDate, endDate, budgetAmount, partySize });
+    const errors = validateWizardBasics({ destinationCity, startDate, endDate, budgetAmount, partySize, budgetBasis });
     setFieldErrors(errors);
     if (Object.keys(errors).length) {
-      setFormError("Lengkapi destinasi, tanggal, jumlah orang, dan budget dulu.");
+      setFormError(errors.budgetAmount?.includes("jangkauan") ? errors.budgetAmount : "Lengkapi destinasi, tanggal, jumlah orang, dan budget dulu.");
       return;
     }
     setFormError("");
@@ -245,6 +303,12 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
     setDays([]);
     setStep(3);
     void prepareItinerary({ force: true });
+  }
+
+  function finalizeWizardDays(raw: EditableItineraryDay[]) {
+    return packItinerarySchedule(
+      clampItineraryToDestination(hydrateItineraryPlaces(raw, destinationCity), destinationCity),
+    );
   }
 
   async function ensureDraftTrip() {
@@ -298,11 +362,8 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
       // Template path: show curated route immediately (user chose template).
       // Create / AI path: request Groq (live) or mock stand-in with same API shape.
       if (useTemplate && province) {
-        const nextDays = packItinerarySchedule(
-          ensureMultiStopDays(
-            visibility === "PUBLIC" ? applyPublicMeetingPoint(fallbackDays, true) : fallbackDays,
-            destinationCity,
-          ),
+        const nextDays = finalizeWizardDays(
+          visibility === "PUBLIC" ? applyPublicMeetingPoint(fallbackDays, true) : fallbackDays,
         );
         setDays(nextDays);
         setSelectedStopId(nextDays[0]?.stops[0]?.id ?? null);
@@ -342,8 +403,8 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
           budgetBasis,
           transport,
           regenerateMode: "balanced",
-          minStopsPerDay: 2,
-          maxStopsPerDay: 4,
+          minStopsPerDay: 7,
+          maxStopsPerDay: 8,
         },
         fallbackDays,
         budgetItems: INITIAL_BUDGET_ITEMS,
@@ -351,7 +412,6 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
       }).catch(async (error) => {
         // Live Groq often fails on place verification / provider — keep wizard usable.
         const message = error instanceof Error ? error.message : "Generate Groq gagal.";
-        setFormError(`${message} Menampilkan rute cadangan lokal agar kamu bisa lanjut edit.`);
         return {
           snapshot: {
             tripId: createdTripId,
@@ -378,11 +438,8 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
           fromGroq: false as const,
         };
       });
-      const nextDays = packItinerarySchedule(
-        ensureMultiStopDays(
-          visibility === "PUBLIC" ? applyPublicMeetingPoint(generated.days, true) : generated.days,
-          destinationCity,
-        ),
+      const nextDays = finalizeWizardDays(
+        visibility === "PUBLIC" ? applyPublicMeetingPoint(generated.days, true) : generated.days,
       );
       setDays(nextDays);
       setSelectedStopId(nextDays[0]?.stops[0]?.id ?? null);
@@ -477,19 +534,33 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
           budgetAmount,
           budgetBasis,
           transport,
-          minStopsPerDay: 2,
-          maxStopsPerDay: 4,
+          minStopsPerDay: 7,
+          maxStopsPerDay: 8,
         },
-      );
-      const nextDays = packItinerarySchedule(
-        ensureMultiStopDays(
-          mergeLockedStops(
-            visibility === "PUBLIC"
-              ? applyPublicMeetingPoint(next.snapshot.versions[0]?.days ?? localFallback, true)
-              : (next.snapshot.versions[0]?.days ?? localFallback),
-            days,
-          ),
-          destinationCity,
+      ).catch(() => ({
+        snapshot: {
+          ...snapshot,
+          tripId: createdTripId,
+          versions: [{
+            id: `wizard-regen-${regenerateUsed + 1}`,
+            tripId: createdTripId,
+            versionNumber: (snapshot.versions[0]?.versionNumber ?? 1) + 1,
+            source: "REGENERATED" as const,
+            summary: "Alternatif lokal setelah generate gagal.",
+            assumptions: ["Cadangan lokal"],
+            days: localFallback,
+            budget: snapshot.versions[0]?.budget ?? createBudgetSummary(INITIAL_BUDGET_ITEMS),
+            createdAt: new Date().toISOString(),
+          }, ...snapshot.versions],
+        },
+        job: null,
+      }));
+      const nextDays = finalizeWizardDays(
+        mergeLockedStops(
+          visibility === "PUBLIC"
+            ? applyPublicMeetingPoint(next.snapshot.versions[0]?.days ?? localFallback, true)
+            : (next.snapshot.versions[0]?.days ?? localFallback),
+          days,
         ),
       );
       setSnapshot({
@@ -518,6 +589,12 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
   }
 
   async function persistItineraryThenInvite() {
+    const budgetError = validateWizardBasics({ destinationCity, startDate, endDate, budgetAmount, partySize, budgetBasis }).budgetAmount;
+    if (budgetError) {
+      setFieldErrors({ budgetAmount: budgetError });
+      setFormError(budgetError);
+      return;
+    }
     if (!days.length) {
       setFormError("Itinerary masih kosong. Tunggu generate selesai atau pilih template.");
       return;
@@ -625,7 +702,7 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
           return;
         }
       }
-      router.push(ROUTES.trip(createdTripId));
+      router.push(ROUTES.tripSaya);
       router.refresh();
     } catch (error) {
       setFormError(error instanceof Error ? error.message : "Trip belum tersimpan.");
@@ -890,6 +967,7 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
               destinationCity={destinationCity}
               budgetAmount={budgetAmount}
               budgetBasis={budgetBasis}
+              budgetWarning={validateWizardBasics({ destinationCity, startDate, endDate, budgetAmount, partySize, budgetBasis }).budgetAmount}
               onBudgetAmountChange={setBudgetAmount}
               onBudgetBasisChange={setBudgetBasis}
               onSelectStop={(id) => {
@@ -917,7 +995,7 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
             onBack={() => setStep(2)}
             onNext={() => void persistItineraryThenInvite()}
             nextLabel={pending ? "Menyimpan…" : "Setuju & lanjut undang"}
-            nextDisabled={pending || generating || days.length === 0}
+            nextDisabled={pending || generating || days.length === 0 || Boolean(validateWizardBasics({ destinationCity, startDate, endDate, budgetAmount, partySize, budgetBasis }).budgetAmount)}
           />
         </>
       ) : null}
@@ -945,15 +1023,15 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
               </div>
             </div>
             {visibility === "PUBLIC" ? (
-              <div className="space-y-4 rounded-2xl bg-surface-container-low p-4">
-                <p className="rounded-2xl bg-white px-4 py-3 type-body text-on-surface">
+              <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4">
+                <p className="rounded-2xl border border-primary/20 bg-primary-fixed/35 px-4 py-3 type-body text-on-surface">
                   Titik kumpul: <strong>{firstStopMeetingLabel(days) || destinationCity}</strong>
                 </p>
                 <Field id="maxParticipants" label="Max grup (opsional)" hint="Termasuk host. Kosongkan untuk memakai default 8.">
-                  <input id="maxParticipants" type="number" min={2} className="field-input" value={maxParticipants} onChange={(event) => setMaxParticipants(event.target.value === "" ? "" : Number(event.target.value))} placeholder="8" />
+                  <input id="maxParticipants" type="number" min={2} className="field-input bg-white ring-1 ring-slate-200" value={maxParticipants} onChange={(event) => setMaxParticipants(event.target.value === "" ? "" : Number(event.target.value))} placeholder="8" />
                 </Field>
                 <Field id="genderRule" label="Gender (public)">
-                  <select id="genderRule" className="field-input" value={genderRule} onChange={(event) => setGenderRule(event.target.value as typeof genderRule)}>
+                  <select id="genderRule" className="field-input bg-white ring-1 ring-slate-200" value={genderRule} onChange={(event) => setGenderRule(event.target.value as typeof genderRule)}>
                     <option value="ALL_GENDERS">All gender</option>
                     <option value="FEMALE_ONLY">Female only</option>
                     <option value="MALE_ONLY">Male only</option>
@@ -961,35 +1039,15 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
                 </Field>
               </div>
             ) : null}
-            <div>
-              <p className="type-label text-on-surface">Invite friend (opsional)</p>
-              <p className="type-caption mt-1 text-on-surface-variant">Hanya teman yang sudah connect / kamu ikuti.</p>
-              {connections.length > 0 ? (
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {connections.map((person) => {
-                    const selected = inviteUsernames.includes(person.username);
-                    return (
-                      <button
-                        type="button"
-                        key={person.username}
-                        className={`rounded-full px-3 py-2 type-label ${selected ? "bg-primary text-white" : "bg-surface-container-high text-on-surface"}`}
-                        onClick={() => {
-                          setInviteUsernames((current) =>
-                            selected ? current.filter((item) => item !== person.username) : [...current, person.username],
-                          );
-                        }}
-                      >
-                        @{person.username} · {person.displayName}
-                      </button>
-                    );
-                  })}
-                </div>
-              ) : (
-                <p className="mt-2 rounded-2xl bg-primary-fixed/35 px-4 py-3 type-caption text-on-surface-variant">
-                  Belum ada koneksi DOLAN. Follow dulu, atau simpan trip tanpa undangan.
-                </p>
-              )}
-            </div>
+            <FriendInviteField
+              connections={connections}
+              selected={inviteUsernames}
+              onToggle={(username) => {
+                setInviteUsernames((current) =>
+                  current.includes(username) ? current.filter((item) => item !== username) : [...current, username],
+                );
+              }}
+            />
           </div>
           <div className="mt-6 flex flex-wrap justify-between gap-3">
             <button type="button" className="btn-ghost" onClick={() => setStep(3)}>Kembali</button>
@@ -1003,6 +1061,91 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
 
       {formError ? <p className="type-body mt-4 text-error" role="alert">{formError}</p> : null}
       {templateLoading ? <p className="type-caption mt-3 text-on-surface-variant">Memuat template…</p> : null}
+    </div>
+  );
+}
+
+function FriendInviteField({
+  connections,
+  selected,
+  onToggle,
+}: {
+  connections: Array<{ username: string; displayName: string }>;
+  selected: string[];
+  onToggle: (username: string) => void;
+}) {
+  const [query, setQuery] = useState("");
+  const needle = query.trim().replace(/^@/, "").toLocaleLowerCase("id-ID");
+  const matches = connections.filter((person) => {
+    if (!needle) return false;
+    return (
+      person.username.toLocaleLowerCase("id-ID").includes(needle) ||
+      person.displayName.toLocaleLowerCase("id-ID").includes(needle)
+    );
+  }).slice(0, 8);
+
+  return (
+    <div>
+      <p className="type-label text-on-surface">Invite friend (opsional)</p>
+      <p className="type-caption mt-1 text-on-surface-variant">Cari username teman yang sudah connect denganmu, lalu pilih dari saran.</p>
+      <div className="relative mt-3">
+        <Icon name="search" className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[20px] text-primary" />
+        <input
+          className="field-input field-input-icon bg-white ring-1 ring-slate-200"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="Ketik username, misalnya @salsa"
+          autoComplete="off"
+        />
+        {needle && matches.length > 0 ? (
+          <ul className="absolute z-30 mt-1 max-h-56 w-full overflow-auto rounded-xl border border-slate-200 bg-white p-1 shadow-lg">
+            {matches.map((person) => {
+              const picked = selected.includes(person.username);
+              return (
+                <li key={person.username}>
+                  <button
+                    type="button"
+                    className={`flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left ${picked ? "bg-primary-fixed/60" : "hover:bg-slate-50"}`}
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => {
+                      onToggle(person.username);
+                      setQuery("");
+                    }}
+                  >
+                    <span>
+                      <span className="type-label text-on-surface">@{person.username}</span>
+                      <span className="ml-2 type-caption text-on-surface-variant">{person.displayName}</span>
+                    </span>
+                    <span className="type-caption font-bold text-primary">{picked ? "Dipilih" : "Undang"}</span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        ) : null}
+        {needle && connections.length > 0 && matches.length === 0 ? (
+          <p className="mt-2 type-caption text-on-surface-variant">Tidak ada teman dengan username itu. Pastikan sudah follow / terhubung.</p>
+        ) : null}
+      </div>
+      {selected.length > 0 ? (
+        <div className="mt-3 flex flex-wrap gap-2">
+          {selected.map((username) => (
+            <button
+              type="button"
+              key={username}
+              className="rounded-full bg-primary px-3 py-1.5 type-label text-white"
+              onClick={() => onToggle(username)}
+            >
+              @{username} ×
+            </button>
+          ))}
+        </div>
+      ) : null}
+      {connections.length === 0 ? (
+        <p className="mt-2 rounded-2xl bg-primary-fixed/35 px-4 py-3 type-caption text-on-surface-variant">
+          Belum ada koneksi DOLAN. Follow dulu, atau simpan trip tanpa undangan.
+        </p>
+      ) : null}
     </div>
   );
 }

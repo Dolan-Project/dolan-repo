@@ -16,18 +16,49 @@ describe("trip mocks", () => {
     expect(pending.success && joined.success).toBe(true);
     if (pending.success && joined.success) {
       const joinedIds = new Set(joined.data.map((trip) => trip.id));
-      expect(pending.data.length).toBeGreaterThan(0);
       expect(pending.data.every((trip) => !joinedIds.has(trip.id))).toBe(true);
     }
   });
 
+  it("lists only trips created in this session on My Trip", () => {
+    const hosted = mockListMyTrips("success", "hosted");
+    expect(hosted.success).toBe(true);
+    if (!hosted.success) return;
+    expect(hosted.data.find((trip) => trip.id === "trip_1")).toBeUndefined();
+    expect(hosted.data.find((trip) => trip.id === "trip_closed")).toBeUndefined();
+    expect(hosted.data.find((trip) => trip.id === "trip_host")).toBeUndefined();
+
+    const created = mockCreateTrip("success", {
+      path: "known",
+      title: "Trip milik saya",
+      description: "",
+      origin: "Jakarta",
+      destinationCity: "Bandung",
+      startDate: "2026-11-01",
+      endDate: "2026-11-03",
+      transport: "Kereta",
+      planningPartySize: 2,
+      budgetAmount: 1_000_000,
+      budgetBasis: "PER_PERSON",
+      activityPrefs: [],
+      lodgingPref: "",
+      visibility: "PRIVATE",
+      companionNote: "",
+    });
+    expect(created.success).toBe(true);
+    if (!created.success) return;
+    const after = mockListMyTrips("success", "hosted");
+    expect(after.success).toBe(true);
+    if (!after.success) return;
+    expect(after.data.some((trip) => trip.id === created.data.id)).toBe(true);
+  });
+
   it("exposes the completed joined trip for attendance and review", () => {
-    const joined = mockListMyTrips("success", "joined");
-    expect(joined.success).toBe(true);
-    if (!joined.success) return;
-    const completed = joined.data.find((trip) => trip.id === "trip_completed");
-    expect(completed?.status).toBe("COMPLETED");
-    expect(completed?.host.username).toBe("wayan");
+    const completed = mockGetTrip("success", "trip_completed");
+    expect(completed.success).toBe(true);
+    if (!completed.success) return;
+    expect(completed.data.status).toBe("COMPLETED");
+    expect(completed.data.host.username).toBe("wayan");
   });
 
   it("create trip empty scenario returns no trip body payment fields", () => {
@@ -39,13 +70,12 @@ describe("trip mocks", () => {
   });
 
   it("places hosted trip markers on public meeting coordinates", () => {
-    const result = mockListMyTrips("success", "hosted");
+    const result = mockGetTrip("success", "trip_1");
     expect(result.success).toBe(true);
     if (!result.success) return;
-    const yogya = result.data.find((trip) => trip.id === "trip_1");
-    expect(yogya?.publicMeetingPointLabel).toBe("Stasiun Tugu");
-    expect(yogya?.publicMeetingPointLatitude).toBeCloseTo(-7.7891, 3);
-    expect(yogya?.publicMeetingPointLongitude).toBeCloseTo(110.3636, 3);
+    expect(result.data.publicMeetingPointLabel).toBe("Stasiun Tugu");
+    expect(result.data.publicMeetingPointLatitude).toBeCloseTo(-7.7891, 3);
+    expect(result.data.publicMeetingPointLongitude).toBeCloseTo(110.3636, 3);
   });
 
   it("stores origin and meeting coordinates from the mock Places catalog", () => {
@@ -76,13 +106,12 @@ describe("trip mocks", () => {
   });
 
   it("does not keep Yogyakarta coordinates when a cloned seed has a new meeting point", () => {
-    const result = mockListMyTrips("success", "hosted");
+    const result = mockGetTrip("success", "trip_closed");
     expect(result.success).toBe(true);
     if (!result.success) return;
-    const dieng = result.data.find((trip) => trip.id === "trip_closed");
-    expect(dieng?.publicMeetingPointLabel).toBe("Alun-alun Wonosobo");
-    expect(dieng?.publicMeetingPointLatitude).toBeCloseTo(-7.36, 2);
-    expect(dieng?.publicMeetingPointLongitude).toBeCloseTo(109.9, 1);
+    expect(result.data.publicMeetingPointLabel).toBe("Alun-alun Wonosobo");
+    expect(result.data.publicMeetingPointLatitude).toBeCloseTo(-7.36, 2);
+    expect(result.data.publicMeetingPointLongitude).toBeCloseTo(109.9, 1);
   });
 
   it("lets a guest read a public non-draft trip without the host origin", () => {

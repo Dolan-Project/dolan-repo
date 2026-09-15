@@ -51,23 +51,38 @@ export function RegisterForm({ next }: RegisterFormProps) {
     setPending(true);
     setFormError("");
     setFieldErrors({});
-    const response = await fetch(AUTH_PATHS.register, {
-      method: "POST",
-      credentials: "include",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ email, password, confirmPassword, displayName, username, next }),
-    });
-    const json = (await response.json()) as
-      | { success: true; data: AuthSession }
-      | ApiError;
-    setPending(false);
-    if (!json.success) {
-      setFormError(json.error.message);
-      setFieldErrors(json.error.fields ?? {});
-      return;
+    try {
+      const response = await fetch(AUTH_PATHS.register, {
+        method: "POST",
+        credentials: "include",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email, password, confirmPassword, displayName, username, next }),
+      });
+      const json = (await response.json()) as
+        | { success: true; data: AuthSession }
+        | ApiError;
+      if (!json.success) {
+        setFormError(
+          json.error.code === "PROVIDER_UNAVAILABLE"
+            ? "Layanan daftar sedang sibuk. Coba beberapa detik lagi."
+            : json.error.code === "EMAIL_TAKEN"
+              ? "Email sudah terdaftar. Masuk, atau pakai email lain."
+              : json.error.message,
+        );
+        setFieldErrors(json.error.fields ?? {});
+        return;
+      }
+      if (!json.data) {
+        setFormError("Layanan daftar sedang sibuk. Coba beberapa detik lagi.");
+        return;
+      }
+      router.push(resolveAfterAuth(json.data, next));
+      router.refresh();
+    } catch {
+      setFormError("Layanan daftar sedang sibuk. Coba beberapa detik lagi.");
+    } finally {
+      setPending(false);
     }
-    router.push(resolveAfterAuth(json.data, next));
-    router.refresh();
   }
 
   const googleHref = next

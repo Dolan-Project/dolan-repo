@@ -7,11 +7,12 @@ import { Icon } from "@/components/ui/Icon";
 import { AttendanceConfirm } from "@/components/trips/AttendanceConfirm";
 import { GoogleMap, type MapPoint } from "@/features/explore/GoogleMap";
 import { PlacePhoto } from "@/features/explore/PlacePhoto";
-import type { ApiError, MyTripRole, MyTripSummary, TripSummary } from "@/lib/contracts";
+import type { MyTripRole, MyTripSummary, TripSummary } from "@/lib/contracts";
 import { ROUTES, tripDetailHref, tripItineraryPath } from "@/lib/routes";
 import { meetingPointFor } from "@/mocks/geo";
 import { CITY_ROUTES, destinationCoverUrl } from "@/lib/destination-itinerary";
-import { ItineraryPdfButton } from "./ItineraryPdfButton";
+import { ShareRouteModal } from "./ShareRouteModal";
+import { JoinRequestsModal } from "./JoinRequestsModal";
 
 const tabs: { id: MyTripRole; label: string }[] = [
   { id: "hosted", label: "Dibuat" },
@@ -21,6 +22,17 @@ const tabs: { id: MyTripRole; label: string }[] = [
 type SheetPos = "collapsed" | "half" | "expanded";
 type MapType = "roadmap" | "satellite";
 const noop = () => undefined;
+
+function parseMyTripRows(payload: unknown): { rows: MyTripSummary[]; error?: string } {
+  if (!payload || typeof payload !== "object") return { rows: [], error: "Gagal memuat trip" };
+  const json = payload as { success?: boolean; data?: unknown; error?: { message?: string } };
+  if (!json.success) return { rows: [], error: json.error?.message ?? "Gagal memuat trip" };
+  if (Array.isArray(json.data)) return { rows: json.data as MyTripSummary[] };
+  if (json.data && typeof json.data === "object" && Array.isArray((json.data as { items?: unknown }).items)) {
+    return { rows: (json.data as { items: MyTripSummary[] }).items };
+  }
+  return { rows: [] };
+}
 
 const fallbackRoutes = CITY_ROUTES.map((route) => ({
   match: route.match,
@@ -143,6 +155,8 @@ export function MyTripsBoard() {
   const [notice, setNotice] = useState("");
   const [routePolylines, setRoutePolylines] = useState<string[]>([]);
   const [persistedPoints, setPersistedPoints] = useState<MapPoint[]>([]);
+  const [shareTrip, setShareTrip] = useState<MyTripSummary | null>(null);
+  const [joinTrip, setJoinTrip] = useState<MyTripSummary | null>(null);
   const dragStart = useRef<number | null>(null);
 
   useEffect(() => {
@@ -157,17 +171,16 @@ export function MyTripsBoard() {
           credentials: "include",
           signal: ac.signal,
         });
-        const json = (await response.json()) as
-          | { success: true; data: MyTripSummary[] }
-          | ApiError;
+        const json = (await response.json()) as unknown;
         if (ac.signal.aborted) return;
-        if (!json.success) {
-          setError(json.error.message);
+        const parsed = parseMyTripRows(json);
+        if (parsed.error) {
+          setError(parsed.error);
           setLoading(false);
           return;
         }
-        setRows(json.data);
-        setSelectedId(json.data[0]?.id ?? null);
+        setRows(parsed.rows);
+        setSelectedId(parsed.rows[0]?.id ?? null);
         setLoading(false);
       } catch (err) {
         if (ac.signal.aborted) return;
@@ -300,10 +313,38 @@ export function MyTripsBoard() {
           <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-3 pb-28 pt-3 [scrollbar-gutter:stable] md:px-4 md:pb-12 md:pt-3 lg:pb-10">
             {loading ? <p className="type-body text-on-surface-variant">Memuat trip…</p> : null}
             {!loading && !error && visibleRows.length === 0 ? <div className="rounded-2xl bg-white p-8 text-center type-body text-on-surface-variant">Belum ada trip yang cocok dengan filter ini.</div> : null}
-            {visibleRows.map((trip) => <TripCard key={trip.id} trip={trip} tab={tab} selected={trip.id === selected?.id} onSelect={() => selectTrip(trip.id)} />)}
+            {visibleRows.map((trip) => (
+              <TripCard
+                key={trip.id}
+                trip={trip}
+                tab={tab}
+                selected={trip.id === selected?.id}
+                onSelect={() => selectTrip(trip.id)}
+                onShare={() => setShareTrip(trip)}
+                onJoinRequests={() => setJoinTrip(trip)}
+              />
+            ))}
           </div>
         </section>
       </div>
+      {shareTrip ? (
+        <ShareRouteModal tripId={shareTrip.id} tripTitle={shareTrip.title} onClose={() => setShareTrip(null)} />
+      ) : null}
+      {joinTrip ? (
+        <JoinRequestsModal
+          tripId={joinTrip.id}
+          tripTitle={joinTrip.title}
+          onClose={() => setJoinTrip(null)}
+          onChanged={() => {
+            void fetch(`/api/v1/trips/me?role=${tab}`, { credentials: "include" })
+              .then((response) => response.json())
+              .then((json: { success?: boolean; data?: MyTripSummary[] }) => {
+                if (json.success && json.data) setRows(json.data);
+              })
+              .catch(() => undefined);
+          }}
+        />
+      ) : null}
     </div>
   );
 }
@@ -312,7 +353,21 @@ function MapControl({ label, icon, onClick, squared = false }: { label: string; 
   return <button type="button" onClick={onClick} title={label} aria-label={label} className={`flex h-11 w-11 items-center justify-center bg-white text-[#17324d] shadow-lg transition hover:bg-primary-fixed hover:text-primary ${squared ? "rounded-none shadow-none" : "rounded-xl"}`}><Icon name={icon} className="text-[21px]" /></button>;
 }
 
-function TripCard({ trip, tab, selected, onSelect }: { trip: MyTripSummary; tab: MyTripRole; selected: boolean; onSelect: () => void }) {
+function TripCard({
+  trip,
+  tab,
+  selected,
+  onSelect,
+  onShare,
+  onJoinRequests,
+}: {
+  trip: MyTripSummary;
+  tab: MyTripRole;
+  selected: boolean;
+  onSelect: () => void;
+  onShare: () => void;
+  onJoinRequests: () => void;
+}) {
   const roleLabel = tab === "hosted" ? "PERAN: HOST (INISIATOR)" : tab === "joined" ? "PERAN: PESERTA" : "PENGAJUAN TERKIRIM";
   const duration = durationLabel(trip.startDate, trip.endDate);
   const meeting = trip.publicMeetingPointLabel ?? trip.destinationCity ?? "Titik kumpul belum ditentukan";
@@ -342,12 +397,17 @@ function TripCard({ trip, tab, selected, onSelect }: { trip: MyTripSummary; tab:
         </div>
       </button>
       <div className="flex flex-wrap items-center gap-1.5 border-t border-outline-variant/45 px-3 py-2.5">
-        {tab === "hosted" && trip.visibility === "PUBLIC" ? <Link href={`${tripDetailHref(trip.id)}#join-requests`} className="btn-primary !min-h-9 !px-3 !text-xs">Kelola Pengajuan {trip.pendingRequestCount ? `(${trip.pendingRequestCount})` : ""}</Link> : null}
+        {tab === "hosted" && trip.visibility === "PUBLIC" ? (
+          <button type="button" className="btn-primary !min-h-9 !px-3 !text-xs" onClick={onJoinRequests}>
+            Permintaan gabung {trip.pendingRequestCount ? `(${trip.pendingRequestCount})` : ""}
+          </button>
+        ) : null}
         {(tab === "hosted" || tab === "joined") ? <Link href={ROUTES.tripChat(trip.id)} className="rounded-full bg-surface-container px-3 py-2 type-label"><Icon name="forum" /> Grup Chat</Link> : null}
-        {(tab === "hosted" || tab === "joined") ? <ItineraryPdfButton tripId={trip.id} /> : null}
         {tab === "hosted" ? <Link href={tripItineraryPath(trip.id)} className="rounded-full bg-surface-container px-3 py-2 type-label"><Icon name="edit" /> Edit itinerary</Link> : null}
         {tab === "pending" ? <Link href={tripDetailHref(trip.id)} className="btn-brand !min-h-9 !px-3 !text-xs"><Icon name="forum" /> Buka diskusi publik</Link> : null}
-        {tripPoints(trip).length > 0 ? <a href={mapsRouteUrl(tripPoints(trip))} target="_blank" rel="noreferrer" className="rounded-full px-3 py-2 type-label text-primary hover:bg-primary-fixed"><Icon name="share" /> Bagikan rute</a> : null}
+        <button type="button" className="rounded-full px-3 py-2 type-label text-primary hover:bg-primary-fixed" onClick={onShare}>
+          <Icon name="share" /> Bagikan rute
+        </button>
         <Link href={tripDetailHref(trip.id)} className="rounded-full px-3 py-2 type-label text-primary hover:bg-primary-fixed">Lihat detail</Link>
       </div>
       {trip.status === "COMPLETED" ? (

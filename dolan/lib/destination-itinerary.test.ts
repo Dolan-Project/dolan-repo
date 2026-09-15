@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildDestinationItinerary, buildProvinceTemplateDays, destinationCoverUrl, destinationStopSeeds, ensureMultiStopDays, findProvinceForDestination, resolveTripItineraryDays, templateMatchesDestination } from "./destination-itinerary";
+import { buildDestinationItinerary, buildProvinceTemplateDays, clampItineraryToDestination, destinationCoverUrl, destinationStopSeeds, ensureMultiStopDays, findProvinceForDestination, resolveTripItineraryDays, templateMatchesDestination } from "./destination-itinerary";
 import { INDONESIA_PROVINCES } from "./provinces";
 
 describe("destination itinerary", () => {
@@ -12,7 +12,7 @@ describe("destination itinerary", () => {
     const names = days.flatMap((day) => day.stops.map((stop) => stop.customTitle)).join(" ");
     expect(names).toMatch(/Gedung Sate|Braga/i);
     expect(names).not.toMatch(/Pink Beach|Bandara Komodo|Padar|Bogor|Pangandaran/i);
-    expect(days[0].stops.length).toBeGreaterThanOrEqual(3);
+    expect(days[0].stops.length).toBeGreaterThanOrEqual(5);
     expect(days[0].stops[0].startTime).toBe("08:00");
     const last = days[0].stops.at(-1)!;
     expect(last.startTime! >= "14:00").toBe(true);
@@ -190,5 +190,51 @@ describe("destination itinerary", () => {
     expect(transportLines.some((line) => /Titik awal hari/i.test(line.detail))).toBe(true);
     expect(transportLines.every((line) => line.amount === 0 || !/jalan kaki jauh/i.test(line.detail))).toBe(true);
     expect(transportLines.some((line) => line.amount > 0 && /ojek|antar-kota|jeep/i.test(line.detail))).toBe(true);
+  });
+
+  it("builds Cirebon with local stops, not an empty or Bandung itinerary", () => {
+    const days = buildDestinationItinerary({
+      destination: "Cirebon",
+      startDate: "2026-11-01",
+      endDate: "2026-11-02",
+    });
+    const names = days.flatMap((day) => day.stops.map((stop) => stop.customTitle)).join(" ");
+    expect(days.length).toBeGreaterThanOrEqual(1);
+    expect(days.every((day) => day.stops.length >= 2)).toBe(true);
+    expect(names).toMatch(/Kasepuhan|Sunyaragi|Trusmi|Kejawanan|Kanoman/i);
+    expect(names).not.toMatch(/Gedung Sate|Braga|Pink Beach|Padar|Komodo/i);
+    for (const stop of days.flatMap((day) => day.stops)) {
+      expect(stop.place?.latitude).toBeGreaterThan(-7.1);
+      expect(stop.place?.latitude).toBeLessThan(-6.5);
+      expect(stop.place?.longitude).toBeGreaterThan(108.4);
+      expect(stop.place?.longitude).toBeLessThan(108.7);
+    }
+  });
+
+  it("keeps Bali itineraries inside Bali and drops NTT leaks", () => {
+    const days = buildDestinationItinerary({
+      destination: "Bali",
+      startDate: "2026-11-01",
+      endDate: "2026-11-03",
+    });
+    const names = days.flatMap((day) => day.stops.map((stop) => stop.customTitle)).join(" ");
+    expect(names).toMatch(/Tanah Lot|Uluwatu|Ubud|Sanur|Kuta|Tirta|GWK|Garuda/i);
+    expect(names).not.toMatch(/Pink Beach|Padar|Komodo|Labuan Bajo|Kelimutu/i);
+    const leaked = clampItineraryToDestination(
+      [{
+        id: "d1",
+        dayNumber: 1,
+        date: "2026-11-01",
+        title: "Hari 1",
+        stops: [
+          { id: "s1", sequence: 1, place: { googlePlaceId: "x", name: "Pulau Padar", formattedAddress: "NTT", city: "Labuan Bajo", latitude: -8.6486, longitude: 119.5892, rating: null, userRatingCount: null, photoName: null, googleMapsUrl: "" }, customTitle: "Pulau Padar", activityType: "Wisata", startTime: "08:00", durationMinutes: 60, travelDurationMinutes: 0, notes: null, isLocked: false },
+          { id: "s2", sequence: 2, place: { googlePlaceId: "y", name: "Pink Beach", formattedAddress: "NTT", city: "Labuan Bajo", latitude: -8.6031, longitude: 119.5196, rating: null, userRatingCount: null, photoName: null, googleMapsUrl: "" }, customTitle: "Pink Beach", activityType: "Wisata", startTime: "10:00", durationMinutes: 60, travelDurationMinutes: 0, notes: null, isLocked: false },
+        ],
+      }],
+      "Bali",
+    );
+    const leakedNames = leaked.flatMap((day) => day.stops.map((stop) => stop.customTitle)).join(" ");
+    expect(leakedNames).not.toMatch(/Padar|Pink Beach|Komodo/i);
+    expect(leakedNames).toMatch(/Tanah Lot|Uluwatu|Ubud|Sanur|Kuta|Tirta|Garuda/i);
   });
 });

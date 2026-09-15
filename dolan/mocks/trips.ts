@@ -16,6 +16,19 @@ const idempotentCreates = new Map<string, string>();
 const trips = new Map<string, TripDetail>();
 const roles = new Map<string, TripViewerRole>();
 
+/** Seed fixtures for get/join/comment tests — not listed as "trip saya". */
+const FIXTURE_TRIP_IDS = new Set([
+  "trip_1",
+  "trip_joined",
+  "trip_pending",
+  "trip_ongoing",
+  "trip_closed",
+  "trip_private",
+  "trip_open",
+  "trip_host",
+  "trip_completed",
+]);
+
 function moneyString(value: number | string | null | undefined): string | null {
   if (value == null || value === "") return null;
   if (typeof value === "number") return String(value);
@@ -267,7 +280,7 @@ export function mockListMyTrips(
   const wanted: TripViewerRole =
     role === "hosted" ? "host" : role === "joined" ? "participant" : "pending";
   const data = [...trips.values()]
-    .filter((trip) => roles.get(trip.id) === wanted)
+    .filter((trip) => roles.get(trip.id) === wanted && !FIXTURE_TRIP_IDS.has(trip.id))
     .map(detailToSummary);
   return { success: true, data };
 }
