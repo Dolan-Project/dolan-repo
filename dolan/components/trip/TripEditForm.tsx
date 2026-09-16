@@ -288,19 +288,17 @@ export function TripEditForm({ tripId }: { tripId: string }) {
             error={fieldErrors.origin}
             placeholder="Cari kota atau bandara"
             hint="Asal pribadi tidak dipakai sebagai titik temu publik."
+            kind="destination"
           />
-          <Field
+          <PlacePicker
             id="destinationCity"
             label="Destinasi utama"
+            value={destinationCity}
+            onChange={setDestinationCity}
+            kind="destination"
             error={fieldErrors.destinationCity}
-          >
-            <input
-              id="destinationCity"
-              className="field-input"
-              value={destinationCity}
-              onChange={(e) => setDestinationCity(e.target.value)}
-            />
-          </Field>
+            placeholder="Cari kota, provinsi, atau tempat wisata"
+          />
         </div>
         {previewMarkers.length > 0 ? (
           <TripBoardMap compact markers={previewMarkers} />
@@ -457,6 +455,7 @@ export function TripEditForm({ tripId }: { tripId: string }) {
               excludeLabel={origin}
               error={fieldErrors.meetingPoint}
               hint="Jangan salin alamat/asal pribadi."
+              kind="place"
             />
             {previewMarkers.length > 0 ? (
               <TripBoardMap compact markers={previewMarkers} />

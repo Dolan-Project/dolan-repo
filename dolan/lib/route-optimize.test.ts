@@ -89,6 +89,8 @@ describe("route optimize", () => {
       { name: "Kesawan", lat: 3.5895, lng: 98.6735 },
       { name: "Gedung Juang 45", lat: 3.5878, lng: 98.6781 },
       { name: "Pasar Petisah", lat: 3.5955, lng: 98.6698 },
+      { name: "Graha Maria Annai Velangkanni", lat: 3.5676, lng: 98.6195 },
+      { name: "Taman Ahmad Yani Medan", lat: 3.5848, lng: 98.6712 },
     ];
     const days = selectCompactStops(stops, 4, { lat: 3.5952, lng: 98.6722 }, {
       minPerDay: 2,

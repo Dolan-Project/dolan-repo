@@ -2,6 +2,13 @@ import { getModels } from "@dolan/database";
 import type { GeminiItinerary, PlaceSummary } from "@dolan/shared";
 import { HttpError } from "../../lib/api-error.ts";
 import type { PlacesProvider } from "../../integrations/google/places-client.ts";
+import { isAdministrativePlace } from "../search/place-rank.ts";
+import {
+  clampDailyStopBounds,
+  dropDuplicateStops,
+  planItineraryByProximity,
+  sameDestination,
+} from "./itinerary-optimize.ts";
 import type { LatLng } from "./routes-adapter.ts";
 
 const CHIJ_PLACE_ID = /^ChIJ[A-Za-z0-9_-]+$/;
@@ -137,14 +144,19 @@ export function createPlaceLookup(
     },
   ) {
     if (!places) return days;
-    const used = new Set(
-      days.flatMap((day) =>
-        day.stops
-          .map((stop) => stop.place?.googlePlaceId)
-          .filter((id): id is string => Boolean(id)),
-      ),
+    const usedPlaces: Array<{ googlePlaceId?: string | null; name?: string | null }> = days.flatMap((day) =>
+      day.stops.map((stop) => stop.place ?? { name: stop.customTitle }),
     );
-    const queries = input.city ? [input.city, "wisata"] : ["wisata"];
+    const queries = input.city
+      ? [
+          `${input.city} wisata`,
+          `tempat wisata ${input.city}`,
+          `museum ${input.city}`,
+          `taman ${input.city}`,
+          `pasar ${input.city}`,
+          input.city,
+        ]
+      : ["wisata"];
     const nearby: PlaceSummary[] = [];
     const seen = new Set<string>();
     for (const query of queries) {
@@ -155,7 +167,7 @@ export function createPlaceLookup(
       }).catch(() => []);
       for (const place of results) {
         if (seen.has(place.googlePlaceId) || !CHIJ_PLACE_ID.test(place.googlePlaceId)) continue;
-        if (isLodgingOrFood(place.types)) continue;
+        if (isLodgingOrFood(place.types) || isAdministrativePlace(place)) continue;
         seen.add(place.googlePlaceId);
         nearby.push(place);
         if (typeof place.latitude === "number" && typeof place.longitude === "number") {
@@ -168,7 +180,7 @@ export function createPlaceLookup(
     }
 
     return days.map((day) => {
-      if (day.stops.length >= input.minStops) {
+      if (day.stops.length >= input.maxStops) {
         return { ...day, stops: day.stops.map((stop, index) => ({ ...stop, sequence: index + 1 })) };
       }
       const hubId = day.stops.find((stop) => stop.place?.googlePlaceId)?.place?.googlePlaceId;
@@ -176,11 +188,12 @@ export function createPlaceLookup(
       const extras = [];
       for (const place of nearby) {
         if (day.stops.length + extras.length >= input.maxStops) break;
-        if (used.has(place.googlePlaceId)) continue;
+        if (usedPlaces.some((item) => sameDestination(item, place))) continue;
+        if (input.city && sameDestination({ name: input.city }, place)) continue;
         if (hub && typeof place.latitude === "number" && typeof place.longitude === "number") {
-          if (haversineKm(hub, { latitude: place.latitude, longitude: place.longitude }) > 18) continue;
+          if (haversineKm(hub, { latitude: place.latitude, longitude: place.longitude }) > 22) continue;
         }
-        used.add(place.googlePlaceId);
+        usedPlaces.push(place);
         extras.push({
           sequence: day.stops.length + extras.length + 1,
           place: {
@@ -243,8 +256,7 @@ export function createPlaceLookup(
       }
 
       const biasCity = bias?.destinationCity?.trim() || null;
-      const minStops = Math.max(2, Number(bias?.minStopsPerDay ?? 2));
-      const maxStops = Math.max(minStops, Number(bias?.maxStopsPerDay ?? 4));
+      const { minStops, maxStops } = clampDailyStopBounds(bias?.minStopsPerDay, bias?.maxStopsPerDay);
       const coordsById = new Map<string, { latitude: number; longitude: number }>();
       const destinationAnchor =
         biasCity && places
@@ -257,6 +269,7 @@ export function createPlaceLookup(
         });
       }
       const maxKmFromDestination = 45;
+      const usedPlaces: Array<{ googlePlaceId?: string | null; name?: string | null }> = [];
       const days = [];
       for (const day of itinerary.days) {
         const stops = [];
@@ -278,6 +291,15 @@ export function createPlaceLookup(
               : null);
 
           if (!resolved || !CHIJ_PLACE_ID.test(resolved.googlePlaceId)) {
+            continue;
+          }
+          if (isLodgingOrFood(resolved.types) || isAdministrativePlace(resolved)) {
+            continue;
+          }
+          if (biasCity && sameDestination({ name: biasCity }, resolved)) {
+            continue;
+          }
+          if (usedPlaces.some((item) => sameDestination(item, resolved))) {
             continue;
           }
 
@@ -304,6 +326,7 @@ export function createPlaceLookup(
             });
           }
 
+          usedPlaces.push(resolved);
           stops.push({
             ...stop,
             place: {
@@ -316,7 +339,12 @@ export function createPlaceLookup(
 
         if (!stops.length && biasCity) {
           const filler = await resolveByName(`${biasCity} wisata`, biasCity);
-          if (filler && CHIJ_PLACE_ID.test(filler.googlePlaceId)) {
+          if (
+            filler &&
+            CHIJ_PLACE_ID.test(filler.googlePlaceId) &&
+            !isLodgingOrFood(filler.types) &&
+            !usedPlaces.some((item) => sameDestination(item, filler))
+          ) {
             const seed = day.stops[0];
             if (typeof filler.latitude === "number" && typeof filler.longitude === "number") {
               coordsById.set(filler.googlePlaceId, {
@@ -324,6 +352,7 @@ export function createPlaceLookup(
                 longitude: filler.longitude,
               });
             }
+            usedPlaces.push(filler);
             stops.push({
               sequence: 1,
               place: {
@@ -342,22 +371,35 @@ export function createPlaceLookup(
           }
         }
 
-        if (stops.length) {
-          days.push({
-            ...day,
-            stops: stops.map((stop, index) => ({ ...stop, sequence: index + 1 })),
-          });
-        }
+        days.push({
+          ...day,
+          stops: stops.map((stop, index) => ({ ...stop, sequence: index + 1 })),
+        });
       }
 
-      if (!days.length) throw new Error("INVALID_GENERATION");
+      if (!days.some((day) => day.stops.length)) throw new Error("INVALID_GENERATION");
       const densified = await densifyDays(days, {
         city: biasCity,
         minStops,
         maxStops,
         coordsById,
       });
-      return { ...itinerary, days: densified };
+      const clustered = planItineraryByProximity(
+        dropDuplicateStops({ ...itinerary, days: densified }),
+        coordsById,
+        destinationAnchor && typeof destinationAnchor.latitude === "number" && typeof destinationAnchor.longitude === "number"
+          ? { latitude: destinationAnchor.latitude, longitude: destinationAnchor.longitude }
+          : null,
+      );
+      const filled = await densifyDays(clustered.days, {
+        city: biasCity,
+        minStops,
+        maxStops,
+        coordsById,
+      });
+      const uniqueDays = dropDuplicateStops({ ...clustered, days: filled }).days;
+      if (!uniqueDays.some((day) => day.stops.length)) throw new Error("INVALID_GENERATION");
+      return { ...clustered, days: uniqueDays };
     },
 
     async resolveCoords(itinerary: GeminiItinerary): Promise<Array<LatLng | null>> {

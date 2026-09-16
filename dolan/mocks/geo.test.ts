@@ -31,9 +31,20 @@ describe("searchGeoPlaces", () => {
     expect(hits[0]?.latitude).not.toBeCloseTo(-6.2088, 3);
   });
 
-  it("suggests provinces while the name is still being typed", () => {
+  it("suggests city names while they are still being typed", () => {
     expect(searchGeoPlaces("jam")[0]?.label).toMatch(/Jambi/i);
-    expect(searchGeoPlaces("lamp").some((place) => /Lampung/i.test(place.label))).toBe(true);
+    expect(searchGeoPlaces("cirebon").some((place) => /cirebon/i.test(place.label))).toBe(true);
+  });
+
+  it("offers a province as a destination, then nearby places", () => {
+    const hits = searchGeoPlaces("jawa barat");
+    expect(hits[0]?.label.toLocaleLowerCase("id-ID")).toBe("jawa barat");
+    expect(hits.some((place) => /Gedung Sate|Braga|Bogor|Bandung/i.test(place.label))).toBe(true);
+  });
+
+  it("does not offer a province name as if it were a tourist stop", () => {
+    expect(searchGeoPlaces("jawa barat", { includeRegions: false }).every((place) => place.label.toLocaleLowerCase("id-ID") !== "jawa barat")).toBe(true);
+    expect(searchGeoPlaces("jawa barat", { includeRegions: false }).some((place) => /Gedung Sate|Braga|Bogor|Bandung/i.test(place.label))).toBe(true);
   });
 });
 

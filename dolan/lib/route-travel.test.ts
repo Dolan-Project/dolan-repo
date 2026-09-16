@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  applyLiveRoadRoutes,
   encodedRoutePolylines,
   formatDistanceKm,
   formatStopTravel,
@@ -41,5 +42,24 @@ describe("route travel labels", () => {
     ];
     expect(encodedRoutePolylines(days)).toEqual(["abc"]);
     expect(itineraryHasUnavailableRoute(days)).toBe(true);
+  });
+
+  it("writes Google road polylines onto stops after a location edit", async () => {
+    const days = [
+      {
+        stops: [
+          { place: { latitude: -6.9025, longitude: 107.6187 }, travelDurationMinutes: 0, routePolyline: null, routeStatus: "PENDING" as const },
+          { place: { latitude: -6.9174, longitude: 107.609 }, travelDurationMinutes: null, routePolyline: "stale", routeStatus: "AVAILABLE" as const },
+        ],
+      },
+    ];
+    const routed = await applyLiveRoadRoutes(days, async () =>
+      new Response(JSON.stringify({
+        data: { segments: [{ ok: true, encodedPolyline: "newroad", durationMinutes: 12, distanceMeters: 2800 }] },
+      }), { status: 200 }),
+    );
+    expect(routed[0]?.stops[1]?.routePolyline).toBe("newroad");
+    expect(routed[0]?.stops[1]?.travelDurationMinutes).toBe(12);
+    expect(routed[0]?.stops[1]?.routeStatus).toBe("AVAILABLE");
   });
 });

@@ -195,8 +195,8 @@ export async function generateInitialItinerary(input: {
   const preferences = {
     ...input.preferences,
     regenerateMode: input.preferences.regenerateMode ?? "balanced",
-    minStopsPerDay: input.preferences.minStopsPerDay ?? 2,
-    maxStopsPerDay: input.preferences.maxStopsPerDay ?? 4,
+    minStopsPerDay: input.preferences.minStopsPerDay ?? 4,
+    maxStopsPerDay: input.preferences.maxStopsPerDay ?? 6,
     requireDayCards: true,
   };
 
@@ -220,34 +220,33 @@ export async function generateInitialItinerary(input: {
       error?: { message?: string };
     };
     if (!response.ok || !payload.success || !payload.data?.id) {
-      throw new Error(payload.error?.message ?? "Gagal memulai generate itinerary Groq.");
+      throw new Error(payload.error?.message ?? "Dolan belum bisa mulai menyusun itinerary. Coba lagi ya.");
     }
     const job = await pollJob(payload.data.id);
     if (job?.status === "SUCCEEDED") {
       const snapshot = await getItineraryEditor(input.tripId);
       const days = activeDays(snapshot);
       if (!days.length) {
-        throw new Error("Groq selesai tapi itinerary kosong. Coba generate lagi.");
+        throw new Error("Dolan sudah selesai, tapi itinerary-nya masih kosong. Coba susun ulang ya.");
       }
       return { snapshot, days, job, fromGroq: true as const };
     }
     if (job?.status === "FAILED") {
-      const code = job.errorCode ? ` (${job.errorCode})` : "";
       if (job.errorCode === "INVALID_GENERATION") {
         throw new Error(
-          `Generate Groq gagal${code}: hasil AI tidak lolos verifikasi tempat (Place ID). Coba generate lagi.`,
+          "Dolan belum yakin dengan beberapa tempat di rute ini. Coba susun ulang ya.",
         );
       }
       if (job.errorCode === "PROVIDER_UNAVAILABLE") {
         throw new Error(
-          `Generate Groq gagal${code}: provider AI/Maps tidak tersedia. Cek GROQ_API_KEY, kuota Groq, dan GOOGLE_MAPS_SERVER_KEY di server.`,
+          "Dolan lagi kesulitan terhubung ke peta. Coba beberapa saat lagi ya.",
         );
       }
       throw new Error(
-        `Generate Groq gagal${code}. Cek log server (job generation). API key biasanya sudah terisi jika error ini muncul.`,
+        "Dolan belum bisa menyusun itinerary. Coba lagi ya.",
       );
     }
-    throw new Error("Generate Groq masih berjalan terlalu lama. Muat ulang lalu coba lagi.");
+    throw new Error("Dolan masih menyusun terlalu lama. Muat ulang halaman, lalu coba lagi ya.");
   }
 
   await wait(900);
@@ -264,10 +263,9 @@ export async function generateInitialItinerary(input: {
       tripId: input.tripId,
       versionNumber: 1,
       source: input.sourceLabel ?? "AI",
-      summary: `Rekomendasi itinerary untuk ${input.preferences.destinationCity} (mock — set NEXT_PUBLIC_USE_MOCK_API=false untuk Groq live).`,
+      summary: `Rencana perjalanan untuk ${input.preferences.destinationCity}.`,
       assumptions: [
-        "Mode mock: hasil dari generator lokal multi-stop, bukan Groq.",
-        "Aktifkan live API + GROQ_API_KEY agar rekomendasi dari Groq.",
+        "Rencana awal dari Dolan. Kamu bisa ubah tempat atau urutannya.",
       ],
       days,
       budget: createBudgetSummary(input.budgetItems),
@@ -305,8 +303,8 @@ export async function generateAlternative(
           partySize: preferences?.partySize,
           budgetAmount: preferences?.budgetAmount,
           budgetBasis: preferences?.budgetBasis,
-          minStopsPerDay: preferences?.minStopsPerDay ?? 2,
-          maxStopsPerDay: preferences?.maxStopsPerDay ?? 4,
+          minStopsPerDay: preferences?.minStopsPerDay ?? 4,
+          maxStopsPerDay: preferences?.maxStopsPerDay ?? 6,
           requireDayCards: true,
         },
       }),
@@ -354,9 +352,9 @@ export async function generateAlternative(
           source: "REGENERATED" as const,
           summary:
             regenerateMode === "cheaper"
-              ? "Alternatif hemat (mock). Destinasi terkunci tetap dipertahankan."
-              : "Alternatif AI (mock). Destinasi terkunci tetap dipertahankan.",
-          assumptions: ["Mode mock — bukan hasil Groq"],
+              ? "Alternatif hemat dari Dolan. Tempat yang kamu kunci tetap dipertahankan."
+              : "Rute alternatif dari Dolan. Tempat yang kamu kunci tetap dipertahankan.",
+          assumptions: ["Disusun ulang oleh Dolan."],
           days: generatedDays,
           budget: createBudgetSummary(budgetItems),
           createdAt: new Date().toISOString(),

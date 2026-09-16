@@ -47,9 +47,12 @@ export function TripBoardMap({
   const storedKey = (encodedPolylines ?? []).join("|");
   useEffect(() => {
     if (encodedPolylines?.length) {
-      setRoutePolylines(encodedPolylines);
-      setPreviewReady(true);
-      return;
+      const expectedLegs = groups.reduce((sum, group) => sum + Math.max(0, group.length - 1), 0);
+      if (encodedPolylines.length === expectedLegs) {
+        setRoutePolylines(encodedPolylines);
+        setPreviewReady(true);
+        return;
+      }
     }
     const controller = new AbortController();
     setRoutePolylines([]);

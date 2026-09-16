@@ -2,6 +2,7 @@ import { INDONESIA_PROVINCES } from "@/lib/provinces";
 import { CITY_ROUTES } from "@/lib/destination-itinerary";
 import { resolvePlaceCoordinates } from "@/lib/place-coordinates";
 import { PROVINCE_CENTERS } from "@/lib/template-itinerary";
+import { administrativeRegionHub, isAdministrativeRegionName } from "@/lib/region-names";
 
 export type GeoPlace = {
   id: string;
@@ -195,6 +196,15 @@ function destinationCatalog(): GeoPlace[] {
       });
     });
   });
+  Object.entries(PROVINCE_CENTERS).forEach(([name, center]) => {
+    push({
+      id: `prov-hub-${name.toLocaleLowerCase("id-ID").replace(/\s+/g, "-")}`,
+      label: name,
+      city: name,
+      latitude: center.lat,
+      longitude: center.lng,
+    });
+  });
   CITY_ROUTES.forEach((route) => {
     const aliases: Record<string, string> = {
       dki: "Jakarta",
@@ -228,11 +238,12 @@ function destinationCatalog(): GeoPlace[] {
 
 export function searchGeoPlaces(
   query: string,
-  options?: { excludeLabel?: string; nearbyCity?: string },
+  options?: { excludeLabel?: string; nearbyCity?: string; includeRegions?: boolean },
 ): GeoPlace[] {
   const needle = query.trim().toLowerCase();
   const excluded = options?.excludeLabel?.trim().toLowerCase();
   const nearby = options?.nearbyCity?.trim().toLowerCase();
+  const includeRegions = options?.includeRegions !== false;
   const nearbyScore = (place: GeoPlace) => {
     if (!nearby) return 0;
     const city = place.city.toLowerCase();
@@ -241,11 +252,34 @@ export function searchGeoPlaces(
     if (city.includes(nearby) || label.includes(nearby)) return 1;
     return 4;
   };
-  const pool = destinationCatalog().filter(
-    (place) => !excluded || place.label.toLowerCase() !== excluded,
-  );
+  const pool = destinationCatalog().filter((place) => {
+    if (excluded && place.label.toLowerCase() === excluded) return false;
+    if (!includeRegions && (place.id.startsWith("prov-") || isAdministrativeRegionName(place.label))) {
+      return false;
+    }
+    return true;
+  });
   if (!needle) {
     return [...pool].sort((a, b) => nearbyScore(a) - nearbyScore(b) || a.label.length - b.label.length).slice(0, 8);
+  }
+  if (isAdministrativeRegionName(query)) {
+    const hub = administrativeRegionHub(query) ?? { lat: -6.9175, lng: 107.6191 };
+    const nearbyPlaces = [...pool]
+      .filter((place) => place.label.toLowerCase() !== needle)
+      .map((place) => {
+        const dLat = place.latitude - hub.lat;
+        const dLng = place.longitude - hub.lng;
+        return { place, distance: dLat * dLat + dLng * dLng };
+      })
+      .sort((a, b) => a.distance - b.distance)
+      .slice(0, includeRegions ? 7 : 8)
+      .map((row) => row.place);
+    if (includeRegions) {
+      const region = pool.find((place) => place.label.toLowerCase() === needle)
+        ?? destinationCatalog().find((place) => place.label.toLowerCase() === needle);
+      if (region) return [region, ...nearbyPlaces].slice(0, 8);
+    }
+    return nearbyPlaces;
   }
   const airportQuery = needle.includes("bandara") || needle.includes("airport");
   return pool

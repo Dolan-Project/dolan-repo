@@ -148,6 +148,9 @@ describe("create trip wizard helpers", () => {
     expect(packed[0].stops.every((stop) => stop.durationMinutes <= 75)).toBe(true);
     expect(packed[0].stops[0].startTime).toBe("08:00");
     expect(packed[0].stops.at(-1)!.startTime! >= "16:00").toBe(true);
+    const last = packed[0].stops.at(-1)!;
+    const lastStart = Number(last.startTime!.slice(0, 2)) * 60 + Number(last.startTime!.slice(3));
+    expect(lastStart + last.durationMinutes).toBeGreaterThanOrEqual(18 * 60);
     const plan = estimateItineraryBudget(packed, 5_000_000, 1);
     const foods = packed[0].stops.map((stop) => plan.byStopId[stop.id].foodCost);
     expect(foods.filter((amount) => amount > 0).length).toBeGreaterThanOrEqual(2);

@@ -186,24 +186,25 @@ export function CreateTripItineraryStep({
               {heading || (fromTemplate
                 ? "Itinerary dari template"
                 : fromGroq
-                  ? "Rekomendasi itinerary Groq"
-                  : "Itinerary + estimasi AI")}
+                  ? "Itinerary dari Dolan"
+                  : "Itinerary + perkiraan biaya")}
             </h2>
             <p className="type-caption mt-1 text-on-surface-variant">
               {fromTemplate
-                ? "Rute kurasi DOLAN. Bisa diedit sebelum lanjut."
+                ? "Rute kurasi Dolan. Bisa diedit sebelum lanjut."
                 : fromGroq
-                  ? "Disusun Groq. Edit jika ada tempat yang tidak cocok."
+                  ? "Ini usulan Dolan. Silakan ubah kalau ada yang kurang pas."
                   : "Nomor di daftar sama dengan pin di peta."}
             </p>
           </div>
           <button
             type="button"
-            className="btn-ghost !min-h-9 !px-3 !text-xs"
+            className="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-full bg-cyan-400 px-4 py-2 text-xs font-extrabold text-cyan-950 shadow-[0_8px_18px_rgba(34,211,238,0.38)] transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-55"
             disabled={generating || (!unlimitedRegenerate && !canRegenerate(regenerateUsed))}
             onClick={onRegenerate}
           >
-            {generating ? "Mengoptimalkan…" : unlimitedRegenerate ? "Regenerate" : leftover > 0 ? `Regenerate (${leftover}x)` : "Batas regenerate"}
+            <Icon name="auto_awesome" className="text-[16px]" />
+            {generating ? "Dolan sedang merapikan…" : unlimitedRegenerate ? "Susun ulang" : leftover > 0 ? `Susun ulang (${leftover}x)` : "Batas susun ulang"}
           </button>
         </div>
         {numberedDays.length > 0 ? (
@@ -437,6 +438,7 @@ export function CreateTripItineraryStep({
                                 label="Nama tempat"
                                 value={placeValue}
                                 nearbyCity={destinationCity}
+                                kind="place"
                                 autoSelectOnBlur={false}
                                 hint="Ketik nama wisata, lalu pilih dari daftar supaya peta ikut pindah."
                                 placeholder="Cari destinasi, misalnya Kota Tua"
@@ -448,6 +450,7 @@ export function CreateTripItineraryStep({
                                     city: geo.city || destinationCity,
                                     latitude: geo.latitude,
                                     longitude: geo.longitude,
+                                    googlePlaceId: geo.id,
                                   }),
                                 })}
                               />
@@ -486,7 +489,7 @@ export function CreateTripItineraryStep({
                                   checked={editing.stop.isLocked}
                                   onChange={(event) => onUpdateStop(editing.day.id, editing.stop.id, { isLocked: event.target.checked })}
                                 />
-                                Pertahankan saat regenerate
+                                Pertahankan saat Dolan susun ulang
                               </label>
                             </div>
                           ) : null}
@@ -505,6 +508,7 @@ export function CreateTripItineraryStep({
                         label="Tambah wisata sendiri"
                         value={addQuery}
                         nearbyCity={destinationCity}
+                        kind="place"
                         hint="Pilih dari saran supaya titik muncul di peta."
                         placeholder="Cari atau ketik nama tempat"
                         onChange={setAddQuery}
@@ -513,6 +517,7 @@ export function CreateTripItineraryStep({
                           city: geo.city || destinationCity,
                           latitude: geo.latitude,
                           longitude: geo.longitude,
+                          googlePlaceId: geo.id,
                         })}
                       />
                       <div className="flex flex-wrap gap-2">
@@ -582,7 +587,7 @@ export function CreateTripItineraryStep({
           ) : (
             <div className="grid h-full place-items-center bg-white px-6 text-center">
               <p className="type-caption text-on-surface-variant">
-                {generating ? "AI sedang menyusun rute dan estimasi biaya…" : "Rute belum punya koordinat. Generate atau pilih template dulu."}
+                {generating ? "Tunggu sebentar, Dolan sedang menyusun itinerary-mu…" : "Rute belum punya koordinat. Minta Dolan susun dulu, atau pilih template."}
               </p>
             </div>
           )}

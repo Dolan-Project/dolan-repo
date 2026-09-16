@@ -16,20 +16,27 @@ describe("destination itinerary", () => {
     expect(days[0].stops[0].startTime).toBe("08:00");
     const last = days[0].stops.at(-1)!;
     expect(last.startTime! >= "14:00").toBe(true);
+    const lastStart = Number(last.startTime!.slice(0, 2)) * 60 + Number(last.startTime!.slice(3));
+    expect(lastStart + last.durationMinutes).toBeGreaterThanOrEqual(18 * 60);
+    expect(days[0].stops.every((stop) => !/warung|resto|cafe/i.test(stop.customTitle ?? "") || stop.durationMinutes <= 75)).toBe(true);
     expect(days[0].stops[0].place?.latitude).toBeCloseTo(-6.9, 0);
     expect(findProvinceForDestination("Bandung")?.name).toBe("Jawa Barat");
     expect(templateMatchesDestination("Nusa Tenggara Timur", "Bandung")).toBe(false);
     expect(templateMatchesDestination("Jawa Barat", "Bandung")).toBe(true);
   });
 
-  it("keeps Jawa Barat province trips wider than a Bandung city trip", () => {
-    const provinceDays = buildDestinationItinerary({
+  it("does not treat Jawa Barat the province as a tourist stop", () => {
+    const seeds = destinationStopSeeds("Jawa Barat");
+    expect(seeds.every((stop) => stop.name.toLocaleLowerCase("id-ID") !== "jawa barat")).toBe(true);
+    expect(seeds.some((stop) => /Gedung Sate|Braga|Bogor|Kebun Raya/i.test(stop.name))).toBe(true);
+    const days = buildDestinationItinerary({
       destination: "Jawa Barat",
       startDate: "2026-11-01",
       endDate: "2026-11-03",
     });
-    const names = provinceDays.flatMap((day) => day.stops.map((stop) => stop.customTitle)).join(" ");
-    expect(names).toMatch(/Bogor|Pangandaran|Kawah Putih|Tangkuban/i);
+    const names = days.flatMap((day) => day.stops.map((stop) => stop.customTitle)).join(" ");
+    expect(names.toLocaleLowerCase("id-ID")).not.toMatch(/(^| )jawa barat( |$)/);
+    expect(names).toMatch(/Gedung Sate|Braga|Bogor|Kebun Raya/i);
   });
 
   it("uses a destination-related cover, not the generic Komodo fallback", () => {

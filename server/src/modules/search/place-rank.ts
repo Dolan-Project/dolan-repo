@@ -34,6 +34,20 @@ export function looksLikeLodgingOrFoodQuery(query: string) {
   return LODGING_QUERY.test(query);
 }
 
+export function isAdministrativePlace(place: { name?: string | null; types?: string[] | null }) {
+  const types = (place.types ?? []).map((type) => type.toLowerCase());
+  const tourist = types.some((type) => DESTINATION_TYPES.has(type));
+  if (types.some((type) => type.startsWith("administrative_area") || type === "country") && !tourist) {
+    return true;
+  }
+  const name = (place.name ?? "").trim();
+  if (!name || tourist) return false;
+  return /^(aceh|sumatera|riau|jambi|bengkulu|lampung|banten|jawa|bali|nusa tenggara|kalimantan|sulawesi|gorontalo|maluku|papua|dki jakarta|di yogyakarta|kepulauan)\b/i.test(
+    name,
+  ) && name.split(/\s+/).length <= 3;
+}
+
+
 export function destinationScore(place: PlaceSummary) {
   const types = place.types ?? [];
   if (types.some((type) => LODGING_TYPES.has(type))) return -3;

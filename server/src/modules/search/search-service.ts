@@ -13,7 +13,7 @@ import {
 import { badRequest, conflict, notFound, unauthorized } from "../../lib/api-error.ts";
 import type { PlacesProvider } from "../../integrations/google/places-client.ts";
 import { searchIndonesiaCities, normalizeCityName } from "./city-catalog.ts";
-import { destinationScore, distanceKm } from "./place-rank.ts";
+import { destinationScore, distanceKm, isAdministrativePlace } from "./place-rank.ts";
 import { runWithPlacesQuotaUser } from "./places-quota-context.ts";
 import type { SearchStore } from "./types.ts";
 
@@ -47,7 +47,8 @@ export class SearchService {
         latitude: query.lat,
         longitude: query.lng,
         sort: query.sort,
-      })).map((place) => ({ ...place, city: normalizeCityName(place.city) ?? place.city }));
+      })).map((place) => ({ ...place, city: normalizeCityName(place.city) ?? place.city }))
+        .filter((place) => !isAdministrativePlace(place));
       await this.store.cachePlaces(places);
       const ranked = await this.withVisitCounts(places);
       const sorted = sortPlaces(ranked, query.sort, query.lat, query.lng);

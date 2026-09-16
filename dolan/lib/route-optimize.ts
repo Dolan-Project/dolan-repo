@@ -353,16 +353,7 @@ export function selectCompactStops<T extends GeoPoint & { name?: string }>(
     const remainingDays = daysTotal - dayIndex;
     const unused = startPool.length - used.size;
     if (unused === 0) {
-      const origin = groups.at(-1)?.at(-1) ?? hub;
-      const wrap: T[] = [];
-      const rankedWrap = [...startPool].sort((left, right) => haversineKm(origin, left) - haversineKm(origin, right));
-      for (const point of rankedWrap) {
-        if (wrap.length >= minPerDay) break;
-        wrap.push(point);
-      }
-      if (!wrap.length) break;
-      groups.push(orderStopsWithoutBacktrack(wrap, origin));
-      continue;
+      break;
     }
     // Never reserve so aggressively that today drops to 1 stop while 2+ unused remain.
     const evenShare = Math.ceil(unused / remainingDays);

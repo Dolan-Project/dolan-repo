@@ -10,9 +10,9 @@ import { resolvePlaceCoordinates } from "@/lib/place-coordinates";
 import { haversineKm } from "@/lib/route-optimize";
 import {
   packedTravelMinutes,
+  planDayVisitDurations,
   roundEstimateRupiah,
   scheduleGapMinutes,
-  suggestedVisitMinutes,
   ticketLineDetail,
   analyzeStopTravel,
 } from "@/lib/itinerary-stop-view";
@@ -257,12 +257,16 @@ export type PickedVisitPlace = {
   city: string;
   latitude?: number;
   longitude?: number;
+  googlePlaceId?: string;
 };
 
 export function placeSummaryFromPick(input: PickedVisitPlace): PlaceSummary {
   const base = placeFromTemplateStop(input.name, input.city);
   const latitude = input.latitude;
   const longitude = input.longitude;
+  const googlePlaceId = input.googlePlaceId && /^ChIJ/.test(input.googlePlaceId)
+    ? input.googlePlaceId
+    : base.googlePlaceId;
   if (
     latitude == null ||
     longitude == null ||
@@ -270,10 +274,11 @@ export function placeSummaryFromPick(input: PickedVisitPlace): PlaceSummary {
     !Number.isFinite(longitude) ||
     (latitude === 0 && longitude === 0)
   ) {
-    return { ...base, name: input.name };
+    return { ...base, name: input.name, googlePlaceId };
   }
   return {
     ...base,
+    googlePlaceId,
     name: input.name,
     city: input.city,
     formattedAddress: `${input.name}, ${input.city}`,
@@ -368,28 +373,33 @@ export function placeTicketEstimate(name: string, notes?: string | null) {
 }
 
 export function packItinerarySchedule(days: EditableItineraryDay[]): EditableItineraryDay[] {
-  const visitMinutes = 60;
   const packed = days.map((day) => {
     const firstName = day.stops[0]?.customTitle || day.stops[0]?.place?.name || "";
     const suggested = suggestedStartMinutes(firstName);
     const specialWindow = suggested < 8 * 60 || suggested >= 15 * 60;
-    let cursor = specialWindow ? suggested : 8 * 60;
+    const startMinutes = specialWindow ? suggested : 8 * 60;
+    const names = day.stops.map((stop) => stop.customTitle || stop.place?.name || "");
+    const travelMinutes = day.stops.map((stop, index) => (
+      index === 0 ? 0 : scheduleGapMinutes(stop, day.stops[index - 1], index)
+    ));
+    const durations = planDayVisitDurations({
+      names,
+      startMinutes,
+      travelMinutes,
+      requestedMinutes: specialWindow ? day.stops.map((stop) => stop.durationMinutes) : undefined,
+    });
+    let cursor = startMinutes;
     const stops = day.stops.map((stop, index) => {
-      const name = stop.customTitle || stop.place?.name || "";
-      const previous = index === 0 ? undefined : day.stops[index - 1];
-      cursor += scheduleGapMinutes(stop, previous, index);
+      cursor += travelMinutes[index] ?? 0;
       const startTime = minutesToClock(cursor);
-      const durationMinutes = suggestedVisitMinutes(
-        name,
-        specialWindow ? stop.durationMinutes || visitMinutes : visitMinutes,
-      );
+      const durationMinutes = durations[index] ?? 60;
       cursor += durationMinutes;
       return {
         ...stop,
         sequence: index + 1,
         startTime,
         durationMinutes,
-        travelDurationMinutes: packedTravelMinutes(stop, previous, index),
+        travelDurationMinutes: packedTravelMinutes(stop, index === 0 ? undefined : day.stops[index - 1], index),
       };
     });
     return { ...day, stops };
