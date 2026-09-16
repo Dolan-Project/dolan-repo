@@ -110,8 +110,10 @@ export function presentInboxNotification(input: {
       };
     case "feedback.invite":
       return {
-        title: "Trip selesai",
-        body: named ? `${named} selesai. Bantu komunitas dengan memberi ulasan.` : "Bantu komunitas dengan memberi ulasan.",
+        title: "Beri rating rekan trip",
+        body: named
+          ? `${named} selesai. Beri rating peserta lain yang seperjalanan denganmu.`
+          : "Trip selesai. Beri rating peserta lain yang seperjalanan denganmu.",
         href: tripId ? `/trip/${tripId}` : "/notifikasi",
         tripId,
       };

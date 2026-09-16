@@ -539,7 +539,6 @@ export class SequelizeTripStore implements TripStore {
     targetId: string;
     data?: Record<string, unknown>;
   }) {
-    if (input.recipientUserId === input.actorUserId) return;
     await Notification.create(
       {
         recipientUserId: input.recipientUserId,

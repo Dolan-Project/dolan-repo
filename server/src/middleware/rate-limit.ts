@@ -21,7 +21,13 @@ export function createRateLimit(config: RateLimitConfig) {
   const buckets = new Map<string, { count: number; resetAt: number }>();
 
   return function rateLimit(req: Request, res: Response, next: NextFunction) {
-    if (req.path === "/health" || req.path === "/ready") {
+    if (
+      req.path === "/health" ||
+      req.path === "/ready" ||
+      req.path.startsWith("/api/v1/search") ||
+      req.path.startsWith("/api/v1/places") ||
+      req.path.startsWith("/api/v1/routes")
+    ) {
       next();
       return;
     }

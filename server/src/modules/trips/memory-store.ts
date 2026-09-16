@@ -362,7 +362,6 @@ export class MemoryTripStore implements TripStore {
     targetId: string;
     data?: Record<string, unknown>;
   }) {
-    if (input.recipientUserId === input.actorUserId) return;
     this.notifications.push({
       recipientUserId: input.recipientUserId,
       actorUserId: input.actorUserId,
