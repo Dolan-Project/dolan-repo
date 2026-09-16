@@ -1,6 +1,8 @@
 import { initModels } from "@dolan/database";
 import { env } from "./config/env.ts";
+import { wrapPlacesProvider } from "./integrations/google/caching-places-client.ts";
 import { FakePlacesClient } from "./integrations/google/fake-places-client.ts";
+import { createMemoryPlacesCache, getSharedPlacesCache } from "./integrations/google/places-cache.ts";
 import { GooglePlacesClient, type PlacesProvider } from "./integrations/google/places-client.ts";
 import type { AuthAdapter } from "./modules/auth/auth-adapter.ts";
 import { MockAuthAdapter } from "./modules/auth/mock-auth-adapter.ts";
@@ -25,6 +27,7 @@ import { loadDraftTrip, loadLockedStops, persistGeneratedVersion, saveTripPrefer
 import { GoogleRoutesClient, MockRoutesClient } from "./modules/jobs/routes-adapter.ts";
 import { SequelizeJobRepository } from "./modules/jobs/sequelize-job-repository.ts";
 import { MemorySearchStore } from "./modules/search/memory-store.ts";
+import { createPlacesQuotaMissHandler } from "./modules/search/places-quota-context.ts";
 import { MemoryQuotaStore, QuotaService } from "./modules/search/quota.ts";
 import { SearchService } from "./modules/search/search-service.ts";
 import { SequelizeQuotaStore } from "./modules/search/sequelize-quota.ts";
@@ -91,7 +94,9 @@ export function createProductionJobService(onJobUpdated?: JobServiceOptions["onJ
   if (!env.groqApiKey) {
     throw new Error("GROQ_API_KEY is required for production job service");
   }
-  const places = new GooglePlacesClient(env.googleMapsServerKey);
+  const places = wrapPlacesProvider(new GooglePlacesClient(env.googleMapsServerKey), {
+    cache: getSharedPlacesCache(),
+  });
   const lookup = createPlaceLookup(places, { requireKnownPlace: true });
   const aiQuota = new QuotaService(new SequelizeQuotaStore(), env.placesMaxRequestsPerUserPerDay);
   return new GenerationJobService(
@@ -142,11 +147,15 @@ export function createMemorySearchService(options?: {
   placesProvider?: PlacesProvider;
   quotaLimit?: number;
   store?: MemorySearchStore;
+  sharePlacesCache?: boolean;
 }) {
+  const quota = new QuotaService(new MemoryQuotaStore(), options?.quotaLimit ?? env.placesMaxRequestsPerUserPerDay);
   return new SearchService(
-    options?.placesProvider ?? new FakePlacesClient(),
+    wrapPlacesProvider(options?.placesProvider ?? new FakePlacesClient(), {
+      cache: options?.sharePlacesCache ? getSharedPlacesCache() : createMemoryPlacesCache(),
+      onMiss: createPlacesQuotaMissHandler(quota),
+    }),
     options?.store ?? new MemorySearchStore(),
-    new QuotaService(new MemoryQuotaStore(), options?.quotaLimit ?? env.placesMaxRequestsPerUserPerDay),
   );
 }
 
@@ -155,10 +164,13 @@ export function createProductionSearchService() {
   if (!env.googleMapsServerKey) {
     throw new Error("GOOGLE_MAPS_SERVER_KEY is required for production search service");
   }
+  const quota = new QuotaService(new SequelizeQuotaStore(), env.placesMaxRequestsPerUserPerDay);
   return new SearchService(
-    new GooglePlacesClient(env.googleMapsServerKey),
+    wrapPlacesProvider(new GooglePlacesClient(env.googleMapsServerKey), {
+      cache: getSharedPlacesCache(),
+      onMiss: createPlacesQuotaMissHandler(quota),
+    }),
     new SequelizeSearchStore(),
-    new QuotaService(new SequelizeQuotaStore(), env.placesMaxRequestsPerUserPerDay),
   );
 }
 
@@ -169,6 +181,7 @@ export function createRuntimeSearchService(databaseReady: boolean) {
       ? new GooglePlacesClient(env.googleMapsServerKey)
       : undefined,
     store: new MemorySearchStore({ seedPublicTrips: false }),
+    sharePlacesCache: Boolean(env.googleMapsServerKey),
   });
 }
 

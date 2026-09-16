@@ -23,8 +23,8 @@ describe("province covers", () => {
     for (const province of INDONESIA_PROVINCES) {
       expect(provinceCoverUrl(province)).toMatch(/^https:\/\//);
     }
-    expect(provinceCoverUrl(INDONESIA_PROVINCES.find((item) => item.slug === "jawa-barat")!)).toMatch(/unsplash|bandung/i);
-    expect(provinceCoverUrl(INDONESIA_PROVINCES.find((item) => item.slug === "jawa-timur")!)).toMatch(/bromo/i);
+    expect(provinceCoverUrl(INDONESIA_PROVINCES.find((item) => item.slug === "jawa-barat")!)).toMatch(/kawah|bandung|wikimedia/i);
+    expect(provinceCoverUrl(INDONESIA_PROVINCES.find((item) => item.slug === "jawa-timur")!)).toMatch(/bromo|wikimedia/i);
     expect(provinceCoverUrl(INDONESIA_PROVINCES.find((item) => item.slug === "bali")!)).toMatch(/http/);
   });
 });

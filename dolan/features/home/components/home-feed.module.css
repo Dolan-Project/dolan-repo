@@ -39,7 +39,7 @@
 .catCard,
 .promoCard,
 .trendCard,
-.kawanCard,
+.popularStack,
 .composer,
 .empty,
 .post,
@@ -207,6 +207,99 @@
   font-weight: 700;
 }
 
+.popularStack {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  height: 13.1rem;
+  padding: 0.85rem 0.7rem 0.7rem;
+}
+
+.popularViewport {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.popularTrack {
+  display: flex;
+  flex-direction: column;
+  height: 200%;
+  transform: translateY(0);
+}
+
+.popularTrack[data-sliding="true"] {
+  transform: translateY(-50%);
+  transition: transform 0.7s cubic-bezier(0.22, 0.8, 0.28, 1);
+}
+
+.popularPair {
+  display: grid;
+  grid-template-rows: repeat(5, minmax(0, 1fr));
+  gap: 0.28rem;
+  height: 50%;
+  min-height: 0;
+}
+
+.provincePromo {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  min-height: 0;
+  border-radius: 0.55rem;
+  color: #fff;
+  text-decoration: none;
+}
+
+.provincePromo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.provincePromo::after {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(16, 36, 60, 0.08), rgba(16, 36, 60, 0.78));
+  content: "";
+}
+
+.provincePromoCopy {
+  position: absolute;
+  right: 0.5rem;
+  bottom: 0.28rem;
+  left: 0.5rem;
+  z-index: 1;
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.provincePromoCopy b {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.provincePromoCopy small {
+  min-width: 0;
+  overflow: hidden;
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 0.56rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .popularTrack[data-sliding="true"] {
+    transition: none;
+  }
+}
+
 .mainCol {
   display: grid;
   gap: 0.9rem;
@@ -271,12 +364,20 @@
 }
 
 .audience {
+  border: 0;
   border-radius: 999px;
   padding: 0.28rem 0.7rem;
   background: #eef3ff;
   color: #004ac6;
+  font: inherit;
   font-size: 0.7rem;
   font-weight: 800;
+  cursor: pointer;
+}
+
+.audience[data-mode="community"] {
+  background: #fff3e8;
+  color: #9a4600;
 }
 
 .composerTop {
@@ -571,6 +672,12 @@
   color: #be123c;
 }
 
+.copied {
+  color: #0f7a4a;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
 .comments {
   display: grid;
   gap: 0.3rem;
@@ -646,23 +753,20 @@
   font-size: 0.82rem;
 }
 
-.trendList,
-.kawanList {
+.trendList {
   display: grid;
   gap: 0.65rem;
   padding: 0.2rem 0.95rem 1rem;
 }
 
-.trendCard h3,
-.kawanCard h3 {
+.trendCard h3 {
   margin: 0;
   padding: 0.9rem 1rem 0.35rem;
   color: var(--navy);
   font-size: 0.92rem;
 }
 
-.trendRow,
-.kawanRow {
+.trendRow {
   display: grid;
   grid-template-columns: auto 1fr auto;
   gap: 0.55rem;
@@ -678,34 +782,15 @@
   font-weight: 800;
 }
 
-.trendRow b,
-.kawanRow b {
+.trendRow b {
   display: block;
   color: var(--navy);
   font-size: 0.8rem;
 }
 
-.trendRow small,
-.kawanRow small {
+.trendRow small {
   color: var(--muted);
   font-size: 0.68rem;
-}
-
-.kawanHead {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.9rem 1rem 0.2rem;
-}
-
-.kawanHead h3 {
-  padding: 0;
-}
-
-.kawanHead a {
-  color: #004ac6;
-  font-size: 0.72rem;
-  font-weight: 700;
 }
 
 .pageFoot {

@@ -14,7 +14,7 @@ import { badRequest, conflict, notFound, unauthorized } from "../../lib/api-erro
 import type { PlacesProvider } from "../../integrations/google/places-client.ts";
 import { searchIndonesiaCities, normalizeCityName } from "./city-catalog.ts";
 import { destinationScore, distanceKm } from "./place-rank.ts";
-import type { QuotaService } from "./quota.ts";
+import { runWithPlacesQuotaUser } from "./places-quota-context.ts";
 import type { SearchStore } from "./types.ts";
 
 const PHOTO_NAME_PATTERN = /^places\/[^/]+\/photos\/.+/;
@@ -25,7 +25,6 @@ export class SearchService {
   constructor(
     private readonly placesProvider: PlacesProvider,
     private readonly store: SearchStore,
-    private readonly quota: QuotaService,
   ) {}
 
   async searchCities(q?: string) {
@@ -41,19 +40,20 @@ export class SearchService {
         lng: "Required for sort=nearest",
       });
     }
-    await this.quota.consumePlaces(actorUserId(actor), "searchText");
-    const places = (await this.placesProvider.searchText({
-      query: query.q,
-      city,
-      latitude: query.lat,
-      longitude: query.lng,
-      sort: query.sort,
-    })).map((place) => ({ ...place, city: normalizeCityName(place.city) ?? place.city }));
-    await this.store.cachePlaces(places);
-    const ranked = await this.withVisitCounts(places);
-    const sorted = sortPlaces(ranked, query.sort, query.lat, query.lng);
-    const start = (query.page - 1) * query.limit;
-    return apiPage(sorted.slice(start, start + query.limit), query.page, query.limit, sorted.length);
+    return runWithPlacesQuotaUser(actorUserId(actor), async () => {
+      const places = (await this.placesProvider.searchText({
+        query: query.q,
+        city,
+        latitude: query.lat,
+        longitude: query.lng,
+        sort: query.sort,
+      })).map((place) => ({ ...place, city: normalizeCityName(place.city) ?? place.city }));
+      await this.store.cachePlaces(places);
+      const ranked = await this.withVisitCounts(places);
+      const sorted = sortPlaces(ranked, query.sort, query.lat, query.lng);
+      const start = (query.page - 1) * query.limit;
+      return apiPage(sorted.slice(start, start + query.limit), query.page, query.limit, sorted.length);
+    });
   }
 
   async searchTrips(query: TripSearchQuery) {
@@ -77,12 +77,13 @@ export class SearchService {
   }
 
   async getPlace(googlePlaceId: string, actor: SessionActor) {
-    await this.quota.consumePlaces(actorUserId(actor), "getDetails");
-    const details = await this.placesProvider.getDetails(googlePlaceId);
-    const normalized = { ...details, city: normalizeCityName(details.city) ?? details.city };
-    await this.store.cachePlaces([normalized]);
-    const visitCounts = await this.store.getDestinationVisitCounts([googlePlaceId]);
-    return { ...normalized, visitCount: visitCounts.get(googlePlaceId) ?? 0 };
+    return runWithPlacesQuotaUser(actorUserId(actor), async () => {
+      const details = await this.placesProvider.getDetails(googlePlaceId);
+      const normalized = { ...details, city: normalizeCityName(details.city) ?? details.city };
+      await this.store.cachePlaces([normalized]);
+      const visitCounts = await this.store.getDestinationVisitCounts([googlePlaceId]);
+      return { ...normalized, visitCount: visitCounts.get(googlePlaceId) ?? 0 };
+    });
   }
 
   async getPlacePhoto(googlePlaceId: string, photoName: string, actor: SessionActor) {
@@ -96,8 +97,7 @@ export class SearchService {
     if (useCached && cached?.photoUri) {
       return { photoUri: cached.photoUri, attributions: [] };
     }
-    await this.quota.consumePlaces(actorUserId(actor), "getPhotoMedia");
-    return this.placesProvider.getPhotoMedia(photoName);
+    return runWithPlacesQuotaUser(actorUserId(actor), () => this.placesProvider.getPhotoMedia(photoName));
   }
 
   async listPlaceTrips(googlePlaceId: string, page: number, limit: number) {

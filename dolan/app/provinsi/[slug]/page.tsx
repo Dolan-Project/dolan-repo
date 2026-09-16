@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { AppShell } from "@/components/layout/AppShell";
 import { Icon } from "@/components/ui/Icon";
 import { INDONESIA_PROVINCES } from "@/lib/provinces";
+import { PROVINCE_ATLAS } from "@/features/rekomendasi/atlas";
 import { ProvincePlacesGrid } from "@/components/province/ProvincePlacesGrid";
 import { ProvinceItineraryPanel } from "@/components/province/ProvinceItineraryPanel";
 import { TemplateRoutePeek } from "@/components/trip/TemplateRoutePeek";
@@ -11,7 +12,11 @@ import { provinceCoverUrl } from "@/lib/province-cover";
 import { ROUTES } from "@/lib/routes";
 
 export function generateStaticParams() {
-  return INDONESIA_PROVINCES.map(({ slug }) => ({ slug }));
+  const slugs = new Set([
+    ...INDONESIA_PROVINCES.map(({ slug }) => slug),
+    ...PROVINCE_ATLAS.map(({ slug }) => slug),
+  ]);
+  return [...slugs].map((slug) => ({ slug }));
 }
 
 type LiveProvince = {
@@ -58,12 +63,13 @@ export default async function ProvincePage({ params }: { params: Promise<{ slug:
   const { slug } = await params;
   const live = await loadProvince(slug);
   const catalog = INDONESIA_PROVINCES.find((item) => item.slug === slug);
-  if (!live && !catalog) notFound();
+  const atlas = PROVINCE_ATLAS.find((item) => item.slug === slug);
+  if (!live && !catalog && !atlas) notFound();
   const usingCatalogFallback = !live && Boolean(catalog);
 
-  const name = live?.name ?? catalog!.name;
-  const capital = live?.capital ?? catalog!.capital;
-  const description = live?.description ?? catalog!.description;
+  const name = live?.name ?? catalog?.name ?? atlas!.name;
+  const capital = live?.capital ?? catalog?.capital ?? atlas!.capital;
+  const description = live?.description ?? catalog?.description ?? atlas!.teaser;
   const places =
     live?.places?.map((place) => ({
       name: place.name,
@@ -74,13 +80,31 @@ export default async function ProvincePage({ params }: { params: Promise<{ slug:
       googleMapsUrl: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${place.name}, ${name}`)}`,
       rank: 0,
     })) ??
-    catalog!.places;
-  const templateId = live?.template?.id ?? catalog!.template.id;
-  const templateTitle = live?.template?.title ?? catalog!.template.title;
-  const templateDescription = live?.template?.description ?? catalog!.template.description;
-  const durationDays = live?.template?.durationDays ?? catalog!.template.durationDays;
+    catalog?.places ??
+    [
+      {
+        name: atlas!.place,
+        city: atlas!.capital,
+        description: atlas!.teaser,
+        googlePlaceId: null,
+        searchQuery: `${atlas!.place}, ${name}, Indonesia`,
+        googleMapsUrl: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${atlas!.place}, ${name}`)}`,
+        rank: 1,
+      },
+    ];
+  const templateId = live?.template?.id ?? catalog?.template.id ?? null;
+  const templateTitle = live?.template?.title ?? catalog?.template.title ?? `Rute ${name}`;
+  const templateDescription =
+    live?.template?.description ??
+    catalog?.template.description ??
+    `Mulai trip ke ${name} dari ${capital}. Pakai ikon ${atlas?.place ?? capital} sebagai titik awal.`;
+  const durationDays = live?.template?.durationDays ?? catalog?.template.durationDays ?? null;
   const usageCount = live?.template?.usageCount ?? 0;
-  const cover = catalog ? provinceCoverUrl(catalog) : null;
+  const cover = provinceCoverUrl({
+    slug,
+    name,
+    heroQuery: `${atlas?.place ?? name}, ${name}, Indonesia`,
+  });
   const dayCards =
     live?.template?.days?.map((day) => ({
       dayNumber: day.dayNumber,
@@ -89,12 +113,17 @@ export default async function ProvincePage({ params }: { params: Promise<{ slug:
         notes: stop.notes ?? "",
       })),
     })) ??
-    Array.from({ length: catalog!.template.durationDays }, (_, dayIndex) => ({
-      dayNumber: dayIndex + 1,
-      stops: catalog!.template.stops
-        .filter((stop) => stop.day === dayIndex + 1)
-        .map((stop) => ({ name: stop.name, notes: stop.notes })),
-    }));
+    (catalog
+      ? Array.from({ length: catalog.template.durationDays }, (_, dayIndex) => ({
+          dayNumber: dayIndex + 1,
+          stops: catalog.template.stops
+            .filter((stop) => stop.day === dayIndex + 1)
+            .map((stop) => ({ name: stop.name, notes: stop.notes })),
+        }))
+      : []);
+  const buatTripHref = templateId
+    ? `/buat-trip?templateId=${encodeURIComponent(templateId)}&destination=${encodeURIComponent(name)}`
+    : `/buat-trip?destination=${encodeURIComponent(name)}`;
 
   return (
     <AppShell>
@@ -112,8 +141,8 @@ export default async function ProvincePage({ params }: { params: Promise<{ slug:
           <div className={`absolute inset-0 bg-gradient-to-br from-[#075fb8]/90 via-[#118acb]/80 to-[#071c32]/75 ${cover ? "" : "from-[#075fb8] via-[#118acb] to-[#74d5e8]"}`} />
           <div className="relative px-6 py-10 md:px-12 md:py-16">
           <p className="type-label font-extrabold uppercase tracking-[.16em] text-white/75">
-            <Link href={ROUTES.provinsi} className="text-white/75 hover:text-white">
-              Jelajah 38 Provinsi
+            <Link href={ROUTES.rekomendasi} className="text-white/75 hover:text-white">
+              Rekomendasi daerah
             </Link>
           </p>
           <h1 className="mt-3 max-w-3xl text-4xl font-extrabold leading-tight md:text-6xl">
@@ -124,10 +153,16 @@ export default async function ProvincePage({ params }: { params: Promise<{ slug:
             <span className="rounded-full bg-white/15 px-4 py-2 backdrop-blur">
               <Icon name="location_on" /> Ibu kota {capital}
             </span>
-            <span className="rounded-full bg-white/15 px-4 py-2 backdrop-blur">
-              <Icon name="route" /> Template {durationDays} hari
-              {usageCount > 0 ? ` · dipakai ${usageCount}x` : ""}
-            </span>
+            {durationDays ? (
+              <span className="rounded-full bg-white/15 px-4 py-2 backdrop-blur">
+                <Icon name="route" /> Template {durationDays} hari
+                {usageCount > 0 ? ` · dipakai ${usageCount}x` : ""}
+              </span>
+            ) : atlas ? (
+              <span className="rounded-full bg-white/15 px-4 py-2 backdrop-blur">
+                <Icon name="location_on" /> Ikon {atlas.place}
+              </span>
+            ) : null}
           </div>
           </div>
         </section>
@@ -149,22 +184,25 @@ export default async function ProvincePage({ params }: { params: Promise<{ slug:
           <div className="grid gap-0 lg:grid-cols-[minmax(0,1.1fr)_auto]">
             <div className="p-6 md:p-9">
               <p className="type-label font-extrabold uppercase tracking-[.13em] text-secondary">
-                Template resmi DOLAN
+                {templateId ? "Template resmi DOLAN" : "Rencana perjalanan"}
               </p>
               <h2 className="mt-2 text-3xl font-extrabold text-on-surface">{templateTitle}</h2>
               <p className="mt-3 max-w-2xl text-sm leading-6 text-on-surface-variant">{templateDescription}</p>
               <div className="mt-4 flex flex-wrap items-center gap-2 text-xs font-bold">
-                <span className="rounded-full bg-primary-fixed px-3 py-2">{durationDays} hari</span>
+                {durationDays ? (
+                  <span className="rounded-full bg-primary-fixed px-3 py-2">{durationDays} hari</span>
+                ) : null}
                 {catalog ? <TemplateRoutePeek province={catalog} /> : null}
               </div>
               <Link
-                href={`/buat-trip?templateId=${encodeURIComponent(templateId)}&destination=${encodeURIComponent(name)}`}
+                href={buatTripHref}
                 className="mt-6 inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-primary to-[#198ad8] px-5 py-3 text-sm font-extrabold text-white shadow-lg"
               >
-                <Icon name="add_road" /> Pakai template ini
+                <Icon name="add_road" /> {templateId ? "Pakai template ini" : "Buat trip ke daerah ini"}
               </Link>
             </div>
           </div>
+          {catalog || dayCards.length > 0 ? (
           <div className="border-t border-primary/10 p-6 md:p-9">
             {catalog ? (
               <ProvinceItineraryPanel days={buildProvinceTemplateDays(catalog)} destination={name} />
@@ -191,6 +229,7 @@ export default async function ProvincePage({ params }: { params: Promise<{ slug:
               </div>
             )}
           </div>
+          ) : null}
         </section>
       </main>
     </AppShell>

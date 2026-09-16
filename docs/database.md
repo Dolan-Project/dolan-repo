@@ -35,7 +35,7 @@ npm run db:seed:photos
 | `curator@dolan.local` | `password123` | Yogya curated template owner |
 | Memory fallback (no DB): `verified@dolan.test` | `password123` | `AUTH_ADAPTER=local` memory users |
 
-`GOOGLE_MAPS_SERVER_KEY` is needed for **seed-time** Places Text/Photo download only. Runtime Explore/home prefer `places.cached_photo_url` and skip Places quota when cache exists.
+`GOOGLE_MAPS_SERVER_KEY` is needed for **seed-time** Places Text/Photo download only. Runtime Explore/home prefer `places.cached_photo_url` and skip Places quota when cache exists. Live Places search/details/photo URI are also cached in Express (`REDIS_URL`, fallback in-memory) so repeat Jelajah / province / wisata views do not hit Google.
 
 Scripts:
 

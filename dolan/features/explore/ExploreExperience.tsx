@@ -2,6 +2,7 @@
 
 import type { ItineraryTemplateSummary, PlaceSummary, TripSummary } from "@dolan/shared";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Icon } from "@/components/ui/Icon";
 import { GoogleMap, type MapPoint } from "./GoogleMap";
@@ -41,13 +42,33 @@ function tabLabel(tab: ExploreTab) {
   return "template itinerary";
 }
 
+function parseExploreTab(value: string | null): ExploreTab | null {
+  if (value === "wisata" || value === "trip" || value === "template") return value;
+  return null;
+}
+
+function matchCategory(query: string) {
+  const normalized = query.trim().toLowerCase();
+  return categoryFilters.find((item) => item.value && item.value === normalized)?.value ?? "";
+}
+
+function tabSort(next: ExploreTab): ExploreSort {
+  if (next === "wisata") return "relevance";
+  if (next === "trip") return "soonest";
+  return "popular";
+}
+
 export function ExploreExperience() {
-  const [tab, setTab] = useState<ExploreTab>("wisata");
-  const [draftQuery, setDraftQuery] = useState("");
-  const [query, setQuery] = useState("");
-  const [category, setCategory] = useState("");
+  const searchParams = useSearchParams();
+  const urlQuery = (searchParams.get("q") ?? "").trim();
+  const urlTab = parseExploreTab(searchParams.get("tab"));
+  const initialCategory = urlTab === "wisata" || !urlTab ? matchCategory(urlQuery) : "";
+  const [tab, setTab] = useState<ExploreTab>(urlTab ?? "wisata");
+  const [draftQuery, setDraftQuery] = useState(urlQuery);
+  const [query, setQuery] = useState(initialCategory && initialCategory === urlQuery.toLowerCase() ? "" : urlQuery);
+  const [category, setCategory] = useState(initialCategory);
   const [dateFrom, setDateFrom] = useState("");
-  const [sort, setSort] = useState<ExploreSort>("relevance");
+  const [sort, setSort] = useState<ExploreSort>(tabSort(urlTab ?? "wisata"));
   const [result, setResult] = useState<ExplorePage | null>(null);
   const [items, setItems] = useState<ExploreItem[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -63,6 +84,18 @@ export function ExploreExperience() {
   const dragStartY = useRef<number | null>(null);
   const cardRefs = useRef(new Map<string, HTMLElement>());
   const requestSequence = useRef(0);
+  const searchKey = searchParams.toString();
+
+  useEffect(() => {
+    const q = (searchParams.get("q") ?? "").trim();
+    const nextTab = parseExploreTab(searchParams.get("tab")) ?? "wisata";
+    const matched = nextTab === "wisata" ? matchCategory(q) : "";
+    setTab(nextTab);
+    setDraftQuery(q);
+    setQuery(matched && matched === q.toLowerCase() ? "" : q);
+    setCategory(matched);
+    setSort(tabSort(nextTab));
+  }, [searchKey, searchParams]);
 
   const runSearch = useCallback(async ({ page = 1, append = false }: { page?: number; append?: boolean } = {}) => {
     const sequence = ++requestSequence.current;
