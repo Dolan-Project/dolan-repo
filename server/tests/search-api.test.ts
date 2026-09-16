@@ -211,15 +211,12 @@ describe("WIRA-D2 search and popularity APIs", () => {
     expect(response.body.error.code).toBe(SearchErrorCode.PROVIDER_UNAVAILABLE);
   });
 
-  it("enforces the daily Places quota on cache miss", async () => {
+  it("does not block Places searches with a per-user daily quota", async () => {
     const search = createMemorySearchService({ quotaLimit: 1 });
-    const ok = await request(app(search)).get("/api/v1/search/places?q=malioboro");
-    expect(ok.status).toBe(200);
-    const cached = await request(app(search)).get("/api/v1/search/places?q=malioboro");
-    expect(cached.status).toBe(200);
-    const blocked = await request(app(search)).get("/api/v1/search/places?q=prambanan");
-    expect(blocked.status).toBe(429);
-    expect(blocked.body.error.code).toBe(SearchErrorCode.QUOTA_EXCEEDED);
+    const first = await request(app(search)).get("/api/v1/search/places?q=malioboro");
+    expect(first.status).toBe(200);
+    const next = await request(app(search)).get("/api/v1/search/places?q=prambanan");
+    expect(next.status).toBe(200);
   });
 
   it("accepts Google photo resource names longer than 200 characters", async () => {

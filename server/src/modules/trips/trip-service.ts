@@ -290,16 +290,19 @@ export class TripService {
     const detail = await this.transition(actor, tripId, "COMPLETED", ["ONGOING"]);
     const user = requireUser(actor);
     const members = await this.store.listMembers(tripId);
+    const recipients = new Set<string>([detail.host.id]);
     for (const member of members) {
-      if (member.membershipStatus !== "ACTIVE") continue;
-      if (member.userId === user.id) continue;
+      if (member.membershipStatus === "ACTIVE") recipients.add(member.userId);
+    }
+    for (const recipientUserId of recipients) {
       await this.recordNotification({
-        recipientUserId: member.userId,
+        recipientUserId,
         actorUserId: user.id,
         type: "feedback.invite",
         targetType: "trip",
         targetId: tripId,
         data: { tripTitle: detail.title },
+        allowSelf: true,
       });
     }
     return detail;
@@ -970,10 +973,18 @@ export class TripService {
     targetType: string;
     targetId: string;
     data?: Record<string, unknown>;
+    allowSelf?: boolean;
   }) {
-    if (input.recipientUserId === input.actorUserId) return;
+    if (!input.allowSelf && input.recipientUserId === input.actorUserId) return;
     const data = input.data ?? {};
-    await this.store.createNotification({ ...input, data });
+    await this.store.createNotification({
+      recipientUserId: input.recipientUserId,
+      actorUserId: input.actorUserId,
+      type: input.type,
+      targetType: input.targetType,
+      targetId: input.targetId,
+      data,
+    });
     await this.realtime?.onNotificationCreated?.(input.recipientUserId, {
       type: input.type,
       targetType: input.targetType,

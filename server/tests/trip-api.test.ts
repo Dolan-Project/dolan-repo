@@ -338,6 +338,9 @@ describe("WIRA-D3 trip lifecycle, join, and comments", () => {
     expect(started.body.data.status).toBe("ONGOING");
     const completed = await request(api).post(`/api/v1/trips/${trip.id}/complete`).set("Authorization", HOST);
     expect(completed.body.data.status).toBe("COMPLETED");
+    const invites = store.notifications.filter((row) => row.type === "feedback.invite");
+    expect(invites.some((row) => row.recipientUserId === completed.body.data.host.id)).toBe(true);
+    expect(invites.some((row) => row.recipientUserId === "55555555-5555-4555-8555-555555555555")).toBe(true);
   });
 
   it("lets the applicant withdraw a pending join and the host delete a draft", async () => {
