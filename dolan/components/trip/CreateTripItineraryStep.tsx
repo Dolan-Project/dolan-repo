@@ -106,7 +106,7 @@ function DayRouteFilters({
         className={`min-h-9 shrink-0 rounded-full px-3.5 type-caption font-bold ${value === "all" ? "bg-primary text-white" : "bg-slate-100 text-on-surface"}`}
         onClick={() => onChange("all")}
       >
-        All
+        Semua
       </button>
       {days.map((day) => (
         <button
@@ -117,7 +117,7 @@ function DayRouteFilters({
           className={`min-h-9 shrink-0 rounded-full px-3.5 type-caption font-bold ${value === day.id ? "bg-primary text-white" : "bg-slate-100 text-on-surface"}`}
           onClick={() => onChange(day.id)}
         >
-          Day {day.dayNumber}
+          Hari {day.dayNumber}
         </button>
       ))}
     </div>

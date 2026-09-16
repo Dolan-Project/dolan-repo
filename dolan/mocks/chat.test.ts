@@ -17,4 +17,12 @@ describe("chat mocks", () => {
       expect(result.data[0]?.clientMessageId).toBeTruthy();
     }
   });
+
+  it("covers guest, unauthorized, and empty chat rooms", () => {
+    expect(mockListMessages("success", "guest").success).toBe(false);
+    expect(mockListMessages("unauthorized", "host").success).toBe(false);
+    const empty = mockListMessages("empty", "host");
+    expect(empty.success).toBe(true);
+    if (empty.success) expect(empty.data).toEqual([]);
+  });
 });

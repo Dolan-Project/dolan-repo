@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import type { AuthSession, PublicUser } from "@/lib/contracts";
 import { profileRouteHandlers } from "./adapter";
 import { SESSION_COOKIE } from "./session-cookie";
+import { readApiJson } from "./read-api-json";
 
 async function cookieHeader(): Promise<string> {
   const jar = await cookies();
@@ -23,10 +24,12 @@ export async function getSession(): Promise<AuthSession | null> {
         : {},
     }),
   );
-  const json = (await response.json()) as
-    | { success: true; data: AuthSession }
-    | { success: false };
-  return json.success ? json.data : null;
+  try {
+    const json = await readApiJson<{ success: true; data: AuthSession } | { success: false }>(response);
+    return json.success ? json.data : null;
+  } catch {
+    return null;
+  }
 }
 
 export async function getPublicProfile(username: string): Promise<PublicUser | null> {
@@ -38,8 +41,10 @@ export async function getPublicProfile(username: string): Promise<PublicUser | n
     }),
     username,
   );
-  const json = (await response.json()) as
-    | { success: true; data: PublicUser }
-    | { success: false };
-  return json.success ? json.data : null;
+  try {
+    const json = await readApiJson<{ success: true; data: PublicUser } | { success: false }>(response);
+    return json.success ? json.data : null;
+  } catch {
+    return null;
+  }
 }

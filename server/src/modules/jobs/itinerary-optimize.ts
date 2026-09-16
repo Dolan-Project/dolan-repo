@@ -364,6 +364,37 @@ function money(amount: number): string {
   return `${Math.max(0, Math.round(amount))}.00`;
 }
 
+function activityTicketBand(name: string, cheaper: boolean) {
+  const value = name.toLocaleLowerCase("id-ID");
+  if (/dufan|dunia fantasi|trans studio|seaworld|ocean dream|atlantis|waterboom|waterpark/.test(value)) {
+    return cheaper ? { low: 120000, high: 200000 } : { low: 150000, high: 325000 };
+  }
+  if (/museum|keraton|candi|taman nasional|tmii|ragunan|ancol/.test(value)) {
+    return cheaper ? { low: 15000, high: 40000 } : { low: 25000, high: 75000 };
+  }
+  return cheaper ? { low: 10000, high: 35000 } : { low: 15000, high: 50000 };
+}
+
+function backpackerLocalTransport(km: number, hops: number, cheaper: boolean) {
+  const hopFloorLow = cheaper ? 12000 : 15000;
+  const hopFloorHigh = cheaper ? 22000 : 30000;
+  if (km <= 40) {
+    const perKmLow = cheaper ? 3500 : 4500;
+    const perKmHigh = cheaper ? 6500 : 8000;
+    return {
+      low: Math.max(hops * hopFloorLow, Math.round(km * perKmLow)),
+      high: Math.max(hops * hopFloorHigh, Math.round(km * perKmHigh)),
+      longHaul: false,
+    };
+  }
+  const extraKm = km - 40;
+  return {
+    low: Math.max(hops * (cheaper ? 8000 : 10000), Math.round(40 * 2000 + extraKm * 750)),
+    high: Math.max(hops * (cheaper ? 14000 : 18000), Math.round(40 * 3200 + extraKm * 1100)),
+    longHaul: true,
+  };
+}
+
 export function refineGeneratedBudget(
   itinerary: GeminiItinerary,
   preferences?: Record<string, unknown> | null,
@@ -372,13 +403,14 @@ export function refineGeneratedBudget(
   const nights = Math.max(0, daysCount - 1);
   const partySize = Math.max(1, Number(preferences?.partySize ?? preferences?.planningPartySize ?? 1) || 1);
   const cheaper = String(preferences?.regenerateMode ?? "") === "cheaper";
-  const uniqueVisits = new Set<string>();
+  const uniqueVisits = new Map<string, string>();
   let travelMeters = 0;
   let hops = 0;
   for (const day of itinerary.days) {
     day.stops.forEach((stop, index) => {
-      const key = stop.place?.googlePlaceId ?? normalizePlaceName(stop.place?.name ?? stop.customTitle ?? "");
-      if (key) uniqueVisits.add(key);
+      const name = stop.place?.name ?? stop.customTitle ?? "";
+      const key = stop.place?.googlePlaceId ?? normalizePlaceName(name);
+      if (key && !uniqueVisits.has(key)) uniqueVisits.set(key, name);
       if (index > 0) {
         hops += 1;
         travelMeters += stop.travelDistanceMeters ?? 0;
@@ -391,14 +423,19 @@ export function refineGeneratedBudget(
   const lodgingHigh = cheaper ? 140000 : 180000;
   const foodLow = cheaper ? 40000 : 50000;
   const foodHigh = cheaper ? 70000 : 85000;
-  const activityLow = cheaper ? 10000 : 15000;
-  const activityHigh = cheaper ? 35000 : 50000;
-  const perKmLow = cheaper ? 3500 : 4500;
-  const perKmHigh = cheaper ? 6500 : 8000;
-  const hopFloorLow = cheaper ? 12000 : 15000;
-  const hopFloorHigh = cheaper ? 22000 : 30000;
-  const localLow = Math.max(hops * hopFloorLow, Math.round(km * perKmLow));
-  const localHigh = Math.max(hops * hopFloorHigh, Math.round(km * perKmHigh), localLow);
+  const local = backpackerLocalTransport(km, hops, cheaper);
+  const localLow = local.low;
+  const localHigh = Math.max(local.high, localLow);
+  const tickets = [...uniqueVisits.values()].reduce(
+    (sum, name) => {
+      const band = activityTicketBand(name, cheaper);
+      return { low: sum.low + band.low, high: sum.high + band.high };
+    },
+    { low: 0, high: 0 },
+  );
+  const visitCount = Math.max(1, uniqueVisits.size);
+  const activityLow = Math.round(tickets.low / visitCount) || (cheaper ? 10000 : 15000);
+  const activityHigh = Math.max(activityLow, Math.round(tickets.high / visitCount) || (cheaper ? 35000 : 50000));
 
   const computed: BudgetItemInput[] = [];
   if (nights > 0) {
@@ -425,7 +462,11 @@ export function refineGeneratedBudget(
   });
   computed.push({
     category: "TRANSPORT_LOCAL",
-    label: hops ? `Ojek/angkot antar ${hops} titik` : "Transport lokal harian",
+    label: local.longHaul
+      ? `Bus/travel + ojek (~${Math.round(km)} km)`
+      : hops
+        ? `Ojek/angkot antar ${hops} titik`
+        : "Transport lokal harian",
     quantity: money(Math.max(1, hops || daysCount)),
     unit: hops ? "trip" : "hari",
     unitCostLow: money(Math.round(localLow / Math.max(1, hops || daysCount))),
@@ -433,10 +474,11 @@ export function refineGeneratedBudget(
     sourceType: "estimate",
     sourceReference: travelMeters > 0 ? `${Math.round(km)} km Google Routes` : null,
     notes: travelMeters > 0
-      ? `Dihitung dari jarak rute Google Maps (~${Math.round(km)} km).`
+      ? local.longHaul
+        ? `Jarak jauh dihitung bus/travel, bukan sewa mobil per km (~${Math.round(km)} km).`
+        : `Dihitung dari jarak rute Google Maps (~${Math.round(km)} km).`
       : "Estimasi ojek/angkot antar titik dalam kota.",
   });
-  const visitCount = Math.max(1, uniqueVisits.size);
   computed.push({
     category: "ACTIVITIES",
     label: `Tiket/donasi ${visitCount} destinasi`,
@@ -445,7 +487,7 @@ export function refineGeneratedBudget(
     unitCostLow: money(activityLow),
     unitCostHigh: money(activityHigh),
     sourceType: "estimate",
-    notes: "Rata-rata tiket museum/taman; destinasi gratis tetap dihitung konservatif.",
+    notes: "Estimasi tiket per destinasi (Dufan/taman hiburan terpisah dari tempat gratis).",
   });
 
   const kept = itinerary.budgetItems.filter((item) => item.category === "TRANSPORT_ROUNDTRIP" || item.category === "RESERVE");

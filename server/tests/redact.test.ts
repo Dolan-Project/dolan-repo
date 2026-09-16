@@ -8,5 +8,10 @@ describe("log redaction", () => {
       authorization: "[redacted]",
       refresh_token: "[redacted]",
     });
+    expect(redactAuthorizationHeader(undefined)).toBeUndefined();
+    expect(redactAuthorizationHeader("Basic abc")).toBe("[redacted]");
+    expect(redactValue(["ok", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9"])).toEqual(["ok", "[redacted]"]);
+    expect(redactValue(12)).toBe(12);
+    expect(redactValue("short")).toBe("short");
   });
 });

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   activityTypeLabel,
   analyzeStopTravel,
+  chooseTravelVehicle,
   formatTravelToStop,
   itineraryListNumbers,
   minutesForVehicleKm,
@@ -197,5 +198,11 @@ describe("itinerary stop view", () => {
         stops: [stop({ id: "a", sequence: 1 }), stop({ id: "b", sequence: 2, customTitle: "Uluwatu" })],
       },
     ]).map((item) => item.number)).toEqual([1, 2]);
+  });
+
+  it("uses a boat for sea stages and islands instead of a car", () => {
+    expect(chooseTravelVehicle(12, "Pentas Laut")).toBe("boat");
+    expect(chooseTravelVehicle(6, "Pulau Umang")).toBe("boat");
+    expect(chooseTravelVehicle(20, "Museum Geologi Bandung")).toBe("drive");
   });
 });

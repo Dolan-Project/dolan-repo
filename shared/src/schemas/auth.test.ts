@@ -46,6 +46,25 @@ describe("registerSchema", () => {
     });
     expect(result.success).toBe(true);
   });
+
+  it("accepts a valid optional username", () => {
+    expect(
+      registerSchema.safeParse({
+        email: "rani@dolan.test",
+        password: "rahasia8",
+        confirmPassword: "rahasia8",
+        username: "rani_trip",
+      }).success,
+    ).toBe(true);
+    expect(
+      registerSchema.safeParse({
+        email: "rani@dolan.test",
+        password: "rahasia8",
+        confirmPassword: "rahasia8",
+        username: "ab",
+      }).success,
+    ).toBe(false);
+  });
 });
 
 describe("loginSchema", () => {

@@ -177,9 +177,12 @@ function stopCoords(stop?: EditableItineraryStop | null) {
   return null;
 }
 
+const WATER_ACCESS_PLACE =
+  /komodo|padar|gili|penida|nusa lembongan|nusa penida|ferry|kapal|perahu|pulau|pentas|pahawang|umang|snorkel|diving|underwater|menyelam/;
+
 export function chooseTravelVehicle(km: number, placeName: string): TravelVehicle {
   const name = placeName.toLocaleLowerCase("id-ID");
-  if (/komodo|padar|gili|penida|nusa lembongan|ferry|kapal/.test(name) && km >= 1.5) return "boat";
+  if (WATER_ACCESS_PLACE.test(name) && km >= 1.5) return "boat";
   if (/bromo|ijen|penanjakan/.test(name)) return "jeep";
   if (km < 1) return "walk";
   if (km <= 15) return "ojek";

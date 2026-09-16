@@ -14,10 +14,19 @@ const nextConfig: NextConfig = {
   },
   async rewrites() {
     const origin = (process.env.EXPRESS_ORIGIN ?? "http://localhost:4000").replace(/\/$/, "");
-    return [
+    const socketRewrites = [
       { source: "/socket.io", destination: `${origin}/socket.io` },
       { source: "/socket.io/:path*", destination: `${origin}/socket.io/:path*` },
     ];
+    if (process.env.NEXT_PUBLIC_USE_MOCK_API === "true") {
+      return socketRewrites;
+    }
+    return {
+      beforeFiles: [
+        { source: "/api/v1/trips/me", destination: `${origin}/api/v1/trips/me` },
+      ],
+      afterFiles: socketRewrites,
+    };
   },
   images: {
     remotePatterns: [

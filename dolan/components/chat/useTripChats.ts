@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import type { MyTripSummary } from "@/lib/contracts";
 import { connectDolanSocket } from "@/lib/realtime/dolan-socket";
+import { readApiJson } from "@/lib/auth/read-api-json";
 
 export function useTripChats() {
   const [trips, setTrips] = useState<MyTripSummary[]>([]);
@@ -18,8 +19,12 @@ export function useTripChats() {
         ]);
         const read = async (response: Response) => {
           if (!response.ok) return [] as MyTripSummary[];
-          const payload = (await response.json()) as { data?: { items?: MyTripSummary[] } | MyTripSummary[] };
-          return Array.isArray(payload.data) ? payload.data : payload.data?.items ?? [];
+          try {
+            const payload = await readApiJson<{ data?: { items?: MyTripSummary[] } | MyTripSummary[] }>(response);
+            return Array.isArray(payload.data) ? payload.data : payload.data?.items ?? [];
+          } catch {
+            return [] as MyTripSummary[];
+          }
         };
         const next = [...(await read(hosted)), ...(await read(joined))];
         const seen = new Set<string>();

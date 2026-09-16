@@ -26,5 +26,7 @@ describe("readSessionId", () => {
       "complete",
     );
     expect(readSessionId(null)).toBeNull();
+    expect(readSessionId("orphan; dolan_session=")).toBeNull();
+    expect(readSessionId("other=abc")).toBeNull();
   });
 });

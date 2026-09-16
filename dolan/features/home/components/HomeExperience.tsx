@@ -11,6 +11,7 @@ import { findProvince, searchProvinces } from "@/lib/provinces";
 import type { GuestHomePayload } from "../load-guest-home";
 import { featuredGuestProvinces, isLiveGuestHome } from "../load-guest-home";
 import { GlobeCanvas } from "./GlobeCanvas";
+import { requestIrisCover } from "@/components/layout/IrisWipe";
 import styles from "./home.module.css";
 
 const travelerMessages=["Ada yang ke Labuan Bajo?","Cari teman sunrise-an ☀️","Yuk susun trip bareng!"];
@@ -56,32 +57,48 @@ export function HomeExperience({ live = null }: HomeExperienceProps){
  const feedError=useLive?live?.loadError??null:null;
  const router=useRouter();
  const[city,setCity]=useState("");
- const[phase,setPhase]=useState<"idle"|"searching"|"reveal">("idle");
+ const[phase,setPhase]=useState<"idle"|"searching"|"stopping"|"reveal">("idle");
  const[messageIndex,setMessageIndex]=useState(0);
  const[messagesVisible,setMessagesVisible]=useState(true);
  const[demoStep,setDemoStep]=useState(0);
  const[error,setError]=useState("");
- const dialogRef=useRef<HTMLDivElement>(null),searchButtonRef=useRef<HTMLButtonElement>(null);
- useEffect(()=>{let hideTimer=0,nextTimer=0;const cycle=()=>{setMessagesVisible(true);hideTimer=window.setTimeout(()=>setMessagesVisible(false),5500);nextTimer=window.setTimeout(()=>{setMessageIndex(i=>(i+1)%travelerMessages.length);cycle()},11500)};cycle();return()=>{window.clearTimeout(hideTimer);window.clearTimeout(nextTimer)}},[]);
+ const dialogRef=useRef<HTMLDivElement>(null),searchButtonRef=useRef<HTMLButtonElement>(null),searchTimer=useRef(0);
+ useEffect(()=>{let hideTimer=0,nextTimer=0;const cycle=()=>{setMessagesVisible(true);hideTimer=window.setTimeout(()=>setMessagesVisible(false),5500);nextTimer=window.setTimeout(()=>{setMessageIndex(i=>(i+1)%travelerMessages.length);cycle()},11500)};cycle();return()=>{window.clearTimeout(hideTimer);window.clearTimeout(nextTimer);window.clearTimeout(searchTimer.current)}},[]);
  useEffect(()=>{const timer=window.setInterval(()=>setDemoStep(i=>(i+1)%demoSteps.length),4200);return()=>window.clearInterval(timer)},[]);
  useEffect(()=>{if(!error)return;document.body.style.overflow="hidden";dialogRef.current?.focus();const key=(e:KeyboardEvent)=>{if(e.key==="Escape"){closeError();return;}if(e.key!=="Tab"||!dialogRef.current)return;const focusable=[...dialogRef.current.querySelectorAll<HTMLElement>('a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])')];if(!focusable.length){e.preventDefault();dialogRef.current.focus();return;}const first=focusable[0],last=focusable.at(-1)!;if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}};window.addEventListener("keydown",key);return()=>{document.body.style.overflow="";window.removeEventListener("keydown",key);};},[error]);
  function closeError(){setError("");setPhase("idle");requestAnimationFrame(()=>searchButtonRef.current?.focus());}
  const provinceMatches=searchProvinces(city);
  function goToProvince(slug:string){router.push(ROUTES.province(slug));}
+ function playSearchTransition(slug:string){
+  if(phase!=="idle")return;
+  if(window.matchMedia("(prefers-reduced-motion: reduce)").matches){goToProvince(slug);return;}
+  window.clearTimeout(searchTimer.current);
+  setPhase("searching");
+  searchTimer.current=window.setTimeout(()=>{
+   setPhase("stopping");
+   searchTimer.current=window.setTimeout(()=>{
+    setPhase("reveal");
+    searchTimer.current=window.setTimeout(()=>{
+     requestIrisCover();
+     searchTimer.current=window.setTimeout(()=>goToProvince(slug),760);
+    },1280);
+   },700);
+  },1600);
+ }
  function runSearch(){
   const matched=findProvince(city);
-  if(matched){goToProvince(matched.slug);return;}
+  if(matched){playSearchTransition(matched.slug);return;}
   const suggestions=searchProvinces(city);
-  if(suggestions[0]){goToProvince(suggestions[0].slug);return;}
+  if(suggestions[0]){playSearchTransition(suggestions[0].slug);return;}
   setError("Provinsi tidak ditemukan. Coba ketik nama seperti Bali, Jawa Timur, atau Nusa Tenggara Timur.");
   setPhase("idle");
  }
  function submitSearch(e:FormEvent){e.preventDefault();runSearch();}
  return <>
- <section className={styles.hero}><div className={styles.ambient}/><div className={styles.clouds} aria-hidden="true"><i/><i/><i/><i/></div><svg className={styles.flightScene} viewBox="0 0 1440 720" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="planeColor" x1="0" x2="1"><stop stopColor="#ff9d58"/><stop offset="1" stopColor="#ff6f1d"/></linearGradient></defs><path className={styles.flightPath} d="M1380 485 C1160 280 920 245 690 335 S470 505 315 430"/><g className={styles.routeDestination} transform="translate(315 430)"><path d="M0-22a16 16 0 0 0-16 16C-16 7 0 25 0 25S16 7 16-6A16 16 0 0 0 0-22Z"/><circle cy="-6" r="6"/></g><g className={styles.flightPlane}><image href="/images/dolan-plane-realistic.png" x="-62" y="-42" width="124" height="84" transform="rotate(180)" preserveAspectRatio="xMidYMid meet"/><animateMotion dur="12s" repeatCount="indefinite" rotate="auto" path="M1380 485 C1160 280 920 245 690 335 S470 505 315 430"/></g></svg><div className={styles.globeStage} aria-hidden="true"><div className={`${styles.globeWrap} ${styles[phase]}`}><GlobeCanvas fast={phase==="searching"}/></div></div><div className={`${styles.heroPost} ${styles.postOne}`} style={{position:"absolute"}}><Image src={unsplash.bali} alt="Nusa Penida" fill unoptimized sizes="180px"/><span>Bali</span></div><div className={`${styles.heroPost} ${styles.postTwo}`} style={{position:"absolute"}}><Image src={unsplash.komodo} alt="Labuan Bajo" fill unoptimized sizes="180px"/><span>Labuan Bajo</span></div><div className={`${styles.socialBubble} ${styles.socialOne}`}><span style={{position:"relative"}}><Image src={ASSETS.hostWayan} alt="Wayan, traveler Dolan" fill unoptimized sizes="58px"/></span>{messagesVisible&&<p key={`one-${messageIndex}`}>{travelerMessages[messageIndex]}</p>}</div><div className={`${styles.socialBubble} ${styles.socialTwo}`}><span style={{position:"relative"}}><Image src={ASSETS.hostSinta} alt="Sinta, traveler Dolan" fill unoptimized sizes="58px"/></span>{messagesVisible&&<p key={`two-${messageIndex}`}>{travelerMessages[(messageIndex+1)%travelerMessages.length]}</p>}</div>
+ <section className={styles.hero}><div className={styles.ambient}/><div className={styles.clouds} aria-hidden="true"><i/><i/><i/><i/></div><svg className={styles.flightScene} viewBox="0 0 1440 720" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="planeColor" x1="0" x2="1"><stop stopColor="#ff9d58"/><stop offset="1" stopColor="#ff6f1d"/></linearGradient></defs><path className={styles.flightPath} d="M1380 485 C1160 280 920 245 690 335 S470 505 315 430"/><g className={styles.routeDestination} transform="translate(315 430)"><path d="M0-22a16 16 0 0 0-16 16C-16 7 0 25 0 25S16 7 16-6A16 16 0 0 0 0-22Z"/><circle cy="-6" r="6"/></g><g className={styles.flightPlane}><image href="/images/dolan-plane-realistic.png" x="-62" y="-42" width="124" height="84" transform="rotate(180)" preserveAspectRatio="xMidYMid meet"/><animateMotion dur="12s" repeatCount="indefinite" rotate="auto" path="M1380 485 C1160 280 920 245 690 335 S470 505 315 430"/></g></svg><div className={styles.globeStage} aria-hidden="true"><div className={`${styles.globeWrap} ${styles[phase]}`}><GlobeCanvas searching={phase==="searching"} stopped={phase==="stopping"||phase==="reveal"}/></div></div><div className={`${styles.heroPost} ${styles.postOne}`} style={{position:"absolute"}}><Image src={unsplash.bali} alt="Nusa Penida" fill unoptimized sizes="180px"/><span>Bali</span></div><div className={`${styles.heroPost} ${styles.postTwo}`} style={{position:"absolute"}}><Image src={unsplash.komodo} alt="Labuan Bajo" fill unoptimized sizes="180px"/><span>Labuan Bajo</span></div><div className={`${styles.socialBubble} ${styles.socialOne}`}><span style={{position:"relative"}}><Image src={ASSETS.hostWayan} alt="Wayan, traveler Dolan" fill unoptimized sizes="58px"/></span>{messagesVisible&&<p key={`one-${messageIndex}`}>{travelerMessages[messageIndex]}</p>}</div><div className={`${styles.socialBubble} ${styles.socialTwo}`}><span style={{position:"relative"}}><Image src={ASSETS.hostSinta} alt="Sinta, traveler Dolan" fill unoptimized sizes="58px"/></span>{messagesVisible&&<p key={`two-${messageIndex}`}>{travelerMessages[(messageIndex+1)%travelerMessages.length]}</p>}</div>
   <div className={styles.heroInner}><div className={styles.heroCopy}><span className={styles.kicker}>Dolan bareng, cerita bareng</span><h1>Tujuannya sama.<br/><em>Ceritanya bisa bersama.</em></h1>
   <p>Temukan destinasi, susun itinerary sesuai budget, lalu berangkat bersama traveler yang punya rencana serupa.</p>
-  <form onSubmit={submitSearch} className={`${styles.searchPanel} ${styles.destinationOnlySearch}`} aria-label="Cari provinsi"><label className={styles.field}><span><Icon name="map"/> Provinsi tujuan</span><input value={city} onChange={e=>setCity(e.target.value)} placeholder="Cari provinsi, mis. Bali atau Jawa Timur" autoComplete="off" aria-autocomplete="list" aria-controls="province-suggestions"/>{provinceMatches.length>0&&<div id="province-suggestions" className={styles.provinceSuggestions} role="listbox">{provinceMatches.map(province=><button type="button" role="option" key={province.slug} onClick={()=>goToProvince(province.slug)}><Icon name="map"/><span><b>{province.name}</b><small>Provinsi · ibu kota {province.capital}</small></span></button>)}</div>}</label><button ref={searchButtonRef} type="submit" className={styles.searchButton}><Icon name="explore"/><span>Cari provinsi</span></button></form>
+  <form onSubmit={submitSearch} className={`${styles.searchPanel} ${styles.destinationOnlySearch}`} aria-label="Cari provinsi"><label className={styles.field}><span><Icon name="map"/> Provinsi tujuan</span><input value={city} onChange={e=>setCity(e.target.value)} placeholder="Cari provinsi, mis. Bali atau Jawa Timur" autoComplete="off" aria-autocomplete="list" aria-controls="province-suggestions"/>{provinceMatches.length>0&&<div id="province-suggestions" className={styles.provinceSuggestions} role="listbox">{provinceMatches.map(province=><button type="button" role="option" key={province.slug} onClick={()=>playSearchTransition(province.slug)}><Icon name="map"/><span><b>{province.name}</b><small>Provinsi · ibu kota {province.capital}</small></span></button>)}</div>}</label><button ref={searchButtonRef} type="submit" className={styles.searchButton}><Icon name="explore"/><span>Cari provinsi</span></button></form>
   </div></div>
  </section>
 

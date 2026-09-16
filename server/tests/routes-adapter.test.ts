@@ -66,4 +66,27 @@ describe("route legs", () => {
     expect(next.days[0]?.stops[1]?.routeStatus).toBe("UNAVAILABLE");
     expect(next.days[0]?.stops[1]?.routePolyline).toBeNull();
   });
+
+  it("does not drive a car to a sea stage", async () => {
+    const sea: GeminiItinerary = {
+      ...itinerary,
+      days: [{
+        ...itinerary.days[0]!,
+        stops: [
+          itinerary.days[0]!.stops[0]!,
+          { ...itinerary.days[0]!.stops[1]!, place: { googlePlaceId: "ChIJcccccccccccccccccccc", name: "Pentas Laut", city: "Banten" } },
+        ],
+      }],
+    };
+    const next = await applyRouteLegs(
+      sea,
+      [
+        { latitude: -6.12, longitude: 105.85 },
+        { latitude: -6.05, longitude: 105.9 },
+      ],
+      new MockRoutesClient({ ok: true, durationMinutes: 40, travelMode: "DRIVE" }),
+    );
+    expect(next.days[0]?.stops[1]?.routeTravelMode).toBe("BOAT");
+    expect(next.days[0]?.stops[1]?.notes).toMatch(/kapal/i);
+  });
 });

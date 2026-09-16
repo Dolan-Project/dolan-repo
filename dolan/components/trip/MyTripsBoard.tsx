@@ -9,6 +9,7 @@ import type { MyTripRole, MyTripSummary, TripSummary } from "@/lib/contracts";
 import { ROUTES, tripDetailHref, tripItineraryPath } from "@/lib/routes";
 import { meetingPointFor } from "@/mocks/geo";
 import { CITY_ROUTES } from "@/lib/destination-itinerary";
+import { readApiJson } from "@/lib/auth/read-api-json";
 import { ShareRouteModal } from "./ShareRouteModal";
 import { JoinRequestsModal } from "./JoinRequestsModal";
 import { DeleteTripDialog } from "./DeleteTripDialog";
@@ -41,13 +42,23 @@ function parseMyTripRows(payload: unknown): { rows: MyTripSummary[]; error?: str
 async function loadListedTrips(filter: TripListFilter, signal?: AbortSignal): Promise<{ rows: ListedTrip[]; error?: string }> {
   const roles: MyTripRole[] = filter === "all" ? ["hosted", "joined", "pending"] : [filter];
   const responses = await Promise.all(
-    roles.map((role) => fetch(`/api/v1/trips/me?role=${role}`, { credentials: "include", signal })),
+    roles.map((role) => fetch(`/api/v1/trips/me?role=${role}`, {
+      credentials: "include",
+      signal,
+      headers: { Accept: "application/json" },
+    })),
   );
   const seen = new Set<string>();
   const rows: ListedTrip[] = [];
   for (let index = 0; index < responses.length; index += 1) {
     const role = roles[index]!;
-    const parsed = parseMyTripRows(await responses[index]!.json());
+    let payload: unknown;
+    try {
+      payload = await readApiJson(responses[index]!);
+    } catch (error) {
+      return { rows: [], error: error instanceof Error ? error.message : "Gagal memuat trip" };
+    }
+    const parsed = parseMyTripRows(payload);
     if (parsed.error) return { rows: [], error: parsed.error };
     for (const trip of parsed.rows) {
       if (seen.has(trip.id)) continue;

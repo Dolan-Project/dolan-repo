@@ -55,4 +55,40 @@ describe("itinerary editor mutation schemas", () => {
     });
     expect(result.success).toBe(false);
   });
+
+  it("normalizes short clocks and empty visit times", () => {
+    const empty = saveItineraryVersionSchema.safeParse({
+      baseVersionId: "version-1",
+      summary: null,
+      days: [{ id: "day-1", dayNumber: 1, date: "2026-10-24", title: null, stops: [{ ...stop, startTime: "" }] }],
+      budgetItems: [],
+    });
+    expect(empty.success).toBe(true);
+    if (empty.success) expect(empty.data.days[0].stops[0].startTime).toBeNull();
+
+    const short = saveItineraryVersionSchema.safeParse({
+      baseVersionId: "version-1",
+      summary: null,
+      days: [{ id: "day-1", dayNumber: 1, date: "2026-10-24", title: null, stops: [{ ...stop, startTime: "9:05" }] }],
+      budgetItems: [],
+    });
+    expect(short.success).toBe(true);
+    if (short.success) expect(short.data.days[0].stops[0].startTime).toBe("09:05");
+
+    const unmatched = saveItineraryVersionSchema.safeParse({
+      baseVersionId: "version-1",
+      summary: null,
+      days: [{ id: "day-1", dayNumber: 1, date: "2026-10-24", title: null, stops: [{ ...stop, startTime: "soon" }] }],
+      budgetItems: [],
+    });
+    expect(unmatched.success).toBe(false);
+
+    const numeric = saveItineraryVersionSchema.safeParse({
+      baseVersionId: "version-1",
+      summary: null,
+      days: [{ id: "day-1", dayNumber: 1, date: "2026-10-24", title: null, stops: [{ ...stop, startTime: 12 as never }] }],
+      budgetItems: [],
+    });
+    expect(numeric.success).toBe(false);
+  });
 });

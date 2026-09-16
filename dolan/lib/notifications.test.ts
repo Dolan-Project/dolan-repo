@@ -47,4 +47,33 @@ describe("parseNotificationsResponse", () => {
     expect(parsed.unreadCount).toBe(1);
     expect(parsed.items[0].href).toBe("/trip/trip_1");
   });
+
+  it("uses stored copy when the row has no type, and counts unread items", () => {
+    expect(parseNotificationsResponse({ success: false })).toEqual({ items: [], unreadCount: 0 });
+    const parsed = parseNotificationsResponse({
+      success: true,
+      data: {
+        items: [
+          {
+            id: "n2",
+            title: "Custom",
+            body: "Isi custom",
+            tripId: "t2",
+            readAt: null,
+            createdAt: "2026-09-15T00:00:00.000Z",
+          },
+          {
+            id: "n3",
+            title: "Read",
+            body: "Sudah dibaca",
+            href: "/notifikasi",
+            readAt: "2026-09-15T01:00:00.000Z",
+            createdAt: "2026-09-15T00:00:00.000Z",
+          },
+        ],
+      },
+    });
+    expect(parsed.items[0]).toMatchObject({ title: "Custom", href: "/trip/t2" });
+    expect(parsed.unreadCount).toBe(1);
+  });
 });

@@ -1,5 +1,6 @@
-import type { ApiPage, TripSummary } from "@dolan/shared";
+import type { ApiPage, PlaceSummary, TripSummary } from "@dolan/shared";
 import { provinceCoverUrl, provinceHref } from "@/lib/province-cover";
+import { destinationCoverUrl, findProvinceForDestination } from "@/lib/destination-itinerary";
 import { INDONESIA_PROVINCES, type CuratedProvince } from "@/lib/provinces";
 
 export type GuestHomeDestination = {
@@ -64,6 +65,22 @@ async function fetchJson<T>(url: string): Promise<T | null> {
   }
 }
 
+export function fallbackTripCover(trip: Pick<TripSummary, "title" | "destinationCity" | "coverPlace">) {
+  const destination = trip.destinationCity ?? trip.coverPlace?.city ?? trip.coverPlace?.name ?? trip.title;
+  const province = findProvinceForDestination(destination);
+  return province ? provinceCoverUrl(province) : destinationCoverUrl(destination || "Indonesia");
+}
+
+async function resolvePlacePhoto(base: string, place: PlaceSummary | null): Promise<string | null> {
+  if (!place) return null;
+  if (place.photoUri) return place.photoUri;
+  if (!place.photoName || !place.googlePlaceId) return null;
+  const payload = await fetchJson<{ success?: boolean; data?: { photoUri?: string } }>(
+    `${base}/places/${encodeURIComponent(place.googlePlaceId)}/photo?name=${encodeURIComponent(place.photoName)}`,
+  );
+  return payload?.data?.photoUri ?? null;
+}
+
 export async function loadGuestHome(): Promise<GuestHomePayload> {
   const base = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api/v1").replace(/\/$/, "");
 
@@ -72,15 +89,16 @@ export async function loadGuestHome(): Promise<GuestHomePayload> {
   );
 
   const destinations = featuredGuestProvinces();
-
-  const trips: GuestHomeTrip[] = (tripsPayload?.data ?? []).map((trip) => ({
-    id: trip.id,
-    title: trip.title,
-    place: trip.destinationCity ?? "Indonesia",
-    date: formatRange(trip.startDate, trip.endDate),
-    seats: Math.max(0, 7 - trip.participantCount),
-    image: trip.coverPlace?.photoUri ?? null,
-  }));
+  const trips: GuestHomeTrip[] = await Promise.all(
+    (tripsPayload?.data ?? []).map(async (trip) => ({
+      id: trip.id,
+      title: trip.title,
+      place: trip.destinationCity ?? trip.coverPlace?.city ?? "Indonesia",
+      date: formatRange(trip.startDate, trip.endDate),
+      seats: Math.max(0, 7 - trip.participantCount),
+      image: (await resolvePlacePhoto(base, trip.coverPlace)) ?? fallbackTripCover(trip),
+    })),
+  );
 
   return { destinations, trips, loadError: null };
 }
