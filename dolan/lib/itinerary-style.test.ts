@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { itineraryCircleSvg, itineraryPinSvg, itineraryStopColor, itineraryStopTint, ITINERARY_ROUTE_COLOR } from "./itinerary-style";
-import { provinceCoverUrl } from "./province-cover";
+import { itineraryCircleSvg, itineraryPinSvg, itineraryStopBadgeStyle, itineraryStopColor, itineraryStopTint, ITINERARY_ROUTE_COLOR } from "./itinerary-style";
+import { provinceCoverUrl, provinceHref } from "./province-cover";
 import { INDONESIA_PROVINCES } from "./provinces";
 
 describe("itinerary style", () => {
@@ -16,6 +16,8 @@ describe("itinerary style", () => {
     expect(itineraryPinSvg(1, 2)).toContain("#ef3b69");
     expect(itineraryPinSvg(1, 2, false, ITINERARY_ROUTE_COLOR)).toContain(ITINERARY_ROUTE_COLOR);
     expect(itineraryPinSvg(1, 2, false, ITINERARY_ROUTE_COLOR)).not.toContain("#ef3b69");
+    expect(itineraryCircleSvg(0, 1, true)).toContain("stroke-width=\"3\"");
+    expect(itineraryStopBadgeStyle(0).color).toBe("#ffffff");
   });
 });
 
@@ -27,5 +29,7 @@ describe("province covers", () => {
     expect(provinceCoverUrl(INDONESIA_PROVINCES.find((item) => item.slug === "jawa-barat")!)).toMatch(/kawah|bandung|wikimedia/i);
     expect(provinceCoverUrl(INDONESIA_PROVINCES.find((item) => item.slug === "jawa-timur")!)).toMatch(/bromo|wikimedia/i);
     expect(provinceCoverUrl(INDONESIA_PROVINCES.find((item) => item.slug === "bali")!)).toMatch(/http/);
+    expect(provinceCoverUrl({ slug: "unknown-land", name: "Atlantis", heroQuery: "" })).toMatch(/loremflickr/);
+    expect(provinceHref("bali")).toBe("/provinsi/bali");
   });
 });

@@ -8,6 +8,7 @@ import {
   type TripChecklistItem,
 } from "@dolan/shared";
 import { shouldUseMockApi } from "@/lib/auth/use-mock";
+import { readApiJson } from "@/lib/auth/read-api-json";
 import { createBudgetSummary } from "./mock-data";
 
 const wait = (ms = 260) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -41,11 +42,11 @@ export async function getItineraryEditor(tripId: string): Promise<ItineraryEdito
     credentials: "include",
     headers: { Accept: "application/json" },
   });
-  const payload = (await response.json()) as {
+  const payload = await readApiJson<{
     success: boolean;
     data?: ItineraryEditorSnapshot;
     error?: { message?: string };
-  };
+  }>(response);
   if (response.ok && payload.success && payload.data) {
     return payload.data;
   }

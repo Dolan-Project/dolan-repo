@@ -32,4 +32,8 @@ describe("decodePolyline", () => {
     expect(path[0]?.lat).toBeCloseTo(38.5, 1);
     expect(path[0]?.lng).toBeCloseTo(-120.2, 1);
   });
+
+  it("returns an empty path for an empty encoding", () => {
+    expect(decodePolyline("")).toEqual([]);
+  });
 });

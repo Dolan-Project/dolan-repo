@@ -28,4 +28,10 @@ describe("upload mocks", () => {
       expect("token" in result.data).toBe(false);
     }
   });
+
+  it("returns a cover url for a valid jpeg", () => {
+    const result = mockUploadCover({ type: "image/jpeg", size: 1024 });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.coverUrl).toContain("cover");
+  });
 });

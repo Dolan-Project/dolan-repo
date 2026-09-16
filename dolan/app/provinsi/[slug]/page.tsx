@@ -6,7 +6,6 @@ import { INDONESIA_PROVINCES } from "@/lib/provinces";
 import { PROVINCE_ATLAS } from "@/features/rekomendasi/atlas";
 import { ProvincePlacesGrid } from "@/components/province/ProvincePlacesGrid";
 import { ProvinceItineraryPanel } from "@/components/province/ProvinceItineraryPanel";
-import { TemplateRoutePeek } from "@/components/trip/TemplateRoutePeek";
 import { buildProvinceTemplateDays } from "@/lib/destination-itinerary";
 import { provinceCoverUrl } from "@/lib/province-cover";
 import { ROUTES } from "@/lib/routes";
@@ -192,7 +191,6 @@ export default async function ProvincePage({ params }: { params: Promise<{ slug:
                 {durationDays ? (
                   <span className="rounded-full bg-primary-fixed px-3 py-2">{durationDays} hari</span>
                 ) : null}
-                {catalog ? <TemplateRoutePeek province={catalog} /> : null}
               </div>
               <Link
                 href={buatTripHref}

@@ -62,6 +62,8 @@ export function SiteHeader({
   const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
   const compactMobile = hideMobileHeader(pathname);
+  const guestLanding = !session && pathname === "/";
+  const transparent = guestLanding && !scrolled;
   useEffect(() => {
     const update = () => setScrolled(window.scrollY > 8);
     update();
@@ -71,8 +73,10 @@ export function SiteHeader({
 
   return (
     <header
-      className={`${compactMobile ? "hidden md:block" : ""} fixed top-0 z-50 w-full border-b border-[#e8edf3] bg-white/94 backdrop-blur-xl ${
-        scrolled ? "shadow-[0_8px_30px_rgba(15,59,94,.06)]" : ""
+      className={`${compactMobile ? "hidden md:block" : ""} fixed top-0 z-50 w-full transition-[background-color,border-color,box-shadow,backdrop-filter] duration-300 ${
+        transparent
+          ? "border-b border-transparent bg-transparent"
+          : `border-b border-[#e8edf3] bg-white/94 backdrop-blur-xl ${scrolled ? "shadow-[0_8px_30px_rgba(15,59,94,.06)]" : ""}`
       }`}
     >
       <div className="mx-auto flex h-14 max-w-[1280px] items-center gap-3 px-4 md:h-16 md:px-6">

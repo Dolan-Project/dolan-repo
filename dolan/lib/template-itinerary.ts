@@ -15,6 +15,7 @@ import {
   scheduleGapMinutes,
   ticketLineDetail,
   analyzeStopTravel,
+  chooseTravelVehicle,
 } from "@/lib/itinerary-stop-view";
 
 export const MAX_ITINERARY_REGENERATES = 2;
@@ -361,7 +362,12 @@ export function placeTicketEstimate(name: string, notes?: string | null) {
   if (FREE_PUBLIC_PLACE.test(value)) return 0;
   if (/bromo|ijen|kawah|rinjani|padar|komodo|kerinci|penanjakan/.test(value)) return 150_000;
   if (
-    /candi|pura|tanah lot|uluwatu|keraton|museum|taman nasional|tangkuban|kebun raya|borobudur|prambanan|lawang sewu|sampoerna|angkut|taman sari|istana|saung|mansion|tjong|tmii|taman mini|ragunan|dufan|seaworld|trans studio|farmhouse|floating market|taman pintar|sonobudoyo|coban|madakaripura|tebing keraton/.test(
+    /dufan|dunia fantasi|trans studio|seaworld|ocean dream|atlantis|waterboom|waterpark|taman hiburan/.test(value)
+  ) {
+    return 175_000;
+  }
+  if (
+    /candi|pura|tanah lot|uluwatu|keraton|museum|taman nasional|tangkuban|kebun raya|borobudur|prambanan|lawang sewu|sampoerna|angkut|taman sari|istana|saung|mansion|tjong|tmii|taman mini|ragunan|farmhouse|floating market|taman pintar|sonobudoyo|coban|madakaripura|tebing keraton/.test(
       value,
     )
   ) {
@@ -602,7 +608,7 @@ export function assignDayMeals(day: EditableItineraryDay[]) {
 }
 
 export type TransportLegEstimate = {
-  mode: "start" | "walk" | "ojek" | "drive";
+  mode: "start" | "walk" | "ojek" | "drive" | "boat";
   km: number;
   cost: number;
   label: string;
@@ -615,11 +621,12 @@ export function estimateTransportLeg(input: {
   isFirstOfDay?: boolean;
 }): TransportLegEstimate {
   const km = Math.max(0, input.km);
-  const name = (input.placeName ?? "").toLocaleLowerCase("id-ID");
+  const name = input.placeName ?? "";
   if (input.isFirstOfDay || km <= 0) {
     return { mode: "start", km: 0, cost: 0, label: "Titik awal hari" };
   }
-  if (/bromo|ijen|penanjakan/.test(name)) {
+  const vehicle = chooseTravelVehicle(km, name);
+  if (vehicle === "jeep") {
     return {
       mode: "drive",
       km,
@@ -627,10 +634,18 @@ export function estimateTransportLeg(input: {
       label: "Naik jeep",
     };
   }
-  if (km < 1) {
+  if (vehicle === "boat") {
+    return {
+      mode: "boat",
+      km,
+      cost: roundEstimateRupiah(Math.max(25_000, Math.min(150_000, Math.round(20_000 + km * 4_000)))),
+      label: "Naik kapal",
+    };
+  }
+  if (vehicle === "walk" || km < 1) {
     return { mode: "walk", km, cost: 0, label: "Jalan kaki" };
   }
-  if (km <= 25) {
+  if (vehicle === "ojek" || km <= 25) {
     return {
       mode: "ojek",
       km,
@@ -638,11 +653,19 @@ export function estimateTransportLeg(input: {
       label: "Naik ojek",
     };
   }
+  if (km <= 80) {
+    return {
+      mode: "drive",
+      km,
+      cost: roundEstimateRupiah(Math.max(40_000, Math.min(180_000, Math.round(km * 2_800)))),
+      label: "Naik mobil",
+    };
+  }
   return {
     mode: "drive",
     km,
-    cost: roundEstimateRupiah(Math.max(75_000, Math.round(km * 6_500))),
-    label: "Naik mobil",
+    cost: roundEstimateRupiah(Math.max(75_000, Math.min(280_000, Math.round(50_000 + km * 850)))),
+    label: "Naik bus/travel",
   };
 }
 

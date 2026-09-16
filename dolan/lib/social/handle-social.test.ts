@@ -124,7 +124,7 @@ describe("join", () => {
       "trip_open",
     );
     const json = (await response.json()) as { error: { code: string } };
-    expect(response.status).toBe(409);
+    expect(response.status).toBe(400);
     expect(json.error.code).toBe("BLOCKED_RELATION");
   });
 

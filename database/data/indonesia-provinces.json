@@ -578,6 +578,14 @@
         "description": "Pusat oleh-oleh khas Melayu, kain tenun Siak, dan barang antik.",
         "searchQuery": "Pasar Bawah (Pasar Wisata Pekanbaru), Riau, Indonesia",
         "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Pasar%20Bawah%20%28Pasar%20Wisata%20Pekanbaru%29%2C%20Riau%2C%20Indonesia"
+      },
+      {
+        "name": "Taman Rekreasi Alam Mayang",
+        "city": "Pekanbaru",
+        "rank": 5,
+        "description": "Hutan kota dan danau rekreasi di Pekanbaru.",
+        "searchQuery": "Taman Rekreasi Alam Mayang, Riau, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Taman%20Rekreasi%20Alam%20Mayang%2C%20Riau%2C%20Indonesia"
       }
     ],
     "template": {
@@ -909,6 +917,14 @@
         "description": "Danau perkotaan tempat santai warga dengan budidaya keramba dan perahu wisata.",
         "searchQuery": "Danau Sipin, Jambi, Indonesia",
         "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Danau%20Sipin%2C%20Jambi%2C%20Indonesia"
+      },
+      {
+        "name": "Museum Siginjei",
+        "city": "Jambi",
+        "rank": 5,
+        "description": "Museum sejarah dan budaya Jambi di pusat kota.",
+        "searchQuery": "Museum Siginjei, Jambi, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Museum%20Siginjei%2C%20Jambi%2C%20Indonesia"
       }
     ],
     "template": {
@@ -1247,6 +1263,14 @@
         "description": "Garis pantai berpasir putih tanpa karang yang membentang 7 km di sepanjang kota.",
         "searchQuery": "Pantai Panjang, Bengkulu, Indonesia",
         "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Pantai%20Panjang%2C%20Bengkulu%2C%20Indonesia"
+      },
+      {
+        "name": "Pantai Tapak Paderi",
+        "city": "Bengkulu",
+        "rank": 5,
+        "description": "Pesisir kota dengan anjungan dan kuliner malam.",
+        "searchQuery": "Pantai Tapak Paderi, Bengkulu, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Pantai%20Tapak%20Paderi%2C%20Bengkulu%2C%20Indonesia"
       }
     ],
     "template": {
@@ -1405,6 +1429,14 @@
         "description": "Bangunan mahkota pengantin wanita Lampung di titik nol kilometer selatan Sumatera.",
         "searchQuery": "Menara Siger, Lampung, Indonesia",
         "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Menara%20Siger%2C%20Lampung%2C%20Indonesia"
+      },
+      {
+        "name": "Pulau Tegal Mas",
+        "city": "Pesawaran",
+        "rank": 5,
+        "description": "Pulau wisata laut dekat Bandar Lampung.",
+        "searchQuery": "Pulau Tegal Mas, Lampung, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Pulau%20Tegal%20Mas%2C%20Lampung%2C%20Indonesia"
       }
     ],
     "template": {
@@ -2601,6 +2633,14 @@
         "description": "Pantai selatan Samudra Hindia dengan sepasang batu karang raksasa tegak menyerupai layar kapal.",
         "searchQuery": "Pantai Sawarna & Tanjung Layar, Banten, Indonesia",
         "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Pantai%20Sawarna%20%26%20Tanjung%20Layar%2C%20Banten%2C%20Indonesia"
+      },
+      {
+        "name": "Taman Nasional Ujung Kulon",
+        "city": "Pandeglang",
+        "rank": 5,
+        "description": "Situs warisan dunia dan habitat badak Jawa.",
+        "searchQuery": "Taman Nasional Ujung Kulon, Banten, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Taman%20Nasional%20Ujung%20Kulon%2C%20Banten%2C%20Indonesia"
       }
     ],
     "template": {
@@ -3451,6 +3491,14 @@
         "description": "Museum kebudayaan Dayak terlengkap yang menampilkan ritual Tiwah, pakaian kulit kayu, dan mandau.",
         "searchQuery": "Museum Balanga, Kalimantan Tengah, Indonesia",
         "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Museum%20Balanga%2C%20Kalimantan%20Tengah%2C%20Indonesia"
+      },
+      {
+        "name": "Danau Tahai",
+        "city": "Palangka Raya",
+        "rank": 5,
+        "description": "Danau gambut dengan dermaga kayu di Palangka Raya.",
+        "searchQuery": "Danau Tahai, Kalimantan Tengah, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Danau%20Tahai%2C%20Kalimantan%20Tengah%2C%20Indonesia"
       }
     ],
     "template": {
@@ -3969,6 +4017,14 @@
         "description": "Bangunan cagar budaya unik beratap setengah lingkaran bekas kantor tambang minyak kolonial.",
         "searchQuery": "Rumah Bundar Peninggalan BPM Belanda, Kalimantan Utara, Indonesia",
         "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Rumah%20Bundar%20Peninggalan%20BPM%20Belanda%2C%20Kalimantan%20Utara%2C%20Indonesia"
+      },
+      {
+        "name": "Air Terjun Semolon",
+        "city": "Malinau",
+        "rank": 5,
+        "description": "Air terjun bertingkat di pedalaman Malinau.",
+        "searchQuery": "Air Terjun Semolon, Kalimantan Utara, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Air%20Terjun%20Semolon%2C%20Kalimantan%20Utara%2C%20Indonesia"
       }
     ],
     "template": {
@@ -4307,6 +4363,14 @@
         "description": "Ikon kebangkitan kota Palu dengan promenade pantai dan kafe senja tepi laut.",
         "searchQuery": "Jembatan Palu V & Anjungan Teluk Palu, Sulawesi Tengah, Indonesia",
         "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Jembatan%20Palu%20V%20%26%20Anjungan%20Teluk%20Palu%2C%20Sulawesi%20Tengah%2C%20Indonesia"
+      },
+      {
+        "name": "Museum Sulawesi Tengah",
+        "city": "Palu",
+        "rank": 5,
+        "description": "Koleksi budaya Kaili dan sejarah Teluk Palu.",
+        "searchQuery": "Museum Sulawesi Tengah, Sulawesi Tengah, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Museum%20Sulawesi%20Tengah%2C%20Sulawesi%20Tengah%2C%20Indonesia"
       }
     ],
     "template": {
@@ -4652,6 +4716,14 @@
         "description": "Garis pantai landai sepanjang 4 km dengan barisan pohon kelapa dan panorama matahari terbit.",
         "searchQuery": "Pantai Toronipa, Sulawesi Tenggara, Indonesia",
         "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Pantai%20Toronipa%2C%20Sulawesi%20Tenggara%2C%20Indonesia"
+      },
+      {
+        "name": "Air Terjun Moramo",
+        "city": "Konawe Selatan",
+        "rank": 5,
+        "description": "Air terjun berundak khas Sulawesi Tenggara.",
+        "searchQuery": "Air Terjun Moramo, Sulawesi Tenggara, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Air%20Terjun%20Moramo%2C%20Sulawesi%20Tenggara%2C%20Indonesia"
       }
     ],
     "template": {
@@ -4817,6 +4889,14 @@
         "description": "Menara jam megah setinggi 65 meter menyerupai Menara Eiffel di pusat ibu kota Serambi Madinah.",
         "searchQuery": "Menara Keagungan Limboto, Gorontalo, Indonesia",
         "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Menara%20Keagungan%20Limboto%2C%20Gorontalo%2C%20Indonesia"
+      },
+      {
+        "name": "Pulau Saronde",
+        "city": "Gorontalo Utara",
+        "rank": 5,
+        "description": "Pulau pasir putih di utara Gorontalo.",
+        "searchQuery": "Pulau Saronde, Gorontalo, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Pulau%20Saronde%2C%20Gorontalo%2C%20Indonesia"
       }
     ],
     "template": {
@@ -4975,6 +5055,14 @@
         "description": "Rumah panggung tradisional suku Mandar dengan ornamen ukiran khas dan sejarah kemaritiman.",
         "searchQuery": "Rumah Adat Boyang Mandar, Sulawesi Barat, Indonesia",
         "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Rumah%20Adat%20Boyang%20Mandar%2C%20Sulawesi%20Barat%2C%20Indonesia"
+      },
+      {
+        "name": "Pantai Dato",
+        "city": "Majene",
+        "rank": 5,
+        "description": "Pantai bertebing di pesisir Mandar.",
+        "searchQuery": "Pantai Dato, Sulawesi Barat, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Pantai%20Dato%2C%20Sulawesi%20Barat%2C%20Indonesia"
       }
     ],
     "template": {
@@ -5652,6 +5740,14 @@
         "description": "Pantai pemancingan tradisional dengan atraksi unik memanggil kawanan ikan liar menggunakan peluit daun kelapa.",
         "searchQuery": "Pantai Bakaro, Papua Barat, Indonesia",
         "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Pantai%20Bakaro%2C%20Papua%20Barat%2C%20Indonesia"
+      },
+      {
+        "name": "Puncak Table Mountain Manokwari",
+        "city": "Manokwari",
+        "rank": 5,
+        "description": "Puncak kota Manokwari dengan panorama Teluk Doreh.",
+        "searchQuery": "Puncak Table Mountain Manokwari, Papua Barat, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Puncak%20Table%20Mountain%20Manokwari%2C%20Papua%20Barat%2C%20Indonesia"
       }
     ],
     "template": {
@@ -5990,6 +6086,14 @@
         "description": "Ruang terbuka hijau di pusat kota Nabire tempat berkumpul dan bersantai warga.",
         "searchQuery": "Taman Bunga Kota Nabire (Taman Karang Tumaritis), Papua Tengah, Indonesia",
         "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Taman%20Bunga%20Kota%20Nabire%20%28Taman%20Karang%20Tumaritis%29%2C%20Papua%20Tengah%2C%20Indonesia"
+      },
+      {
+        "name": "Pantai Kimi",
+        "city": "Nabire",
+        "rank": 5,
+        "description": "Pantai pasir hitam di pesisir Nabire.",
+        "searchQuery": "Pantai Kimi, Papua Tengah, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Pantai%20Kimi%2C%20Papua%20Tengah%2C%20Indonesia"
       }
     ],
     "template": {
@@ -6321,6 +6425,14 @@
         "description": "Pantai pesisir laut Arafura yang sangat luas dan berlumpur dengan mercusuar tunggal dan pemandangan perahu nelayan karam saat surut.",
         "searchQuery": "Pantai Lampu Satu Merauke, Papua Selatan, Indonesia",
         "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Pantai%20Lampu%20Satu%20Merauke%2C%20Papua%20Selatan%2C%20Indonesia"
+      },
+      {
+        "name": "Pantai Payum",
+        "city": "Merauke",
+        "rank": 5,
+        "description": "Pantai kota Merauke untuk sunset di ujung selatan.",
+        "searchQuery": "Pantai Payum, Papua Selatan, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Pantai%20Payum%2C%20Papua%20Selatan%2C%20Indonesia"
       }
     ],
     "template": {

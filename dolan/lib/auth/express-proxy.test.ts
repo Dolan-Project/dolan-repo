@@ -23,6 +23,13 @@ describe("extractAccessToken", () => {
     });
     expect(extractAccessToken(request)).toBe("complete");
   });
+
+  it("ignores an empty Bearer token", () => {
+    const request = new Request("http://localhost/api/v1/users/me", {
+      headers: { authorization: "Bearer   " },
+    });
+    expect(extractAccessToken(request)).toBeNull();
+  });
 });
 
 describe("proxyToExpress", () => {
@@ -101,5 +108,36 @@ describe("proxyToExpress", () => {
     expect(key).toMatch(
       /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
     );
+  });
+
+  it("returns PROVIDER_UNAVAILABLE when fetch throws", async () => {
+    vi.stubEnv("EXPRESS_ORIGIN", "http://127.0.0.1:4000");
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("offline")));
+    const response = await proxyToExpress(
+      new Request("http://localhost/api/v1/users/me"),
+      "/api/v1/users/me",
+    );
+    expect(response.status).toBe(503);
+  });
+
+  it("forwards content-disposition from a successful upstream", async () => {
+    vi.stubEnv("EXPRESS_ORIGIN", "http://127.0.0.1:4000");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response("pdf", {
+          status: 200,
+          headers: {
+            "content-type": "application/pdf",
+            "content-disposition": "attachment; filename=trip.pdf",
+          },
+        }),
+      ),
+    );
+    const response = await proxyToExpress(
+      new Request("http://localhost/api/v1/trips/t1/itinerary.pdf"),
+      "/api/v1/trips/t1/itinerary.pdf",
+    );
+    expect(response.headers.get("content-disposition")).toContain("trip.pdf");
   });
 });

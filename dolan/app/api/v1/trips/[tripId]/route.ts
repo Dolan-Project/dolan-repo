@@ -4,6 +4,7 @@ type Ctx = { params: Promise<{ tripId: string }> };
 
 export async function GET(request: Request, { params }: Ctx) {
   const { tripId } = await params;
+  if (tripId === "me") return tripRouteHandlers.listMine(request);
   return tripRouteHandlers.get(request, tripId);
 }
 

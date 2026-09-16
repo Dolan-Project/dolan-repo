@@ -33,6 +33,7 @@ describe("trip schemas", () => {
 
   it("filters My Trip by hosted, joined, or pending", () => {
     expect(myTripsQuerySchema.parse({}).role).toBe("hosted");
+    expect(myTripsQuerySchema.parse({ role: ["joined"] }).role).toBe("joined");
     expect(myTripsQuerySchema.parse({ role: "pending" }).role).toBe("pending");
   });
 
@@ -94,6 +95,25 @@ describe("createTripSchema", () => {
     expect(result.success).toBe(false);
   });
 
+  it("rejects public trip when capacity is below the planning party", () => {
+    const result = createTripSchema.safeParse({
+      ...knownBase,
+      visibility: "PUBLIC",
+      maxParticipants: 3,
+      meetingPoint: "Bandara Komodo (LBJ)",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects public trip without a meeting point", () => {
+    const result = createTripSchema.safeParse({
+      ...knownBase,
+      visibility: "PUBLIC",
+      maxParticipants: 7,
+    });
+    expect(result.success).toBe(false);
+  });
+
   it("rejects public meetingPoint that copies the private origin", () => {
     const result = createTripSchema.safeParse({
       ...knownBase,
@@ -144,5 +164,6 @@ describe("deleteTripBodySchema", () => {
     expect(tripDeletedHostMessage("Kuota tidak cukup.")).toBe(
       "Grup trip ini dihapus host. Alasan: Kuota tidak cukup.",
     );
+    expect(tripDeletedHostMessage("   ")).toBe("Grup trip ini dihapus host.");
   });
 });

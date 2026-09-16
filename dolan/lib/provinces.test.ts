@@ -16,4 +16,17 @@ describe("listProvinceCatalog", () => {
     expect(listProvinceCatalog("Denpasar")[0]?.slug).toBe("bali");
     expect(listProvinceCatalog()).toHaveLength(38);
   });
+
+  it("finds a province by name, capital, template id, and href", async () => {
+    const { findProvince, findProvinceForTemplate, provinceDetailHref, searchProvinces } = await import("./provinces");
+    expect(findProvince("Jawa Barat")?.slug).toBe("jawa-barat");
+    expect(searchProvinces("x")).toHaveLength(0);
+    expect(searchProvinces("bandung").some((item) => item.slug === "jawa-barat")).toBe(true);
+    const province = findProvince("Bali")!;
+    expect(findProvinceForTemplate({ templateId: province.template.id })?.slug).toBe("bali");
+    expect(findProvinceForTemplate({ city: "Denpasar" })?.slug).toBe("bali");
+    expect(findProvinceForTemplate({})).toBeUndefined();
+    expect(provinceDetailHref({ city: "Denpasar" })).toBe("/provinsi/bali");
+    expect(provinceDetailHref({ city: "Atlantis" })).toBeNull();
+  });
 });

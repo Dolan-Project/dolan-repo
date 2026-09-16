@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { GeminiItinerary } from "@dolan/shared";
 import {
+  clampDailyStopBounds,
   dropDuplicateStops,
   packGeneratedSchedule,
   planItineraryByProximity,
@@ -48,6 +49,15 @@ describe("itinerary unique destinations and budget", () => {
   it("treats the same landmark with a city suffix as one destination", () => {
     expect(sameDestination({ name: "Gedung Sate" }, { name: "Gedung Sate Bandung" })).toBe(true);
     expect(sameDestination({ googlePlaceId: "ChIJa" }, { googlePlaceId: "ChIJa" })).toBe(true);
+    expect(sameDestination(null, { name: "Gedung Sate" })).toBe(false);
+    expect(sameDestination({ name: "" }, { name: "Gedung Sate" })).toBe(false);
+    expect(sameDestination({ name: "Braga" }, { name: "Malioboro" })).toBe(false);
+  });
+
+  it("clamps daily stop bounds into a walkable day", () => {
+    expect(clampDailyStopBounds()).toEqual({ minStops: 4, maxStops: 6 });
+    expect(clampDailyStopBounds(1, 20)).toEqual({ minStops: 3, maxStops: 6 });
+    expect(clampDailyStopBounds(5, 4)).toEqual({ minStops: 5, maxStops: 5 });
   });
 
   it("keeps each destination at most once across the trip", () => {
@@ -110,6 +120,32 @@ describe("itinerary unique destinations and budget", () => {
     expect(packed.days[0]?.stops[1]?.startTime! > packed.days[0]?.stops[0]?.startTime!).toBe(true);
   });
 
+  it("keeps warung visits short even when the day has spare time", () => {
+    const packed = packGeneratedSchedule({
+      ...twoDayRepeat,
+      days: [
+        {
+          ...twoDayRepeat.days[0]!,
+          stops: [
+            stop("Gedung Sate", "ChIJaaaaaaaaaaaaaaaaaaaa", { travelDurationMinutes: 0 }),
+            stop("Warung Nasi Bandung", "ChIJeeeeeeeeeeeeeeeeeeee", {
+              activityType: "makan",
+              travelDurationMinutes: 10,
+            }),
+          ],
+        },
+      ],
+    });
+    const warung = packed.days[0]?.stops.find((item) => item.place?.name?.includes("Warung"));
+    expect(warung?.durationMinutes).toBeLessThanOrEqual(75);
+    expect(warung?.durationMinutes).toBeGreaterThanOrEqual(45);
+  });
+
+  it("returns the unique itinerary when no stop has coordinates", () => {
+    const planned = planItineraryByProximity(twoDayRepeat, new Map());
+    expect(uniqueVisitCount(planned.days)).toBe(3);
+  });
+
   it("rebuilds backpacker costs from unique visits and route distance", () => {
     const priced = refineGeneratedBudget({
       ...twoDayRepeat,
@@ -148,5 +184,53 @@ describe("itinerary unique destinations and budget", () => {
     expect(categories).toContain("ACTIVITIES");
     const local = priced.budgetItems.find((item) => item.category === "TRANSPORT_LOCAL");
     expect(local?.sourceReference).toContain("km");
+  });
+
+  it("uses cheaper backpacker rates and party-size notes", () => {
+    const priced = refineGeneratedBudget(
+      {
+        ...twoDayRepeat,
+        days: [twoDayRepeat.days[0]!],
+        budgetItems: [],
+      },
+      { regenerateMode: "cheaper", partySize: 3 },
+    );
+    expect(priced.days).toHaveLength(1);
+    expect(priced.budgetItems.some((item) => item.category === "LODGING")).toBe(false);
+    const food = priced.budgetItems.find((item) => item.category === "FOOD");
+    expect(food?.unitCostLow).toBe("40000.00");
+    expect(food?.notes).toMatch(/x3 peserta/i);
+    expect(priced.assumptions.join(" ")).toMatch(/backpacker/i);
+  });
+
+  it("prices long Banten-style hops as bus/travel, not a 900k car", () => {
+    const priced = refineGeneratedBudget({
+      ...twoDayRepeat,
+      days: [{
+        ...twoDayRepeat.days[0]!,
+        stops: [
+          stop("Serang", "ChIJeeeeeeeeeeeeeeeeeeee", { travelDistanceMeters: 0 }),
+          stop("Anyer", "ChIJffffffffffffffffffff", { travelDistanceMeters: 213_000 }),
+        ],
+      }],
+      budgetItems: [],
+    });
+    const local = priced.budgetItems.find((item) => item.category === "TRANSPORT_LOCAL");
+    expect(local?.label).toMatch(/bus\/travel/i);
+    expect(Number(local?.unitCostLow)).toBeLessThan(400_000);
+    expect(Number(local?.unitCostLow)).toBeGreaterThan(50_000);
+  });
+
+  it("uses theme-park ticket bands for Dufan", () => {
+    const priced = refineGeneratedBudget({
+      ...twoDayRepeat,
+      days: [{
+        ...twoDayRepeat.days[0]!,
+        stops: [stop("Dunia Fantasi", "ChIJdufan000000000000000")],
+      }],
+      budgetItems: [],
+    });
+    const activities = priced.budgetItems.find((item) => item.category === "ACTIVITIES");
+    expect(Number(activities?.unitCostLow)).toBeGreaterThanOrEqual(150_000);
   });
 });

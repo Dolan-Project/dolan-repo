@@ -121,6 +121,8 @@ describe("create trip wizard helpers", () => {
     expect(placeTicketEstimate("Taman Sari")).toBeGreaterThan(0);
     expect(placeTicketEstimate("Museum Nasional Indonesia")).toBeGreaterThan(0);
     expect(placeTicketEstimate("Bundaran HI")).toBe(0);
+    expect(placeTicketEstimate("Dunia Fantasi")).toBeGreaterThanOrEqual(150_000);
+    expect(placeTicketEstimate("Dufan Ancol")).toBeGreaterThanOrEqual(150_000);
   });
 
   it("packs a city day with short visits from morning into late afternoon", async () => {
@@ -171,6 +173,13 @@ describe("create trip wizard helpers", () => {
     const drive = estimateTransportLeg({ km: 40, minutes: 75 });
     expect(drive.mode).toBe("drive");
     expect(drive.cost).toBeGreaterThan(ojek.cost);
+    const longHaul = estimateTransportLeg({ km: 213, minutes: 240, placeName: "Anyer" });
+    expect(longHaul.label).toMatch(/bus\/travel/i);
+    expect(longHaul.cost).toBeLessThan(400_000);
+    expect(longHaul.cost).toBeGreaterThan(ojek.cost);
+    const boat = estimateTransportLeg({ km: 8, placeName: "Pentas Laut" });
+    expect(boat.mode).toBe("boat");
+    expect(boat.label).toMatch(/kapal/i);
   });
 
   it("caps regenerate at two attempts", () => {

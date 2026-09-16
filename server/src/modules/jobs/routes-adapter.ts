@@ -85,6 +85,20 @@ export async function applyRouteLegs(
         continue;
       }
       const haversineKm = approximateKm(from, to);
+      const stopName = `${stop.customTitle ?? ""} ${stop.place?.name ?? ""}`;
+      if (isWaterAccessLeg(stopName) && haversineKm >= 1.5) {
+        stops.push({
+          ...stop,
+          travelDurationMinutes: Math.max(20, Math.round((haversineKm / 22) * 60) + 12),
+          notes: [stop.notes, "Segmen laut: pakai kapal/perahu, bukan mobil."].filter(Boolean).join(" "),
+          routePolyline: null,
+          travelDistanceMeters: Math.round(haversineKm * 1000),
+          routeStatus: "UNAVAILABLE" as const,
+          routeTravelMode: "BOAT",
+        });
+        cursor += 1;
+        continue;
+      }
       if (haversineKm > 200) {
         stops.push({
           ...stop,
@@ -118,6 +132,12 @@ export async function applyRouteLegs(
     days.push({ ...day, stops });
   }
   return { ...itinerary, days };
+}
+
+function isWaterAccessLeg(name: string) {
+  return /komodo|padar|gili|penida|nusa lembongan|nusa penida|ferry|kapal|perahu|pulau|pentas|pahawang|umang|snorkel|diving|underwater|menyelam/.test(
+    name.toLocaleLowerCase("id-ID"),
+  );
 }
 
 function approximateKm(from: LatLng, to: LatLng): number {

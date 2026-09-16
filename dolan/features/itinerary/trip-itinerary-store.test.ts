@@ -17,5 +17,25 @@ describe("trip itinerary packing store", () => {
     const second = upsertMockChecklistItem(tripId, { title: "Sunscreen", isCompleted: false, dueDate: null });
     expect(second.id).toBe(first.id);
     expect(getMockItinerarySnapshot(tripId).checklist).toHaveLength(1);
+    const completed = upsertMockChecklistItem(tripId, { title: "Sunscreen", isCompleted: true });
+    expect(completed.isCompleted).toBe(true);
+  });
+
+  it("updates a packing item by id and ignores an empty day save", async () => {
+    const { saveMockItinerarySnapshot } = await import("./trip-itinerary-store");
+    const tripId = `pack-id-${Date.now()}`;
+    const created = upsertMockChecklistItem(tripId, { title: "Topi", isCompleted: false, dueDate: null });
+    const updated = upsertMockChecklistItem(tripId, {
+      id: created.id,
+      title: "Topi lebar",
+      isCompleted: true,
+      dueDate: "2026-11-01",
+    });
+    expect(updated.title).toBe("Topi lebar");
+    expect(updated.isCompleted).toBe(true);
+    const missing = upsertMockChecklistItem(tripId, { id: "missing", title: "Ghost" });
+    expect(missing.title).toBe("Topi lebar");
+    const kept = saveMockItinerarySnapshot(tripId, []);
+    expect(kept.checklist.length).toBeGreaterThan(0);
   });
 });

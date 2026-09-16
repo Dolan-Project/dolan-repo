@@ -44,6 +44,7 @@ declare global {
         LatLngBounds: new () => GoogleBounds;
         Point: new (x: number, y: number) => object;
         TravelMode?: { DRIVING: string; WALKING: string };
+        RenderingType?: { RASTER: string; VECTOR: string };
         DirectionsService?: new () => GoogleDirectionsService;
         importLibrary?: (name: string) => Promise<{
           DirectionsService?: new () => GoogleDirectionsService;
@@ -226,7 +227,7 @@ export function GoogleMap({
           center: { lat: -2.5, lng: 118 },
           zoom: 5,
           mapTypeId: "roadmap",
-          mapId: process.env.NEXT_PUBLIC_GOOGLE_MAP_ID || undefined,
+          renderingType: window.google.maps.RenderingType?.RASTER ?? "RASTER",
           disableDefaultUI: true,
           zoomControl: false,
           gestureHandling: "greedy",

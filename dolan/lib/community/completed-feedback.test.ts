@@ -74,4 +74,22 @@ describe("tripsFromMinePayload", () => {
     });
     expect(rows).toEqual([completedWithWayan]);
   });
+
+  it("ignores malformed payloads and fills missing titles", () => {
+    expect(tripsFromMinePayload(null)).toEqual([]);
+    expect(tripsFromMinePayload({ data: "nope" })).toEqual([]);
+    expect(
+      tripsFromMinePayload({
+        data: [
+          null,
+          { id: 1, status: "COMPLETED" },
+          { id: "done", status: "COMPLETED" },
+        ],
+      }),
+    ).toEqual([
+      { id: "done", title: "done", status: "COMPLETED", hostUsername: null },
+    ]);
+    expect(reviewTripForPeer([completedWithWayan], "   ")).toBeNull();
+    expect(reviewTripForPeer([completedWithWayan], "wayan", "missing")?.id).toBe("abc-uuid");
+  });
 });

@@ -12,6 +12,7 @@
     "dev:server": "npm run dev -w server",
     "dev:worker": "npm run dev -w worker",
     "test:server": "npm run test -w server",
+    "test:coverage": "npm run test:coverage -w shared && npm run test:coverage -w dolan && npm run test:coverage -w server",
     "typecheck:web": "tsc --noEmit -p dolan/tsconfig.json",
     "typecheck:shared": "npm run typecheck -w shared",
     "typecheck:server": "npm run typecheck -w server",

@@ -8,6 +8,7 @@ import {
   type TripForFeedback,
 } from "@/lib/community/completed-feedback";
 import { ROUTES } from "@/lib/routes";
+import { readApiJson } from "@/lib/auth/read-api-json";
 
 type ReviewFormProps = {
   username: string;
@@ -19,8 +20,10 @@ async function loadCompletedMine(): Promise<TripForFeedback[]> {
     fetch("/api/v1/trips/me?role=hosted", { credentials: "include" }),
     fetch("/api/v1/trips/me?role=joined", { credentials: "include" }),
   ]);
-  const hostedJson = (await hosted.json()) as unknown;
-  const joinedJson = (await joined.json()) as unknown;
+  const [hostedJson, joinedJson] = await Promise.all([
+    readApiJson(hosted).catch(() => null),
+    readApiJson(joined).catch(() => null),
+  ]);
   return [...tripsFromMinePayload(hostedJson), ...tripsFromMinePayload(joinedJson)];
 }
 
