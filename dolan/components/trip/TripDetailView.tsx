@@ -108,6 +108,7 @@ export function TripDetailView({
   const [shareHint, setShareHint] = useState("");
   const [templateMessage, setTemplateMessage] = useState("");
   const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [lifecycleConfirm, setLifecycleConfirm] = useState<"start" | "complete" | null>(null);
 
   async function loadAll() {
     const tripRes = await readJson<TripDetail>(await fetch(`/api/v1/trips/${tripId}`, { credentials: "include" }));
@@ -470,7 +471,7 @@ export function TripDetailView({
         </div>
       ) : null}
 
-      <div className="sticky top-14 z-40 flex items-center justify-between gap-2 border-b border-slate-200 bg-white/95 px-margin py-3 backdrop-blur-md md:hidden">
+      <div className="sticky top-0 z-40 flex items-center justify-between gap-2 border-b border-slate-200 bg-white/95 px-margin py-3 backdrop-blur-md md:hidden">
         <Link href={visitor ? ROUTES.jelajah : ROUTES.tripSaya} className="grid h-8 w-8 place-items-center rounded-full hover:bg-slate-100" aria-label="Kembali">
           <Icon name="arrow_back" className="text-[20px]" />
         </Link>
@@ -543,6 +544,23 @@ export function TripDetailView({
             </div>
           </div>
         </section>
+
+        {trip.viewerRole === "host" && trip.status !== "CANCELLED" ? (
+          <HostLifecycleCard
+            status={trip.status}
+            pending={pending}
+            confirm={lifecycleConfirm}
+            onAsk={setLifecycleConfirm}
+            onStart={() => {
+              setLifecycleConfirm(null);
+              void act(`/api/v1/trips/${trip.id}/transition`, { action: "start" });
+            }}
+            onComplete={() => {
+              setLifecycleConfirm(null);
+              void act(`/api/v1/trips/${trip.id}/transition`, { action: "complete" });
+            }}
+          />
+        ) : null}
 
         <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-12">
           <div className="space-y-6 lg:col-span-8">
@@ -970,8 +988,6 @@ export function TripDetailView({
                           {trip.status === "DRAFT" ? <button type="button" className="w-full rounded-xl px-3 py-2 text-left text-xs font-bold hover:bg-slate-50" disabled={pending} onClick={() => void act(`/api/v1/trips/${trip.id}/publish`, { confirmPublish: true, visibility: trip.visibility })}>Publish</button> : null}
                           {trip.status === "OPEN" ? <button type="button" className="w-full rounded-xl px-3 py-2 text-left text-xs font-bold hover:bg-slate-50" disabled={pending} onClick={() => void act(`/api/v1/trips/${trip.id}/transition`, { action: "close" })}>Tutup pengajuan</button> : null}
                           {trip.status === "CLOSED" ? <button type="button" className="w-full rounded-xl px-3 py-2 text-left text-xs font-bold hover:bg-slate-50" disabled={pending} onClick={() => void act(`/api/v1/trips/${trip.id}/transition`, { action: "reopen" })}>Buka lagi</button> : null}
-                          {trip.status === "OPEN" || trip.status === "CLOSED" ? <button type="button" className="w-full rounded-xl px-3 py-2 text-left text-xs font-bold hover:bg-slate-50" disabled={pending} onClick={() => void act(`/api/v1/trips/${trip.id}/transition`, { action: "start" })}>Mulai trip</button> : null}
-                          {trip.status === "ONGOING" ? <button type="button" className="w-full rounded-xl px-3 py-2 text-left text-xs font-bold hover:bg-slate-50" disabled={pending} onClick={() => void act(`/api/v1/trips/${trip.id}/transition`, { action: "complete" })}>Selesai</button> : null}
                           {trip.status === "COMPLETED" ? <button type="button" className="w-full rounded-xl px-3 py-2 text-left text-xs font-bold hover:bg-slate-50" disabled={pending} onClick={() => void act(`/api/v1/trips/${trip.id}/publish-as-template`, {})}>Jadikan template</button> : null}
                           {trip.status !== "CANCELLED" && trip.status !== "COMPLETED" ? <button type="button" className="w-full rounded-xl px-3 py-2 text-left text-xs font-bold text-error hover:bg-rose-50" disabled={pending} onClick={() => void act(`/api/v1/trips/${trip.id}/transition`, { action: "cancel" })}>Batalkan</button> : null}
                           <button type="button" className="w-full rounded-xl px-3 py-2 text-left text-xs font-bold text-error hover:bg-rose-50" disabled={pending} onClick={() => { setManageOpen(false); setDeleteConfirm(true); }}>Hapus trip</button>
@@ -998,7 +1014,7 @@ export function TripDetailView({
               </>
             ) : null}
             {trip.status === "COMPLETED" && (trip.viewerRole === "host" || trip.viewerRole === "participant") ? (
-              <AttendanceConfirm tripId={trip.id} tripTitle={trip.title} reviewUsername={trip.viewerRole === "participant" ? trip.host.username : null} />
+              <AttendanceConfirm tripId={trip.id} tripTitle={trip.title} />
             ) : null}
           </aside>
         </div>
@@ -1047,6 +1063,97 @@ export function TripDetailView({
         />
       ) : null}
     </div>
+  );
+}
+
+function HostLifecycleCard({
+  status,
+  pending,
+  confirm,
+  onAsk,
+  onStart,
+  onComplete,
+}: {
+  status: TripDetail["status"];
+  pending: boolean;
+  confirm: "start" | "complete" | null;
+  onAsk: (next: "start" | "complete" | null) => void;
+  onStart: () => void;
+  onComplete: () => void;
+}) {
+  const canStart = status === "OPEN" || status === "CLOSED";
+  const canFinish = status === "ONGOING";
+  const label =
+    status === "DRAFT"
+      ? "Trip masih draf"
+      : status === "ONGOING"
+        ? "Trip sedang berlangsung"
+        : status === "COMPLETED"
+          ? "Trip sudah selesai"
+          : "Trip belum dimulai";
+  const copy =
+    status === "DRAFT"
+      ? "Publish trip dulu lewat menu Kelola sebelum bisa dimulai."
+      : status === "COMPLETED"
+        ? "Perjalanan sudah ditutup. Peserta bisa mengonfirmasi kehadiran dan memberi ulasan."
+        : "Hanya host yang bisa memulai dan mengakhiri trip ini.";
+
+  return (
+    <section className="mb-6 rounded-2xl border border-primary/20 bg-white p-5 shadow-[0_1px_2px_rgba(16,36,58,.04)]">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-xs font-bold uppercase tracking-wider text-primary">Status perjalanan</p>
+          <p className="mt-1 text-sm font-bold text-on-surface">{label}</p>
+          <p className="mt-1 text-xs text-on-surface-variant">{copy}</p>
+        </div>
+        {canStart || canFinish ? (
+          <div className="flex flex-wrap gap-2">
+            {canStart ? (
+              <button
+                type="button"
+                className="rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-primary-container disabled:opacity-60"
+                disabled={pending}
+                onClick={() => onAsk("start")}
+              >
+                Mulai trip
+              </button>
+            ) : null}
+            {canFinish ? (
+              <button
+                type="button"
+                className="rounded-xl bg-[#071c32] px-4 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-slate-800 disabled:opacity-60"
+                disabled={pending}
+                onClick={() => onAsk("complete")}
+              >
+                Selesaikan trip
+              </button>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
+      {confirm ? (
+        <div className="mt-4 rounded-xl bg-slate-50 p-4">
+          <p className="text-xs leading-relaxed text-on-surface">
+            {confirm === "start"
+              ? "Mulai trip sekarang? Status berubah menjadi berlangsung, dan hanya kamu yang nanti bisa menyelesaikannya."
+              : "Selesaikan trip sekarang? Peserta akan diminta mengonfirmasi kehadiran dan bisa memberi ulasan."}
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              type="button"
+              className="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-white disabled:opacity-60"
+              disabled={pending}
+              onClick={confirm === "start" ? onStart : onComplete}
+            >
+              {pending ? "Menyimpan…" : confirm === "start" ? "Ya, mulai trip" : "Ya, selesaikan trip"}
+            </button>
+            <button type="button" className="rounded-xl px-4 py-2 text-xs font-bold text-on-surface-variant hover:bg-white" disabled={pending} onClick={() => onAsk(null)}>
+              Batal
+            </button>
+          </div>
+        </div>
+      ) : null}
+    </section>
   );
 }
 

@@ -53,7 +53,7 @@ export function PlaceDetailExperience({ googlePlaceId }: { googlePlaceId: string
 
   return (
     <>
-      <div className="sticky top-14 z-40 flex items-center gap-2 border-b border-outline-variant/35 bg-white/92 px-margin py-2.5 backdrop-blur-xl md:hidden">
+      <div className="sticky top-0 z-40 flex items-center gap-2 border-b border-outline-variant/35 bg-white/92 px-margin py-2.5 backdrop-blur-xl md:hidden">
         <Link href="/jelajah" className="flex h-9 w-9 items-center justify-center rounded-full bg-surface-container" aria-label="Kembali"><Icon name="arrow_back" className="text-[19px]" /></Link>
         <p className="type-label min-w-0 flex-1 truncate">{place.name}</p>
         <button type="button" className="flex h-9 w-9 items-center justify-center rounded-full bg-surface-container" aria-label="Simpan"><Icon name="bookmark_border" className="text-[19px]" /></button>

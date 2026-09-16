@@ -1,7 +1,7 @@
 import type { EditableItineraryDay } from "@dolan/shared";
 import { INDONESIA_PROVINCES, type CuratedProvince } from "@/lib/provinces";
 import { resolvePlaceCoordinates } from "@/lib/place-coordinates";
-import { haversineKm, orderStopsWithoutBacktrack, planEfficientDays, selectCompactStops } from "@/lib/route-optimize";
+import { haversineKm, planEfficientDays, selectCompactStops } from "@/lib/route-optimize";
 import { addDaysToIso, packItinerarySchedule, placeFromTemplateStop, PROVINCE_CENTERS } from "@/lib/template-itinerary";
 import { ASSETS } from "@/lib/assets";
 
@@ -618,22 +618,19 @@ export function resolveTripItineraryDays(input: {
   });
 }
 
-function daySpanKm(stops: DestinationStopSeed[]) {
-  if (stops.length < 2) return 0;
-  let max = 0;
-  for (let i = 0; i < stops.length; i += 1) {
-    for (let j = i + 1; j < stops.length; j += 1) {
-      max = Math.max(max, haversineKm(stops[i]!, stops[j]!));
-    }
-  }
-  return max;
+function clockFromCuratedNotes(notes: string | null | undefined) {
+  const match = notes?.match(/pukul\s+(\d{1,2})[.:](\d{2})/i);
+  if (!match) return null;
+  const hour = Number(match[1]);
+  const minute = Number(match[2]);
+  if (!Number.isFinite(hour) || !Number.isFinite(minute) || hour > 23 || minute > 59) return null;
+  return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
 }
 
 function clustersFromCuratedDays(
   stops: Array<DestinationStopSeed & { day: number; sequence: number }>,
   durationDays: number,
   hub: { lat: number; lng: number },
-  maxDaySpanKm = 100,
 ) {
   const byDay = new Map<number, Array<DestinationStopSeed & { sequence: number }>>();
   stops.forEach((stop) => {
@@ -651,12 +648,10 @@ function clustersFromCuratedDays(
     )
     .filter((chunk) => chunk.length > 0);
 
-  const compact = curated.length > 0 && curated.every((chunk) => daySpanKm(chunk) <= maxDaySpanKm);
-  if (compact) {
-    return curated.map((chunk, index) =>
-      orderStopsWithoutBacktrack(chunk, index === 0 ? hub : curated[index - 1]?.at(-1) ?? hub),
-    );
-  }
+  // JSON day + sequence is the authored route. Re-clustering by distance was
+  // collapsing later days into day 1 when place coordinates were approximate.
+  if (curated.length > 0) return curated;
+
   const unique = stops.filter((stop, index, list) => list.findIndex((item) => item.name === stop.name) === index);
   return planEfficientDays(
     unique.map(({ name, lat, lng, notes }) => ({ name, lat, lng, notes })),
@@ -679,36 +674,35 @@ export function buildProvinceTemplateDays(province: CuratedProvince, options?: {
       sequence: stop.sequence,
     };
   });
-  const unique = seeds.filter((stop, index, list) => list.findIndex((item) => item.name === stop.name) === index);
-  const hub = resolvePlaceCoordinates(unique[0]?.name ?? "", province.name)
+  const hub = resolvePlaceCoordinates(seeds[0]?.name ?? "", province.name)
     ?? PROVINCE_CENTERS[province.name]
-    ?? { lat: unique[0]?.lat ?? -2.5, lng: unique[0]?.lng ?? 118 };
-  const clusters = clustersFromCuratedDays(unique, province.template.durationDays, hub);
+    ?? { lat: seeds[0]?.lat ?? -2.5, lng: seeds[0]?.lng ?? 118 };
+  const clusters = clustersFromCuratedDays(seeds, province.template.durationDays, hub);
   const startDate = options?.startDate && /^\d{4}-\d{2}-\d{2}$/.test(options.startDate) ? options.startDate : "";
-  return packItinerarySchedule(
-    clusters.map((chunk, dayIndex) => ({
-      id: `${province.slug}-day-${dayIndex + 1}`,
-      dayNumber: dayIndex + 1,
-      date: startDate ? addDaysToIso(startDate, dayIndex) : `2026-10-${String(24 + dayIndex).padStart(2, "0")}`,
-      title: `Hari ${dayIndex + 1} · ${province.name}`,
-      stops: chunk.map((stop, stopIndex) => {
-        const place = placeFromTemplateStop(stop.name, province.name);
-        const previous = chunk[stopIndex - 1];
-        const key = stop.name.toLocaleLowerCase("id-ID");
-        const travel = travelBetweenSeeds(previous, stop, stopIndex);
-        return {
-          id: `${province.slug}-day-${dayIndex + 1}-stop-${stopIndex + 1}`,
-          sequence: stopIndex + 1,
-          place: { ...place, latitude: stop.lat, longitude: stop.lng, formattedAddress: `${stop.name}, ${province.name}` },
-          customTitle: stop.name,
-          activityType: stopIndex === 0 && dayIndex === 0 ? "Titik kumpul" : "Wisata",
-          startTime: "08:00",
-          durationMinutes: durationByName.get(key) || 120,
-          travelDurationMinutes: travel,
-          notes: notesByName.get(key) ?? stop.notes ?? `Rute hemat jarak ke ${stop.name}.`,
-          isLocked: false,
-        };
-      }),
-    })),
-  );
+  let sequence = 1;
+  return clusters.map((chunk, dayIndex) => ({
+    id: `${province.slug}-day-${dayIndex + 1}`,
+    dayNumber: dayIndex + 1,
+    date: startDate ? addDaysToIso(startDate, dayIndex) : `2026-10-${String(24 + dayIndex).padStart(2, "0")}`,
+    title: `Hari ${dayIndex + 1} · ${province.name}`,
+    stops: chunk.map((stop, stopIndex) => {
+      const place = placeFromTemplateStop(stop.name, province.name);
+      const previous = chunk[stopIndex - 1];
+      const key = stop.name.toLocaleLowerCase("id-ID");
+      const notes = notesByName.get(key) ?? stop.notes ?? `Rute hemat jarak ke ${stop.name}.`;
+      const travel = travelBetweenSeeds(previous, stop, stopIndex);
+      return {
+        id: `${province.slug}-day-${dayIndex + 1}-stop-${stopIndex + 1}`,
+        sequence: sequence++,
+        place: { ...place, latitude: stop.lat, longitude: stop.lng, formattedAddress: `${stop.name}, ${province.name}` },
+        customTitle: stop.name,
+        activityType: stopIndex === 0 && dayIndex === 0 ? "Titik kumpul" : "Wisata",
+        startTime: clockFromCuratedNotes(notes) ?? "08:00",
+        durationMinutes: durationByName.get(key) || 120,
+        travelDurationMinutes: travel,
+        notes,
+        isLocked: false,
+      };
+    }),
+  }));
 }

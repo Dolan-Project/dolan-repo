@@ -293,7 +293,7 @@ function ChatMembersPane({
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Cari nama kawan rombongan…"
-            className="w-full rounded-lg bg-surface-container-low py-1.5 pl-8 pr-3 text-xs text-on-surface placeholder:text-on-surface-variant/70 focus:outline-none focus:ring-1 focus:ring-primary/30"
+            className="w-full rounded-lg bg-white py-1.5 pl-8 pr-3 text-xs text-on-surface placeholder:text-on-surface-variant/70 focus:outline-none focus:ring-1 focus:ring-primary/30 md:bg-surface-container-low"
           />
         </label>
       ) : null}

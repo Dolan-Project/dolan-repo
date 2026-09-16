@@ -62,7 +62,7 @@ export function TripChatInbox({ activeTripId }: { activeTripId?: string }) {
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder="Cari obrolan, trip, kawan…"
-          className="w-full rounded-xl bg-surface-container-low py-2 pl-9 pr-8 text-sm text-on-surface placeholder:text-on-surface-variant/70 focus:outline-none focus:ring-2 focus:ring-primary/20"
+          className="w-full rounded-xl bg-white py-2 pl-9 pr-8 text-sm text-on-surface placeholder:text-on-surface-variant/70 focus:outline-none focus:ring-2 focus:ring-primary/20 md:bg-surface-container-low"
         />
         {query ? (
           <button

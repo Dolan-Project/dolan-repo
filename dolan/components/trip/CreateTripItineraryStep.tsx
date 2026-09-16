@@ -88,6 +88,42 @@ type CreateTripItineraryStepProps = {
   mapFooter?: ReactNode;
 };
 
+function DayRouteFilters({
+  days,
+  value,
+  onChange,
+}: {
+  days: Array<{ id: string; dayNumber: number }>;
+  value: string;
+  onChange: (next: "all" | string) => void;
+}) {
+  return (
+    <div className="flex gap-1.5 overflow-x-auto" role="tablist" aria-label="Filter hari">
+      <button
+        type="button"
+        role="tab"
+        aria-selected={value === "all"}
+        className={`min-h-9 shrink-0 rounded-full px-3.5 type-caption font-bold ${value === "all" ? "bg-primary text-white" : "bg-slate-100 text-on-surface"}`}
+        onClick={() => onChange("all")}
+      >
+        All
+      </button>
+      {days.map((day) => (
+        <button
+          key={day.id}
+          type="button"
+          role="tab"
+          aria-selected={value === day.id}
+          className={`min-h-9 shrink-0 rounded-full px-3.5 type-caption font-bold ${value === day.id ? "bg-primary text-white" : "bg-slate-100 text-on-surface"}`}
+          onClick={() => onChange(day.id)}
+        >
+          Day {day.dayNumber}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export function CreateTripItineraryStep({
   days,
   selectedStopId,
@@ -170,6 +206,11 @@ export function CreateTripItineraryStep({
             {generating ? "Mengoptimalkan…" : unlimitedRegenerate ? "Regenerate" : leftover > 0 ? `Regenerate (${leftover}x)` : "Batas regenerate"}
           </button>
         </div>
+        {numberedDays.length > 0 ? (
+          <div className="mb-3">
+            <DayRouteFilters days={numberedDays} value={routeFilter} onChange={setRouteFilter} />
+          </div>
+        ) : null}
         {budgetWarning ? (
           <p className="mb-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2.5 type-caption font-bold text-rose-800" role="alert">
             {budgetWarning}
@@ -232,27 +273,6 @@ export function CreateTripItineraryStep({
           ) : null}
         </div>
         <div className="space-y-3">
-              {numberedDays.length > 1 ? (
-            <div className="flex flex-wrap gap-1.5">
-              <button
-                type="button"
-                className={`rounded-full px-3 py-1.5 type-caption ${routeFilter === "all" ? "bg-primary text-white" : "bg-slate-100 text-on-surface"}`}
-                onClick={() => setRouteFilter("all")}
-              >
-                Semua rute
-              </button>
-              {numberedDays.map((day) => (
-                <button
-                  key={`list-${day.id}`}
-                  type="button"
-                  className={`rounded-full px-3 py-1.5 type-caption ${routeFilter === day.id ? "bg-primary text-white" : "bg-slate-100 text-on-surface"}`}
-                  onClick={() => setRouteFilter(day.id)}
-                >
-                  Hari {day.dayNumber}
-                </button>
-              ))}
-            </div>
-          ) : null}
           {visibleDays.map((day) => {
             const dayTotal = day.stops.reduce((sum, stop) => sum + (budgetPlan.byStopId[stop.id]?.total ?? 0), 0);
             return (
@@ -542,12 +562,19 @@ export function CreateTripItineraryStep({
         </div>
       </div>
       <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white lg:sticky lg:top-24">
-        <div className="flex items-center gap-2 border-b border-slate-200 bg-white px-4 py-3">
-          <Icon name="map" className="text-[20px] text-primary" />
-          <div>
-            <p className="type-caption font-bold text-on-surface">Peta rute</p>
-            <p className="type-caption text-on-surface-variant">Nomor pin sama dengan daftar.</p>
+        <div className="border-b border-slate-200 bg-white px-4 py-3">
+          <div className="flex items-center gap-2">
+            <Icon name="map" className="text-[20px] text-primary" />
+            <div>
+              <p className="type-caption font-bold text-on-surface">Peta rute</p>
+              <p className="type-caption text-on-surface-variant">Nomor pin sama dengan daftar.</p>
+            </div>
           </div>
+          {numberedDays.length > 0 ? (
+            <div className="mt-3">
+              <DayRouteFilters days={numberedDays} value={routeFilter} onChange={setRouteFilter} />
+            </div>
+          ) : null}
         </div>
         <div className="h-[280px] bg-white md:h-[340px] lg:h-[420px]">
           {markers.length > 0 ? (

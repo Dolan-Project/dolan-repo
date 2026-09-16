@@ -25,7 +25,7 @@ const categoryFilters = [
 const snapHeight: Record<SheetSnap, string> = {
   collapsed: "31%",
   half: "58%",
-  expanded: "calc(100% - 0.75rem)",
+  expanded: "calc(100% - 9rem)",
 };
 
 function itemId(item: ExploreItem) {
@@ -208,7 +208,7 @@ export function ExploreExperience() {
   }
 
   return (
-    <div className="flex h-[calc(100dvh-3.5rem)] min-h-[560px] flex-col overflow-hidden bg-surface md:h-[calc(100dvh-4rem)]">
+    <div className="flex h-dvh min-h-[560px] flex-col overflow-hidden bg-surface md:h-[calc(100dvh-4rem)]">
       <div className="relative min-h-0 flex-1">
         <div className="absolute inset-x-4 top-3 z-40 lg:hidden">
           <SearchField draftQuery={draftQuery} onDraftQuery={setDraftQuery} onSubmit={() => setQuery(draftQuery.trim())} compact />
@@ -245,7 +245,7 @@ export function ExploreExperience() {
 
 function SearchField({ draftQuery, onDraftQuery, onSubmit, compact = false }: { draftQuery: string; onDraftQuery: (value: string) => void; onSubmit: () => void; compact?: boolean }) {
   return <form onSubmit={(event) => { event.preventDefault(); onSubmit(); }} className={compact ? "mx-auto max-w-xl" : "w-full"}>
-    <label className={`flex items-center gap-2.5 border border-outline-variant/45 bg-surface-container-low shadow-sm transition focus-within:border-primary/35 focus-within:bg-white focus-within:shadow-md ${compact ? "rounded-full py-1.5 pl-4 pr-1.5" : "rounded-2xl py-2 pl-4 pr-2"}`}>
+    <label className={`flex items-center gap-2.5 border border-outline-variant/45 shadow-sm transition focus-within:border-primary/35 focus-within:shadow-md ${compact ? "rounded-full bg-white py-1.5 pl-4 pr-1.5" : "rounded-2xl bg-surface-container-low py-2 pl-4 pr-2 focus-within:bg-white"}`}>
       <Icon name="search" className="text-[21px] text-on-surface-variant" />
       <input value={draftQuery} onChange={(event) => onDraftQuery(event.target.value)} className="type-label min-w-0 flex-1 bg-transparent text-on-surface outline-none" placeholder="Cari wisata, kota, atau trip..." />
       <button type="submit" aria-label="Cari" className={`grid shrink-0 place-items-center rounded-full bg-primary text-white shadow-[0_6px_16px_rgba(0,74,198,.24)] ${compact ? "h-10 w-10" : "h-9 w-9"}`}><Icon name="arrow_forward" className="text-[19px]" /></button>

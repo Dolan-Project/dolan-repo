@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { AuthSession } from "@/lib/contracts";
 import { ROUTES, type NavKey } from "@/lib/routes";
@@ -16,6 +16,26 @@ const desktopLinks: { key: NavKey; href: string; label: string }[] = [
   { key: "trip-saya", href: ROUTES.tripSaya, label: "Trip Saya" },
 ];
 
+export function hideMobileHeader(pathname: string) {
+  return (
+    pathname.startsWith("/jelajah") ||
+    pathname.startsWith("/wisata/") ||
+    pathname.startsWith("/trip-saya") ||
+    /^\/trip\/[^/]+(?:\/edit)?$/.test(pathname)
+  );
+}
+
+export function HeaderSpacer({ flush = false }: { flush?: boolean }) {
+  const pathname = usePathname();
+  if (flush) return null;
+  return (
+    <div
+      aria-hidden
+      className={hideMobileHeader(pathname) ? "hidden md:block md:h-16" : "h-14 md:h-16"}
+    />
+  );
+}
+
 function isActive(pathname: string, key: NavKey) {
   if (key === "beranda") return pathname === "/";
   if (key === "jelajah")
@@ -23,7 +43,8 @@ function isActive(pathname: string, key: NavKey) {
       pathname.startsWith("/jelajah") ||
       pathname.startsWith("/wisata") ||
       pathname.startsWith("/itinerary") ||
-      pathname.startsWith("/trip")
+      pathname === "/trip" ||
+      pathname.startsWith("/trip/")
     );
   if (key === "trip-saya") return pathname.startsWith("/trip-saya");
   if (key === "buat-trip") return pathname.startsWith("/buat-trip");
@@ -39,9 +60,8 @@ export function SiteHeader({
   unreadCount?: number;
 }) {
   const pathname = usePathname();
-  const router = useRouter();
   const [scrolled, setScrolled] = useState(false);
-  const [query, setQuery] = useState("");
+  const compactMobile = hideMobileHeader(pathname);
   useEffect(() => {
     const update = () => setScrolled(window.scrollY > 8);
     update();
@@ -51,7 +71,7 @@ export function SiteHeader({
 
   return (
     <header
-      className={`fixed top-0 z-50 w-full border-b border-[#e8edf3] bg-white/94 backdrop-blur-xl ${
+      className={`${compactMobile ? "hidden md:block" : ""} fixed top-0 z-50 w-full border-b border-[#e8edf3] bg-white/94 backdrop-blur-xl ${
         scrolled ? "shadow-[0_8px_30px_rgba(15,59,94,.06)]" : ""
       }`}
     >
@@ -64,25 +84,6 @@ export function SiteHeader({
             className="h-8 w-auto object-contain object-left mix-blend-multiply md:h-9"
           />
         </Link>
-
-        <form
-          className="hidden min-w-0 flex-1 items-center gap-2 rounded-full border border-[#e4e9f0] bg-[#f4f6f9] px-3.5 py-2 md:flex md:max-w-[14rem] xl:max-w-[20rem]"
-          action={ROUTES.jelajah}
-          onSubmit={(event) => {
-            event.preventDefault();
-            const next = query.trim();
-            router.push(next ? `${ROUTES.jelajah}?q=${encodeURIComponent(next)}` : ROUTES.jelajah);
-          }}
-        >
-          <Icon name="search" className="text-[18px] text-on-surface-variant" />
-          <input
-            name="q"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            className="min-w-0 flex-1 bg-transparent type-caption text-on-surface outline-none placeholder:text-on-surface-variant/80"
-            placeholder="Cari destinasi, rute, atau kawan dolan..."
-          />
-        </form>
 
         <nav className="ml-auto hidden items-center gap-0.5 lg:flex">
           {desktopLinks.map((link) => {
@@ -115,7 +116,7 @@ export function SiteHeader({
           </Link>
         </nav>
 
-        <div className="flex shrink-0 items-center gap-2 md:gap-3">
+        <div className="ml-auto flex shrink-0 items-center gap-2 lg:ml-0 md:gap-3">
           {session ? (
             <Link
               href={ROUTES.buatTrip}
@@ -125,9 +126,21 @@ export function SiteHeader({
               Buat Trip
             </Link>
           ) : null}
+          <Link
+            href={ROUTES.rekomendasi}
+            aria-label="Rekomendasi"
+            aria-current={pathname.startsWith("/rekomendasi") ? "page" : undefined}
+            className={`flex h-10 w-10 items-center justify-center rounded-full transition-colors md:hidden ${
+              pathname.startsWith("/rekomendasi")
+                ? "bg-primary/10 text-primary"
+                : "text-on-surface-variant hover:bg-surface-container hover:text-on-surface"
+            }`}
+          >
+            <Icon name="public" className="text-[22px]" />
+          </Link>
           <NotificationBell session={session} unreadCount={unreadCount} />
           {session ? (
-            <Link href={ROUTES.profil} aria-label="Profil">
+            <Link href={ROUTES.profil} aria-label="Profil" className="hidden md:inline-flex">
               <UserAvatar
                 src={session.user.avatarUrl}
                 className="h-8 w-8 rounded-full ring-2 ring-primary-fixed"

@@ -26,8 +26,10 @@ type SortTab = "popular" | "latest" | "routes" | "friends";
 export function HomeFeed({ session, feed }: HomeFeedProps) {
   const router = useRouter();
   const { tasks, stream: initialStream, composer, trips, provinces } = feed.data;
+  const leftRailRef = useRef<HTMLElement>(null);
   const catCardRef = useRef<HTMLDivElement>(null);
-  const [catHeight, setCatHeight] = useState<number | null>(null);
+  const popularRef = useRef<HTMLElement>(null);
+  const [popularHeight, setPopularHeight] = useState<number | null>(null);
   const [stream, setStream] = useState<HomeStreamItem[]>(initialStream);
   const [error, setError] = useState(feed.ok ? "" : feed.error);
   const [pending, setPending] = useState(false);
@@ -76,14 +78,27 @@ export function HomeFeed({ session, feed }: HomeFeedProps) {
   }, [session?.user.username]);
 
   useEffect(() => {
-    const node = catCardRef.current;
-    if (!node) return;
-    const update = () => setCatHeight(Math.round(node.getBoundingClientRect().height));
+    const left = leftRailRef.current;
+    const cat = catCardRef.current;
+    const popular = popularRef.current;
+    if (!left || !cat || !popular) return;
+    const update = () => {
+      const catBox = cat.getBoundingClientRect();
+      if (catBox.height < 1) return;
+      const next = Math.round(catBox.bottom - popular.getBoundingClientRect().top);
+      if (next < 80) return;
+      setPopularHeight((current) => (current === next ? current : next));
+    };
     update();
     const observer = new ResizeObserver(update);
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, []);
+    observer.observe(left);
+    if (popular.parentElement) observer.observe(popular.parentElement);
+    window.addEventListener("resize", update);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", update);
+    };
+  }, [session]);
 
   const canPublish = tasks.profileComplete;
   const visibleStream = useMemo(() => {
@@ -177,7 +192,7 @@ export function HomeFeed({ session, feed }: HomeFeedProps) {
 
   return (
     <div className={styles.page} id="momen">
-      <aside className={styles.rail}>
+      <aside className={styles.rail} ref={leftRailRef}>
         {session ? (
           <>
             <div className={styles.profileCard}>
@@ -416,7 +431,7 @@ export function HomeFeed({ session, feed }: HomeFeedProps) {
           </div>
         </div>
 
-        <PopularProvinces provinces={provinces} height={catHeight} />
+        <PopularProvinces provinces={provinces} height={popularHeight} rootRef={popularRef} />
       </aside>
 
       <p className={styles.pageFoot}>Jejak dolan. Ruang temu, penjelajah rute, dan cerita nusantara.</p>
@@ -462,9 +477,11 @@ function popularPage(slides: ProvinceSlide[], start: number) {
 function PopularProvinces({
   provinces,
   height,
+  rootRef,
 }: {
   provinces: HomeFeedPayload["provinces"];
   height: number | null;
+  rootRef: React.RefObject<HTMLElement | null>;
 }) {
   const slides = useMemo(() => popularProvinceSlides(provinces), [provinces]);
   const count = slides.length;
@@ -501,6 +518,7 @@ function PopularProvinces({
 
   return (
     <section
+      ref={rootRef}
       className={styles.popularStack}
       style={height ? { height } : undefined}
       aria-label="Provinsi populer di Dolan"

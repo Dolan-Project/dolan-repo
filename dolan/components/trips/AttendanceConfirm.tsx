@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ROUTES } from "@/lib/routes";
+
+type ReviewPeer = { username: string; label: string };
 
 type AttendanceConfirmProps = {
   tripId: string;
@@ -27,6 +29,35 @@ export function AttendanceConfirm({
   const [message, setMessage] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [markPresent, setMarkPresent] = useState(true);
+  const [peers, setPeers] = useState<ReviewPeer[]>(
+    reviewUsername ? [{ username: reviewUsername, label: reviewUsername }] : [],
+  );
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void (async () => {
+      const [tripResponse, meResponse] = await Promise.all([
+        fetch(`/api/v1/trips/${encodeURIComponent(tripId)}`, { credentials: "include", signal: controller.signal }),
+        fetch("/api/v1/users/me", { credentials: "include", signal: controller.signal }),
+      ]);
+      if (!tripResponse.ok) return;
+      const tripJson = (await tripResponse.json()) as {
+        success?: boolean;
+        data?: { members?: Array<{ id: string; username: string; displayName: string }>; host?: { id: string; username: string; displayName: string } };
+      };
+      const meJson = meResponse.ok
+        ? ((await meResponse.json()) as { success?: boolean; data?: { user?: { id?: string } } })
+        : null;
+      if (controller.signal.aborted || !tripJson.success) return;
+      const meId = meJson?.data?.user?.id ?? null;
+      const roster = tripJson.data?.members?.length ? tripJson.data.members : tripJson.data?.host ? [tripJson.data.host] : [];
+      const others = roster.filter((member) => member.username && member.id !== meId);
+      if (others.length > 0) {
+        setPeers(others.map((member) => ({ username: member.username, label: member.displayName || member.username })));
+      }
+    })().catch(() => undefined);
+    return () => controller.abort();
+  }, [tripId]);
 
   async function submit(body: { confirmed: boolean; targetUserId?: string }) {
     setPending(true);
@@ -56,10 +87,7 @@ export function AttendanceConfirm({
     );
   }
 
-  const reviewHref =
-    reviewUsername != null && reviewUsername.length > 0
-      ? `${ROUTES.profilUlasan(reviewUsername)}?tripId=${encodeURIComponent(tripId)}`
-      : null;
+  const reviewPeers = peers.filter((peer) => peer.username.length > 0);
 
   return (
     <section className="card-surface mt-3 p-4 md:p-5">
@@ -115,13 +143,19 @@ export function AttendanceConfirm({
           {message}
         </p>
       ) : null}
-      {reviewHref && confirmed && !disputed ? (
-        <Link
-          href={reviewHref}
-          className="mt-3 inline-flex min-h-11 items-center type-label font-semibold text-primary"
-        >
-          Tulis ulasan untuk @{reviewUsername}
-        </Link>
+      {confirmed && !disputed && reviewPeers.length > 0 ? (
+        <div className="mt-3 space-y-1">
+          <p className="type-caption font-semibold text-on-surface">Beri rating rekan trip</p>
+          {reviewPeers.map((peer) => (
+            <Link
+              key={peer.username}
+              href={`${ROUTES.profilUlasan(peer.username)}?tripId=${encodeURIComponent(tripId)}`}
+              className="flex min-h-11 items-center type-label font-semibold text-primary"
+            >
+              Tulis ulasan untuk {peer.label}
+            </Link>
+          ))}
+        </div>
       ) : null}
     </section>
   );

@@ -72,6 +72,9 @@
 
   --font-sans: var(--font-plus-jakarta), ui-sans-serif, system-ui, sans-serif;
 
+  /* Phone stays below 768px. iPad and other tablets use the desktop layout. */
+  --breakpoint-lg: 48rem;
+
   --spacing-margin: 1rem;
   --spacing-margin-tablet: 1.5rem;
   --spacing-margin-desktop: 2.5rem;
