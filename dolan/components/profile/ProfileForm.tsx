@@ -12,15 +12,8 @@ import {
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Field } from "@/components/auth/Field";
+import { DomicileField } from "@/components/profile/DomicileField";
 import { Icon } from "@/components/ui/Icon";
-
-const DOMICILES = [
-  "Kota Bandung, Jawa Barat",
-  "Jakarta Selatan, DKI Jakarta",
-  "Kota Surabaya, Jawa Timur",
-  "Kota Denpasar, Bali",
-  "Kab. Sleman, D.I. Yogyakarta",
-];
 
 type ProfileFormProps = {
   user: PublicUser;
@@ -99,37 +92,7 @@ export function ProfileForm({ user, next }: ProfileFormProps) {
           </div>
         </Field>
       </div>
-      <Field
-        id="domicile"
-        label="Domisili Kota / Kabupaten"
-        error={fieldErrors.domicile}
-        hint="Digunakan untuk merekomendasikan titik kumpul terdekat."
-      >
-        <div className="relative">
-          <Icon
-            name="location_on"
-            className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[20px] text-on-surface-variant"
-          />
-          <select
-            id="domicile"
-            className="field-input field-input-icon appearance-none pr-11"
-            required
-            value={domicile}
-            aria-invalid={Boolean(fieldErrors.domicile)}
-            onChange={(event) => setDomicile(event.target.value)}
-          >
-            <option value="">Pilih domisili</option>
-            {DOMICILES.map((city) => (
-              <option key={city} value={city}>
-                {city}
-              </option>
-            ))}
-            {domicile && !DOMICILES.includes(domicile) ? (
-              <option value={domicile}>{domicile}</option>
-            ) : null}
-          </select>
-        </div>
-      </Field>
+      <DomicileField id="domicile" value={domicile} error={fieldErrors.domicile} onChange={setDomicile} />
       <Field
         id="bio"
         label="Bio Singkat Traveler"

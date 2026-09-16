@@ -14,7 +14,11 @@ import { JoinRequestsModal } from "./JoinRequestsModal";
 import { DeleteTripDialog } from "./DeleteTripDialog";
 import { TripCoverImage } from "./TripCoverImage";
 
-const tabs: { id: MyTripRole; label: string }[] = [
+type TripListFilter = MyTripRole | "all";
+type ListedTrip = MyTripSummary & { listRole: MyTripRole };
+
+const tabs: { id: TripListFilter; label: string }[] = [
+  { id: "all", label: "Semua" },
   { id: "hosted", label: "Dibuat" },
   { id: "joined", label: "Diikuti" },
   { id: "pending", label: "Pengajuan" },
@@ -32,6 +36,26 @@ function parseMyTripRows(payload: unknown): { rows: MyTripSummary[]; error?: str
     return { rows: (json.data as { items: MyTripSummary[] }).items };
   }
   return { rows: [] };
+}
+
+async function loadListedTrips(filter: TripListFilter, signal?: AbortSignal): Promise<{ rows: ListedTrip[]; error?: string }> {
+  const roles: MyTripRole[] = filter === "all" ? ["hosted", "joined", "pending"] : [filter];
+  const responses = await Promise.all(
+    roles.map((role) => fetch(`/api/v1/trips/me?role=${role}`, { credentials: "include", signal })),
+  );
+  const seen = new Set<string>();
+  const rows: ListedTrip[] = [];
+  for (let index = 0; index < responses.length; index += 1) {
+    const role = roles[index]!;
+    const parsed = parseMyTripRows(await responses[index]!.json());
+    if (parsed.error) return { rows: [], error: parsed.error };
+    for (const trip of parsed.rows) {
+      if (seen.has(trip.id)) continue;
+      seen.add(trip.id);
+      rows.push({ ...trip, listRole: role });
+    }
+  }
+  return { rows };
 }
 
 const fallbackRoutes = CITY_ROUTES.map((route) => ({
@@ -141,8 +165,8 @@ function durationLabel(start: string | null, end: string | null) {
 }
 
 export function MyTripsBoard() {
-  const [tab, setTab] = useState<MyTripRole>("hosted");
-  const [rows, setRows] = useState<MyTripSummary[]>([]);
+  const [tab, setTab] = useState<TripListFilter>("all");
+  const [rows, setRows] = useState<ListedTrip[]>([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -170,13 +194,8 @@ export function MyTripsBoard() {
       setRows([]);
       setSelectedId(null);
       try {
-        const response = await fetch(`/api/v1/trips/me?role=${tab}`, {
-          credentials: "include",
-          signal: ac.signal,
-        });
-        const json = (await response.json()) as unknown;
+        const parsed = await loadListedTrips(tab, ac.signal);
         if (ac.signal.aborted) return;
-        const parsed = parseMyTripRows(json);
         if (parsed.error) {
           setError(parsed.error);
           setLoading(false);
@@ -242,7 +261,7 @@ export function MyTripsBoard() {
     return () => controller.abort();
   }, [points, routePolylines.length]);
 
-  function changeTab(next: MyTripRole) {
+  function changeTab(next: TripListFilter) {
     setTab(next);
     setStatusFilter("ALL");
     setVisibilityFilter("ALL");
@@ -273,32 +292,30 @@ export function MyTripsBoard() {
   }
 
   return (
-    <div className="relative mx-auto w-full max-w-[1440px] px-3 pb-3 pt-3 md:px-6 md:pb-5 md:pt-5">
-      <div className="relative h-[calc(100dvh-2.75rem)] min-h-[580px] overflow-hidden rounded-[1.75rem] border border-outline-variant/60 bg-white shadow-[0_18px_50px_rgba(22,48,80,.12)] md:h-[calc(100dvh-6.25rem)] lg:grid lg:h-[calc(100vh-7rem)] lg:min-h-[650px] lg:grid-cols-2">
-        <section className="relative h-full min-h-[440px] overflow-hidden border-r border-outline-variant/50">
+    <div className="relative mx-auto w-full max-w-[1440px] md:px-6 md:pb-5 md:pt-5">
+      <div className="relative h-dvh overflow-hidden md:h-[calc(100dvh-6.25rem)] md:min-h-[580px] md:rounded-[1.75rem] md:border md:border-outline-variant/60 md:bg-white md:shadow-[0_18px_50px_rgba(22,48,80,.12)] lg:grid lg:h-[calc(100vh-7rem)] lg:min-h-[650px] lg:grid-cols-2">
+        <section className="relative h-full min-h-[440px] overflow-hidden md:border-r md:border-outline-variant/50">
           <GoogleMap key={selected?.id ?? tab} points={points} selectedId={points[0]?.id ?? null} onSelect={noop} showRoute={points.length > 1} routePolylines={routePolylines} mapType={mapType} focusCenter={focusCenter} zoomCommand={zoomCommand} className="absolute inset-0 h-full w-full" />
-          <form
-            className="fixed inset-x-4 top-3 z-40 md:hidden"
-            onSubmit={(event) => event.preventDefault()}
-          >
-            <label className="flex min-h-14 items-center gap-2.5 rounded-full border border-outline-variant/45 bg-white py-2 pl-4 pr-2 shadow-[0_10px_28px_rgba(15,59,94,.16)]">
-              <Icon name="search" className="text-[22px] text-on-surface-variant" />
+          <form className="absolute inset-x-4 top-3 z-40 md:hidden" onSubmit={(event) => event.preventDefault()}>
+            <label className="flex items-center gap-2.5 rounded-full border border-outline-variant/45 bg-white py-1.5 pl-4 pr-1.5 shadow-sm">
+              <Icon name="search" className="text-[21px] text-on-surface-variant" />
               <input
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                className="min-w-0 flex-1 bg-transparent text-base text-on-surface outline-none placeholder:text-on-surface-variant"
+                className="type-label min-w-0 flex-1 bg-transparent text-on-surface outline-none"
                 placeholder="Cari trip atau kota..."
                 aria-label="Cari trip"
               />
-              {query ? (
-                <button type="button" className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-surface-container text-on-surface" aria-label="Hapus pencarian" onClick={() => setQuery("")}>
-                  <Icon name="close" className="text-[20px]" />
-                </button>
-              ) : (
-                <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-primary text-white shadow-[0_6px_16px_rgba(0,74,198,.24)]" aria-hidden>
-                  <Icon name="arrow_forward" className="text-[20px]" />
-                </span>
-              )}
+              <button
+                type="button"
+                className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-primary text-white shadow-[0_6px_16px_rgba(0,74,198,.24)]"
+                aria-label={query ? "Hapus pencarian" : "Cari trip"}
+                onClick={() => {
+                  if (query) setQuery("");
+                }}
+              >
+                <Icon name={query ? "close" : "arrow_forward"} className="text-[19px]" />
+              </button>
             </label>
           </form>
           <div className="pointer-events-none absolute left-3 right-3 top-3 hidden rounded-2xl border border-white/70 bg-white/90 p-3 shadow-lg backdrop-blur-md md:left-4 md:right-20 md:top-4 md:block md:p-4">
@@ -324,7 +341,7 @@ export function MyTripsBoard() {
           ) : null}
         </section>
 
-        <section className={`absolute inset-x-0 bottom-0 z-20 flex min-h-0 flex-col overflow-hidden rounded-t-[1.75rem] border-t border-outline-variant/60 bg-[#f8faff]/96 shadow-[0_-18px_45px_rgba(7,28,50,.18)] backdrop-blur-xl transition-[height] duration-300 lg:static lg:h-full lg:rounded-none lg:border-0 lg:bg-surface-container-low/70 lg:shadow-none ${sheet === "collapsed" ? "h-[31%]" : sheet === "half" ? "h-[59%]" : "h-[89%]"}`}>
+        <section className={`absolute inset-x-0 bottom-14 z-20 flex min-h-0 flex-col overflow-hidden rounded-t-[28px] border-t border-white/80 bg-white/97 shadow-[0_-16px_45px_rgba(7,28,50,.18)] backdrop-blur-xl transition-[height] duration-300 md:bottom-0 lg:static lg:z-auto lg:!h-full lg:rounded-none lg:border-0 lg:bg-surface-container-low/70 lg:shadow-none ${sheet === "collapsed" ? "max-lg:h-[31%]" : sheet === "half" ? "max-lg:h-[59%]" : "max-lg:h-[calc(100%-9rem)]"}`}>
           <button type="button" onClick={() => setSheet((current) => nextSheet(current))} onPointerDown={(event) => { dragStart.current = event.clientY; }} onPointerUp={(event) => endDrag(event.clientY)} className="flex w-full touch-none flex-col items-center py-2 lg:hidden" aria-label="Ubah tinggi daftar trip">
             <span className="h-1.5 w-11 rounded-full bg-outline-variant" />
           </button>
@@ -354,12 +371,12 @@ export function MyTripsBoard() {
               <TripCard
                 key={trip.id}
                 trip={trip}
-                tab={tab}
+                tab={trip.listRole}
                 selected={trip.id === selected?.id}
                 onSelect={() => selectTrip(trip.id)}
                 onShare={() => setShareTrip(trip)}
                 onJoinRequests={() => setJoinTrip(trip)}
-                onDelete={tab === "hosted" ? () => setDeleteTrip(trip) : undefined}
+                onDelete={trip.listRole === "hosted" ? () => setDeleteTrip(trip) : undefined}
               />
             ))}
           </div>
@@ -374,10 +391,9 @@ export function MyTripsBoard() {
           tripTitle={joinTrip.title}
           onClose={() => setJoinTrip(null)}
           onChanged={() => {
-            void fetch(`/api/v1/trips/me?role=${tab}`, { credentials: "include" })
-              .then((response) => response.json())
-              .then((json: { success?: boolean; data?: MyTripSummary[] }) => {
-                if (json.success && json.data) setRows(json.data);
+            void loadListedTrips(tab)
+              .then((parsed) => {
+                if (!parsed.error) setRows(parsed.rows);
               })
               .catch(() => undefined);
           }}
@@ -563,7 +579,7 @@ function TripCard({
         <AttendanceConfirm
           tripId={trip.id}
           tripTitle={trip.title}
-          reviewUsername={tab === "joined" ? trip.host.username : null}
+          reviewUsername={null}
         />
       ) : null}
     </article>

@@ -116,7 +116,7 @@
   }
 }
 
-@media (min-width: 960px) {
+@media (min-width: 768px) {
   .layoutSplit {
     grid-template-columns: 1.05fr 0.95fr;
     gap: 1.5rem;
@@ -135,7 +135,7 @@
   animation: rise 620ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-@media (min-width: 960px) {
+@media (min-width: 768px) {
   .showcase {
     min-height: 100%;
   }
@@ -167,7 +167,7 @@
   padding: 1.35rem 1.35rem 1.5rem;
 }
 
-@media (min-width: 960px) {
+@media (min-width: 768px) {
   .showcaseContent {
     padding: 2rem 2rem 2.15rem;
   }

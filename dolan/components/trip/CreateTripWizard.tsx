@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Field } from "@/components/auth/Field";
 import { Icon } from "@/components/ui/Icon";
 import { PlacePicker } from "@/components/trip/PlacePicker";
@@ -41,29 +41,77 @@ import { INITIAL_BUDGET_ITEMS, createBudgetSummary } from "@/features/itinerary/
 import { coverMatchesDestination, fetchDestinationCover, hasCoverPhoto, toDestinationCover } from "@/lib/destination-cover";
 import { provinceCoverUrl } from "@/lib/province-cover";
 import { PackingListField } from "@/components/trip/PackingListField";
-import { TemplateRoutePeek } from "@/components/trip/TemplateRoutePeek";
+
+const TEMPLATE_PAGE_SIZE = 12;
 
 const BUDGET_PRESETS = [750_000, 1_500_000, 2_500_000, 5_000_000];
 
-function provinceCatalogTemplates(query: string): ItineraryTemplateSummary[] {
+function matchingProvinces(query: string) {
   const city = query.trim().toLowerCase();
   return INDONESIA_PROVINCES.filter((province) => {
     if (!city) return true;
     const hay = `${province.name} ${province.capital} ${province.template.title}`.toLowerCase();
     return hay.includes(city);
-  })
-    .slice(0, 24)
-    .map((province) => ({
-      id: province.template.id,
-      title: province.template.title,
-      city: province.name,
-      durationDays: province.template.durationDays,
-      source: "CURATED" as const,
-      sourceLabel: "Kurasi Dolan" as const,
-      usageCount: 0,
-      popularityLabel: null,
-      coverPlace: null,
-    }));
+  });
+}
+
+function curatedTemplateRows(query: string): ItineraryTemplateSummary[] {
+  return matchingProvinces(query).map((province) => ({
+    id: province.template.id,
+    title: province.template.title,
+    city: province.name,
+    durationDays: province.template.durationDays,
+    source: "CURATED" as const,
+    sourceLabel: "Kurasi Dolan" as const,
+    usageCount: 0,
+    popularityLabel: null,
+    coverPlace: null,
+  }));
+}
+
+function localTemplatePage(query: string, page: number): { rows: ItineraryTemplateSummary[]; hasNextPage: boolean } {
+  const matched = curatedTemplateRows(query);
+  const start = (page - 1) * TEMPLATE_PAGE_SIZE;
+  return {
+    rows: matched.slice(start, start + TEMPLATE_PAGE_SIZE),
+    hasNextPage: start + TEMPLATE_PAGE_SIZE < matched.length,
+  };
+}
+
+async function fetchTemplatePage(
+  query: string,
+  page: number,
+  signal?: AbortSignal,
+): Promise<{ rows: ItineraryTemplateSummary[]; hasNextPage: boolean } | "aborted" | null> {
+  const params = new URLSearchParams({
+    sort: "popular",
+    limit: String(TEMPLATE_PAGE_SIZE),
+    page: String(page),
+  });
+  if (query.trim()) params.set("city", query.trim());
+  try {
+    const response = await fetch(`/api/v1/templates?${params}`, {
+      credentials: "include",
+      headers: { Accept: "application/json" },
+      signal,
+    });
+    const json = (await response.json()) as {
+      success?: boolean;
+      data?: unknown;
+      pagination?: { hasNextPage?: boolean };
+    };
+    if (signal?.aborted) return "aborted";
+    if (!response.ok || !json.success) return null;
+    const rows = templateRowsFromPayload(json);
+    if (!rows) return null;
+    return {
+      rows,
+      hasNextPage: json.pagination?.hasNextPage ?? rows.length === TEMPLATE_PAGE_SIZE,
+    };
+  } catch (error) {
+    if (signal?.aborted || (error instanceof DOMException && error.name === "AbortError")) return "aborted";
+    return null;
+  }
 }
 
 function localTemplateDetail(templateIdToUse: string): ItineraryTemplateDetail | null {
@@ -132,6 +180,17 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
   const [templateDetail, setTemplateDetail] = useState<ItineraryTemplateDetail | null>(null);
   const [catalogTemplates, setCatalogTemplates] = useState<ItineraryTemplateSummary[]>([]);
   const [templatesError, setTemplatesError] = useState("");
+  const [templatesLoading, setTemplatesLoading] = useState(false);
+  const [templatesHasNext, setTemplatesHasNext] = useState(false);
+  const templatePageRef = useRef(1);
+  const templateSourceRef = useRef<"api" | "local" | "remainder">("api");
+  const templateRemainderRef = useRef<ItineraryTemplateSummary[]>([]);
+  const catalogTemplatesRef = useRef<ItineraryTemplateSummary[]>([]);
+  const templateQueryRef = useRef("");
+  const templatesHasNextRef = useRef(false);
+  const templatesLoadingRef = useRef(false);
+  const templateRequestGen = useRef(0);
+  const templateSentinelRef = useRef<HTMLDivElement>(null);
   const [connections, setConnections] = useState<Array<{ username: string; displayName: string }>>([]);
   const [tripId, setTripId] = useState("");
   const [snapshot, setSnapshot] = useState<ItineraryEditorSnapshot | null>(null);
@@ -204,39 +263,110 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
     return () => controller.abort();
   }, []);
 
+  const applyTemplatePage = useCallback((page: number, source: "api" | "local" | "remainder", rows: ItineraryTemplateSummary[], hasNextPage: boolean, append: boolean) => {
+    templatePageRef.current = page;
+    templateSourceRef.current = source;
+    templatesHasNextRef.current = hasNextPage;
+    setTemplatesHasNext(hasNextPage);
+    const seen = new Set((append ? catalogTemplatesRef.current : []).map((item) => item.id));
+    const next = append ? [...catalogTemplatesRef.current, ...rows.filter((item) => !seen.has(item.id))] : rows;
+    catalogTemplatesRef.current = next;
+    setCatalogTemplates(next);
+  }, []);
+
   useEffect(() => {
     const controller = new AbortController();
-    const params = new URLSearchParams({ sort: "popular", limit: "24", page: "1" });
-    if (templateQuery.trim()) params.set("city", templateQuery.trim());
+    const gen = ++templateRequestGen.current;
+    templateQueryRef.current = templateQuery;
+    templatesHasNextRef.current = false;
+    setTemplatesHasNext(false);
     setTemplatesError("");
+    setTemplatesLoading(true);
+    templatesLoadingRef.current = true;
     const timer = window.setTimeout(() => {
-      void fetch(`/api/v1/templates?${params}`, {
-        credentials: "include",
-        headers: { Accept: "application/json" },
-        signal: controller.signal,
-      })
-        .then(async (response) => {
-          const json = (await response.json()) as {
-            success?: boolean;
-            data?: unknown;
-            error?: { message?: string };
-          };
-          const rows = json.success ? templateRowsFromPayload(json) : null;
-          if (!controller.signal.aborted) {
-            setCatalogTemplates(rows && rows.length ? rows : provinceCatalogTemplates(templateQuery));
-          }
-        })
-        .catch(() => {
-          if (controller.signal.aborted) return;
-          setCatalogTemplates(provinceCatalogTemplates(templateQuery));
-          setTemplatesError("");
-        });
+      void fetchTemplatePage(templateQuery, 1, controller.signal).then((result) => {
+        if (gen !== templateRequestGen.current) return;
+        if (result === "aborted") return;
+        if (!result || result.rows.length === 0) {
+          templateRemainderRef.current = [];
+          const local = localTemplatePage(templateQuery, 1);
+          applyTemplatePage(1, "local", local.rows, local.hasNextPage, false);
+        } else if (result.hasNextPage) {
+          templateRemainderRef.current = [];
+          applyTemplatePage(1, "api", result.rows, true, false);
+        } else {
+          const seen = new Set(result.rows.map((item) => item.id));
+          templateRemainderRef.current = curatedTemplateRows(templateQuery).filter((item) => !seen.has(item.id));
+          applyTemplatePage(1, templateRemainderRef.current.length ? "remainder" : "api", result.rows, templateRemainderRef.current.length > 0, false);
+        }
+        templatesLoadingRef.current = false;
+        setTemplatesLoading(false);
+      });
     }, 200);
     return () => {
       controller.abort();
       window.clearTimeout(timer);
+      templatesLoadingRef.current = false;
     };
-  }, [templateQuery]);
+  }, [applyTemplatePage, templateQuery]);
+
+  const loadMoreTemplates = useCallback(() => {
+    if (templatesLoadingRef.current || !templatesHasNextRef.current) return;
+    const gen = templateRequestGen.current;
+    const query = templateQueryRef.current;
+    const nextPage = templatePageRef.current + 1;
+    templatesLoadingRef.current = true;
+    setTemplatesLoading(true);
+    const finish = (rows: ItineraryTemplateSummary[], hasNextPage: boolean, source: "api" | "local" | "remainder") => {
+      if (gen !== templateRequestGen.current) return;
+      applyTemplatePage(nextPage, source, rows, hasNextPage, true);
+      templatesLoadingRef.current = false;
+      setTemplatesLoading(false);
+    };
+    if (templateSourceRef.current === "remainder") {
+      const slice = templateRemainderRef.current.slice(0, TEMPLATE_PAGE_SIZE);
+      templateRemainderRef.current = templateRemainderRef.current.slice(TEMPLATE_PAGE_SIZE);
+      finish(slice, templateRemainderRef.current.length > 0, "remainder");
+      return;
+    }
+    if (templateSourceRef.current === "local") {
+      const local = localTemplatePage(query, nextPage);
+      finish(local.rows, local.hasNextPage, "local");
+      return;
+    }
+    void fetchTemplatePage(query, nextPage).then((result) => {
+      if (gen !== templateRequestGen.current) return;
+      if (!result || result === "aborted") {
+        templatesLoadingRef.current = false;
+        setTemplatesLoading(false);
+        if (!result) {
+          templatesHasNextRef.current = false;
+          setTemplatesHasNext(false);
+        }
+        return;
+      }
+      if (result.hasNextPage) {
+        finish(result.rows, true, "api");
+        return;
+      }
+      const seen = new Set([...catalogTemplatesRef.current, ...result.rows].map((item) => item.id));
+      templateRemainderRef.current = curatedTemplateRows(query).filter((item) => !seen.has(item.id));
+      finish(result.rows, templateRemainderRef.current.length > 0, templateRemainderRef.current.length ? "remainder" : "api");
+    });
+  }, [applyTemplatePage]);
+
+  useEffect(() => {
+    const node = templateSentinelRef.current;
+    if (!node || path !== "template" || step !== 1) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) loadMoreTemplates();
+      },
+      { rootMargin: "280px" },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [loadMoreTemplates, path, step, catalogTemplates.length, templatesHasNext]);
 
   useEffect(() => {
     const query = destinationCity.trim();
@@ -823,13 +953,14 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
           </div>
           {path === "template" ? (
             <div className="card-surface mt-5 p-5">
-              <Field id="templateQuery" label="Cari template di database" hint="Ambil dari server. Ketik kota/provinsi untuk menyaring.">
+              <Field id="templateQuery" label="Cari template" hint="Opsional. Gulir ke bawah untuk melihat semua template.">
                 <div className="relative">
                   <Icon name="search" className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[20px] text-primary" />
                   <input id="templateQuery" className="field-input field-input-icon" value={templateQuery} onChange={(event) => setTemplateQuery(event.target.value)} placeholder="Bali, Aceh, Yogyakarta…" />
                 </div>
               </Field>
               {templatesError ? <p className="mt-3 type-caption text-error">{templatesError}</p> : null}
+              {templatesLoading && templates.length === 0 ? <p className="mt-4 type-caption text-on-surface-variant">Memuat template…</p> : null}
               <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                 {templates.map((template) => {
                   const selected = selectedTemplateId === template.id;
@@ -866,7 +997,7 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
                           <span className="absolute left-3 top-3 rounded-full bg-white/92 px-2.5 py-1 text-[10px] font-extrabold text-primary">{template.city}</span>
                           <span className="absolute bottom-3 left-3 rounded-full bg-[#004ac6] px-2.5 py-1 text-[10px] font-extrabold text-white">{template.durationDays} hari</span>
                           {selected ? (
-                            <span className="absolute right-14 top-3 rounded-full bg-primary px-2.5 py-1 text-[10px] font-extrabold text-white">Dipilih</span>
+                            <span className="absolute right-3 top-3 rounded-full bg-primary px-2.5 py-1 text-[10px] font-extrabold text-white">Dipilih</span>
                           ) : null}
                         </div>
                         <div className="p-3.5 pb-2">
@@ -874,11 +1005,6 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
                           <p className="type-caption mt-1 text-on-surface-variant">{template.durationDays} hari · {template.city} · dipakai {template.usageCount}x</p>
                         </div>
                       </button>
-                      {province ? (
-                        <div className="absolute right-3 top-3 z-20">
-                          <TemplateRoutePeek province={province} />
-                        </div>
-                      ) : null}
                       <div className="flex items-center justify-between gap-2 px-3.5 pb-3.5">
                         <p className="type-caption text-on-surface-variant">{selected ? "Lanjut ke detail trip." : "Klik kartu untuk memilih."}</p>
                         {province ? (
@@ -895,9 +1021,9 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
                   );
                 })}
               </div>
-              <p className="mt-3 type-caption text-on-surface-variant">
-                Template diambil dari API. Pastikan Express + database sudah jalan.
-              </p>
+              <div ref={templateSentinelRef} className="h-1" aria-hidden />
+              {templatesLoading && templates.length > 0 ? <p className="mt-3 type-caption text-on-surface-variant">Memuat template lainnya…</p> : null}
+              {!templatesLoading && templates.length === 0 ? <p className="mt-3 type-caption text-on-surface-variant">Tidak ada template yang cocok.</p> : null}
             </div>
           ) : null}
           <Nav nextLabel="Lanjut ke detail" onNext={goFromStep1} />

@@ -58,17 +58,28 @@ describe("destination itinerary", () => {
     expect(days.flatMap((day) => day.stops).length).toBe(province.template.stops.length);
   });
 
-  it("places Bromo on the Tengger caldera, not Surabaya, and keeps Ijen on a different day", () => {
+  it("keeps curated province stops on the JSON day, not stacked on day 1", () => {
+    const province = INDONESIA_PROVINCES.find((item) => item.slug === "jawa-barat")!;
+    const days = buildProvinceTemplateDays(province);
+    const expected = Array.from({ length: province.template.durationDays }, (_, dayIndex) =>
+      province.template.stops.filter((stop) => stop.day === dayIndex + 1).map((stop) => stop.name),
+    );
+    expect(days).toHaveLength(expected.length);
+    expect(days.map((day) => day.stops.map((stop) => stop.customTitle))).toEqual(expected);
+    expect(days[0].stops[0].startTime).toBe("08:00");
+    expect(days[2].stops[0].startTime).toBe("05:30");
+    expect(days[0].stops.some((stop) => /kawah putih|situ patenggang/i.test(stop.customTitle ?? ""))).toBe(false);
+  });
+
+  it("places Bromo on the Tengger caldera, not Surabaya, on its curated day", () => {
     const province = INDONESIA_PROVINCES.find((item) => item.slug === "jawa-timur")!;
     const days = buildProvinceTemplateDays(province);
-    const bromo = days.flatMap((day) => day.stops).find((stop) => /bromo/i.test(stop.customTitle ?? ""));
-    const ijen = days.flatMap((day) => day.stops).find((stop) => /ijen/i.test(stop.customTitle ?? ""));
+    const bromo = days.flatMap((day) => day.stops).find((stop) => /kawah bromo/i.test(stop.customTitle ?? ""));
     expect(bromo?.place?.latitude).toBeCloseTo(-7.94, 1);
     expect(bromo?.place?.longitude).toBeCloseTo(112.95, 1);
-    expect(ijen?.place?.latitude).toBeCloseTo(-8.06, 1);
-    expect(ijen?.place?.longitude).toBeCloseTo(114.24, 1);
-    const bromoDay = days.find((day) => day.stops.some((stop) => /bromo/i.test(stop.customTitle ?? "")));
-    expect(bromoDay?.stops.some((stop) => /ijen/i.test(stop.customTitle ?? ""))).toBe(false);
+    const bromoDay = days.find((day) => day.stops.some((stop) => /kawah bromo/i.test(stop.customTitle ?? "")));
+    expect(bromoDay?.dayNumber).toBe(2);
+    expect(bromoDay?.stops[0]?.customTitle).toMatch(/Penanjakan|Bromo Sunrise/i);
   });
 
   it("maps Gunung Bromo and Cemoro Lawang to the caldera, not a city center", () => {

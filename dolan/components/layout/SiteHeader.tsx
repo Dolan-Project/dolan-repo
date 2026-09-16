@@ -126,6 +126,18 @@ export function SiteHeader({
               Buat Trip
             </Link>
           ) : null}
+          <Link
+            href={ROUTES.rekomendasi}
+            aria-label="Rekomendasi"
+            aria-current={pathname.startsWith("/rekomendasi") ? "page" : undefined}
+            className={`flex h-10 w-10 items-center justify-center rounded-full transition-colors md:hidden ${
+              pathname.startsWith("/rekomendasi")
+                ? "bg-primary/10 text-primary"
+                : "text-on-surface-variant hover:bg-surface-container hover:text-on-surface"
+            }`}
+          >
+            <Icon name="public" className="text-[22px]" />
+          </Link>
           <NotificationBell session={session} unreadCount={unreadCount} />
           {session ? (
             <Link href={ROUTES.profil} aria-label="Profil" className="hidden md:inline-flex">
