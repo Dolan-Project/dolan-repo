@@ -1,0 +1,123 @@
+import { createServer } from "node:http";
+import { assertDatabaseConnection, initModels } from "@dolan/database";
+import { env } from "./config/env.ts";
+import { createApp } from "./app.ts";
+import {
+  createAuthAdapter,
+  createChatService,
+  createItineraryExportService,
+  createJobService,
+  createLocationService,
+  createMemorySocialStore,
+  createMemoryTripService,
+  createProductionJobService,
+  createProductionSocialStore,
+  createProductionTripService,
+  createPostService,
+  createRuntimeSearchService,
+  createSessionStore,
+  createShareLinkService,
+  createUserRepository,
+} from "./container.ts";
+import { MemoryQuotaStore, QuotaService } from "./modules/search/quota.ts";
+import { SequelizeQuotaStore } from "./modules/search/sequelize-quota.ts";
+import { envRateLimit } from "./middleware/rate-limit.ts";
+import { logger } from "./lib/logger.ts";
+import { AuthService } from "./modules/auth/auth-service.ts";
+import { startGenerationWorker } from "./modules/jobs/run-worker.ts";
+import { ProvinceService } from "./modules/provinces/province-service.ts";
+import { createSocketServer, logSocketReady } from "./socket/index.ts";
+
+async function main() {
+  let databaseReady = false;
+  try {
+    initModels();
+    await assertDatabaseConnection();
+    databaseReady = true;
+  } catch (error) {
+    if (env.nodeEnv === "production") {
+      throw error;
+    }
+    logger.warn("Database unavailable; using in-memory user repository");
+  }
+
+  const authUsers = createUserRepository(databaseReady);
+  const authSessions = createSessionStore(databaseReady);
+  const chatService = createChatService(databaseReady);
+  const onJobUpdated = (job: {
+    id: string;
+    tripId: string;
+    status: string;
+    resultVersionId: string | null;
+    errorCode: string | null;
+  }) => {
+    void chatService.emitGenerationUpdated(job);
+  };
+  let jobService;
+  try {
+    jobService = databaseReady ? createProductionJobService(onJobUpdated) : createJobService(onJobUpdated);
+  } catch (error) {
+    logger.error("Production job service unavailable", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw error;
+  }
+  const social = databaseReady ? createProductionSocialStore() : createMemorySocialStore();
+  const trips = databaseReady
+    ? createProductionTripService(chatService)
+    : createMemoryTripService(undefined, chatService, social);
+  const authService = new AuthService(
+    createAuthAdapter(authUsers, authSessions),
+    authUsers,
+    authSessions,
+    social,
+    (userId) => trips.profileTripCounts(userId),
+  );
+  const httpServer = createServer();
+  const sockets = createSocketServer(httpServer, authService, chatService, trips);
+  const routesQuota = new QuotaService(
+    databaseReady ? new SequelizeQuotaStore() : new MemoryQuotaStore(),
+    env.placesMaxRequestsPerUserPerDay,
+  );
+  const search = createRuntimeSearchService(databaseReady);
+  const postService = createPostService(trips, search, social, chatService, databaseReady);
+  const app = createApp(
+    authService,
+    sockets.disconnectUser,
+    search,
+    jobService,
+    trips,
+    chatService,
+    envRateLimit(),
+    social,
+    createLocationService(chatService, databaseReady),
+    createShareLinkService(chatService, databaseReady),
+    createItineraryExportService(chatService, databaseReady),
+    new ProvinceService(databaseReady),
+    routesQuota,
+    databaseReady,
+    postService,
+  );
+
+  httpServer.on("request", app);
+
+  httpServer.listen(env.port, () => {
+    logger.info("Dolan API listening", {
+      port: env.port,
+      authAdapter: env.authAdapter,
+      userRepository: databaseReady ? "sequelize" : "memory",
+      searchRepository: databaseReady ? "sequelize" : "memory",
+      googlePlacesConfigured: Boolean(env.googleMapsServerKey),
+    });
+    logSocketReady();
+    startGenerationWorker(jobService);
+  });
+}
+
+main().catch((error) => {
+  logger.error("Failed to start Dolan API", {
+    name: error instanceof Error ? error.name : "UnknownError",
+    message: error instanceof Error ? error.message : "Unknown error",
+  });
+  process.exit(1);
+});

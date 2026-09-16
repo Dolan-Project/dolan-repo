@@ -1,0 +1,996 @@
+[
+  {
+    "slug": "aceh",
+    "name": "Aceh",
+    "capital": "Banda Aceh",
+    "description": "Aceh menawarkan perpaduan alam, budaya, dan kuliner lokal. Kurasi DOLAN ini menjadi titik awal perjalanan backpacker dan tetap perlu disesuaikan dengan cuaca, jam operasional, serta kondisi transportasi terbaru.",
+    "heroQuery": "Masjid Raya Baiturrahman, Aceh, Indonesia",
+    "featuredRank": 1,
+    "places": [
+      {
+        "name": "Masjid Raya Baiturrahman",
+        "city": "Banda Aceh",
+        "rank": 1,
+        "description": "Ikon sejarah dan spiritual kota Banda Aceh yang megah di pusat kota.",
+        "searchQuery": "Masjid Raya Baiturrahman, Aceh, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Masjid%20Raya%20Baiturrahman%2C%20Aceh%2C%20Indonesia"
+      },
+      {
+        "name": "Museum Tsunami Aceh",
+        "city": "Banda Aceh",
+        "rank": 2,
+        "description": "Museum edukasi memorial bencana tsunami 2004 yang berjarak sangat dekat dari Masjid Raya.",
+        "searchQuery": "Museum Tsunami Aceh, Aceh, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Museum%20Tsunami%20Aceh%2C%20Aceh%2C%20Indonesia"
+      },
+      {
+        "name": "PLTD Apung",
+        "city": "Banda Aceh",
+        "rank": 3,
+        "description": "Kapal pembangkit listrik yang terseret tsunami ke tengah pemukiman warga.",
+        "searchQuery": "PLTD Apung, Banda Aceh, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=PLTD%20Apung%2C%20Banda%20Aceh%2C%20Indonesia"
+      },
+      {
+        "name": "Taman Gunongan",
+        "city": "Banda Aceh",
+        "rank": 4,
+        "description": "Situs bersejarah peninggalan Kesultanan Aceh untuk Permaisuri Putri Pahang.",
+        "searchQuery": "Taman Gunongan, Banda Aceh, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Taman%20Gunongan%2C%20Banda%20Aceh%2C%20Indonesia"
+      },
+      {
+        "name": "Pantai Lampuuk",
+        "city": "Aceh Besar",
+        "rank": 5,
+        "description": "Pantai berpasir putih di Aceh Besar dengan tebing megah dan matahari terbenam yang indah.",
+        "searchQuery": "Pantai Lampuuk, Aceh, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Pantai%20Lampuuk%2C%20Aceh%2C%20Indonesia"
+      },
+      {
+        "name": "Pulau Weh",
+        "city": "Sabang",
+        "rank": 6,
+        "description": "Pulau paling barat Indonesia dengan keindahan bawah laut dan Monumen Tugu Nol Kilometer.",
+        "searchQuery": "Pulau Weh, Aceh, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Pulau%20Weh%2C%20Aceh%2C%20Indonesia"
+      }
+    ],
+    "template": {
+      "id": "a8bacd19-8b09-4c25-ad55-4436547c783b",
+      "title": "Rute Backpacker Aceh 3D2N (Banda Aceh & Sabang)",
+      "description": "Itinerary efisien mengelilingi heritage Banda Aceh, pantai pesisir Aceh Besar, hingga menyeberang ke Pulau Weh.",
+      "durationDays": 3,
+      "transportMode": "Sewa motor lokal + Penyeberangan Kapal Cepat",
+      "budgetLow": 850000,
+      "budgetHigh": 2200000,
+      "stops": [
+        {
+          "day": 1,
+          "sequence": 1,
+          "name": "Masjid Raya Baiturrahman",
+          "durationMinutes": 90,
+          "notes": "Mulai pagi jam 07:30. Menikmati arsitektur megah dan halaman masjid saat belum terik."
+        },
+        {
+          "day": 1,
+          "sequence": 2,
+          "name": "Museum Tsunami Aceh",
+          "durationMinutes": 120,
+          "notes": "Jalan kaki 5 menit dari Masjid Raya. Menelusuri lorong tsunami dan ruang doa."
+        },
+        {
+          "day": 1,
+          "sequence": 3,
+          "name": "Taman Gunongan & Kerkhoff",
+          "durationMinutes": 60,
+          "notes": "Lokasi berdekatan dengan museum. Belajar sejarah kerajaan dan makam prajurit Belanda."
+        },
+        {
+          "day": 1,
+          "sequence": 4,
+          "name": "Situs Monumen PLTD Apung",
+          "durationMinutes": 60,
+          "notes": "Melihat bukti dahsyatnya gelombang tsunami di tengah area pemukiman."
+        },
+        {
+          "day": 1,
+          "sequence": 5,
+          "name": "Warung Kopi Solong Ulee Kareng",
+          "durationMinutes": 90,
+          "notes": "Sore hari menikmati tradisi Warkop Aceh dan Mie Aceh Otentik."
+        },
+        {
+          "day": 2,
+          "sequence": 1,
+          "name": "Rumoh Aceh (Museum Negeri Aceh)",
+          "durationMinutes": 60,
+          "notes": "Pagi jam 08:30 melihat rumah adat tradisional Aceh kayu tanpa paku."
+        },
+        {
+          "day": 2,
+          "sequence": 2,
+          "name": "Kapal di Atas Rumah Lampulo",
+          "durationMinutes": 45,
+          "notes": "Situs sejarah tsunami unik sebelum bergerak menuju kawasan pesisir."
+        },
+        {
+          "day": 2,
+          "sequence": 3,
+          "name": "Pantai Lampuuk & Lhoknga",
+          "durationMinutes": 180,
+          "notes": "Perjalanan 30 menit ke Aceh Besar. Makan siang seafood segar di tepi pantai."
+        },
+        {
+          "day": 2,
+          "sequence": 4,
+          "name": "Puncak Geurutee",
+          "durationMinutes": 120,
+          "notes": "Menikmati pemandangan Samudra Hindia dan gugusan pulau kecil dari atas tebing saat sunset."
+        },
+        {
+          "day": 3,
+          "sequence": 1,
+          "name": "Pelabuhan Ulee Lheue ke Sabang (Pulau Weh)",
+          "durationMinutes": 90,
+          "notes": "Menyeberang pagi jam 08:00 dengan Kapal Cepat Express Bahari ke Sabang."
+        },
+        {
+          "day": 3,
+          "sequence": 2,
+          "name": "Tugu Nol Kilometer Indonesia",
+          "durationMinutes": 120,
+          "notes": "Sewa motor di Pelabuhan Balohan, langsung berkendara ke titik paling barat Indonesia."
+        },
+        {
+          "day": 3,
+          "sequence": 3,
+          "name": "Pantai Iboih & Pulau Rubiah",
+          "durationMinutes": 180,
+          "notes": "Snorkeling dan makan siang menikmati taman laut Iboih hingga sore sebelum kembali ke pelabuhan."
+        }
+      ]
+    }
+  },
+  {
+    "slug": "sumatera-utara",
+    "name": "Sumatera Utara",
+    "capital": "Medan",
+    "description": "Sumatera Utara menawarkan perpaduan alam, budaya, dan kuliner lokal. Kurasi DOLAN ini menjadi titik awal perjalanan backpacker dan tetap perlu disesuaikan dengan cuaca, jam operasional, serta kondisi transportasi terbaru.",
+    "heroQuery": "Danau Toba, Sumatera Utara, Indonesia",
+    "featuredRank": 2,
+    "places": [
+      {
+        "name": "Istana Maimun",
+        "city": "Medan",
+        "rank": 1,
+        "description": "Istana peninggalan Kesultanan Deli berpola arsitektur Melayu, Islam, dan Eropa.",
+        "searchQuery": "Istana Maimun, Sumatera Utara, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Istana%20Maimun%2C%20Sumatera%20Utara%2C%20Indonesia"
+      },
+      {
+        "name": "Masjid Raya Al-Mashun",
+        "city": "Medan",
+        "rank": 2,
+        "description": "Masjid bersejarah ikonik di Medan yang berjarak sangat dekat dari Istana Maimun.",
+        "searchQuery": "Masjid Raya Al Mashun Medan, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Masjid%20Raya%20Al%20Mashun%20Medan%2C%20Indonesia"
+      },
+      {
+        "name": "Air Terjun Sipiso-piso",
+        "city": "Karo",
+        "rank": 3,
+        "description": "Air Terjun megah setinggi 120m di tepi Danau Toba kawasan Karo.",
+        "searchQuery": "Air Terjun Sipiso-piso, Sumatera Utara, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Air%20Terjun%20Sipiso-piso%2C%20Sumatera%20Utara%2C%20Indonesia"
+      },
+      {
+        "name": "Danau Toba",
+        "city": "Simalungun/Toba",
+        "rank": 4,
+        "description": "Danau vulkanik terbesar di Asia Tenggara dengan pemandangan pegunungan membentang.",
+        "searchQuery": "Danau Toba, Sumatera Utara, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Danau%20Toba%2C%20Sumatera%20Utara%2C%20Indonesia"
+      },
+      {
+        "name": "Pulau Samosir",
+        "city": "Samosir",
+        "rank": 5,
+        "description": "Pulau di tengah Danau Toba yang kaya akan kebudayaan suku Batak Toba.",
+        "searchQuery": "Pulau Samosir, Sumatera Utara, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Pulau%20Samosir%2C%20Sumatera%20Utara%2C%20Indonesia"
+      }
+    ],
+    "template": {
+      "id": "e8420ecb-f360-46c0-9ac6-16e462759c2e",
+      "title": "Rute Backpacker Sumatera Utara 3D2N (Medan - Berastagi - Samosir)",
+      "description": "Rute overland dari hiruk pikuk kota Medan, dataran tinggi Berastagi, hingga eksotisme Samosir di Danau Toba.",
+      "durationDays": 3,
+      "transportMode": "Sewa Mobil/Motor Overland + Kapal Feri",
+      "budgetLow": 900000,
+      "budgetHigh": 2500000,
+      "stops": [
+        {
+          "day": 1,
+          "sequence": 1,
+          "name": "Istana Maimun",
+          "durationMinutes": 90,
+          "notes": "Mulai jam 08:00 pagi. Foto memakai baju adat Melayu dan mengeksplor ruangan istana."
+        },
+        {
+          "day": 1,
+          "sequence": 2,
+          "name": "Masjid Raya Al-Mashun",
+          "durationMinutes": 45,
+          "notes": "Jalan kaki 5 menit dari Istana Maimun. Menikmati arsitektur khas timur tengah dan eropa."
+        },
+        {
+          "day": 1,
+          "sequence": 3,
+          "name": "Tjong A Fie Mansion",
+          "durationMinutes": 90,
+          "notes": "Eksplorasi bangunan cagar budaya Tionghoa kuno di kawasan Kesawan."
+        },
+        {
+          "day": 1,
+          "sequence": 4,
+          "name": "Kuliner Merdeka Walk & Durian Ucok",
+          "durationMinutes": 120,
+          "notes": "Makan siang kuliner khas Medan (Soto Kesawan) dan santai malam makan durian."
+        },
+        {
+          "day": 2,
+          "sequence": 1,
+          "name": "Pasar Buah Berastagi",
+          "durationMinutes": 90,
+          "notes": "Perjalanan pagi Medan-Berastagi (2 jam). Menikmati buah segar & udara sejuk dataran tinggi."
+        },
+        {
+          "day": 2,
+          "sequence": 2,
+          "name": "Gundaling Hill",
+          "durationMinutes": 60,
+          "notes": "Melihat pemandangan Gunung Sinabung dan Gunung Sibayak dari ketinggian."
+        },
+        {
+          "day": 2,
+          "sequence": 3,
+          "name": "Air Terjun Sipiso-piso",
+          "durationMinutes": 120,
+          "notes": "Perjalanan menuju Brand di pinggir Toba. Menikmati gagahnya air terjun dan view Danau Toba utara."
+        },
+        {
+          "day": 2,
+          "sequence": 4,
+          "name": "Pelabuhan Ajibata ke Tomok (Samosir)",
+          "durationMinutes": 90,
+          "notes": "Menyeberang ke Pulau Samosir menggunakan kapal feri di sore hari untuk menginap di Tuktuk."
+        },
+        {
+          "day": 3,
+          "sequence": 1,
+          "name": "Desa Tomok & Makam Raja Sidabutar",
+          "durationMinutes": 90,
+          "notes": "Eksplor budaya Batak Toba, Patung Sigale-gale, dan belanja suvenir."
+        },
+        {
+          "day": 3,
+          "sequence": 2,
+          "name": "Desa Siallagan (Batu Persidangan)",
+          "durationMinutes": 90,
+          "notes": "Situs sejarah hukum adat Batak kuno dengan perkampungan rumah bolon yang terjaga."
+        },
+        {
+          "day": 3,
+          "sequence": 3,
+          "name": "Bukit Holbung (Bukit Teletubbies)",
+          "durationMinutes": 120,
+          "notes": "Trekking ringan menikmati lanskap pemandangan spektakuler Danau Toba dari ketinggian."
+        }
+      ]
+    }
+  },
+  {
+    "slug": "sumatera-barat",
+    "name": "Sumatera Barat",
+    "capital": "Padang",
+    "description": "Sumatera Barat menawarkan perpaduan alam, budaya, dan kuliner lokal. Kurasi DOLAN ini menjadi titik awal perjalanan backpacker dan tetap perlu disesuaikan dengan cuaca, jam operasional, serta kondisi transportasi terbaru.",
+    "heroQuery": "Jam Gadang, Sumatera Barat, Indonesia",
+    "featuredRank": 3,
+    "places": [
+      {
+        "name": "Jam Gadang",
+        "city": "Bukittinggi",
+        "rank": 1,
+        "description": "Ikon utama Kota Bukittinggi yang terletak di pusat alun-alun kota.",
+        "searchQuery": "Jam Gadang, Sumatera Barat, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Jam%20Gadang%2C%20Sumatera%20Barat%2C%20Indonesia"
+      },
+      {
+        "name": "Ngarai Sianok & Lubang Jepang",
+        "city": "Bukittinggi",
+        "rank": 2,
+        "description": "Lembah hijau membentang spektakuler dipadukan dengan jaringan goa bersejarah.",
+        "searchQuery": "Ngarai Sianok, Sumatera Barat, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Ngarai%20Sianok%2C%20Sumatera%20Barat%2C%20Indonesia"
+      },
+      {
+        "name": "Lembah Harau",
+        "city": "Payakumbuh",
+        "rank": 3,
+        "description": "Lembah tebing batu granit terjal yang dihimpit persawahan hijau di Lima Puluh Kota.",
+        "searchQuery": "Lembah Harau, Sumatera Barat, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Lembah%20Harau%2C%20Sumatera%20Barat%2C%20Indonesia"
+      },
+      {
+        "name": "Istano Basa Pagaruyung",
+        "city": "Batusangkar",
+        "rank": 4,
+        "description": "Museum rumah gadang megah peninggalan Kerajaan Pagaruyung di Batusangkar.",
+        "searchQuery": "Istano Basa Pagaruyung, Sumatera Barat, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Istano%20Basa%20Pagaruyung%2C%20Sumatera%20Barat%2C%20Indonesia"
+      },
+      {
+        "name": "Pantai Padang & Jembatan Siti Nurbaya",
+        "city": "Padang",
+        "rank": 5,
+        "description": "Ikon pesisir kota Padang untuk bersantai dan menikmati sunset serta kuliner seafood.",
+        "searchQuery": "Pantai Padang, Sumatera Barat, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Pantai%20Padang%2C%20Sumatera%20Barat%2C%20Indonesia"
+      }
+    ],
+    "template": {
+      "id": "15d232b9-5cc9-484c-b784-a202538bb4a6",
+      "title": "Rute Backpacker Sumatera Barat 3D2N (Padang - Bukittinggi - Harau)",
+      "description": "Penjelajahan kuliner otentik Minang, wisata sejarah budaya, dan lanskap alam tebing fantastis.",
+      "durationDays": 3,
+      "transportMode": "Sewa Motor / Mobil Travel Minangkabau",
+      "budgetLow": 800000,
+      "budgetHigh": 2300000,
+      "stops": [
+        {
+          "day": 1,
+          "sequence": 1,
+          "name": "Museum Adityawarman",
+          "durationMinutes": 60,
+          "notes": "Mulai jam 08:30 di Kota Padang, belajar sejarah dan kebudayaan Minangkabau."
+        },
+        {
+          "day": 1,
+          "sequence": 3,
+          "name": "Makan Siang Rumah Makan Padang Otentik",
+          "durationMinutes": 60,
+          "notes": "Mencicipi rendang dan sate padang asli di tempat asalnya."
+        },
+        {
+          "day": 1,
+          "sequence": 4,
+          "name": "Air Terjun Lembah Anai",
+          "durationMinutes": 45,
+          "notes": "Singgah di pinggir jalan raya Padang-Bukittinggi melihat air terjun tepi jalan."
+        },
+        {
+          "day": 1,
+          "sequence": 5,
+          "name": "Jam Gadang & Pasar Atas Bukittinggi",
+          "durationMinutes": 120,
+          "notes": "Sore dan malam hari santai di alun-alun Jam Gadang dan berburu Nasi Kapau."
+        },
+        {
+          "day": 2,
+          "sequence": 1,
+          "name": "Taman Panorama Ngarai Sianok & Lubang Jepang",
+          "durationMinutes": 120,
+          "notes": "Pagi jam 08:00 melihat pemandangan Ngarai Sianok dan menyusuri bunker bersejarah."
+        },
+        {
+          "day": 2,
+          "sequence": 2,
+          "name": "Janjang Koto Gadang (Great Wall of Sumatra)",
+          "durationMinutes": 90,
+          "notes": "Jalan menyeberangi lembah via tembok panjang buatan menuju Desa Koto Gadang."
+        },
+        {
+          "day": 2,
+          "sequence": 3,
+          "name": "Lembah Harau & Air Terjun Sarasah Bonta",
+          "durationMinutes": 180,
+          "notes": "Perjalanan ke Payakumbuh. Eksplorasi lembah tebing batu granit dan air terjun alami."
+        },
+        {
+          "day": 2,
+          "sequence": 4,
+          "name": "Kelok 9",
+          "durationMinutes": 60,
+          "notes": "Melihat mahakarya jembatan pemandangan di tengah jurang hijau sebelum kembali ke Bukittinggi."
+        },
+        {
+          "day": 3,
+          "sequence": 1,
+          "name": "Desa Pandai Sikek",
+          "durationMinutes": 60,
+          "notes": "Melihat pengerjaan kain tenun Songket tradisional dan ukiran kayu Minang."
+        },
+        {
+          "day": 3,
+          "sequence": 2,
+          "name": "Istano Basa Pagaruyung",
+          "durationMinutes": 120,
+          "notes": "Perjalanan ke Batusangkar. Mengunjungi Istana Kerajaan dan berfoto memakai pakaian adat."
+        },
+        {
+          "day": 3,
+          "sequence": 3,
+          "name": "Danau Singkarak",
+          "durationMinutes": 90,
+          "notes": "Makan siang Ikan Bilih goreng renyah khas tepi Danau Singkarak sebelum kembali ke Bandara Padang."
+        }
+      ]
+    }
+  },
+  {
+    "slug": "riau",
+    "name": "Riau",
+    "capital": "Pekanbaru",
+    "description": "Riau menawarkan perpaduan alam, budaya, dan kuliner lokal. Kurasi DOLAN ini menjadi titik awal perjalanan backpacker dan tetap perlu disesuaikan dengan cuaca, jam operasional, serta kondisi transportasi terbaru.",
+    "heroQuery": "Istana Siak Sri Indrapura, Riau, Indonesia",
+    "featuredRank": 4,
+    "places": [
+      {
+        "name": "Masjid An-Nur Pekanbaru",
+        "city": "Pekanbaru",
+        "rank": 1,
+        "description": "Masjid megah dengan arsitektur menyerupai Taj Mahal di pusat Pekanbaru.",
+        "searchQuery": "Masjid An Nur, Pekanbaru, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Masjid%20An%20Nur%2C%20Pekanbaru%2C%20Indonesia"
+      },
+      {
+        "name": "Museum Sang Nila Utama",
+        "city": "Pekanbaru",
+        "rank": 2,
+        "description": "Museum warisan budaya Melayu Riau di Pekanbaru.",
+        "searchQuery": "Museum Sang Nila Utama, Pekanbaru, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Museum%20Sang%20Nila%20Utama%2C%20Pekanbaru%2C%20Indonesia"
+      },
+      {
+        "name": "Istana Siak Sri Indrapura",
+        "city": "Siak",
+        "rank": 3,
+        "description": "Istana peninggalan Kesultanan Siak megah bernuansa Melayu-Eropa di pinggir Sungai Siak.",
+        "searchQuery": "Istana Siak Sri Indrapura, Riau, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Istana%20Siak%20Sri%20Indrapura%2C%20Riau%2C%20Indonesia"
+      },
+      {
+        "name": "Candi Muara Takus",
+        "city": "Kampar",
+        "rank": 4,
+        "description": "Situs candi Buddha tertua di Sumatera yang terbuat dari batu pasir dan batu bata merah.",
+        "searchQuery": "Candi Muara Takus, Riau, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Candi%20Muara%20Takus%2C%20Riau%2C%20Indonesia"
+      }
+    ],
+    "template": {
+      "id": "15659998-b8ee-4cf6-933b-5b53026374ac",
+      "title": "Rute Backpacker Riau 3D2N (Pekanbaru - Siak - Kampar)",
+      "description": "Eksplorasi warisan sejarah kejayaan Melayu Islam dan situs kuno di daratan Riau.",
+      "durationDays": 3,
+      "transportMode": "Sewa Mobil / Transportasi Lokal",
+      "budgetLow": 750000,
+      "budgetHigh": 2100000,
+      "stops": [
+        {
+          "day": 1,
+          "sequence": 1,
+          "name": "Masjid An-Nur Pekanbaru",
+          "durationMinutes": 60,
+          "notes": "Mulai jam 08:30 pagi. Melihat kemegahan masjid yang dijuluki Taj Mahal-nya Riau."
+        },
+        {
+          "day": 1,
+          "sequence": 2,
+          "name": "Museum Sang Nila Utama",
+          "durationMinutes": 90,
+          "notes": "Mengenal artefak dan pakaian adat tradisional kebudayaan Melayu."
+        },
+        {
+          "day": 1,
+          "sequence": 3,
+          "name": "Taman Rekreasi Alam Mayang",
+          "durationMinutes": 90,
+          "notes": "Taman terbuka hijau dengan ruang santai dan tempat piknik warga lokal."
+        },
+        {
+          "day": 1,
+          "sequence": 4,
+          "name": "Pasar Bawah (Pasar Wisata Pekanbaru)",
+          "durationMinutes": 90,
+          "notes": "Belanja oleh-oleh khas Riau (Bolu Kemojo, Lempuk Durian) dan barang antik."
+        },
+        {
+          "day": 1,
+          "sequence": 5,
+          "name": "Wisata Kuliner Khas Melayu (Pondok Khas Padeh)",
+          "durationMinutes": 90,
+          "notes": "Santap malam menu Patin Asam Pedas otentik Riau."
+        },
+        {
+          "day": 2,
+          "sequence": 1,
+          "name": "Perjalanan Pekanbaru ke Siak Sri Indrapura",
+          "durationMinutes": 120,
+          "notes": "Berangkat pagi pukul 07:30 menelusuri jalan darat ke Kabupaten Siak."
+        },
+        {
+          "day": 2,
+          "sequence": 2,
+          "name": "Istana Siak Sri Indrapura (Asseryah Hasyimiah)",
+          "durationMinutes": 120,
+          "notes": "Eksplor interior istana, melihat komet instrumen musik kuno langka di dunia."
+        },
+        {
+          "day": 2,
+          "sequence": 3,
+          "name": "Makam Sultan Syarif Kasim II & Masjid Syahabuddin",
+          "durationMinutes": 60,
+          "notes": "Situs ziarah dan sejarah pahlawan nasional Riau."
+        },
+        {
+          "day": 2,
+          "sequence": 4,
+          "name": "Jembatan Tengku Agung Sultanah Latifah",
+          "durationMinutes": 60,
+          "notes": "Bersantai di water-front pinggir Sungai Siak sambil menikmati sunset jembatan megah."
+        },
+        {
+          "day": 3,
+          "sequence": 1,
+          "name": "Perjalanan Pekanbaru ke Candi Muara Takus (Kampar)",
+          "durationMinutes": 150,
+          "notes": "Berangkat pagi pukul 07:30 menuju Kabupaten Kampar."
+        },
+        {
+          "day": 3,
+          "sequence": 2,
+          "name": "Kompleks Candi Muara Takus",
+          "durationMinutes": 120,
+          "notes": "Eksplor stupa Candi Mahligai dan Candi Tua, situs peradaban kuno Kedatuan Sriwijaya."
+        },
+        {
+          "day": 3,
+          "sequence": 3,
+          "name": "Dermaga Gulamo (Green Canyon Riau)",
+          "durationMinutes": 120,
+          "notes": "Mengarungi sungai dengan tebing tinggi sebelum kembali ke Pekanbaru."
+        }
+      ]
+    }
+  },
+  {
+    "slug": "kepulauan-riau",
+    "name": "Kepulauan Riau",
+    "capital": "Tanjungpinang",
+    "description": "Kepulauan Riau menawarkan perpaduan alam, budaya, dan kuliner lokal. Kurasi DOLAN ini menjadi titik awal perjalanan backpacker dan tetap perlu disesuaikan dengan cuaca, jam operasional, serta kondisi transportasi terbaru.",
+    "heroQuery": "Pulau Penyengat, Kepulauan Riau, Indonesia",
+    "featuredRank": 5,
+    "places": [
+      {
+        "name": "Jembatan Barelang",
+        "city": "Batam",
+        "rank": 1,
+        "description": "Landmark ikonik menghubungkan pulau-pulau di Batam.",
+        "searchQuery": "Jembatan Barelang, Kepulauan Riau, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Jembatan%20Barelang%2C%20Kepulauan%20Riau%2C%20Indonesia"
+      },
+      {
+        "name": "Pulau Penyengat",
+        "city": "Tanjungpinang",
+        "rank": 2,
+        "description": "Pulau bersejarah pusat peninggalan Kerajaan Riau-Lingga dan birthplace Bahasa Indonesia.",
+        "searchQuery": "Pulau Penyengat, Kepulauan Riau, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Pulau%20Penyengat%2C%20Kepulauan%20Riau%2C%20Indonesia"
+      },
+      {
+        "name": "Gurun Pasir Busung & Telaga Biru",
+        "city": "Bintan",
+        "rank": 3,
+        "description": "Bekas tambang bauksit yang berubah menjadi oasis gurun pasir dan danau biru memukau.",
+        "searchQuery": "Gurun Pasir Busung, Kepulauan Riau, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Gurun%20Pasir%20Busung%2C%20Kepulauan%20Riau%2C%20Indonesia"
+      },
+      {
+        "name": "Lagoi Bay Bintan",
+        "city": "Bintan",
+        "rank": 4,
+        "description": "Kawasan resor pesisir pantai kelas dunia yang rapi dan bersih di Bintan.",
+        "searchQuery": "Lagoi Bay, Kepulauan Riau, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Lagoi%20Bay%2C%20Kepulauan%20Riau%2C%20Indonesia"
+      },
+      {
+        "name": "Pantai Trikora",
+        "city": "Bintan",
+        "rank": 5,
+        "description": "Deretan pantai panjang dengan batu-batu granit besar khas pesisir Bintan.",
+        "searchQuery": "Pantai Trikora, Kepulauan Riau, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Pantai%20Trikora%2C%20Kepulauan%20Riau%2C%20Indonesia"
+      }
+    ],
+    "template": {
+      "id": "97930e7f-42ad-4034-a428-3718c334fcb2",
+      "title": "Rute Backpacker Kepulauan Riau 3D2N (Batam & Bintan Island Hopping)",
+      "description": "Kombinasi modernitas kota transit Batam, sejarah Melayu di Pulau Penyengat, dan pantai eksotis Bintan.",
+      "durationDays": 3,
+      "transportMode": "Kapal Roro/Speedboat Inter-island + Sewa Motor",
+      "budgetLow": 950000,
+      "budgetHigh": 2800000,
+      "stops": [
+        {
+          "day": 1,
+          "sequence": 1,
+          "name": "Welcome to Batam Monument",
+          "durationMinutes": 45,
+          "notes": "Foto di ikon landmark Kota Batam di Bukit Clara pada pagi hari."
+        },
+        {
+          "day": 1,
+          "sequence": 2,
+          "name": "Jembatan Barelang I (Fisabilillah)",
+          "durationMinutes": 90,
+          "notes": "Eksplorasi jembatan megah penghubung pulau dan menikmati seafood kelong di sekitar jembatan."
+        },
+        {
+          "day": 1,
+          "sequence": 3,
+          "name": "Kawasan Nagoya Batam",
+          "durationMinutes": 120,
+          "notes": "Pusat belanja barang elektronik dan pernak-pemik murah khas Batam."
+        },
+        {
+          "day": 1,
+          "sequence": 4,
+          "name": "Pelabuhan Telagapunggur ke Tanjung Uban/Tanjungpinang",
+          "durationMinutes": 60,
+          "notes": "Menyeberang pulau dengan speedboat/kapal feri menuju Pulau Bintan sore hari."
+        },
+        {
+          "day": 2,
+          "sequence": 1,
+          "name": "Pelabuhan Sri Bintan Pura ke Pulau Penyengat",
+          "durationMinutes": 30,
+          "notes": "Naik pompong (perahu tradisional) 15 menit dari Tanjungpinang ke Pulau Penyengat."
+        },
+        {
+          "day": 2,
+          "sequence": 2,
+          "name": "Masjid Raya Sultan Riau Penyengat",
+          "durationMinutes": 60,
+          "notes": "Masjid bersejarah unik yang dibangun menggunakan campuran putih telur."
+        },
+        {
+          "day": 2,
+          "sequence": 3,
+          "name": "Keliling Benteng Bukit Kursi & Istana Ali Marhum",
+          "durationMinutes": 90,
+          "notes": "Sewa becak motor lokal untuk keliling komplek cagar budaya di Pulau Penyengat."
+        },
+        {
+          "day": 2,
+          "sequence": 4,
+          "name": "Vihara Ksitigarbha Bodhisattva (Vihara 1000 Patung)",
+          "durationMinutes": 90,
+          "notes": "Kembali ke Tanjungpinang, lanjut eksplor vihara dengan ratusan patung murid Buddha unik."
+        },
+        {
+          "day": 2,
+          "sequence": 5,
+          "name": "Gonggong Culinary Night",
+          "durationMinutes": 90,
+          "notes": "Makan malam mencicipi Gonggong (siput laut khas Kepri) di Tepi Laut Tanjungpinang."
+        },
+        {
+          "day": 3,
+          "sequence": 1,
+          "name": "Gurun Pasir Busung & Telaga Biru Bintan",
+          "durationMinutes": 90,
+          "notes": "Pagi jam 08:30 foto estetis di bukit pasir dan danau biru transparan."
+        },
+        {
+          "day": 3,
+          "sequence": 2,
+          "name": "Kawasan Wisata Lagoi Bay",
+          "durationMinutes": 120,
+          "notes": "Melihat lanskap pantai modern, kolam renang buatan Treasure Bay, dan bersantai."
+        },
+        {
+          "day": 3,
+          "sequence": 3,
+          "name": "Pantai Trikora",
+          "durationMinutes": 120,
+          "notes": "Menikmati pemandangan pantai alami berbatu granit indah sebelum kembali menuju pelabuhan/bandara."
+        }
+      ]
+    }
+  },
+  {
+    "slug": "jambi",
+    "name": "Jambi",
+    "capital": "Jambi",
+    "description": "Jambi menawarkan perpaduan alam, budaya, dan kuliner lokal. Kurasi DOLAN ini menjadi titik awal perjalanan backpacker dan tetap perlu disesuaikan dengan cuaca, jam operasional, serta kondisi transportasi terbaru.",
+    "heroQuery": "Candi Muaro Jambi, Jambi, Indonesia",
+    "featuredRank": 6,
+    "places": [
+      {
+        "name": "Gentala Arasy",
+        "city": "Jambi",
+        "rank": 1,
+        "description": "Jembatan pedestrian meliuk di atas Sungai Batanghari lengkap dengan menara museum.",
+        "searchQuery": "Gentala Arasy, Jambi, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Gentala%20Arasy%2C%20Jambi%2C%20Indonesia"
+      },
+      {
+        "name": "Masjid Agung Al-Falah Jambi",
+        "city": "Jambi",
+        "rank": 2,
+        "description": "Masjid Seribu Tiang tanpa dinding bersejarah di pusat Kota Jambi.",
+        "searchQuery": "Masjid Agung Al-Falah, Jambi, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Masjid%20Agung%20Al-Falah%2C%20Jambi%2C%20Indonesia"
+      },
+      {
+        "name": "Museum Siginjai",
+        "city": "Jambi",
+        "rank": 3,
+        "description": "Museum negeri Jambi berisi arca dan benda peninggalan Kerajaan Melayu Jambi.",
+        "searchQuery": "Museum Siginjai, Jambi, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Museum%20Siginjai%2C%20Jambi%2C%20Indonesia"
+      },
+      {
+        "name": "Candi Muaro Jambi",
+        "city": "Muaro Jambi",
+        "rank": 4,
+        "description": "Kompleks percandian bata merah terluas di Asia Tenggara di tepi Sungai Batanghari.",
+        "searchQuery": "Candi Muaro Jambi, Jambi, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Candi%20Muaro%20Jambi%2C%20Jambi%2C%20Indonesia"
+      },
+      {
+        "name": "Danau Sipin",
+        "city": "Jambi",
+        "rank": 5,
+        "description": "Danau perkotaan tempat santai warga menikmati keramba dan perahu hias.",
+        "searchQuery": "Danau Sipin, Jambi, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Danau%20Sipin%2C%20Jambi%2C%20Indonesia"
+      }
+    ],
+    "template": {
+      "id": "9d5725d4-1848-44ef-9d3a-44ec9aec0eae",
+      "title": "Rute Backpacker Jambi 3D2N (Heritage City & Muaro Jambi Trail)",
+      "description": "Jelajah kota Jambi yang efisien tanpa perlu perjalanan jauh berjam-jam ke Kerinci.",
+      "durationDays": 3,
+      "transportMode": "Ojek Online / Sewa Motor Lokal",
+      "budgetLow": 650000,
+      "budgetHigh": 1800000,
+      "stops": [
+        {
+          "day": 1,
+          "sequence": 1,
+          "name": "Masjid Agung Al-Falah (Masjid 1000 Tiang)",
+          "durationMinutes": 60,
+          "notes": "Mulai jam 08:30 pagi. Mengagumi arsitektur unik masjid tanpa dinding."
+        },
+        {
+          "day": 1,
+          "sequence": 2,
+          "name": "Museum Siginjai Jambi",
+          "durationMinutes": 90,
+          "notes": "Eksplor koleksi mahkota kerajaan, Keris Siginjai, dan fosil kuno."
+        },
+        {
+          "day": 1,
+          "sequence": 3,
+          "name": "Makan Siang Tempoyak khas Jambi",
+          "durationMinutes": 60,
+          "notes": "Mencicipi kuliner otentik olahan durian fermentasi gulai ikan patin."
+        },
+        {
+          "day": 1,
+          "sequence": 4,
+          "name": "Jembatan Gentala Arasy & Menara Museum",
+          "durationMinutes": 90,
+          "notes": "Menyeberangi jembatan pedestrian ikonik di atas Sungai Batanghari."
+        },
+        {
+          "day": 1,
+          "sequence": 5,
+          "name": "Ancol Jambi (Tanggo Rajo)",
+          "durationMinutes": 90,
+          "notes": "Nongkrong sore di pinggir sungai menikmati es tebu dan pisang goreng keriting."
+        },
+        {
+          "day": 2,
+          "sequence": 1,
+          "name": "Kompleks Percandian Muaro Jambi",
+          "durationMinutes": 240,
+          "notes": "Perjalanan 45 menit dari kota. Sewa sepeda keliling Candi Tinggi, Candi Astano, dan Candi Gumpung."
+        },
+        {
+          "day": 2,
+          "sequence": 2,
+          "name": "Museum Situs Muaro Jambi",
+          "durationMinutes": 60,
+          "notes": "Melihat koleksi arca perunggu, keramik Tiongkok, dan relief candi."
+        },
+        {
+          "day": 2,
+          "sequence": 3,
+          "name": "Jembatan Makalam & Kuliner Malam Jambi",
+          "durationMinutes": 90,
+          "notes": "Kembali ke kota dan menikmati suasana malam sambil makan Pede/Nasi Gemuk Jambi."
+        },
+        {
+          "day": 3,
+          "sequence": 1,
+          "name": "Taman Hutan Kota Mbalek / Kampoeng Radja",
+          "durationMinutes": 90,
+          "notes": "Pagi santai menikmati paru-paru hijau Kota Jambi."
+        },
+        {
+          "day": 3,
+          "sequence": 2,
+          "name": "Danau Sipin",
+          "durationMinutes": 90,
+          "notes": "Naik perahu wisata keliling danau perairan tenang di tengah kota."
+        },
+        {
+          "day": 3,
+          "sequence": 3,
+          "name": "Pusat Oleh-Oleh Khas Jambi (Batik & Kerupuk Ikan)",
+          "durationMinutes": 60,
+          "notes": "Belanja Batik Jambi bermotif Angso Duo dan pempek/kemplang sebelum pulang."
+        }
+      ]
+    }
+  },
+  {
+    "slug": "sumatera-selatan",
+    "name": "Sumatera Selatan",
+    "capital": "Palembang",
+    "description": "Sumatera Selatan menawarkan perpaduan alam, budaya, dan kuliner lokal. Kurasi DOLAN ini menjadi titik awal perjalanan backpacker dan tetap perlu disesuaikan dengan cuaca, jam operasional, serta kondisi transportasi terbaru.",
+    "heroQuery": "Jembatan Ampera, Sumatera Selatan, Indonesia",
+    "featuredRank": 7,
+    "places": [
+      {
+        "name": "Jembatan Ampera",
+        "city": "Palembang",
+        "rank": 1,
+        "description": "Ikon kebanggaan kota Palembang yang membentang di atas Sungai Musi.",
+        "searchQuery": "Jembatan Ampera, Sumatera Selatan, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Jembatan%20Ampera%2C%20Sumatera%20Selatan%2C%20Indonesia"
+      },
+      {
+        "name": "Benteng Kuto Besak",
+        "city": "Palembang",
+        "rank": 2,
+        "description": "Benteng pertahanan abad ke-18 yang menghadap langsung ke Sungai Musi dan Ampera.",
+        "searchQuery": "Benteng Kuto Besak, Sumatera Selatan, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Benteng%20Kuto%20Besak%2C%20Sumatera%20Selatan%2C%20Indonesia"
+      },
+      {
+        "name": "Museum Sultan Mahmud Badaruddin II",
+        "city": "Palembang",
+        "rank": 3,
+        "description": "Museum sejarah dekat BKB yang menampilkan artefak Kesultanan Palembang.",
+        "searchQuery": "Museum Sultan Mahmud Badaruddin II, Palembang, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Museum%20Sultan%20Mahmud%20Badaruddin%20II%2C%20Palembang%2C%20Indonesia"
+      },
+      {
+        "name": "Pulau Kemaro",
+        "city": "Palembang",
+        "rank": 4,
+        "description": "Pulau delta di tengah Sungai Musi dengan Pagoda 9 lantai dan legenda cinta bersejarah.",
+        "searchQuery": "Pulau Kemaro, Sumatera Selatan, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Pulau%20Kemaro%2C%20Sumatera%20Selatan%2C%20Indonesia"
+      },
+      {
+        "name": "Kampung Arab Al-Munawar",
+        "city": "Palembang",
+        "rank": 5,
+        "description": "Perkampungan cagar budaya tepi sungai dengan arsitektur rumah tua berusia ratusan tahun.",
+        "searchQuery": "Kampung Arab Al Munawar, Palembang, Indonesia",
+        "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Kampung%20Arab%20Al%20Munawar%2C%20Palembang%2C%20Indonesia"
+      }
+    ],
+    "template": {
+      "id": "40b434ca-a96d-4db6-9caf-a27fb88998dc",
+      "title": "Rute Backpacker Sumatera Selatan 3D2N (Palembang River & Culinary)",
+      "description": "Rute terpusat menyusuri kemegahan Sungai Musi, kuliner Pempek otentik, dan kemudahan moda LRT Palembang.",
+      "durationDays": 3,
+      "transportMode": "LRT Palembang + Perahu Ketek / Ojek Online",
+      "budgetLow": 650000,
+      "budgetHigh": 1900000,
+      "stops": [
+        {
+          "day": 1,
+          "sequence": 1,
+          "name": "Masjid Agung Sultan Mahmud Badaruddin I",
+          "durationMinutes": 60,
+          "notes": "Mulai jam 08:30 di pusat kota. Masjid terbesar bersejarah peninggalan kesultanan."
+        },
+        {
+          "day": 1,
+          "sequence": 2,
+          "name": "Museum Sultan Mahmud Badaruddin II",
+          "durationMinutes": 90,
+          "notes": "Jalan kaki dari masjid. Belajar tekstil kain songket kuno dan senjata tradisi."
+        },
+        {
+          "day": 1,
+          "sequence": 3,
+          "name": "Wisata Kuliner Pempek Sentra 26 Ilir",
+          "durationMinutes": 90,
+          "notes": "Makan siang memanjakan lidah di kampung pempek legendaris harga bersahabat."
+        },
+        {
+          "day": 1,
+          "sequence": 4,
+          "name": "Benteng Kuto Besak (BKB) & Jembatan Ampera",
+          "durationMinutes": 120,
+          "notes": "Sore santai di pelataran BKB menikmati pemandangan kapal melintas di Sungai Musi."
+        },
+        {
+          "day": 1,
+          "sequence": 5,
+          "name": "Kuliner Lesehan Terapung / Mie Celor",
+          "durationMinutes": 90,
+          "notes": "Santap malam kuliner khas Palembang berlatar belakang kerlip lampu Jembatan Ampera."
+        },
+        {
+          "day": 2,
+          "sequence": 1,
+          "name": "Kampung Arab Al-Munawar",
+          "durationMinutes": 90,
+          "notes": "Pagi jam 08:30 mengunjungi rumah-rumah limas kayu tua bersejarah di tepi sungai."
+        },
+        {
+          "day": 2,
+          "sequence": 2,
+          "name": "Dermaga BKB ke Pulau Kemaro",
+          "durationMinutes": 150,
+          "notes": "Sewa Perahu Ketek menyusuri Sungai Musi menuju Pulau Kemaro. Foto di Pagoda 9 Lantai."
+        },
+        {
+          "day": 2,
+          "sequence": 3,
+          "name": "Kampung Kapitan",
+          "durationMinutes": 60,
+          "notes": "Singgah di pemukiman Tionghoa kuno bersejarah di Seberang Ulu."
+        },
+        {
+          "day": 2,
+          "sequence": 4,
+          "name": "Taman Purbakala Kerajaan Sriwijaya (TPKS)",
+          "durationMinutes": 90,
+          "notes": "Situs jaringan kanal kuno peninggalan era Kerajaan Sriwijaya di Karanganyar."
+        },
+        {
+          "day": 3,
+          "sequence": 1,
+          "name": "Taman Wisata Alam Punti Kayu",
+          "durationMinutes": 90,
+          "notes": "Pagi hari menikmati udara segar di hutan pinus dalam kota Palembang."
+        },
+        {
+          "day": 3,
+          "sequence": 2,
+          "name": "Eksplorasi LRT Palembang (Stasiun Ampera - Jakabaring)",
+          "durationMinutes": 90,
+          "notes": "Menikmati pemandangan kota dari atas LRT dan keliling Kompleks Olahraga Jakabaring."
+        },
+        {
+          "day": 3,
+          "sequence": 3,
+          "name": "Pusat Oleh-Oleh Lenggok / Pempek Candy",
+          "durationMinutes": 60,
+          "notes": "Beli kerupuk kemplang bakar dan pempek vakum sebelum menuju Bandara SMB II."
+        }
+      ]
+    }
+  }
+]

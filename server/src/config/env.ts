@@ -1,0 +1,64 @@
+import "./load-env.ts";
+
+function readList(value: string | undefined, fallback: string[]): string[] {
+  if (!value) return fallback;
+  return value
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function readPositiveInt(value: string | undefined, fallback: number): number {
+  const parsed = Number(value ?? fallback);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+export const env = {
+  nodeEnv: process.env.NODE_ENV ?? "development",
+  port: Number(process.env.PORT ?? 4000),
+  webUrl: process.env.WEB_URL ?? "http://localhost:3000",
+  corsOrigins: readList(process.env.CORS_ALLOWED_ORIGINS, ["http://localhost:3000"]),
+  socketPath: process.env.SOCKET_PATH ?? "/socket.io",
+  authAdapter: (process.env.AUTH_ADAPTER ?? "local") as "mock" | "local",
+  sessionTtlDays: Number(process.env.SESSION_TTL_DAYS ?? 30),
+  googleOAuthClientId: process.env.GOOGLE_OAUTH_CLIENT_ID ?? "",
+  googleOAuthClientSecret: process.env.GOOGLE_OAUTH_CLIENT_SECRET ?? "",
+  googleOAuthRedirectUri:
+    process.env.GOOGLE_OAUTH_REDIRECT_URI ??
+    `${process.env.API_URL ?? "http://localhost:4000"}/api/v1/auth/google/callback`,
+  googleMapsServerKey: process.env.GOOGLE_MAPS_SERVER_KEY ?? "",
+  redisUrl: process.env.REDIS_URL?.trim() ?? "",
+  placesCacheTtlSearchSec: readPositiveInt(process.env.PLACES_CACHE_TTL_SEARCH_SEC, 86_400),
+  placesCacheTtlDetailsSec: readPositiveInt(process.env.PLACES_CACHE_TTL_DETAILS_SEC, 604_800),
+  placesCacheTtlPhotoSec: readPositiveInt(process.env.PLACES_CACHE_TTL_PHOTO_SEC, 43_200),
+  placesMaxRequestsPerUserPerDay: Number(process.env.PLACES_MAX_REQUESTS_PER_USER_PER_DAY ?? 50),
+  placesEstimatedCostPerRequest: Number(process.env.PLACES_ESTIMATED_COST_PER_REQUEST ?? 0.01),
+  aiMaxRegeneratePerUserPerDay: Number(process.env.AI_MAX_REGENERATE_PER_USER_PER_DAY || 20),
+  rateLimitWindowMs: Number(process.env.RATE_LIMIT_WINDOW_MS ?? 60_000),
+  rateLimitMax: Number(process.env.RATE_LIMIT_MAX ?? 120),
+  rateLimitSearchMax: Number(process.env.RATE_LIMIT_SEARCH_MAX ?? 40),
+  logLevel: process.env.LOG_LEVEL ?? "info",
+  workerId: process.env.WORKER_ID ?? "worker-1",
+  jobPollIntervalMs: Number(process.env.JOB_POLL_INTERVAL_MS ?? 2000),
+  jobLockTimeoutMs: Number(process.env.JOB_LOCK_TIMEOUT_MS ?? 300000),
+  jobRetryBackoffMs: Number(process.env.JOB_RETRY_BACKOFF_MS ?? 2000),
+  groqApiKey: process.env.GROQ_API_KEY ?? "",
+  groqModel: process.env.GROQ_MODEL ?? "openai/gpt-oss-20b",
+  imagekitPublicKey: process.env.IMAGEKIT_PUBLIC_KEY ?? "",
+  imagekitPrivateKey: process.env.IMAGEKIT_PRIVATE_KEY ?? "",
+  imagekitUrlEndpoint: process.env.IMAGEKIT_URL_ENDPOINT ?? "",
+  apiUrl: process.env.API_URL ?? "http://localhost:4000",
+  locationStaleSeconds: Number(process.env.LOCATION_STALE_SECONDS ?? 120),
+  locationHideSeconds: Number(process.env.LOCATION_HIDE_SECONDS ?? 600),
+  shareTokenSecret: process.env.SHARE_TOKEN_SECRET ?? "dev-share-token-secret",
+  shareLinkTtlHours: Number(process.env.SHARE_LINK_TTL_HOURS ?? 168),
+  emailProviderApiKey: process.env.EMAIL_PROVIDER_API_KEY ?? "",
+  emailFrom: process.env.EMAIL_FROM ?? "",
+  vapidPublicKey: process.env.VAPID_PUBLIC_KEY ?? "",
+  vapidPrivateKey: process.env.VAPID_PRIVATE_KEY ?? "",
+  vapidSubject: process.env.VAPID_SUBJECT ?? "mailto:halo@dolan.id",
+};
+
+export function isProduction(): boolean {
+  return env.nodeEnv === "production";
+}

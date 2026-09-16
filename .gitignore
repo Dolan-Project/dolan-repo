@@ -1,0 +1,66 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+node_modules
+node_modules/
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+.claude
+.playwright
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env files
+.env
+.env.*
+!.env.example
+!**/.env.example
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# local stitch HTML dumps
+stitch-html/
+
+# Cursor local config (may contain secrets)
+.cursor/
+
+# embedded postgres used by store tests
+**/.tmp-pg*/
+
+# local database dumps
+/backups/
+
+# Destination photos downloaded during db:seed (regenerate with GOOGLE_MAPS_SERVER_KEY)
+dolan/public/seed-places/*.jpg
+dolan/public/seed-places/*.jpeg
+dolan/public/seed-places/*.webp
+
