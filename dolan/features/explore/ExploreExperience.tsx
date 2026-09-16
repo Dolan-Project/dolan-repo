@@ -208,7 +208,7 @@ export function ExploreExperience() {
   }
 
   return (
-    <div className="flex h-[calc(100dvh-3.5rem)] min-h-[560px] flex-col overflow-hidden bg-surface md:h-[calc(100dvh-4rem)]">
+    <div className="flex h-dvh min-h-[560px] flex-col overflow-hidden bg-surface md:h-[calc(100dvh-4rem)]">
       <div className="relative min-h-0 flex-1">
         <div className="absolute inset-x-4 top-3 z-40 lg:hidden">
           <SearchField draftQuery={draftQuery} onDraftQuery={setDraftQuery} onSubmit={() => setQuery(draftQuery.trim())} compact />

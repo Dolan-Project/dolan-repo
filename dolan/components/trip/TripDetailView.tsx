@@ -470,7 +470,7 @@ export function TripDetailView({
         </div>
       ) : null}
 
-      <div className="sticky top-14 z-40 flex items-center justify-between gap-2 border-b border-slate-200 bg-white/95 px-margin py-3 backdrop-blur-md md:hidden">
+      <div className="sticky top-0 z-40 flex items-center justify-between gap-2 border-b border-slate-200 bg-white/95 px-margin py-3 backdrop-blur-md md:hidden">
         <Link href={visitor ? ROUTES.jelajah : ROUTES.tripSaya} className="grid h-8 w-8 place-items-center rounded-full hover:bg-slate-100" aria-label="Kembali">
           <Icon name="arrow_back" className="text-[20px]" />
         </Link>

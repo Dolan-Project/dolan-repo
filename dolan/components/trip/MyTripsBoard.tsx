@@ -149,6 +149,7 @@ export function MyTripsBoard() {
   const [sheet, setSheet] = useState<SheetPos>("half");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [visibilityFilter, setVisibilityFilter] = useState("ALL");
+  const [query, setQuery] = useState("");
   const [mapType, setMapType] = useState<MapType>("roadmap");
   const [focusCenter, setFocusCenter] = useState<{ lat: number; lng: number } | null>(null);
   const [zoomCommand, setZoomCommand] = useState<{ id: number; delta: 1 | -1 } | null>(null);
@@ -194,10 +195,19 @@ export function MyTripsBoard() {
     return () => ac.abort();
   }, [tab]);
 
-  const visibleRows = useMemo(
-    () => rows.filter((trip) => (statusFilter === "ALL" || trip.status === statusFilter) && (visibilityFilter === "ALL" || trip.visibility === visibilityFilter)),
-    [rows, statusFilter, visibilityFilter],
-  );
+  const visibleRows = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    return rows.filter((trip) => {
+      if (statusFilter !== "ALL" && trip.status !== statusFilter) return false;
+      if (visibilityFilter !== "ALL" && trip.visibility !== visibilityFilter) return false;
+      if (!needle) return true;
+      const haystack = [trip.title, trip.destinationCity, trip.publicMeetingPointLabel, trip.coverPlace?.name]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      return haystack.includes(needle);
+    });
+  }, [query, rows, statusFilter, visibilityFilter]);
   const selected = useMemo(
     () => visibleRows.find((trip) => trip.id === selectedId) ?? visibleRows[0] ?? null,
     [visibleRows, selectedId],
@@ -236,6 +246,7 @@ export function MyTripsBoard() {
     setTab(next);
     setStatusFilter("ALL");
     setVisibilityFilter("ALL");
+    setQuery("");
     setNotice("");
   }
   function selectTrip(id: string) {
@@ -263,10 +274,34 @@ export function MyTripsBoard() {
 
   return (
     <div className="relative mx-auto w-full max-w-[1440px] px-3 pb-3 pt-3 md:px-6 md:pb-5 md:pt-5">
-      <div className="relative h-[calc(100dvh-6.25rem)] min-h-[580px] overflow-hidden rounded-[1.75rem] border border-outline-variant/60 bg-white shadow-[0_18px_50px_rgba(22,48,80,.12)] lg:grid lg:h-[calc(100vh-7rem)] lg:min-h-[650px] lg:grid-cols-2">
+      <div className="relative h-[calc(100dvh-2.75rem)] min-h-[580px] overflow-hidden rounded-[1.75rem] border border-outline-variant/60 bg-white shadow-[0_18px_50px_rgba(22,48,80,.12)] md:h-[calc(100dvh-6.25rem)] lg:grid lg:h-[calc(100vh-7rem)] lg:min-h-[650px] lg:grid-cols-2">
         <section className="relative h-full min-h-[440px] overflow-hidden border-r border-outline-variant/50">
           <GoogleMap key={selected?.id ?? tab} points={points} selectedId={points[0]?.id ?? null} onSelect={noop} showRoute={points.length > 1} routePolylines={routePolylines} mapType={mapType} focusCenter={focusCenter} zoomCommand={zoomCommand} className="absolute inset-0 h-full w-full" />
-          <div className="pointer-events-none absolute left-3 right-3 top-3 rounded-2xl border border-white/70 bg-white/90 p-3 shadow-lg backdrop-blur-md md:left-4 md:right-20 md:top-4 md:p-4">
+          <form
+            className="fixed inset-x-4 top-3 z-40 md:hidden"
+            onSubmit={(event) => event.preventDefault()}
+          >
+            <label className="flex min-h-14 items-center gap-2.5 rounded-full border border-outline-variant/45 bg-white py-2 pl-4 pr-2 shadow-[0_10px_28px_rgba(15,59,94,.16)]">
+              <Icon name="search" className="text-[22px] text-on-surface-variant" />
+              <input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                className="min-w-0 flex-1 bg-transparent text-base text-on-surface outline-none placeholder:text-on-surface-variant"
+                placeholder="Cari trip atau kota..."
+                aria-label="Cari trip"
+              />
+              {query ? (
+                <button type="button" className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-surface-container text-on-surface" aria-label="Hapus pencarian" onClick={() => setQuery("")}>
+                  <Icon name="close" className="text-[20px]" />
+                </button>
+              ) : (
+                <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-primary text-white shadow-[0_6px_16px_rgba(0,74,198,.24)]" aria-hidden>
+                  <Icon name="arrow_forward" className="text-[20px]" />
+                </span>
+              )}
+            </label>
+          </form>
+          <div className="pointer-events-none absolute left-3 right-3 top-3 hidden rounded-2xl border border-white/70 bg-white/90 p-3 shadow-lg backdrop-blur-md md:left-4 md:right-20 md:top-4 md:block md:p-4">
             <p className="type-micro uppercase tracking-wider text-secondary">Rute trip aktif</p>
             <h2 className="type-subtitle mt-1">{selected?.destinationCity ?? "Pilih trip untuk melihat lokasi"}</h2>
             <p className="type-caption mt-1 text-on-surface-variant">
@@ -383,6 +418,78 @@ function MapControl({ label, icon, onClick, squared = false }: { label: string; 
   return <button type="button" onClick={onClick} title={label} aria-label={label} className={`flex h-11 w-11 items-center justify-center bg-white text-[#17324d] shadow-lg transition hover:bg-primary-fixed hover:text-primary ${squared ? "rounded-none shadow-none" : "rounded-xl"}`}><Icon name={icon} className="text-[21px]" /></button>;
 }
 
+function TripOptionsMenu({
+  tripTitle,
+  editHref,
+  onDelete,
+}: {
+  tripTitle: string;
+  editHref: string;
+  onDelete?: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (event: PointerEvent) => {
+      if (!wrapRef.current?.contains(event.target as Node)) setOpen(false);
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open]);
+
+  return (
+    <div className="relative" ref={wrapRef}>
+      <button
+        type="button"
+        className="rounded-full bg-surface-container px-3 py-2 type-label"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label={`Opsi trip ${tripTitle}`}
+        onClick={() => setOpen((value) => !value)}
+      >
+        <Icon name="more_horiz" /> Opsi
+      </button>
+      {open ? (
+        <div
+          role="menu"
+          className="absolute bottom-full left-0 z-30 mb-2 w-52 overflow-hidden rounded-2xl border border-outline-variant/60 bg-white py-1 shadow-[0_14px_34px_rgba(7,28,50,.18)]"
+        >
+          <Link
+            role="menuitem"
+            href={editHref}
+            className="flex items-center gap-2 px-3 py-2.5 type-label text-on-surface hover:bg-surface-container"
+            onClick={() => setOpen(false)}
+          >
+            <Icon name="edit" /> Edit trip
+          </Link>
+          {onDelete ? (
+            <button
+              type="button"
+              role="menuitem"
+              className="flex w-full items-center gap-2 px-3 py-2.5 type-label text-error hover:bg-error-container"
+              onClick={() => {
+                setOpen(false);
+                onDelete();
+              }}
+            >
+              <Icon name="delete" /> Hapus trip
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function TripCard({
   trip,
   tab,
@@ -441,17 +548,16 @@ function TripCard({
           </button>
         ) : null}
         {(tab === "hosted" || tab === "joined") ? <Link href={ROUTES.tripChat(trip.id)} className="rounded-full bg-surface-container px-3 py-2 type-label"><Icon name="forum" /> Grup Chat</Link> : null}
-        {tab === "hosted" ? <Link href={tripItineraryPath(trip.id)} className="rounded-full bg-surface-container px-3 py-2 type-label"><Icon name="edit" /> Edit itinerary</Link> : null}
-        {tab === "hosted" && onDelete ? (
-          <button type="button" className="rounded-full px-3 py-2 type-label text-error hover:bg-error-container" onClick={onDelete}>
-            <Icon name="delete" /> Hapus
-          </button>
+        {tab === "hosted" ? (
+          <TripOptionsMenu tripTitle={trip.title} editHref={tripItineraryPath(trip.id)} onDelete={onDelete} />
         ) : null}
         {tab === "pending" ? <Link href={tripDetailHref(trip.id)} className="btn-brand !min-h-9 !px-3 !text-xs"><Icon name="forum" /> Buka diskusi publik</Link> : null}
-        <button type="button" className="rounded-full px-3 py-2 type-label text-primary hover:bg-primary-fixed" onClick={onShare}>
-          <Icon name="share" /> Bagikan rute
-        </button>
-        <Link href={tripDetailHref(trip.id)} className="rounded-full px-3 py-2 type-label text-primary hover:bg-primary-fixed">Lihat detail</Link>
+        <div className="ml-auto flex items-center gap-1">
+          <button type="button" className="rounded-full px-3 py-2 type-label text-primary hover:bg-primary-fixed" onClick={onShare}>
+            <Icon name="share" /> Bagikan rute
+          </button>
+          <Link href={tripDetailHref(trip.id)} className="rounded-full px-3 py-2 type-label text-primary hover:bg-primary-fixed">Lihat detail</Link>
+        </div>
       </div>
       {trip.status === "COMPLETED" ? (
         <AttendanceConfirm

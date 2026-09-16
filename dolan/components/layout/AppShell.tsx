@@ -1,6 +1,6 @@
 import { BottomNav } from "@/components/layout/BottomNav";
 import { SiteFooter } from "@/components/layout/SiteFooter";
-import { SiteHeader } from "@/components/layout/SiteHeader";
+import { HeaderSpacer, SiteHeader } from "@/components/layout/SiteHeader";
 import { NotificationToaster } from "@/components/notifications/NotificationToaster";
 import { getSession } from "@/lib/auth/get-session";
 import { parseNotificationsResponse } from "@/lib/notifications";
@@ -43,8 +43,9 @@ export async function AppShell({
       <main
         id="main-content"
         tabIndex={-1}
-        className={`flex-1 ${flushHeader ? "pt-0" : "pt-14 md:pt-16"} ${withBottomNavPad ? "pb-20 md:pb-0" : ""}`}
+        className={`flex-1 ${withBottomNavPad ? "pb-20 md:pb-0" : ""}`}
       >
+        <HeaderSpacer flush={flushHeader} />
         {children}
       </main>
       {showFooter ? <SiteFooter /> : null}
