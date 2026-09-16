@@ -9,6 +9,8 @@ import { Icon } from "@/components/ui/Icon";
 import { UserAvatar } from "@/components/ui/UserAvatar";
 import type { AuthSession } from "@/lib/contracts";
 import { ROUTES } from "@/lib/routes";
+import { findProvince, INDONESIA_PROVINCES } from "@/lib/provinces";
+import { provinceCoverUrl } from "@/lib/province-cover";
 import type { HomeFeedResult } from "../load-home-feed";
 import type { HomeFeedPayload } from "../home-feed-types";
 import styles from "./home-feed.module.css";
@@ -23,7 +25,9 @@ type SortTab = "popular" | "latest" | "routes" | "friends";
 
 export function HomeFeed({ session, feed }: HomeFeedProps) {
   const router = useRouter();
-  const { tasks, stream: initialStream, composer, trips, templates, provinces } = feed.data;
+  const { tasks, stream: initialStream, composer, trips, provinces } = feed.data;
+  const catCardRef = useRef<HTMLDivElement>(null);
+  const [catHeight, setCatHeight] = useState<number | null>(null);
   const [stream, setStream] = useState<HomeStreamItem[]>(initialStream);
   const [error, setError] = useState(feed.ok ? "" : feed.error);
   const [pending, setPending] = useState(false);
@@ -33,40 +37,69 @@ export function HomeFeed({ session, feed }: HomeFeedProps) {
   const [photo, setPhoto] = useState<File | null>(null);
   const [rail, setRail] = useState<RailFilter>("all");
   const [tab, setTab] = useState<SortTab>("popular");
-  const templateSelectRef = useRef<HTMLSelectElement>(null);
+  const [audience, setAudience] = useState<"public" | "community">("public");
+  const [following, setFollowing] = useState<Set<string>>(() => new Set());
+  const [followingReady, setFollowingReady] = useState(!session);
   const preview = useMemo(() => (photo ? URL.createObjectURL(photo) : ""), [photo]);
   useEffect(() => () => {
     if (preview) URL.revokeObjectURL(preview);
   }, [preview]);
 
-  const canPublish = tasks.profileComplete;
-  const visibleStream = useMemo(
-    () => filterStream(stream, rail, tab),
-    [stream, rail, tab],
-  );
-  const kawan = useMemo(() => {
-    const seen = new Set<string>();
-    const items = [];
-    for (const item of stream) {
-      if (item.kind !== "post") continue;
-      const author = item.post.author;
-      if (!author.username || seen.has(author.username)) continue;
-      if (session?.user.username === author.username) continue;
-      seen.add(author.username);
-      items.push(author);
-      if (items.length === 3) break;
+  useEffect(() => {
+    if (!session?.user.username) {
+      setFollowing(new Set());
+      setFollowingReady(true);
+      return;
     }
-    return items;
-  }, [session?.user.username, stream]);
-  const featuredTrip = tasks.draftTrips[0] ?? composer.trips[0] ?? trips[0] ?? null;
-  const featuredTemplate = templates[0] ?? null;
-  const promoTemplate = templates[1] ?? templates[0] ?? null;
+    const controller = new AbortController();
+    setFollowingReady(false);
+    void fetch(`/api/v1/users/${encodeURIComponent(session.user.username)}/following`, {
+      credentials: "include",
+      signal: controller.signal,
+    })
+      .then((response) => response.json())
+      .then((json: { data?: { items?: Array<{ username?: string }> } }) => {
+        if (controller.signal.aborted) return;
+        const names = (json.data?.items ?? [])
+          .map((item) => item.username)
+          .filter((username): username is string => Boolean(username));
+        setFollowing(new Set(names));
+        setFollowingReady(true);
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) {
+          setFollowing(new Set());
+          setFollowingReady(true);
+        }
+      });
+    return () => controller.abort();
+  }, [session?.user.username]);
+
+  useEffect(() => {
+    const node = catCardRef.current;
+    if (!node) return;
+    const update = () => setCatHeight(Math.round(node.getBoundingClientRect().height));
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+
+  const canPublish = tasks.profileComplete;
+  const visibleStream = useMemo(() => {
+    if (rail === "following" && session && !followingReady) return [];
+    return filterStream(stream, rail, tab, following, session?.user.username);
+  }, [following, followingReady, rail, session, stream, tab]);
   const trending = pickTrending(provinces);
 
   async function onCreate(event: React.FormEvent) {
     event.preventDefault();
     if (!photo) {
       setError("Pilih foto dulu.");
+      return;
+    }
+    if (audience === "community" && !tripId) {
+      setError("Pilih trip dulu untuk berbagi ke komunitas.");
       return;
     }
     setPending(true);
@@ -202,7 +235,7 @@ export function HomeFeed({ session, feed }: HomeFeedProps) {
           </button>
         </div>
 
-        <div className={styles.catCard}>
+        <div className={styles.catCard} ref={catCardRef}>
           <p className={styles.railLabel}>Kategori dolan</p>
           <Link className={styles.catLink} href={`${ROUTES.jelajah}?q=${encodeURIComponent("pantai")}`}>
             <Icon name="landscape" /> Pantai & selam
@@ -217,23 +250,6 @@ export function HomeFeed({ session, feed }: HomeFeedProps) {
             <Icon name="map" /> Campuran
           </Link>
         </div>
-
-        {featuredTrip ? (
-          <article className={styles.promoCard}>
-            <div
-              className={styles.promoCover}
-              style={featuredTemplate?.coverPlace?.photoUri ? { backgroundImage: `url(${featuredTemplate.coverPlace.photoUri})` } : undefined}
-            />
-            <div className={styles.promoBody}>
-              <p>Trip merencanakan</p>
-              <h3>{featuredTrip.title}</h3>
-              {"destinationCity" in featuredTrip && featuredTrip.destinationCity ? (
-                <span>{featuredTrip.destinationCity}</span>
-              ) : null}
-              <Link href={"id" in featuredTrip ? ROUTES.trip(featuredTrip.id) : ROUTES.tripSaya}>Buka trip</Link>
-            </div>
-          </article>
-        ) : null}
       </aside>
 
       <div className={styles.mainCol}>
@@ -257,7 +273,16 @@ export function HomeFeed({ session, feed }: HomeFeedProps) {
                 <p>Jejak trip</p>
                 <h2>Pamerin dolan-mu</h2>
               </div>
-              <span className={styles.audience}>Publik</span>
+              <button
+                type="button"
+                className={styles.audience}
+                data-mode={audience}
+                aria-pressed={audience === "community"}
+                aria-label={audience === "public" ? "Jangkauan publik. Tekan untuk komunitas." : "Jangkauan komunitas. Tekan untuk publik."}
+                onClick={() => setAudience((current) => (current === "public" ? "community" : "public"))}
+              >
+                {audience === "public" ? "Publik" : "Komunitas"}
+              </button>
             </div>
             <div className={styles.composerTop}>
               <UserAvatar src={session.user.avatarUrl} alt="" className="h-9 w-9 shrink-0 rounded-full" />
@@ -271,7 +296,6 @@ export function HomeFeed({ session, feed }: HomeFeedProps) {
             </div>
             <div className={styles.composerMeta}>
               <select
-                ref={templateSelectRef}
                 value={templateId}
                 onChange={(event) => setTemplateId(event.target.value)}
                 aria-label="Pilih rute"
@@ -312,14 +336,6 @@ export function HomeFeed({ session, feed }: HomeFeedProps) {
                   onChange={(event) => setPhoto(event.target.files?.[0] ?? null)}
                 />
               </label>
-              <button type="button" className={styles.toolChip} onClick={() => templateSelectRef.current?.focus()}>
-                <Icon name="map" />
-                Peta lokasi
-              </button>
-              <Link href={ROUTES.buatTrip} className={styles.toolChip}>
-                <Icon name="payments" />
-                Estimasi budget
-              </Link>
               <button type="submit" disabled={pending || !canPublish} className={`btn-primary ${styles.publish}`}>
                 {pending ? "Mengunggah…" : canPublish ? "Bagikan jejak" : "Lengkapi profil"}
               </button>
@@ -360,12 +376,12 @@ export function HomeFeed({ session, feed }: HomeFeedProps) {
         <div className={styles.stream}>
           {rail === "trips" || tab === "friends" ? (
             trips.length === 0 ? (
-              <EmptyState />
+              <EmptyState copy={emptyCopy(rail, tab, followingReady, Boolean(session))} />
             ) : (
               trips.map((trip) => <OpenTripCard key={trip.id} trip={trip} />)
             )
           ) : visibleStream.length === 0 ? (
-            <EmptyState />
+            <EmptyState copy={emptyCopy(rail, tab, followingReady, Boolean(session))} />
           ) : (
             visibleStream.map((item) =>
               item.kind === "plan" ? (
@@ -400,49 +416,138 @@ export function HomeFeed({ session, feed }: HomeFeedProps) {
           </div>
         </div>
 
-        <div className={styles.kawanCard}>
-          <div className={styles.kawanHead}>
-            <h3>Kawan dolan</h3>
-            {session ? <Link href={ROUTES.profilMengikuti(session.user.username)}>Lihat semua</Link> : null}
-          </div>
-          <div className={styles.kawanList}>
-            {kawan.length === 0 ? (
-              <small>Belum ada saran kawan dari jejak saat ini.</small>
-            ) : (
-              kawan.map((person) => (
-                <div key={person.id} className={styles.kawanRow}>
-                  <UserAvatar src={person.avatarUrl} alt="" className="h-9 w-9 rounded-full" />
-                  <Link href={ROUTES.profilUser(person.username)}>
-                    <b>{person.displayName}</b>
-                    <small>@{person.username}</small>
-                  </Link>
-                  {session ? <FollowButton username={person.username} compact /> : null}
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-
-        {promoTemplate ? (
-          <article className={styles.promoCard}>
-            <div
-              className={styles.promoCover}
-              style={promoTemplate.coverPlace?.photoUri ? { backgroundImage: `url(${promoTemplate.coverPlace.photoUri})` } : undefined}
-            />
-            <div className={styles.promoBody}>
-              <p>{promoTemplate.popularityLabel ?? "Rute siap pakai"}</p>
-              <h3>{promoTemplate.title}</h3>
-              <small>
-                {promoTemplate.city}, {promoTemplate.durationDays} hari
-              </small>
-              <Link href={`${ROUTES.buatTrip}?templateId=${encodeURIComponent(promoTemplate.id)}`}>Pakai rute</Link>
-            </div>
-          </article>
-        ) : null}
+        <PopularProvinces provinces={provinces} height={catHeight} />
       </aside>
 
       <p className={styles.pageFoot}>Jejak dolan. Ruang temu, penjelajah rute, dan cerita nusantara.</p>
     </div>
+  );
+}
+
+type ProvinceSlide = {
+  slug: string;
+  name: string;
+  capital: string;
+  cover: string;
+};
+
+function popularProvinceSlides(feedProvinces: HomeFeedPayload["provinces"]): ProvinceSlide[] {
+  const fromFeed = feedProvinces
+    .map((province) => {
+      const catalog = findProvince(province.slug);
+      if (!catalog) return null;
+      return {
+        slug: catalog.slug,
+        name: catalog.name,
+        capital: catalog.capital,
+        cover: provinceCoverUrl(catalog),
+      };
+    })
+    .filter((row): row is ProvinceSlide => Boolean(row));
+  if (fromFeed.length >= 10) return fromFeed;
+  return INDONESIA_PROVINCES.map((province) => ({
+    slug: province.slug,
+    name: province.name,
+    capital: province.capital,
+    cover: provinceCoverUrl(province),
+  }));
+}
+
+const POPULAR_PAGE = 5;
+
+function popularPage(slides: ProvinceSlide[], start: number) {
+  return Array.from({ length: POPULAR_PAGE }, (_, offset) => slides[(start + offset) % slides.length]!);
+}
+
+function PopularProvinces({
+  provinces,
+  height,
+}: {
+  provinces: HomeFeedPayload["provinces"];
+  height: number | null;
+}) {
+  const slides = useMemo(() => popularProvinceSlides(provinces), [provinces]);
+  const count = slides.length;
+  const [index, setIndex] = useState(0);
+  const [sliding, setSliding] = useState(false);
+  const pausedRef = useRef(false);
+  const slidingRef = useRef(false);
+  slidingRef.current = sliding;
+
+  const current = count > 0 ? popularPage(slides, index) : [];
+  const upcoming = count > 0 ? popularPage(slides, index + POPULAR_PAGE) : [];
+
+  useEffect(() => {
+    upcoming.forEach((province) => {
+      const image = new window.Image();
+      image.src = province.cover;
+    });
+  }, [upcoming]);
+
+  useEffect(() => {
+    if (count < POPULAR_PAGE) return;
+    const timer = window.setInterval(() => {
+      if (pausedRef.current || slidingRef.current) return;
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        setIndex((value) => (value + POPULAR_PAGE) % count);
+        return;
+      }
+      setSliding(true);
+    }, 4500);
+    return () => window.clearInterval(timer);
+  }, [count]);
+
+  if (count === 0) return null;
+
+  return (
+    <section
+      className={styles.popularStack}
+      style={height ? { height } : undefined}
+      aria-label="Provinsi populer di Dolan"
+      onMouseEnter={() => {
+        pausedRef.current = true;
+      }}
+      onMouseLeave={() => {
+        pausedRef.current = false;
+      }}
+    >
+      <p className={styles.railLabel}>Populer di Dolan</p>
+      <div className={styles.popularViewport}>
+        <div
+          className={styles.popularTrack}
+          data-sliding={sliding}
+          onTransitionEnd={(event) => {
+            if (event.target !== event.currentTarget || !sliding) return;
+            setIndex((value) => (value + POPULAR_PAGE) % count);
+            setSliding(false);
+          }}
+        >
+          <div className={styles.popularPair}>
+            {current.map((province) => (
+              <ProvincePromoCard key={`now-${province.slug}`} province={province} />
+            ))}
+          </div>
+          <div className={styles.popularPair}>
+            {upcoming.map((province) => (
+              <ProvincePromoCard key={`next-${province.slug}`} province={province} />
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function ProvincePromoCard({ province }: { province: ProvinceSlide }) {
+  return (
+    <Link href={ROUTES.province(province.slug)} className={styles.provincePromo}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={province.cover} alt="" />
+      <span className={styles.provincePromoCopy}>
+        <b>{province.name}</b>
+        <small>{province.capital}</small>
+      </span>
+    </Link>
   );
 }
 
@@ -455,34 +560,95 @@ function pickTrending(provinces: HomeFeedPayload["provinces"]) {
   return [...ranked, ...rest].slice(0, 4);
 }
 
-function EmptyState() {
+function EmptyState({ copy }: { copy: { title: string; body: string } }) {
   return (
     <div className={styles.empty}>
       <Icon name="luggage" />
-      <b>Belum ada jejak</b>
-      <p>Pasang foto liburan atau jelajah rute di kolom ini.</p>
+      <b>{copy.title}</b>
+      <p>{copy.body}</p>
     </div>
   );
 }
 
-function filterStream(stream: HomeStreamItem[], rail: RailFilter, tab: SortTab): HomeStreamItem[] {
-  let next = stream;
-  if (rail === "following" || (rail === "all" && tab === "latest")) {
-    next = next.filter((item) => item.kind === "post");
+function emptyCopy(rail: RailFilter, tab: SortTab, followingReady: boolean, signedIn: boolean) {
+  if (rail === "trips" || tab === "friends") {
+    return { title: "Belum ada open trip", body: "Trip yang bisa diikuti akan muncul di sini." };
+  }
+  if (rail === "following") {
+    if (!signedIn) {
+      return { title: "Masuk dulu", body: "Ikuti traveler lain, lalu jejak mereka muncul di aliran ini." };
+    }
+    if (!followingReady) {
+      return { title: "Memuat jejak", body: "Mengambil akun yang kamu ikuti." };
+    }
+    return { title: "Belum ada jejak dari yang kamu ikuti", body: "Ikuti kawan dolan supaya momen mereka masuk ke sini." };
   }
   if (rail === "routes" || tab === "routes") {
-    next = next.filter((item) => item.kind === "plan" || (item.kind === "post" && item.post.template));
+    return { title: "Belum ada rute terverifikasi", body: "Rute kurasi Dolan akan tampil di aliran ini." };
   }
   if (rail === "gems") {
-    next = next.filter((item) => item.kind === "plan" && item.template.usageCount < 8);
-    if (next.length === 0) next = stream.filter((item) => item.kind === "plan");
+    return { title: "Belum ada hidden gems", body: "Rute traveler yang jarang dipakai akan tampil di sini." };
   }
+  return { title: "Belum ada jejak", body: "Pasang foto liburan atau jelajah rute di kolom ini." };
+}
+
+function templateOf(item: HomeStreamItem) {
+  return item.kind === "plan" ? item.template : item.post.template;
+}
+
+function isVerifiedRoute(item: HomeStreamItem) {
+  return templateOf(item)?.source === "CURATED";
+}
+
+function isHiddenGem(item: HomeStreamItem) {
+  const template = templateOf(item);
+  if (!template) return false;
+  return template.source === "USER_TRIP" || template.usageCount < 8;
+}
+
+function popularityScore(item: HomeStreamItem) {
+  if (item.kind === "post") {
+    return item.post.likeCount * 3 + item.post.commentCount * 2 + (item.post.template?.usageCount ?? 0);
+  }
+  return item.template.usageCount * 4 + (item.template.popularityLabel ? 12 : 0) + (item.template.source === "CURATED" ? 8 : 0);
+}
+
+function filterStream(
+  stream: HomeStreamItem[],
+  rail: RailFilter,
+  tab: SortTab,
+  following: Set<string>,
+  me: string | undefined,
+): HomeStreamItem[] {
+  let next = stream;
+  if (rail === "following") {
+    next = next.filter((item) => {
+      if (item.kind !== "post") return false;
+      const username = item.post.author.username;
+      return username === me || following.has(username);
+    });
+  } else if (rail === "routes") {
+    next = next.filter(isVerifiedRoute);
+  } else if (rail === "gems") {
+    const gems = next.filter(isHiddenGem);
+    next = gems.length > 0 ? gems : next.filter((item) => Boolean(templateOf(item)));
+  }
+
+  if (tab === "routes" && rail !== "routes") {
+    next = next.filter((item) => item.kind === "plan" || Boolean(item.kind === "post" && item.post.template));
+  }
+
   if (tab === "latest") {
     next = [...next].sort((a, b) => {
       const left = a.kind === "post" ? a.post.createdAt : "";
       const right = b.kind === "post" ? b.post.createdAt : "";
-      return right.localeCompare(left);
+      if (left && right) return right.localeCompare(left);
+      if (left) return -1;
+      if (right) return 1;
+      return 0;
     });
+  } else if (tab === "popular") {
+    next = [...next].sort((a, b) => popularityScore(b) - popularityScore(a));
   }
   return next;
 }
@@ -555,6 +721,7 @@ function MomentCard({
 }) {
   const [draft, setDraft] = useState("");
   const [commentOpen, setCommentOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
   const commentInputRef = useRef<HTMLInputElement>(null);
   const stamp = post.trip?.title || post.template?.city || post.template?.title || "";
   const title = postTitle(post);
@@ -630,12 +797,17 @@ function MomentCard({
         <button
           type="button"
           className={styles.like}
+          aria-label={copied ? "Tautan tersalin" : "Salin tautan jejak"}
           onClick={() => {
             const url = `${window.location.origin}/#post-${post.id}`;
-            void navigator.clipboard?.writeText(url);
+            void navigator.clipboard?.writeText(url)?.then(() => {
+              setCopied(true);
+              window.setTimeout(() => setCopied(false), 2000);
+            });
           }}
         >
           <Icon name="share" />
+          {copied ? <span className={styles.copied}>Tersalin</span> : null}
         </button>
       </div>
       {post.comments.length > 0 ? (

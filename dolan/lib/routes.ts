@@ -18,6 +18,7 @@ export const ROUTES = {
   cekEmail: "/cek-email",
   wisataBali: "/provinsi/bali",
   provinsi: "/provinsi",
+  rekomendasi: "/rekomendasi",
   itineraryBali: "/buat-trip?templateId=fc02b73b-20b5-4db9-a559-39280cbac02a",
   notifikasi: "/notifikasi",
   trip: (tripId: string) => `/trip/${tripId}`,

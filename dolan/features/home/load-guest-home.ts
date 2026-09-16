@@ -1,5 +1,6 @@
 import type { ApiPage, TripSummary } from "@dolan/shared";
-import { ROUTES } from "@/lib/routes";
+import { provinceCoverUrl, provinceHref } from "@/lib/province-cover";
+import { INDONESIA_PROVINCES, type CuratedProvince } from "@/lib/provinces";
 
 export type GuestHomeDestination = {
   name: string;
@@ -25,7 +26,21 @@ export type GuestHomePayload = {
 };
 
 const SIZES: GuestHomeDestination["size"][] = ["large", "tall", "small", "small"];
-const FEATURED_PROVINCES = ["bali", "jawa-timur", "nusa-tenggara-timur", "di-yogyakarta"];
+const FEATURED_PROVINCES = ["bali", "jawa-timur", "nusa-tenggara-timur", "di-yogyakarta"] as const;
+
+export function featuredGuestProvinces(): GuestHomeDestination[] {
+  const preferred = FEATURED_PROVINCES.map((slug) =>
+    INDONESIA_PROVINCES.find((item) => item.slug === slug),
+  ).filter((item): item is CuratedProvince => Boolean(item));
+  const extra = INDONESIA_PROVINCES.filter((item) => !preferred.some((row) => row.slug === item.slug));
+  return [...preferred, ...extra].slice(0, 4).map((province, index) => ({
+    name: province.name,
+    meta: `Ibu kota ${province.capital}`,
+    image: provinceCoverUrl(province),
+    href: provinceHref(province.slug),
+    size: SIZES[index] ?? "small",
+  }));
+}
 
 function formatRange(start: string | null, end: string | null) {
   if (!start) return "Tanggal fleksibel";
@@ -49,11 +64,6 @@ async function fetchJson<T>(url: string): Promise<T | null> {
   }
 }
 
-function placeHref(place: { googlePlaceId?: string | null }, provinceSlug: string) {
-  if (place.googlePlaceId) return `/wisata/${encodeURIComponent(place.googlePlaceId)}`;
-  return ROUTES.province(provinceSlug);
-}
-
 export async function loadGuestHome(): Promise<GuestHomePayload> {
   const base = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api/v1").replace(/\/$/, "");
 
@@ -61,38 +71,7 @@ export async function loadGuestHome(): Promise<GuestHomePayload> {
     `${base}/search/trips?sort=soonest&page=1&limit=6`,
   );
 
-  const provinceDetails = await Promise.all(
-    FEATURED_PROVINCES.map(async (slug) => {
-      const payload = await fetchJson<{
-        success: true;
-        data: {
-          slug: string;
-          name: string;
-          places: Array<{
-            name: string;
-            city: string;
-            googlePlaceId: string | null;
-          }>;
-        };
-      }>(`${base}/provinces/${slug}`);
-      return payload?.success ? payload.data : null;
-    }),
-  );
-
-  const destinations: GuestHomeDestination[] = [];
-  for (const province of provinceDetails) {
-    if (!province) continue;
-    const place = province.places[0];
-    if (!place) continue;
-    destinations.push({
-      name: place.name,
-      meta: `${province.name} · ${place.city}`,
-      image: null,
-      href: placeHref(place, province.slug),
-      size: SIZES[destinations.length % SIZES.length] ?? "small",
-    });
-    if (destinations.length >= 4) break;
-  }
+  const destinations = featuredGuestProvinces();
 
   const trips: GuestHomeTrip[] = (tripsPayload?.data ?? []).map((trip) => ({
     id: trip.id,

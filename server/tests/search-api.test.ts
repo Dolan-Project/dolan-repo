@@ -211,11 +211,13 @@ describe("WIRA-D2 search and popularity APIs", () => {
     expect(response.body.error.code).toBe(SearchErrorCode.PROVIDER_UNAVAILABLE);
   });
 
-  it("enforces the daily Places quota", async () => {
+  it("enforces the daily Places quota on cache miss", async () => {
     const search = createMemorySearchService({ quotaLimit: 1 });
     const ok = await request(app(search)).get("/api/v1/search/places?q=malioboro");
     expect(ok.status).toBe(200);
-    const blocked = await request(app(search)).get("/api/v1/search/places?q=malioboro");
+    const cached = await request(app(search)).get("/api/v1/search/places?q=malioboro");
+    expect(cached.status).toBe(200);
+    const blocked = await request(app(search)).get("/api/v1/search/places?q=prambanan");
     expect(blocked.status).toBe(429);
     expect(blocked.body.error.code).toBe(SearchErrorCode.QUOTA_EXCEEDED);
   });

@@ -8,6 +8,11 @@ function readList(value: string | undefined, fallback: string[]): string[] {
     .filter(Boolean);
 }
 
+function readPositiveInt(value: string | undefined, fallback: number): number {
+  const parsed = Number(value ?? fallback);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
 export const env = {
   nodeEnv: process.env.NODE_ENV ?? "development",
   port: Number(process.env.PORT ?? 4000),
@@ -22,6 +27,10 @@ export const env = {
     process.env.GOOGLE_OAUTH_REDIRECT_URI ??
     `${process.env.API_URL ?? "http://localhost:4000"}/api/v1/auth/google/callback`,
   googleMapsServerKey: process.env.GOOGLE_MAPS_SERVER_KEY ?? "",
+  redisUrl: process.env.REDIS_URL?.trim() ?? "",
+  placesCacheTtlSearchSec: readPositiveInt(process.env.PLACES_CACHE_TTL_SEARCH_SEC, 86_400),
+  placesCacheTtlDetailsSec: readPositiveInt(process.env.PLACES_CACHE_TTL_DETAILS_SEC, 604_800),
+  placesCacheTtlPhotoSec: readPositiveInt(process.env.PLACES_CACHE_TTL_PHOTO_SEC, 43_200),
   placesMaxRequestsPerUserPerDay: Number(process.env.PLACES_MAX_REQUESTS_PER_USER_PER_DAY ?? 50),
   placesEstimatedCostPerRequest: Number(process.env.PLACES_ESTIMATED_COST_PER_REQUEST ?? 0.01),
   aiMaxRegeneratePerUserPerDay: Number(process.env.AI_MAX_REGENERATE_PER_USER_PER_DAY || 20),
