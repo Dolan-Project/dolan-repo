@@ -1,6 +1,5 @@
-import type { EditableItineraryDay, EditableItineraryStop } from "@dolan/shared";
+import type { EditableItineraryDay, EditableItineraryStop, ItinerarySource } from "@dolan/shared";
 import { haversineKm } from "@/lib/route-optimize";
-import { isTravelSpeedAnomaly } from "@/lib/route-travel";
 
 function minutesToClock(total: number) {
   const normalized = ((total % (24 * 60)) + 24 * 60) % (24 * 60);
@@ -92,8 +91,20 @@ export function chooseTravelVehicle(km: number, placeName: string): TravelVehicl
   if (/komodo|padar|gili|penida|nusa lembongan|ferry|kapal/.test(name) && km >= 1.5) return "boat";
   if (/bromo|ijen|penanjakan/.test(name)) return "jeep";
   if (km < 1) return "walk";
-  if (km <= 25) return "ojek";
+  if (km <= 15) return "ojek";
   return "drive";
+}
+
+/** Straight-line km undercounts winding Indonesian roads; skip when Maps already gave road meters. */
+export function roadAdjustedKm(straightKm: number, vehicle: TravelVehicle) {
+  if (!(straightKm > 0)) return 0;
+  if (vehicle === "boat") return straightKm;
+  if (vehicle === "walk") return straightKm * 1.12;
+  if (vehicle === "jeep") return straightKm * 1.5;
+  if (straightKm < 3) return straightKm * 1.45;
+  if (straightKm < 15) return straightKm * 1.38;
+  if (straightKm < 40) return straightKm * 1.3;
+  return straightKm * 1.22;
 }
 
 export function vehicleLabel(vehicle: TravelVehicle) {
@@ -105,13 +116,17 @@ export function vehicleLabel(vehicle: TravelVehicle) {
 }
 
 export function minutesForVehicleKm(km: number, vehicle: TravelVehicle) {
-  const speedKmh = vehicle === "walk" ? 4.5
-    : vehicle === "ojek" ? 28
-    : vehicle === "jeep" ? 22
-    : vehicle === "boat" ? 20
-    : 45;
-  const minimum = vehicle === "walk" ? 5 : vehicle === "ojek" ? 8 : 15;
-  return Math.min(480, Math.max(minimum, Math.round((km / speedKmh) * 60)));
+  const overhead = vehicle === "walk" ? 0 : vehicle === "ojek" ? 4 : vehicle === "boat" ? 12 : 8;
+  const speedKmh = vehicle === "walk" ? 4.2
+    : vehicle === "ojek" ? (km < 8 ? 22 : 26)
+    : vehicle === "jeep" ? 18
+    : vehicle === "boat" ? 22
+    : km < 25 ? 28
+      : km < 80 ? 40
+        : 50;
+  const moving = (km / speedKmh) * 60;
+  const minimum = vehicle === "walk" ? 4 : vehicle === "ojek" ? 8 : 12;
+  return Math.min(480, Math.max(minimum, Math.round(overhead + moving)));
 }
 
 export function formatKmLabel(km: number) {
@@ -143,20 +158,18 @@ export function analyzeStopTravel(
   if (isFirst || !previous) return null;
   const from = stopCoords(previous);
   const to = stopCoords(stop);
-  const routedKm = stop.routeStatus === "AVAILABLE" && stop.travelDistanceMeters != null && stop.travelDistanceMeters > 0
+  const straightKm = from && to ? haversineKm(from, to) : null;
+  const routedKm = stop.travelDistanceMeters != null && stop.travelDistanceMeters > 0
     ? stop.travelDistanceMeters / 1000
     : null;
-  const km = routedKm ?? (from && to ? haversineKm(from, to) : null);
-  if (km == null || km <= 0) return null;
+  const seedKm = routedKm ?? straightKm;
+  if (seedKm == null || seedKm <= 0) return null;
   const name = stop.customTitle || stop.place?.name || "";
+  const seedVehicle = chooseTravelVehicle(seedKm, name);
+  const km = routedKm ?? roadAdjustedKm(straightKm ?? seedKm, seedVehicle);
+  if (!(km > 0)) return null;
   const vehicle = chooseTravelVehicle(km, name);
-  const routedMinutes = stop.routeStatus === "AVAILABLE"
-    && stop.travelDurationMinutes != null
-    && stop.travelDurationMinutes > 0
-    && !isTravelSpeedAnomaly(stop.travelDistanceMeters, stop.travelDurationMinutes)
-    ? Math.round(stop.travelDurationMinutes)
-    : null;
-  const minutes = routedMinutes ?? minutesForVehicleKm(km, vehicle);
+  const minutes = minutesForVehicleKm(km, vehicle);
   return {
     vehicle,
     vehicleLabel: vehicleLabel(vehicle),
@@ -254,4 +267,25 @@ export function itineraryListNumbers(days: EditableItineraryDay[]) {
       number: stopDisplayNumber(stop, index),
     })),
   );
+}
+
+export function formatItineraryDateRange(startDate: string, endDate: string) {
+  const format = (value: string) => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+    return new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short", year: "numeric" }).format(new Date(`${value}T00:00:00`));
+  };
+  if (!startDate && !endDate) return "Tanggal belum diisi";
+  if (!endDate || endDate === startDate) return format(startDate);
+  return `${format(startDate)} - ${format(endDate)}`;
+}
+
+export function itinerarySourceLabel(source: ItinerarySource | string) {
+  if (source === "AI") return "Dari AI";
+  if (source === "TEMPLATE") return "Dari template";
+  if (source === "REGENERATED") return "Hasil regenerate";
+  return "Disusun manual";
+}
+
+export function itineraryVersionOptionLabel(versionNumber: number, source: ItinerarySource | string, isActive: boolean) {
+  return `Versi ${versionNumber} - ${itinerarySourceLabel(source)}${isActive ? " - Sedang dipakai" : ""}`;
 }

@@ -46,6 +46,25 @@ export const createTripBodySchema = z
   })
   .superRefine((value, ctx) => dateOrderIssue(value.startDate, value.endDate, ctx));
 
+export const TRIP_DELETE_REASON_TEMPLATES = [
+  "Rencana berubah dan trip ini tidak jadi berangkat.",
+  "Kuota atau jadwal tidak memungkinkan untuk dilanjutkan.",
+  "Ada kendala di destinasi, jadi grup ini ditutup.",
+  "Trip digabung ke rencana lain.",
+  "Alasan pribadi host.",
+] as const;
+
+export const deleteTripBodySchema = z.object({
+  reason: z.string().trim().min(3, "Alasan penghapusan wajib diisi").max(280),
+});
+
+export function tripDeletedHostMessage(reason: string) {
+  const cleaned = reason.trim();
+  return cleaned
+    ? `Grup trip ini dihapus host. Alasan: ${cleaned}`
+    : "Grup trip ini dihapus host.";
+}
+
 export const updateTripBodySchema = z
   .object({
     title: z.string().trim().min(1).max(200).optional(),
@@ -119,6 +138,7 @@ export const myTripsQuerySchema = paginationQuerySchema.extend({
 });
 
 export type CreateTripBody = z.infer<typeof createTripBodySchema>;
+export type DeleteTripBody = z.infer<typeof deleteTripBodySchema>;
 export type UpdateTripBody = z.infer<typeof updateTripBodySchema>;
 export type PublishTripBody = z.infer<typeof publishTripBodySchema>;
 export type VisibilityBody = z.infer<typeof visibilityBodySchema>;
@@ -158,6 +178,17 @@ export const createTripSchema = z
     communityRules: z.string().trim().max(2000).optional(),
     privateInvite: z.string().trim().max(1000).optional(),
     regenerateMode: z.enum(["balanced", "cheaper", "alternative"]).optional(),
+    coverPlace: z.object({
+      googlePlaceId: z.string().trim().min(1),
+      name: z.string().trim().min(1),
+      formattedAddress: z.string().nullable().optional(),
+      city: z.string().nullable().optional(),
+      latitude: z.number().optional(),
+      longitude: z.number().optional(),
+      photoName: z.string().nullable().optional(),
+      photoUri: z.string().nullable().optional(),
+      googleMapsUrl: z.string().nullable().optional(),
+    }).optional(),
   })
   .superRefine((value, ctx) => {
     if (["manual", "ai-route", "template", "known"].includes(value.path) && !value.destinationCity) {

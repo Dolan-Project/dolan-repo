@@ -59,6 +59,22 @@ describe("presentInboxNotification", () => {
       body: "Budi: Boleh join?",
       href: "/trip/t1",
     });
+
+    expect(
+      presentInboxNotification({
+        type: "trip.deleted",
+        targetType: "trip",
+        targetId: "t1",
+        data: {
+          tripTitle: "Trip ke Kupang",
+          preview: "Grup trip ini dihapus host. Alasan: Rencana berubah dan trip ini tidak jadi berangkat.",
+        },
+      }),
+    ).toMatchObject({
+      title: "Grup trip dihapus",
+      body: "Grup trip ini dihapus host. Alasan: Rencana berubah dan trip ini tidak jadi berangkat.",
+      href: "/trip-saya",
+    });
   });
 
   it("describes a like and comment on a post", () => {

@@ -8,19 +8,23 @@ import { Icon } from "@/components/ui/Icon";
 import { ProfileSocialLinks } from "@/components/profile/ProfileSocialLinks";
 import { AttendanceConfirm } from "@/components/trips/AttendanceConfirm";
 import { ReportTargetButton } from "@/components/moderation/ReportTargetButton";
-import { PlacePhoto } from "@/features/explore/PlacePhoto";
-import { destinationCoverUrl, resolveTripItineraryDays } from "@/lib/destination-itinerary";
+import { resolveTripItineraryDays } from "@/lib/destination-itinerary";
 import type { ApiError, JoinRequest, TripComment, TripDetail } from "@/lib/contracts";
 import { ROUTES, tripEditHref, tripItineraryPath } from "@/lib/routes";
 import type { EditableItineraryDay, TripChecklistItem } from "@dolan/shared";
-import { hydrateItineraryPlaces, itineraryMapMarkers, itineraryMapRouteGroups, visitWindowLabel, googleMapsDirectionsUrl, estimateItineraryBudget, availableBudgetPool, formatRupiah } from "@/lib/template-itinerary";
-import { encodedRoutePolylines, formatStopTravel, itineraryHasUnavailableRoute } from "@/lib/route-travel";
+import { hydrateItineraryPlaces, itineraryMapMarkers, itineraryMapRouteGroups, visitWindowLabel, googleMapsDirectionsUrl, estimateItineraryBudget, availableBudgetPool, formatRupiah, type StopBudgetEstimate } from "@/lib/template-itinerary";
+import { encodedRoutePolylines, itineraryHasUnavailableRoute } from "@/lib/route-travel";
+import { formatTravelToStop } from "@/lib/itinerary-stop-view";
+import { hasCoverPhoto } from "@/lib/destination-cover";
+import { itineraryStopColor } from "@/lib/itinerary-style";
 import { ItineraryTimeline } from "@/components/trip/ItineraryTimeline";
 import { ItineraryPdfButton } from "./ItineraryPdfButton";
 import { LocationSharePanel } from "./LocationSharePanel";
 import { ShareLinkPanel } from "./ShareLinkPanel";
 import { TripBoardMap, type TripMapMarker } from "./TripBoardMap";
 import { JoinRequestsModal } from "./JoinRequestsModal";
+import { DeleteTripDialog } from "./DeleteTripDialog";
+import { TripCoverImage } from "./TripCoverImage";
 
 type Json<T> = { success: true; data: T } | ApiError;
 
@@ -48,10 +52,6 @@ function dayChip(day: EditableItineraryDay) {
   if (!day.date) return `Hari ${day.dayNumber}`;
   const formatted = new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short" }).format(new Date(`${day.date}T00:00:00`));
   return `Hari ${day.dayNumber} (${formatted})`;
-}
-
-function coverFallback(city: string | null) {
-  return destinationCoverUrl(city ?? "");
 }
 
 function initials(name: string) {
@@ -107,6 +107,7 @@ export function TripDetailView({
   const [followingHost, setFollowingHost] = useState(false);
   const [shareHint, setShareHint] = useState("");
   const [templateMessage, setTemplateMessage] = useState("");
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
 
   async function loadAll() {
     const tripRes = await readJson<TripDetail>(await fetch(`/api/v1/trips/${tripId}`, { credentials: "include" }));
@@ -125,7 +126,7 @@ export function TripDetailView({
     if (commentRes.success) {
       setComments(Array.isArray(commentRes.data) ? commentRes.data : commentRes.data.items ?? []);
     }
-    const itineraryDays = (itineraryRes as { success?: boolean; data?: { versions?: Array<{ id: string; days: EditableItineraryDay[] }>; activeVersionId?: string; checklist?: TripChecklistItem[] } } | null)?.data;
+    const itineraryDays = (itineraryRes as { success?: boolean; data?: { versions?: Array<{ id: string; days: EditableItineraryDay[]; budget?: unknown }>; activeVersionId?: string; checklist?: TripChecklistItem[] } } | null)?.data;
     const active = itineraryDays?.versions?.find((version) => version.id === itineraryDays.activeVersionId) ?? itineraryDays?.versions?.[0];
     const nextDays = hydrateItineraryPlaces(resolveTripItineraryDays({
       destination: tripRes.data.destinationCity ?? "",
@@ -161,18 +162,21 @@ export function TripDetailView({
       socket.emit("comments.join", { tripId });
     };
     socket.on("connect", join);
-    socket.on("comment.created", (comment: TripComment) => {
+    const onCreated = (comment: TripComment) => {
       if (comment.tripId !== tripId) return;
       setComments((current) => mergeComment(current, comment));
-    });
-    socket.on("comment.updated", (comment: TripComment) => {
+    };
+    const onUpdated = (comment: TripComment) => {
       if (comment.tripId !== tripId) return;
       setComments((current) => mergeComment(current, comment));
-    });
-    socket.on("comment.deleted", (payload: { tripId?: string; commentId?: string }) => {
+    };
+    const onDeleted = (payload: { tripId?: string; commentId?: string }) => {
       if (payload.tripId !== tripId || !payload.commentId) return;
       setComments((current) => removeComment(current, payload.commentId!));
-    });
+    };
+    socket.on("comment.created", onCreated);
+    socket.on("comment.updated", onUpdated);
+    socket.on("comment.deleted", onDeleted);
     let reloadTimer: number | undefined;
     const reloadTrip = (payload: { tripId?: string }) => {
       if (payload.tripId !== tripId) return;
@@ -185,7 +189,12 @@ export function TripDetailView({
     socket.on("join_request.reviewed", reloadTrip);
     return () => {
       window.clearTimeout(reloadTimer);
-      socket.disconnect();
+      socket.off("connect", join);
+      socket.off("comment.created", onCreated);
+      socket.off("comment.updated", onUpdated);
+      socket.off("comment.deleted", onDeleted);
+      socket.off("join_request.created", reloadTrip);
+      socket.off("join_request.reviewed", reloadTrip);
     };
   }, [tripId, isLoggedIn]);
 
@@ -242,6 +251,28 @@ export function TripDetailView({
       return;
     }
     await loadAll();
+  }
+
+  async function deleteTrip(reason: string) {
+    if (!trip) return;
+    setPending(true);
+    setError("");
+    try {
+      const response = await fetch(`/api/v1/trips/${encodeURIComponent(trip.id)}`, {
+        method: "DELETE",
+        credentials: "include",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ reason }),
+      });
+      const json = (await response.json()) as { success: boolean; error?: { message?: string } };
+      if (!response.ok || !json.success) throw new Error(json.error?.message ?? "Trip gagal dihapus.");
+      setDeleteConfirm(false);
+      router.push(ROUTES.tripSaya);
+      router.refresh();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Trip gagal dihapus.");
+      setPending(false);
+    }
   }
 
   async function onComment(event: React.FormEvent) {
@@ -390,7 +421,6 @@ export function TripDetailView({
 
   const visitor = trip.viewerRole === "none" || trip.viewerRole === "visitor";
   const budget = Number(trip.budgetAmount ?? 0);
-  const perPerson = trip.budgetBasis === "PER_PERSON" ? budget : Math.round(budget / Math.max(trip.planningPartySize, 1));
   const meetingLabel = trip.meetingPoint ?? trip.publicMeetingPointLabel;
   const itineraryMarkers: TripMapMarker[] = itineraryMapMarkers(days, null, trip.destinationCity ?? "").map((marker, index) => ({
     ...marker,
@@ -414,8 +444,8 @@ export function TripDetailView({
   const remaining = trip.maxParticipants != null ? Math.max(0, trip.maxParticipants - trip.activeParticipantCount) : null;
   const full = trip.status === "CLOSED" || (remaining === 0 && trip.maxParticipants != null);
   const cancelled = trip.status === "CANCELLED";
-  const coverStop = days.flatMap((day) => day.stops).find((stop) => stop.place?.photoUri || stop.place?.photoName);
-  const coverPlace = trip.coverPlace?.photoUri || trip.coverPlace?.photoName ? trip.coverPlace : coverStop?.place ?? null;
+  const coverStop = days.flatMap((day) => day.stops).find((stop) => hasCoverPhoto(stop.place));
+  const headerPlace = hasCoverPhoto(trip.coverPlace) ? trip.coverPlace : coverStop?.place ?? trip.coverPlace ?? null;
   const activeDay = days.find((day) => day.id === activeDayId) ?? days[0];
   const mapsHref = googleMapsDirectionsUrl(markers);
   const budgetPlan = estimateItineraryBudget(days, availableBudgetPool(budget, trip.budgetBasis, trip.planningPartySize), trip.planningPartySize);
@@ -472,12 +502,14 @@ export function TripDetailView({
       <div className="mx-auto max-w-7xl px-margin py-6 md:px-margin-desktop">
         <section className="mb-6 overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_1px_2px_rgba(16,36,58,.04)]">
           <div className="relative h-64 w-full bg-slate-800 sm:h-80 lg:h-96">
-            {coverPlace ? (
-              <PlacePhoto googlePlaceId={coverPlace.googlePlaceId} photoName={coverPlace.photoName} photoUri={coverPlace.photoUri} alt={trip.title} eager className="absolute inset-0 h-full w-full opacity-90" />
-            ) : (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img alt="" src={coverFallback(trip.destinationCity)} className="h-full w-full object-cover opacity-90" />
-            )}
+            <TripCoverImage
+              place={headerPlace}
+              destinationCity={trip.destinationCity}
+              title={trip.title}
+              eager
+              className="absolute inset-0 h-full w-full opacity-90"
+              imgClassName="absolute inset-0 h-full w-full object-cover opacity-90"
+            />
             <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/40 to-transparent" />
             <div className="absolute inset-x-4 top-4 flex items-center justify-between gap-2">
               <div className="flex flex-wrap items-center gap-2">
@@ -562,26 +594,39 @@ export function TripDetailView({
               </h2>
               <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <LogisticCard label={trip.visibility === "PUBLIC" ? "Titik kumpul publik" : "Titik kumpul"} value={meetingLabel ?? "Belum ditentukan"} hint={trip.timezone} />
-                <LogisticCard label="Aturan peserta" value={genderLabel} hint={trip.visibility === "PUBLIC" ? "Trip publik" : "Trip privat"} />
+                <LogisticCard label="Siapa yang boleh ikut" value={genderLabel} hint={trip.visibility === "PUBLIC" ? "Trip publik" : "Trip privat"} />
+                <LogisticCard label="Destinasi" value={trip.destinationCity || "Belum diisi"} hint={dateLabel(trip.startDate, trip.endDate)} />
+                <LogisticCard label="Jumlah rombongan" value={`${trip.planningPartySize} orang`} hint={trip.maxParticipants ? `Kuota ${trip.maxParticipants} termasuk host` : "Kuota fleksibel"} />
               </div>
               <div className="border-t border-slate-100 pt-5">
-                <div className="mb-3 flex items-center justify-between gap-3">
+                <div className="mb-3 flex items-start justify-between gap-3">
                   <div>
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-on-surface">Perkiraan pengeluaran pribadi</h3>
-                    <p className="text-[11px] text-on-surface-variant">Bukan harga paket tur · Estimasi swadaya per orang</p>
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-on-surface">Estimasi budget host</h3>
+                    <p className="text-[11px] text-on-surface-variant">
+                      Budget yang diisi host saat membuat trip
+                    </p>
                   </div>
                   <div className="text-right">
-                    <p className="text-lg font-extrabold text-primary">~Rp {perPerson.toLocaleString("id-ID")}</p>
-                    <p className="text-xs text-on-surface-variant">/ orang (estimasi trip)</p>
-                    {versionTotal > 0 ? (
-                      <p className="mt-1 text-[11px] font-bold text-on-surface">
-                        Makan/jajan {formatRupiah(foodTotal)} · total rute {formatRupiah(versionTotal)}
-                      </p>
-                    ) : null}
+                    <p className="text-lg font-extrabold text-primary">{budget > 0 ? formatRupiah(budget) : "Belum diisi"}</p>
+                    <p className="text-xs text-on-surface-variant">
+                      {trip.budgetBasis === "PER_PERSON" ? "per orang" : `untuk ${trip.planningPartySize} orang`}
+                    </p>
                   </div>
                 </div>
+                {versionTotal > 0 ? (
+                  <div className="mb-3 grid grid-cols-2 gap-2">
+                    <div className="rounded-xl bg-slate-50 px-3 py-2.5">
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-on-surface-variant">Estimasi rute</p>
+                      <p className="mt-0.5 text-sm font-extrabold text-on-surface">{formatRupiah(versionTotal)}</p>
+                    </div>
+                    <div className="rounded-xl bg-slate-50 px-3 py-2.5">
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-on-surface-variant">Makan / jajan</p>
+                      <p className="mt-0.5 text-sm font-extrabold text-on-surface">{formatRupiah(foodTotal)}</p>
+                    </div>
+                  </div>
+                ) : null}
                 {trip.communityRules ? <p className="whitespace-pre-line rounded-xl bg-slate-50 p-4 text-xs text-on-surface-variant">{trip.communityRules}</p> : null}
-                <p className="mt-2 text-[11px] italic text-on-surface-variant">Rencana {trip.planningPartySize} orang{trip.maxParticipants ? ` · kapasitas ${trip.maxParticipants}` : ""}. Tidak ada komisi ke host atau platform.</p>
+                <p className="mt-2 text-[11px] italic text-on-surface-variant">Rombongan {trip.planningPartySize} orang{trip.maxParticipants ? ` · kuota ${trip.maxParticipants}` : ""}. Tidak ada komisi ke host atau platform.</p>
               </div>
             </section>
 
@@ -617,8 +662,7 @@ export function TripDetailView({
                     items={activeDay.stops.map((stop, stopIndex) => {
                       const colorIndex = Math.max(0, days.flatMap((day) => day.stops).findIndex((item) => item.id === stop.id));
                       const cost = budgetPlan.byStopId[stop.id];
-                      const travel = formatStopTravel(stop, stopIndex === 0);
-                      const meal = cost?.lines.find((line) => line.key === "food");
+                      const travel = formatTravelToStop(stop, activeDay.stops[stopIndex - 1], stopIndex === 0);
                       return {
                         id: stop.id,
                         index: colorIndex,
@@ -627,9 +671,9 @@ export function TripDetailView({
                         meta: visitWindowLabel(stop.startTime, stop.durationMinutes) || stop.startTime || undefined,
                         notes: stop.notes ?? undefined,
                         extra: (
-                          <div className="mt-1 space-y-0.5">
+                          <div className="mt-1 space-y-1.5">
                             {travel ? <p className={`type-caption font-bold ${stop.routeStatus === "UNAVAILABLE" ? "text-error" : "text-on-surface"}`}>{travel}</p> : null}
-                            {meal ? <p className="type-caption text-on-surface">Makan/jajan · {meal.detail} · {formatRupiah(meal.amount)}</p> : null}
+                            <StopBudgetBox colorIndex={colorIndex} cost={cost} />
                           </div>
                         ),
                       };
@@ -827,11 +871,6 @@ export function TripDetailView({
                     <span className="text-xs font-bold uppercase tracking-wider text-on-surface-variant">Status partisipasi</span>
                     <span className="rounded bg-emerald-50 px-2 py-0.5 text-xs font-bold text-emerald-600">Slot tersedia</span>
                   </div>
-                  <div>
-                    <span className="block text-xs text-on-surface-variant">Estimasi patungan swadaya:</span>
-                    <p className="flex items-baseline gap-1.5"><span className="text-2xl font-black text-on-surface">~Rp {perPerson.toLocaleString("id-ID")}</span><span className="text-xs text-on-surface-variant">/ orang</span></p>
-                    <p className="mt-1 text-[11px] text-on-surface-variant">Tanpa biaya pendaftaran. Pembayaran logistik diurus langsung bersama host.</p>
-                  </div>
                   <div className="space-y-1.5 rounded-xl border border-primary/15 bg-primary-fixed/50 p-3.5 text-xs">
                     <p className="flex items-center gap-1.5 font-bold text-on-surface"><Icon name="info" className="text-[16px] text-primary" /> Perlu persetujuan host</p>
                     <p className="text-[11px] leading-normal text-primary">Host akan meninjau profil dan catatan pengajuanmu sebelum memasukkanmu ke kuota resmi dan grup chat trip.</p>
@@ -935,6 +974,7 @@ export function TripDetailView({
                           {trip.status === "ONGOING" ? <button type="button" className="w-full rounded-xl px-3 py-2 text-left text-xs font-bold hover:bg-slate-50" disabled={pending} onClick={() => void act(`/api/v1/trips/${trip.id}/transition`, { action: "complete" })}>Selesai</button> : null}
                           {trip.status === "COMPLETED" ? <button type="button" className="w-full rounded-xl px-3 py-2 text-left text-xs font-bold hover:bg-slate-50" disabled={pending} onClick={() => void act(`/api/v1/trips/${trip.id}/publish-as-template`, {})}>Jadikan template</button> : null}
                           {trip.status !== "CANCELLED" && trip.status !== "COMPLETED" ? <button type="button" className="w-full rounded-xl px-3 py-2 text-left text-xs font-bold text-error hover:bg-rose-50" disabled={pending} onClick={() => void act(`/api/v1/trips/${trip.id}/transition`, { action: "cancel" })}>Batalkan</button> : null}
+                          <button type="button" className="w-full rounded-xl px-3 py-2 text-left text-xs font-bold text-error hover:bg-rose-50" disabled={pending} onClick={() => { setManageOpen(false); setDeleteConfirm(true); }}>Hapus trip</button>
                           {trip.status !== "CANCELLED" && trip.status !== "COMPLETED" ? <Link href={tripEditHref(trip.id)} className="block rounded-xl px-3 py-2 text-xs font-bold hover:bg-slate-50">Edit trip</Link> : null}
                           <ShareLinkPanel tripId={trip.id} />
                           <LocationSharePanel tripId={trip.id} />
@@ -987,7 +1027,7 @@ export function TripDetailView({
               </label>
               <label className="flex cursor-pointer items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50/70 p-3.5">
                 <input className="mt-0.5" type="checkbox" checked={joinAck} onChange={(event) => setJoinAck(event.target.checked)} required />
-                <span className="text-[11px] leading-snug text-amber-900">Saya memahami bahwa trip ini adalah <strong>kegiatan swadaya mandiri (bukan paket tur)</strong> dan saya berkomitmen menanggung pengeluaran logistik pribadi sekitar <strong>~Rp {perPerson.toLocaleString("id-ID")}</strong>.</span>
+                <span className="text-[11px] leading-snug text-amber-900">Saya memahami bahwa trip ini adalah <strong>kegiatan swadaya mandiri (bukan paket tur)</strong> dan biaya perjalanan ditanggung masing-masing, bukan harga join.</span>
               </label>
               {error ? <p className="rounded-xl bg-error-container px-3 py-2.5 text-xs text-on-error-container" role="alert">{error}</p> : null}
               <div className="flex items-center justify-end gap-3 pt-2">
@@ -998,6 +1038,36 @@ export function TripDetailView({
           </div>
         </div>
       ) : null}
+      {deleteConfirm ? (
+        <DeleteTripDialog
+          tripTitle={trip.title}
+          pending={pending}
+          onCancel={() => setDeleteConfirm(false)}
+          onConfirm={(reason) => void deleteTrip(reason)}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+function StopBudgetBox({ colorIndex, cost }: { colorIndex: number; cost?: StopBudgetEstimate }) {
+  const color = itineraryStopColor(colorIndex);
+  const lines = cost?.lines ?? [];
+  return (
+    <div className="rounded-lg border border-outline-variant/50 bg-white px-2.5 py-2">
+      {lines.map((line) => (
+        <p key={line.key} className="flex items-baseline justify-between gap-3 type-caption text-on-surface">
+          <span>{line.label}</span>
+          <span className="font-bold">{formatRupiah(line.amount)}</span>
+        </p>
+      ))}
+      <p
+        className={`flex items-baseline justify-between gap-3 text-sm font-extrabold ${lines.length ? "mt-1.5 border-t border-outline-variant/40 pt-1.5" : ""}`}
+        style={{ color }}
+      >
+        <span>Total</span>
+        <span>{cost && cost.total > 0 ? formatRupiah(cost.total) : "Gratis"}</span>
+      </p>
     </div>
   );
 }

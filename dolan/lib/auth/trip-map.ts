@@ -98,6 +98,7 @@ export async function createTripBodyFromInput(input: CreateTripInput) {
       communityRules: input.communityRules,
       privateInvite: input.privateInvite,
       regenerateMode: input.regenerateMode,
+      coverPlace: input.coverPlace ?? undefined,
     },
     ...(await locationFields(input)),
   };
@@ -135,6 +136,7 @@ export async function updateTripBodyFromInput(input: CreateTripInput) {
       communityRules: input.communityRules,
       privateInvite: input.privateInvite,
       regenerateMode: input.regenerateMode,
+      coverPlace: input.coverPlace ?? undefined,
     },
   };
 }

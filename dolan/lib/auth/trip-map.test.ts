@@ -37,6 +37,7 @@ describe("createTripBodyFromInput", () => {
     expect(body.publicMeetingPointLabel).toBe("Bandara Komodo (LBJ)");
     expect(body.publicMeetingPointLatitude).toBeCloseTo(-8.4866, 3);
     expect(body.preferences).toMatchObject({ path: "known" });
+    expect(body.preferences?.coverPlace).toBeUndefined();
     expect("origin" in body).toBe(false);
     expect("meetingPoint" in body).toBe(false);
   });

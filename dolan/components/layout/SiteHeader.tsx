@@ -40,7 +40,6 @@ export function SiteHeader({
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const chatChrome = pathname === "/chat" || /\/trip\/[^/]+\/chat$/.test(pathname);
   const [scrolled, setScrolled] = useState(false);
   const [query, setQuery] = useState("");
   useEffect(() => {
@@ -49,7 +48,6 @@ export function SiteHeader({
     window.addEventListener("scroll", update, { passive: true });
     return () => window.removeEventListener("scroll", update);
   }, []);
-  if (chatChrome) return null;
 
   return (
     <header
@@ -61,7 +59,7 @@ export function SiteHeader({
         <Link href={ROUTES.beranda} className="flex shrink-0 items-center" aria-label="DOLAN beranda">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={logoDolan.src}
+            src="/logo_dolan.png"
             alt="DOLAN"
             className="h-8 w-auto object-contain object-left mix-blend-multiply md:h-9"
           />

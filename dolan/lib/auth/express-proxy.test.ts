@@ -73,4 +73,33 @@ describe("proxyToExpress", () => {
     );
     expect(json.data.user.username).toBe("alya");
   });
+
+  it("supplies an Idempotency-Key for POST when the client omitted it", async () => {
+    vi.stubEnv("EXPRESS_ORIGIN", "http://127.0.0.1:4000");
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ success: true }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await proxyToExpress(
+      new Request("http://localhost/api/v1/join-requests/j1/review", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          cookie: "dolan_session=mock-verified-complete",
+        },
+        body: JSON.stringify({ decision: "accept" }),
+      }),
+      "/api/v1/join-requests/j1/review",
+    );
+
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    const key = new Headers(init.headers).get("idempotency-key");
+    expect(key).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+    );
+  });
 });

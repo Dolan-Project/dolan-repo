@@ -1,18 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Icon } from "@/components/ui/Icon";
 import { AttendanceConfirm } from "@/components/trips/AttendanceConfirm";
 import { GoogleMap, type MapPoint } from "@/features/explore/GoogleMap";
-import { PlacePhoto } from "@/features/explore/PlacePhoto";
 import type { MyTripRole, MyTripSummary, TripSummary } from "@/lib/contracts";
 import { ROUTES, tripDetailHref, tripItineraryPath } from "@/lib/routes";
 import { meetingPointFor } from "@/mocks/geo";
-import { CITY_ROUTES, destinationCoverUrl } from "@/lib/destination-itinerary";
+import { CITY_ROUTES } from "@/lib/destination-itinerary";
 import { ShareRouteModal } from "./ShareRouteModal";
 import { JoinRequestsModal } from "./JoinRequestsModal";
+import { DeleteTripDialog } from "./DeleteTripDialog";
+import { TripCoverImage } from "./TripCoverImage";
 
 const tabs: { id: MyTripRole; label: string }[] = [
   { id: "hosted", label: "Dibuat" },
@@ -157,6 +157,8 @@ export function MyTripsBoard() {
   const [persistedPoints, setPersistedPoints] = useState<MapPoint[]>([]);
   const [shareTrip, setShareTrip] = useState<MyTripSummary | null>(null);
   const [joinTrip, setJoinTrip] = useState<MyTripSummary | null>(null);
+  const [deleteTrip, setDeleteTrip] = useState<MyTripSummary | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const dragStart = useRef<number | null>(null);
 
   useEffect(() => {
@@ -322,6 +324,7 @@ export function MyTripsBoard() {
                 onSelect={() => selectTrip(trip.id)}
                 onShare={() => setShareTrip(trip)}
                 onJoinRequests={() => setJoinTrip(trip)}
+                onDelete={tab === "hosted" ? () => setDeleteTrip(trip) : undefined}
               />
             ))}
           </div>
@@ -345,6 +348,33 @@ export function MyTripsBoard() {
           }}
         />
       ) : null}
+      {deleteTrip ? (
+        <DeleteTripDialog
+          tripTitle={deleteTrip.title}
+          pending={deleting}
+          onCancel={() => setDeleteTrip(null)}
+          onConfirm={(reason) => {
+            setDeleting(true);
+            void fetch(`/api/v1/trips/${encodeURIComponent(deleteTrip.id)}`, {
+              method: "DELETE",
+              credentials: "include",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({ reason }),
+            })
+              .then(async (response) => {
+                const json = (await response.json()) as { success?: boolean; error?: { message?: string } };
+                if (!response.ok || !json.success) throw new Error(json.error?.message ?? "Trip gagal dihapus.");
+                setRows((current) => current.filter((item) => item.id !== deleteTrip.id));
+                setDeleteTrip(null);
+                setNotice("Trip dan grup chat sudah dihapus.");
+              })
+              .catch((reason) => {
+                setError(reason instanceof Error ? reason.message : "Trip gagal dihapus.");
+              })
+              .finally(() => setDeleting(false));
+          }}
+        />
+      ) : null}
     </div>
   );
 }
@@ -360,6 +390,7 @@ function TripCard({
   onSelect,
   onShare,
   onJoinRequests,
+  onDelete,
 }: {
   trip: MyTripSummary;
   tab: MyTripRole;
@@ -367,6 +398,7 @@ function TripCard({
   onSelect: () => void;
   onShare: () => void;
   onJoinRequests: () => void;
+  onDelete?: () => void;
 }) {
   const roleLabel = tab === "hosted" ? "PERAN: HOST (INISIATOR)" : tab === "joined" ? "PERAN: PESERTA" : "PENGAJUAN TERKIRIM";
   const duration = durationLabel(trip.startDate, trip.endDate);
@@ -377,7 +409,13 @@ function TripCard({
       <span className={`absolute right-0 top-0 z-10 rounded-bl-xl px-2.5 py-1.5 text-[8px] font-extrabold tracking-wide text-white md:text-[9px] ${tab === "hosted" ? "bg-primary" : tab === "joined" ? "bg-teal-600" : "bg-amber-500"}`}>{roleLabel}</span>
       <button type="button" aria-pressed={selected} onClick={onSelect} className="flex w-full cursor-pointer items-start gap-3 px-3 pb-3 pt-6 text-left" aria-label={`Tampilkan lokasi ${trip.title}`}>
         <div className="relative h-20 w-24 shrink-0 overflow-hidden rounded-xl bg-surface-container md:h-24 md:w-28">
-          {trip.coverPlace ? <PlacePhoto googlePlaceId={trip.coverPlace.googlePlaceId} photoName={trip.coverPlace.photoName} photoUri={trip.coverPlace.photoUri} alt={trip.title} className="h-full w-full transition duration-300 group-hover:scale-105" /> : <Image fill unoptimized sizes="112px" src={destinationCoverUrl(trip.destinationCity ?? "")} alt={trip.destinationCity ?? trip.title} className="object-cover transition duration-300 group-hover:scale-105" />}
+          <TripCoverImage
+            place={trip.coverPlace}
+            destinationCity={trip.destinationCity}
+            title={trip.title}
+            className="h-full w-full transition duration-300 group-hover:scale-105"
+            imgClassName="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+          />
           <span className={`absolute bottom-2 left-2 rounded-lg px-2 py-1 text-[10px] font-bold text-white backdrop-blur ${trip.visibility === "PUBLIC" ? "bg-primary/90" : "bg-[#071c32]/85"}`}>{trip.visibility === "PUBLIC" ? "Publik" : "Private"}</span>
         </div>
         <div className="min-w-0 flex-1">
@@ -404,6 +442,11 @@ function TripCard({
         ) : null}
         {(tab === "hosted" || tab === "joined") ? <Link href={ROUTES.tripChat(trip.id)} className="rounded-full bg-surface-container px-3 py-2 type-label"><Icon name="forum" /> Grup Chat</Link> : null}
         {tab === "hosted" ? <Link href={tripItineraryPath(trip.id)} className="rounded-full bg-surface-container px-3 py-2 type-label"><Icon name="edit" /> Edit itinerary</Link> : null}
+        {tab === "hosted" && onDelete ? (
+          <button type="button" className="rounded-full px-3 py-2 type-label text-error hover:bg-error-container" onClick={onDelete}>
+            <Icon name="delete" /> Hapus
+          </button>
+        ) : null}
         {tab === "pending" ? <Link href={tripDetailHref(trip.id)} className="btn-brand !min-h-9 !px-3 !text-xs"><Icon name="forum" /> Buka diskusi publik</Link> : null}
         <button type="button" className="rounded-full px-3 py-2 type-label text-primary hover:bg-primary-fixed" onClick={onShare}>
           <Icon name="share" /> Bagikan rute

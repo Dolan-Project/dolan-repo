@@ -74,6 +74,17 @@ export function presentInboxNotification(input: {
         href: tripId ? `/trip/${tripId}` : "/notifikasi",
         tripId,
       };
+    case "trip.deleted":
+      return {
+        title: "Grup trip dihapus",
+        body: preview
+          ? preview
+          : named
+            ? `Host menghapus ${named} beserta grup chat-nya.`
+            : "Host menghapus trip dan grup chat-nya.",
+        href: "/trip-saya",
+        tripId,
+      };
     case "trip.updated":
       return {
         title: "Trip diperbarui",

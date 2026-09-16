@@ -2,10 +2,13 @@ import request from "supertest";
 import { describe, expect, it } from "vitest";
 import { AuthErrorCode, TripErrorCode } from "@dolan/shared";
 import { createApp } from "../src/app.ts";
-import { createJobService, createMemorySearchService } from "../src/container.ts";
+import { createJobService, createMemorySearchService, createMemoryTripService } from "../src/container.ts";
 import { MockAuthAdapter } from "../src/integrations/supabase/mock-auth-adapter.ts";
 import { AuthService } from "../src/modules/auth/auth-service.ts";
 import { MemoryUserRepository } from "../src/modules/auth/user-repository.ts";
+import { ChatService } from "../src/modules/chat/chat-service.ts";
+import { MemoryChatStore } from "../src/modules/chat/memory-chat-store.ts";
+import { tripChatBridge } from "../src/modules/chat/trip-bridge.ts";
 import { MemoryTripStore } from "../src/modules/trips/memory-store.ts";
 import { TripService } from "../src/modules/trips/trip-service.ts";
 import { idempotencyKey as k } from "./idempotency-key.ts";
@@ -72,7 +75,7 @@ describe("WIRA-D3 trip lifecycle, join, and comments", () => {
     const summary = listed.body.data.find((trip: { id: string }) => trip.id === created.body.data.id);
     expect(summary.startDate).toBeNull();
     expect(summary.destinationCity).toBeNull();
-    expect(summary.participantCount).toBe(0);
+    expect(summary.participantCount).toBe(1);
     expect(summary.coverPlace).toBeNull();
 
     const guest = await request(api).get(`/api/v1/trips/${created.body.data.id}`);
@@ -358,7 +361,10 @@ describe("WIRA-D3 trip lifecycle, join, and comments", () => {
       .set("Authorization", HOST)
       .set("Idempotency-Key", k("delete-draft"))
       .send({ title: "Buang draft" });
-    const deleted = await request(api).delete(`/api/v1/trips/${draft.body.data.id}`).set("Authorization", HOST);
+    const deleted = await request(api)
+      .delete(`/api/v1/trips/${draft.body.data.id}`)
+      .set("Authorization", HOST)
+      .send({ reason: "Rencana berubah dan trip ini tidak jadi berangkat." });
     expect(deleted.status).toBe(200);
     const missing = await request(api).get(`/api/v1/trips/${draft.body.data.id}`).set("Authorization", HOST);
     expect(missing.status).toBe(404);
@@ -562,5 +568,82 @@ describe("WIRA-D3 trip lifecycle, join, and comments", () => {
     expect(opened.body.data.visibility).toBe("PUBLIC");
     expect(opened.body.data.status).toBe("OPEN");
     expect(store.notifications.filter((row) => row.type === "trip.updated")).toHaveLength(0);
+  });
+
+  it("requires a reason before the host can delete a draft", async () => {
+    const { api } = app();
+    const created = await request(api)
+      .post("/api/v1/trips")
+      .set("Authorization", HOST)
+      .set("Idempotency-Key", k("delete-draft-create"))
+      .send({ title: "Draft hapus" });
+    const missing = await request(api)
+      .delete(`/api/v1/trips/${created.body.data.id}`)
+      .set("Authorization", HOST)
+      .send({});
+    expect(missing.status).toBe(400);
+
+    const deleted = await request(api)
+      .delete(`/api/v1/trips/${created.body.data.id}`)
+      .set("Authorization", HOST)
+      .send({ reason: "Rencana berubah dan trip ini tidak jadi berangkat." });
+    expect(deleted.status).toBe(200);
+    expect(deleted.body.data.deleted).toBe(true);
+
+    const gone = await request(api).get(`/api/v1/trips/${created.body.data.id}`).set("Authorization", HOST);
+    expect(gone.status).toBe(404);
+  });
+
+  it("notifies members, posts a host goodbye, and removes the group chat", async () => {
+    const tripStore = new MemoryTripStore();
+    const chatStore = new MemoryChatStore();
+    const chat = new ChatService(chatStore);
+    const trips = createMemoryTripService(tripStore, tripChatBridge(chatStore, chat));
+    const api = createApp(
+      new AuthService(new MockAuthAdapter(), new MemoryUserRepository()),
+      () => 0,
+      createMemorySearchService(),
+      createJobService(),
+      trips,
+      chat,
+    );
+    const trip = await publishPublic(api, "Hapus grup");
+    const join = await request(api)
+      .post(`/api/v1/trips/${trip.id}/join-requests`)
+      .set("Authorization", BUDDI)
+      .set("Idempotency-Key", k("delete-join"))
+      .send({ message: "Ikut dong" });
+    await request(api)
+      .post(`/api/v1/join-requests/${join.body.data.id}/review`)
+      .set("Authorization", HOST)
+      .set("Idempotency-Key", k("delete-accept"))
+      .send({ decision: "accept" });
+
+    const reason = "Ada kendala di destinasi, jadi grup ini ditutup.";
+    const memberForbidden = await request(api)
+      .delete(`/api/v1/trips/${trip.id}`)
+      .set("Authorization", BUDDI)
+      .send({ reason });
+    expect(memberForbidden.status).toBe(403);
+
+    const deleted = await request(api)
+      .delete(`/api/v1/trips/${trip.id}`)
+      .set("Authorization", HOST)
+      .send({ reason });
+    expect(deleted.status).toBe(200);
+
+    expect(tripStore.notifications.filter((row) => row.type === "trip.deleted")).toEqual([
+      expect.objectContaining({
+        recipientUserId: "55555555-5555-4555-8555-555555555555",
+        actorUserId: "11111111-1111-4111-8111-111111111111",
+        type: "trip.deleted",
+      }),
+    ]);
+    expect(chatStore.trips.has(trip.id)).toBe(false);
+
+    const messages = await request(api)
+      .get(`/api/v1/trips/${trip.id}/messages`)
+      .set("Authorization", BUDDI);
+    expect(messages.status).toBe(403);
   });
 });

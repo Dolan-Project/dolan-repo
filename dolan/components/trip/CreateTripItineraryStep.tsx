@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import type { EditableItineraryDay, EditableItineraryStop } from "@dolan/shared";
 import { PlacePicker } from "@/components/trip/PlacePicker";
 import { TripBoardMap } from "@/components/trip/TripBoardMap";
@@ -21,6 +21,7 @@ import { ItineraryStopPin } from "@/components/trip/ItineraryTimeline";
 import { encodedRoutePolylines } from "@/lib/route-travel";
 import {
   activityTypeLabel,
+  formatItineraryDateRange,
   formatTravelToStop,
   stopDescription,
   stopDisplayNumber,
@@ -84,6 +85,7 @@ type CreateTripItineraryStepProps = {
   onRemoveStop?: (dayId: string, stopId: string) => void;
   onAddDay?: () => void;
   unlimitedRegenerate?: boolean;
+  mapFooter?: ReactNode;
 };
 
 export function CreateTripItineraryStep({
@@ -114,6 +116,7 @@ export function CreateTripItineraryStep({
   onRemoveStop,
   onAddDay,
   unlimitedRegenerate = false,
+  mapFooter,
 }: CreateTripItineraryStepProps) {
   const [drag, setDrag] = useState<{ dayId: string; index: number } | null>(null);
   const [addingDayId, setAddingDayId] = useState<string | null>(null);
@@ -139,7 +142,7 @@ export function CreateTripItineraryStep({
 
   return (
     <div className="grid gap-4 bg-white lg:grid-cols-[minmax(0,1fr)_minmax(280px,0.78fr)] lg:items-start">
-      <div className="flex flex-col bg-white p-4 md:p-5">
+      <div className="flex flex-col bg-white p-4 pb-28 md:p-5 lg:pb-5">
         <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
           <div className="min-w-0 flex-1">
             <p className="type-micro font-extrabold uppercase tracking-[0.16em] text-primary">Rute, biaya & penjelasan</p>
@@ -175,7 +178,7 @@ export function CreateTripItineraryStep({
         <div className={`mb-3 rounded-xl border bg-white px-3 py-2.5 ${budgetPlan.overBudget ? "border-orange-200" : "border-slate-200"}`}>
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className={`type-caption font-bold ${budgetPlan.overBudget ? "text-secondary" : "text-primary"}`}>
-              {budgetPlan.overBudget ? "Estimasi melebihi budget" : `Budget terpakai ${usedPercent}%`}
+              {budgetPlan.overBudget ? "Estimasi melebihi budget, simpan tetap bisa" : `Budget terpakai ${usedPercent}%`}
             </p>
             <p className="type-caption font-bold text-on-surface">{formatRupiah(budgetPlan.total)} / {formatRupiah(budgetPlan.pool)}</p>
           </div>
@@ -256,7 +259,7 @@ export function CreateTripItineraryStep({
             <section key={day.id} className="rounded-2xl border border-slate-200 bg-white p-3">
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <p className="type-micro font-bold text-primary">Hari {day.dayNumber} · {day.date}</p>
+                  <p className="type-micro font-bold text-primary">Hari {day.dayNumber}, {formatItineraryDateRange(day.date, day.date)}</p>
                   <p className="type-caption mt-0.5 font-bold text-on-surface">{day.title || "Rencana harian"}</p>
                 </div>
                 <p className="type-caption font-extrabold text-primary">{formatRupiah(dayTotal)}</p>
@@ -267,7 +270,7 @@ export function CreateTripItineraryStep({
                   const cost = budgetPlan.byStopId[stop.id];
                   const meeting = isPublic && day.dayNumber === 1 && index === 0;
                   const last = index === day.stops.length - 1;
-                  const placeValue = stop.customTitle || stop.place?.name || "";
+                  const placeValue = stop.customTitle ?? stop.place?.name ?? "";
                   const pinNumber = stopDisplayNumber(stop, index);
                   const pinIndex = stopPinColorIndex(stop, index);
                   const heading = stopPlaceHeading(stop);
@@ -414,6 +417,7 @@ export function CreateTripItineraryStep({
                                 label="Nama tempat"
                                 value={placeValue}
                                 nearbyCity={destinationCity}
+                                autoSelectOnBlur={false}
                                 hint="Ketik nama wisata, lalu pilih dari daftar supaya peta ikut pindah."
                                 placeholder="Cari destinasi, misalnya Kota Tua"
                                 onChange={(next) => onUpdateStop(editing.day.id, editing.stop.id, { customTitle: next })}
@@ -556,7 +560,13 @@ export function CreateTripItineraryStep({
             </div>
           )}
         </div>
+        {mapFooter ? <div className="hidden border-t border-slate-200 bg-white p-3 lg:block">{mapFooter}</div> : null}
       </div>
+      {mapFooter ? (
+        <div className="fixed bottom-[74px] left-3 right-3 z-30 rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-[0_12px_40px_rgba(7,28,50,.18)] backdrop-blur lg:hidden">
+          {mapFooter}
+        </div>
+      ) : null}
     </div>
   );
 }

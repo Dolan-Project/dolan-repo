@@ -189,6 +189,20 @@ export class SequelizeChatStore implements ChatStore {
   async resolveSender(userId: string) {
     return resolveProfile(userId);
   }
+
+  async getRoomId(tripId: string): Promise<string | null> {
+    const { ChatRoom } = getModels();
+    const room = await ChatRoom.findOne({ where: { tripId } });
+    return room?.id ?? null;
+  }
+
+  async deleteRoom(tripId: string): Promise<void> {
+    const { ChatRoom, Message } = getModels();
+    const room = await ChatRoom.findOne({ where: { tripId } });
+    if (!room) return;
+    await Message.destroy({ where: { chatRoomId: room.id } });
+    await ChatRoom.destroy({ where: { id: room.id } });
+  }
 }
 
 async function toMessage(

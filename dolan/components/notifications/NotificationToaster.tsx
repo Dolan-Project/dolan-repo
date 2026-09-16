@@ -46,7 +46,6 @@ export function NotificationToaster({ session }: { session: AuthSession | null }
     socket.on("notification.created", onCreated);
     return () => {
       socket.off("notification.created", onCreated);
-      socket.disconnect();
     };
   }, [session, pathname]);
 

@@ -7,6 +7,7 @@ import {
   apiSuccess,
   createCommentBodySchema,
   createTripBodySchema,
+  deleteTripBodySchema,
   joinRequestBodySchema,
   joinReviewBodySchema,
   myTripsQuerySchema,
@@ -182,13 +183,17 @@ export function createTripRouter(trips: TripService) {
 
   router.delete("/trips/:id", requireCapability("create_draft"), withTripContext, async (req, res, next) => {
     try {
-      res.json(apiSuccess(await trips.deleteDraft(req.actor ?? { kind: "guest" }, param(req.params.id))));
+      const parsed = deleteTripBodySchema.safeParse(req.body ?? {});
+      if (!parsed.success) {
+        throw tripMutationError(parsed.error, "Alasan penghapusan wajib diisi");
+      }
+      res.json(apiSuccess(await trips.deleteTrip(req.actor ?? { kind: "guest" }, param(req.params.id), parsed.data)));
     } catch (error) {
       next(error);
     }
   });
 
-  router.post("/trips/:id/invitations", withTripContext, requireCapability("approve_join"), async (req, res, next) => {
+  router.post("/trips/:id/invitations", requireCapability("approve_join"), withTripContext, async (req, res, next) => {
     try {
       const channel = req.body?.channel === "WHATSAPP" ? "WHATSAPP" : "DOLAN";
       const username = typeof req.body?.username === "string" ? req.body.username.trim().replace(/^@/, "") : "";
@@ -315,7 +320,7 @@ export function createTripRouter(trips: TripService) {
     }
   });
 
-  router.get("/trips/:id/join-requests", withTripContext, requireCapability("approve_join"), async (req, res, next) => {
+  router.get("/trips/:id/join-requests", requireCapability("approve_join"), withTripContext, async (req, res, next) => {
     try {
       const parsed = paginationQuerySchema.safeParse(req.query);
       if (!parsed.success) {
@@ -356,8 +361,8 @@ export function createTripRouter(trips: TripService) {
 
   router.post(
     "/join-requests/:requestId/review",
-    withJoinContext,
     requireCapability("approve_join"),
+    withJoinContext,
     async (req, res, next) => {
       try {
         const parsed = joinReviewBodySchema.safeParse(req.body);

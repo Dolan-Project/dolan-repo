@@ -125,4 +125,26 @@ describe("chat and notifications", () => {
       .set("Authorization", "Bearer mock-admin");
     expect(inbox.body.data).toHaveLength(0);
   });
+
+  it("posts a host goodbye then deletes the group chat", async () => {
+    const { app, store, chat } = setup();
+    const reason = "Rencana berubah dan trip ini tidak jadi berangkat.";
+    const posted: string[] = [];
+    const createMessage = store.createMessage.bind(store);
+    store.createMessage = async (input) => {
+      posted.push(input.body);
+      return createMessage(input);
+    };
+
+    await chat.announceTripDeleted(TRIP, HOST, reason);
+
+    expect(posted).toEqual([`Grup trip ini dihapus host. Alasan: ${reason}`]);
+    expect(store.trips.has(TRIP)).toBe(false);
+    expect(store.messages.some((message) => message.tripId === TRIP)).toBe(false);
+
+    const gone = await request(app)
+      .get(`/api/v1/trips/${TRIP}/messages`)
+      .set("Authorization", "Bearer mock-admin");
+    expect(gone.status).toBe(403);
+  });
 });

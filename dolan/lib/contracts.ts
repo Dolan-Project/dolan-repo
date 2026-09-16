@@ -58,6 +58,9 @@ export {
   createTripSchema,
   publishTripSchema,
   updateTripSchema,
+  deleteTripBodySchema,
+  TRIP_DELETE_REASON_TEMPLATES,
+  tripDeletedHostMessage,
 } from "../../shared/src/index";
 export type {
   CreateTripInput,

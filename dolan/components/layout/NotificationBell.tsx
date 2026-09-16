@@ -86,7 +86,6 @@ export function NotificationBell({
     socket.on("notification.created", onCreated);
     return () => {
       socket.off("notification.created", onCreated);
-      socket.disconnect();
     };
   }, [session]);
 
