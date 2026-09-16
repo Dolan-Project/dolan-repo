@@ -8,7 +8,10 @@ import { findScheduleConflicts, generateAlternative, getItineraryEditor, saveIti
 import { INITIAL_BUDGET_ITEMS } from "./mock-data";
 import { SaveOfflineItineraryButton } from "@/components/offline/SaveOfflineItineraryButton";
 import { CreateTripItineraryStep } from "@/components/trip/CreateTripItineraryStep";
+import { OverBudgetConfirmDialog } from "@/components/trip/OverBudgetConfirmDialog";
+import { DeleteTripDialog } from "@/components/trip/DeleteTripDialog";
 import { ROUTES, tripItineraryPath } from "@/lib/routes";
+import { formatItineraryDateRange, itineraryVersionOptionLabel } from "@/lib/itinerary-stop-view";
 import {
   appendVisitStop,
   availableBudgetPool,
@@ -21,10 +24,9 @@ import {
   addDaysToIso,
 } from "@/lib/template-itinerary";
 
-type Tab = "itinerary" | "budget" | "checklist";
+type Tab = "itinerary" | "checklist";
 type Notice = { tone: "success" | "error" | "info"; text: string } | null;
 
-const money = new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 });
 const clone = <T,>(value: T): T => structuredClone(value);
 
 function normalize(days: EditableItineraryDay[], city = "", startDate = "") {
@@ -68,6 +70,8 @@ export function ItineraryEditorExperience({ tripId }: { tripId: string }) {
   const [editingStopId, setEditingStopId] = useState<string | null>(null);
   const [budgetAmount, setBudgetAmount] = useState(2_000_000);
   const [budgetBasis, setBudgetBasis] = useState<"PER_PERSON" | "GROUP">("PER_PERSON");
+  const [budgetConfirm, setBudgetConfirm] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -102,7 +106,6 @@ export function ItineraryEditorExperience({ tripId }: { tripId: string }) {
     () => estimateItineraryBudget(days, availableBudgetPool(budgetAmount, budgetBasis, 2), 2),
     [days, budgetAmount, budgetBasis],
   );
-  const budgetTotal = useMemo(() => budgetItems.reduce((total, item) => total + Number(item.quantity || 0) * Number(item.unitCostHigh || 0), 0), [budgetItems]);
   const activeVersion = snapshot?.versions.find((item) => item.id === snapshot.activeVersionId);
 
   const changeDays = (next: EditableItineraryDay[]) => {
@@ -113,7 +116,13 @@ export function ItineraryEditorExperience({ tripId }: { tripId: string }) {
 
   const updateStop = (dayId: string, stopId: string, patch: Partial<EditableItineraryStop>) => {
     const next = days.map((day) => day.id === dayId ? { ...day, stops: day.stops.map((stop) => stop.id === stopId ? { ...stop, ...patch } : stop) } : day);
-    changeDays(patch.place ? packItinerarySchedule(next) : next);
+    if (patch.place) {
+      changeDays(packItinerarySchedule(next));
+      return;
+    }
+    setDays(next);
+    setDirty(true);
+    setNotice(null);
   };
 
   const addDay = () => {
@@ -149,6 +158,7 @@ export function ItineraryEditorExperience({ tripId }: { tripId: string }) {
     if (!snapshot) return;
     const packed = packItinerarySchedule(days);
     if (Object.keys(findScheduleConflicts(packed)).length) {
+      setBudgetConfirm(false);
       setNotice({ tone: "error", text: "Masih ada jadwal yang bertumpuk. Perbaiki waktu yang ditandai." });
       return;
     }
@@ -164,12 +174,22 @@ export function ItineraryEditorExperience({ tripId }: { tripId: string }) {
       setSelectedVersionId(next.activeVersionId);
       setDays(normalize(packed, snapshot.destinationCity, snapshot.startDate));
       setDirty(false);
-      setNotice({ tone: "success", text: `Versi ${next.versions[0].versionNumber} tersimpan dan menjadi versi aktif.` });
+      setBudgetConfirm(false);
+      router.push(ROUTES.tripSaya);
+      router.refresh();
     } catch (error) {
       setNotice({ tone: "error", text: error instanceof Error ? error.message : "Gagal menyimpan itinerary." });
-    } finally {
       setSaving(false);
     }
+  };
+
+  const requestSave = () => {
+    if (saving) return;
+    if (budgetPlan.overBudget) {
+      setBudgetConfirm(true);
+      return;
+    }
+    void save();
   };
 
   const generate = async () => {
@@ -189,7 +209,7 @@ export function ItineraryEditorExperience({ tripId }: { tripId: string }) {
       setJob(next.job
         ? { id: next.job.id, status: next.job.status, attemptCount: next.job.attemptCount, resultVersionId: next.job.resultVersionId, errorCode: next.job.errorCode }
         : { id: crypto.randomUUID(), status: "SUCCEEDED", attemptCount: 1, resultVersionId: next.snapshot.versions[0]?.id ?? null, errorCode: null });
-      setNotice({ tone: "success", text: `Versi AI ${next.snapshot.versions[0]?.versionNumber ?? ""} siap ditinjau. Klik ?Jadikan aktif? jika kamu menyukainya.` });
+      setNotice({ tone: "success", text: `Versi AI ${next.snapshot.versions[0]?.versionNumber ?? ""} siap ditinjau. Klik Jadikan aktif jika kamu menyukainya.` });
     } catch (error) {
       setJob({ id: crypto.randomUUID(), status: "FAILED", attemptCount: 1, resultVersionId: null, errorCode: "GENERATION_FAILED" });
       setNotice({
@@ -249,13 +269,18 @@ export function ItineraryEditorExperience({ tripId }: { tripId: string }) {
     }
   };
 
-  const deleteDraft = async () => {
-    if (!window.confirm("Hapus draft trip ini? Tindakan ini tidak dapat dibatalkan.")) return;
+  const deleteDraft = async (reason: string) => {
     setSaving(true);
     try {
-      const response = await fetch(`/api/v1/trips/${encodeURIComponent(tripId)}`, { method: "DELETE", credentials: "include" });
+      const response = await fetch(`/api/v1/trips/${encodeURIComponent(tripId)}`, {
+        method: "DELETE",
+        credentials: "include",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ reason }),
+      });
       const payload = await response.json() as { success: boolean; error?: { message?: string } };
       if (!response.ok || !payload.success) throw new Error(payload.error?.message ?? "Trip gagal dihapus.");
+      setDeleteConfirm(false);
       router.push(ROUTES.tripSaya);
       router.refresh();
     } catch (error) {
@@ -287,13 +312,22 @@ export function ItineraryEditorExperience({ tripId }: { tripId: string }) {
     <main className="mx-auto max-w-[1480px] px-4 pb-28 pt-5 md:px-8 md:pb-10">
       <header className="mb-5 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="type-micro uppercase tracking-[.16em] text-secondary">Trip saya ? Editor itinerary</p>
+          <p className="type-micro uppercase tracking-[.16em] text-secondary">Trip saya / Editor itinerary</p>
           <h1 className="type-title mt-1 md:text-[1.75rem]">{snapshot.tripTitle}</h1>
-          <p className="type-body mt-1 text-on-surface-variant"><Icon name="location_on" /> {snapshot.destinationCity} ? {snapshot.startDate} ? {snapshot.endDate}</p>
+          <p className="type-body mt-1 text-on-surface-variant">
+            Destinasi: {snapshot.destinationCity || "belum diisi"}
+          </p>
+          <p className="type-body text-on-surface-variant">
+            Tanggal: {formatItineraryDateRange(snapshot.startDate, snapshot.endDate)}
+          </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <select aria-label="Pilih versi itinerary" value={selectedVersionId} onChange={(event) => chooseVersion(event.target.value)} className="min-h-11 rounded-full border border-outline-variant bg-white px-4 type-label outline-none focus:border-primary">
-            {snapshot.versions.map((version) => <option key={version.id} value={version.id}>Versi {version.versionNumber} ? {version.source}{version.id === snapshot.activeVersionId ? " ? Aktif" : ""}</option>)}
+            {snapshot.versions.map((version) => (
+              <option key={version.id} value={version.id}>
+                {itineraryVersionOptionLabel(version.versionNumber, version.source, version.id === snapshot.activeVersionId)}
+              </option>
+            ))}
           </select>
           <div className="flex flex-wrap items-center gap-2">
             <select aria-label="Mode regenerate AI" value={regenerateMode} onChange={(event) => setRegenerateMode(event.target.value as typeof regenerateMode)} className="min-h-11 rounded-full border border-outline-variant bg-white px-4 type-label outline-none focus:border-primary">
@@ -301,7 +335,7 @@ export function ItineraryEditorExperience({ tripId }: { tripId: string }) {
               <option value="cheaper">Alternatif hemat</option>
               <option value="alternative">Rute alternatif</option>
             </select>
-            <button type="button" onClick={() => void generate()} disabled={generating} className="btn-primary"><Icon name="rocket_launch" /> {generating ? "Mengoptimalkan?" : "Optimalkan dengan AI"}</button>
+            <button type="button" onClick={() => void generate()} disabled={generating} className="btn-primary"><Icon name="rocket_launch" /> {generating ? "Mengoptimalkan…" : "Optimalkan dengan AI"}</button>
           </div>
           <SaveOfflineItineraryButton
             id={tripId}
@@ -309,15 +343,15 @@ export function ItineraryEditorExperience({ tripId }: { tripId: string }) {
             path={tripItineraryPath(tripId)}
           />
           <button type="button" onClick={() => void closeSlots()} disabled={publishing} className="rounded-full border border-outline-variant bg-white px-4 py-3 type-label text-on-surface-variant hover:border-primary hover:text-primary disabled:opacity-50"><Icon name="lock" /> Tutup Slot</button>
-          <button type="button" onClick={() => void deleteDraft()} disabled={saving} className="rounded-full border border-error/30 bg-white px-4 py-3 type-label text-error hover:bg-error-container disabled:opacity-50"><Icon name="delete" /> Hapus Draft</button>
+          <button type="button" onClick={() => setDeleteConfirm(true)} disabled={saving} className="rounded-full border border-error/30 bg-white px-4 py-3 type-label text-error hover:bg-error-container disabled:opacity-50"><Icon name="delete" /> Hapus Draft</button>
         </div>
       </header>
 
       {notice && <div role="status" className={`mb-4 rounded-2xl border px-4 py-3 type-label ${notice.tone === "error" ? "border-error/30 bg-error-container text-on-error-container" : notice.tone === "success" ? "border-success/30 bg-emerald-50 text-emerald-800" : "border-primary/20 bg-primary-fixed text-on-primary-fixed"}`}>{notice.text}{generatedVersionId && <><button type="button" className="ml-3 underline" onClick={() => chooseVersion(generatedVersionId)}>Tinjau versi</button><button type="button" className="ml-3 underline" onClick={() => chooseVersion(generatedVersionId, true)}>Jadikan aktif</button></>}</div>}
-      {job && <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-outline-variant bg-white px-4 py-3"><span className="type-label">Generation job <code className="text-xs text-on-surface-variant">{job.id}</code></span><span className={`chip ${job.status === "SUCCEEDED" ? "bg-emerald-50 text-emerald-800" : job.status === "FAILED" ? "bg-error-container text-error" : "bg-secondary-fixed text-secondary"}`}>{job.status === "PROCESSING" ? "Sedang diproses" : job.status === "SUCCEEDED" ? "Berhasil" : "Gagal"} ? percobaan {job.attemptCount}</span></div>}
+      {job && <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-outline-variant bg-white px-4 py-3"><span className="type-label">Generation job <code className="text-xs text-on-surface-variant">{job.id}</code></span><span className={`chip ${job.status === "SUCCEEDED" ? "bg-emerald-50 text-emerald-800" : job.status === "FAILED" ? "bg-error-container text-error" : "bg-secondary-fixed text-secondary"}`}>{job.status === "PROCESSING" ? "Sedang diproses" : job.status === "SUCCEEDED" ? "Berhasil" : "Gagal"} · percobaan {job.attemptCount}</span></div>}
 
       <div className="mb-4 flex items-center gap-1 overflow-x-auto rounded-2xl bg-surface-container-low p-1.5">
-        {([ ["itinerary", "Itinerary", "alt_route"], ["budget", "Budget", "payments"], ["checklist", "Checklist", "check_circle"] ] as const).map(([key, label, icon]) => <button key={key} type="button" onClick={() => setTab(key)} className={`flex min-h-10 min-w-max flex-1 items-center justify-center gap-2 rounded-xl px-4 type-label transition ${tab === key ? "bg-white text-primary shadow-sm" : "text-on-surface-variant hover:bg-white/60"}`}><Icon name={icon} /> {label}</button>)}
+        {([ ["itinerary", "Itinerary", "alt_route"], ["checklist", "Checklist", "check_circle"] ] as const).map(([key, label, icon]) => <button key={key} type="button" onClick={() => setTab(key)} className={`flex min-h-10 min-w-max flex-1 items-center justify-center gap-2 rounded-xl px-4 type-label transition ${tab === key ? "bg-white text-primary shadow-sm" : "text-on-surface-variant hover:bg-white/60"}`}><Icon name={icon} /> {label}</button>)}
       </div>
 
       <div className="grid gap-5">
@@ -355,26 +389,50 @@ export function ItineraryEditorExperience({ tripId }: { tripId: string }) {
               onRemoveStop={(dayId, stopId) => changeDays(packItinerarySchedule(days.map((day) => day.id === dayId ? { ...day, stops: day.stops.filter((stop) => stop.id !== stopId) } : day)))}
               onAddDay={addDay}
               onRegenerate={() => void generate()}
+              mapFooter={
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="hidden sm:block">
+                    <p className="type-label">{dirty ? "Ada perubahan belum tersimpan" : `Versi yang dipakai: ${activeVersion?.versionNumber ?? "-"}`}</p>
+                    <p className="type-caption text-on-surface-variant">Simpan akan membuat versi baru.</p>
+                  </div>
+                  <div className="flex flex-1 gap-2 sm:flex-none">
+                    <button type="button" onClick={requestSave} disabled={saving || !dirty || Object.keys(conflicts).length > 0} className="btn-brand flex-1 md:flex-none"><Icon name="bookmark_added" /> {saving ? "Menyimpan…" : "Simpan versi baru"}</button>
+                    <button type="button" onClick={publish} disabled={publishing || saving || dirty || Object.keys(conflicts).length > 0} className="btn-primary flex-1 md:flex-none"><Icon name="publish" /> {publishing ? "Memublikasikan…" : "Publikasikan trip"}</button>
+                  </div>
+                </div>
+              }
             />
           ) : null}
-          {tab === "budget" && <BudgetEditor items={budgetItems} total={budgetTotal} onChange={(items) => { setBudgetItems(items); setDirty(true); }} />}
-          {tab === "checklist" && <ChecklistEditor snapshot={snapshot} setSnapshot={setSnapshot} title={newChecklist} setTitle={setNewChecklist} setNotice={setNotice} />}
+          {tab === "checklist" ? (
+            <>
+              <ChecklistEditor snapshot={snapshot} setSnapshot={setSnapshot} title={newChecklist} setTitle={setNewChecklist} setNotice={setNotice} />
+              <div className="mt-4 flex flex-wrap gap-2">
+                <button type="button" onClick={requestSave} disabled={saving || !dirty || Object.keys(conflicts).length > 0} className="btn-brand"><Icon name="bookmark_added" /> {saving ? "Menyimpan…" : "Simpan versi baru"}</button>
+                <button type="button" onClick={publish} disabled={publishing || saving || dirty || Object.keys(conflicts).length > 0} className="btn-primary"><Icon name="publish" /> {publishing ? "Memublikasikan…" : "Publikasikan trip"}</button>
+              </div>
+            </>
+          ) : null}
         </section>
       </div>
-
-      <div className="fixed bottom-[74px] left-3 right-3 z-30 flex items-center justify-between gap-3 rounded-2xl border border-outline-variant bg-white/95 p-3 shadow-[0_12px_40px_rgba(7,28,50,.22)] backdrop-blur md:static md:mt-5 md:ml-auto md:w-fit">
-        <div className="hidden sm:block"><p className="type-label">{dirty ? "Ada perubahan belum tersimpan" : `Versi aktif: ${activeVersion?.versionNumber}`}</p><p className="type-caption text-on-surface-variant">Penyimpanan membuat versi baru.</p></div>
-        <button type="button" onClick={save} disabled={saving || !dirty || Object.keys(conflicts).length > 0} className="btn-brand flex-1 md:flex-none"><Icon name="bookmark_added" /> {saving ? "Menyimpan?" : "Simpan versi baru"}</button>
-        <button type="button" onClick={publish} disabled={publishing || saving || dirty || Object.keys(conflicts).length > 0} className="btn-primary flex-1 md:flex-none"><Icon name="publish" /> {publishing ? "Memublikasikan?" : "Publikasikan trip"}</button>
-      </div>
+      {budgetConfirm ? (
+        <OverBudgetConfirmDialog
+          estimate={budgetPlan.total}
+          available={budgetPlan.pool}
+          pending={saving}
+          onCancel={() => setBudgetConfirm(false)}
+          onContinue={() => void save()}
+        />
+      ) : null}
+      {deleteConfirm ? (
+        <DeleteTripDialog
+          tripTitle={snapshot.tripTitle}
+          pending={saving}
+          onCancel={() => setDeleteConfirm(false)}
+          onConfirm={(reason) => void deleteDraft(reason)}
+        />
+      ) : null}
     </main>
   );
-}
-
-function BudgetEditor({ items, total, onChange }: { items: BudgetItemInput[]; total: number; onChange: (items: BudgetItemInput[]) => void }) {
-  const update = (index: number, patch: Partial<BudgetItemInput>) => onChange(items.map((item, itemIndex) => itemIndex === index ? { ...item, ...patch } : item));
-  const totalLow = items.reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.unitCostLow || 0), 0);
-  return <div className="rounded-[1.5rem] border border-outline-variant/70 bg-white p-4 shadow-sm md:p-5"><div className="flex flex-wrap items-end justify-between gap-3"><div><p className="type-micro uppercase text-secondary">Estimasi per peserta ? bukan biaya join</p><h2 className="type-title mt-1">Rencana budget</h2></div><div className="text-right"><p className="type-caption text-on-surface-variant">Rentang estimasi</p><strong className="type-subtitle text-primary">{money.format(totalLow)} ? {money.format(total)}</strong></div></div><p className="mt-2 rounded-xl bg-primary-fixed/50 px-3 py-2 type-caption text-on-primary-fixed">Nilai ini hanya preview. Server menghitung ulang subtotal dan total ketika versi disimpan.</p><div className="mt-4 space-y-3">{items.map((item, index) => <div key={`${item.label}-${index}`} className="rounded-2xl bg-surface-container-low p-3"><div className="mb-2 flex items-center justify-between"><span className="chip bg-white text-on-surface-variant">{item.category}</span><span className="type-caption text-on-surface-variant">Sumber: {item.sourceType} ? dicek saat simpan</span></div><div className="grid gap-2 md:grid-cols-[1.4fr_.7fr_1fr_1fr_auto]"><input value={item.label} onChange={(e) => update(index, { label: e.target.value })} aria-label="Nama biaya" className="rounded-xl border border-outline-variant bg-white px-3 py-2" /><input type="number" min="0" value={item.quantity} onChange={(e) => update(index, { quantity: e.target.value })} aria-label="Jumlah" className="rounded-xl border border-outline-variant bg-white px-3 py-2" /><input type="number" min="0" value={item.unitCostLow} onChange={(e) => update(index, { unitCostLow: e.target.value })} aria-label="Biaya minimum" className="rounded-xl border border-outline-variant bg-white px-3 py-2" /><input type="number" min="0" value={item.unitCostHigh} onChange={(e) => update(index, { unitCostHigh: e.target.value })} aria-label="Biaya maksimum" className="rounded-xl border border-outline-variant bg-white px-3 py-2" /><button type="button" onClick={() => onChange(items.filter((_, itemIndex) => itemIndex !== index))} className="rounded-xl px-3 text-error hover:bg-error-container" aria-label="Hapus biaya"><Icon name="close" /></button></div><p className="mt-2 type-caption text-on-surface-variant">{item.quantity} {item.unit} ? {money.format(Number(item.unitCostLow || 0))}?{money.format(Number(item.unitCostHigh || 0))}</p></div>)}</div><button type="button" onClick={() => onChange([...items, { category: "OTHER", label: "Biaya baru", quantity: "1", unit: "item", unitCostLow: "0", unitCostHigh: "0", sourceType: "USER", notes: null }])} className="mt-3 rounded-full border border-primary px-4 py-2 type-label text-primary"><Icon name="add" /> Tambah biaya</button></div>;
 }
 
 function ChecklistEditor({

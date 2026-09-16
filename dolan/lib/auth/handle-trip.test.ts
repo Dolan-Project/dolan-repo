@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   handleCreateTripRequest,
+  handleDeleteTripRequest,
   handleGetTripRequest,
   handleLeaveTripRequest,
   handleListMyTripsRequest,
@@ -253,6 +254,28 @@ describe("handleGetTripRequest", () => {
     expect(response.status).toBe(404);
     expect(json.success).toBe(false);
     expect(json.error.code).toBe("NOT_FOUND");
+  });
+});
+
+describe("handleDeleteTripRequest", () => {
+  it("rejects delete without a reason", async () => {
+    const response = await handleDeleteTripRequest(
+      jsonRequest("http://localhost/api/v1/trips/trip_1", {}, "dolan_session=complete"),
+    );
+    expect(response.status).toBe(400);
+  });
+
+  it("deletes when a reason is provided", async () => {
+    const response = await handleDeleteTripRequest(
+      jsonRequest(
+        "http://localhost/api/v1/trips/trip_1",
+        { reason: "Rencana berubah dan trip ini tidak jadi berangkat." },
+        "dolan_session=complete",
+      ),
+    );
+    const json = (await response.json()) as { success: true; data: { deleted: boolean } };
+    expect(response.status).toBe(200);
+    expect(json.data.deleted).toBe(true);
   });
 });
 

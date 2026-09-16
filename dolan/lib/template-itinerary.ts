@@ -299,7 +299,7 @@ export function appendVisitStop(
       activityType: "Wisata",
       startTime: "08:00",
       durationMinutes: 90,
-      travelDurationMinutes: 20,
+      travelDurationMinutes: null,
       notes: "Ditambah sendiri.",
       isLocked: input.lock !== false,
     };
@@ -480,6 +480,11 @@ export function formatRupiah(amount: number) {
   return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(Math.max(0, Math.round(amount)));
 }
 
+export function overBudgetSaveMessage(estimate: number, available: number) {
+  const shortfall = Math.max(0, Math.round(estimate - available));
+  return `Estimasi budget ${formatRupiah(estimate)} melebihi budget yang tersedia ${formatRupiah(available)}. Kekurangan sekitar ${formatRupiah(shortfall)}. Tetap lanjutkan menyimpan?`;
+}
+
 export type StopBudgetLine = {
   key: "ticket" | "food" | "transport";
   label: string;
@@ -646,14 +651,15 @@ export function dayRouteSummary(day: EditableItineraryDay) {
   for (let index = 1; index < day.stops.length; index += 1) {
     const previous = day.stops[index - 1]!;
     const stop = day.stops[index]!;
-    const from = stopCoord(previous);
-    const to = stopCoord(stop);
-    if (stop.travelDistanceMeters != null && stop.travelDistanceMeters > 0) {
-      totalKm += stop.travelDistanceMeters / 1000;
-    } else if (from && to) {
-      totalKm += haversineKm(from, to);
+    const travel = analyzeStopTravel(stop, previous, false);
+    if (travel) {
+      totalKm += travel.km;
+      totalMinutes += travel.minutes;
+    } else {
+      const from = stopCoord(previous);
+      const to = stopCoord(stop);
+      if (from && to) totalKm += haversineKm(from, to);
     }
-    totalMinutes += Math.max(0, stop.travelDurationMinutes ?? 0);
   }
   return {
     stopCount: day.stops.length,
@@ -867,7 +873,9 @@ export function hydrateItineraryPlaces(days: EditableItineraryDay[], city: strin
     ...day,
     stops: day.stops.map((item) => {
       const stop = item as StopWithCoords;
-      const name = stop.customTitle?.trim() || stop.place?.name || "Titik rute";
+      const name = stop.customTitle === ""
+        ? (stop.place?.name || "Titik rute")
+        : (stop.customTitle?.trim() || stop.place?.name || "Titik rute");
       const resolved = placeFromTemplateStop(name, city || stop.place?.city || "Indonesia");
       const latitude = !placeholderPoint(stop.place?.latitude, stop.place?.longitude)
         ? stop.place!.latitude
@@ -881,7 +889,7 @@ export function hydrateItineraryPlaces(days: EditableItineraryDay[], city: strin
           : resolved.longitude;
       return {
         ...stop,
-        customTitle: name,
+        customTitle: stop.customTitle === "" ? "" : name,
         place: {
           ...resolved,
           ...stop.place,

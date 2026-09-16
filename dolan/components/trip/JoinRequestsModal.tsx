@@ -49,7 +49,7 @@ export function JoinRequestsModal({ tripId, tripTitle, onClose, onChanged, varia
       const response = await fetch(`/api/v1/join-requests/${encodeURIComponent(requestId)}/review`, {
         method: "POST",
         credentials: "include",
-        headers: { "content-type": "application/json" },
+        headers: { "content-type": "application/json", "Idempotency-Key": crypto.randomUUID() },
         body: JSON.stringify({ decision }),
       });
       const json = (await response.json()) as { success?: boolean; error?: { message?: string } };

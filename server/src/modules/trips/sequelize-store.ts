@@ -31,7 +31,7 @@ import { TripErrorCode } from "@dolan/shared";
 import { Op, type Transaction } from "sequelize";
 import { notFound } from "../../lib/api-error.ts";
 import { toAuthIdentity } from "../auth/sequelize-user-repository.ts";
-import { coverPlaceFromCache } from "./cover-place.ts";
+import { coverPlaceFromCache, coverPlaceFromPreferences, hasCoverPhoto } from "./cover-place.ts";
 import type {
   PageResult,
   StoredComment,
@@ -241,16 +241,17 @@ export class SequelizeTripStore implements TripStore {
       ],
       transaction: this.tx(),
     });
-    const coverStop = (
+    const days = (
       trip as unknown as {
-        currentItineraryVersion?: {
-          days?: Array<{ stops?: Array<{ place?: Place | null }> }>;
-        };
+        currentItineraryVersion?: { days?: Array<{ stops?: Array<{ place?: Place | null }> }> };
       } | null
-    )?.currentItineraryVersion?.days
-      ?.flatMap((day) => day.stops ?? [])
-      .find((stop) => stop.place);
-    return coverPlaceFromCache(coverStop?.place ?? null);
+    )?.currentItineraryVersion?.days ?? [];
+    const stopPlaces = days.flatMap((day) => day.stops ?? []).map((stop) => coverPlaceFromCache(stop.place ?? null));
+    const fromPrefs = coverPlaceFromPreferences((trip?.preferences as Record<string, unknown> | null) ?? null);
+    if (hasCoverPhoto(fromPrefs)) return fromPrefs;
+    const photographedStop = stopPlaces.find((place) => hasCoverPhoto(place));
+    if (photographedStop) return photographedStop;
+    return fromPrefs ?? stopPlaces.find(Boolean) ?? null;
   }
 
   async listMembers(tripId: string) {

@@ -1,0 +1,1020 @@
+<!DOCTYPE html>
+
+<html lang="id"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><title>DOLAN - Open Trip &amp; Social Travel</title><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&amp;display=swap" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        "colors": {
+          "surface-dim": "#c8dbf9",
+          "on-error": "#ffffff",
+          "on-tertiary-fixed": "#001e2c",
+          "on-primary-fixed": "#00174b",
+          "surface-variant": "#d2e4ff",
+          "on-secondary-container": "#672c00",
+          "on-primary-fixed-variant": "#003ea8",
+          "primary": "#004ac6",
+          "on-primary-container": "#eeefff",
+          "tertiary": "#005b7c",
+          "on-surface-variant": "#434655",
+          "surface-tint": "#0053db",
+          "tertiary-fixed": "#c4e7ff",
+          "primary-fixed-dim": "#b4c5ff",
+          "surface-bright": "#f8f9ff",
+          "secondary-container": "#fe893c",
+          "surface-container-lowest": "#ffffff",
+          "tertiary-container": "#00759f",
+          "on-tertiary": "#ffffff",
+          "surface": "#f8f9ff",
+          "error-container": "#ffdad6",
+          "outline": "#737686",
+          "on-background": "#071c32",
+          "on-secondary": "#ffffff",
+          "on-tertiary-fixed-variant": "#004c69",
+          "on-error-container": "#93000a",
+          "tertiary-fixed-dim": "#7bd0ff",
+          "error": "#ba1a1a",
+          "on-tertiary-container": "#e1f2ff",
+          "secondary-fixed": "#ffdbc9",
+          "surface-container-highest": "#d2e4ff",
+          "secondary": "#9a4600",
+          "outline-variant": "#c3c6d7",
+          "inverse-primary": "#b4c5ff",
+          "on-secondary-fixed": "#321200",
+          "primary-container": "#2563eb",
+          "secondary-fixed-dim": "#ffb68d",
+          "on-surface": "#071c32",
+          "surface-container-high": "#dce9ff",
+          "primary-fixed": "#dbe1ff",
+          "surface-container-low": "#eff4ff",
+          "inverse-on-surface": "#eaf1ff",
+          "background": "#f8f9ff",
+          "surface-container": "#e5eeff",
+          "inverse-surface": "#1e3148",
+          "on-primary": "#ffffff",
+          "on-secondary-fixed-variant": "#763300"
+        },
+        "borderRadius": {
+          "DEFAULT": "0.25rem",
+          "lg": "0.5rem",
+          "xl": "0.75rem",
+          "full": "9999px"
+        },
+        "spacing": {
+          "space-xl": "2.5rem",
+          "space-xs": "0.25rem",
+          "space-sm": "0.5rem",
+          "space-md": "1rem",
+          "gutter": "1.25rem",
+          "margin-mobile": "1rem",
+          "margin": "2rem",
+          "gutter-mobile": "0.75rem",
+          "space-lg": "1.5rem"
+        },
+        "fontFamily": {
+          "body-md": [
+            "Plus Jakarta Sans"
+          ],
+          "body-lg": [
+            "Plus Jakarta Sans"
+          ],
+          "display-hero": [
+            "Plus Jakarta Sans"
+          ],
+          "label-sm": [
+            "Plus Jakarta Sans"
+          ],
+          "body-sm": [
+            "Plus Jakarta Sans"
+          ],
+          "label-lg": [
+            "Plus Jakarta Sans"
+          ],
+          "headline-sm": [
+            "Plus Jakarta Sans"
+          ],
+          "headline-xl-mobile": [
+            "Plus Jakarta Sans"
+          ],
+          "headline-lg": [
+            "Plus Jakarta Sans"
+          ],
+          "headline-md": [
+            "Plus Jakarta Sans"
+          ],
+          "label-md": [
+            "Plus Jakarta Sans"
+          ],
+          "headline-xl": [
+            "Plus Jakarta Sans"
+          ],
+          "stat-counter": [
+            "Plus Jakarta Sans"
+          ],
+          "display-hero-mobile": [
+            "Plus Jakarta Sans"
+          ]
+        },
+        "fontSize": {
+          "body-md": [
+            "14px",
+            {
+              "lineHeight": "22px",
+              "fontWeight": "400"
+            }
+          ],
+          "body-lg": [
+            "16px",
+            {
+              "lineHeight": "26px",
+              "fontWeight": "400"
+            }
+          ],
+          "display-hero": [
+            "48px",
+            {
+              "lineHeight": "56px",
+              "fontWeight": "800"
+            }
+          ],
+          "label-sm": [
+            "11px",
+            {
+              "lineHeight": "14px",
+              "fontWeight": "700"
+            }
+          ],
+          "body-sm": [
+            "12px",
+            {
+              "lineHeight": "18px",
+              "fontWeight": "400"
+            }
+          ],
+          "label-lg": [
+            "14px",
+            {
+              "lineHeight": "20px",
+              "fontWeight": "600"
+            }
+          ],
+          "headline-sm": [
+            "16px",
+            {
+              "lineHeight": "24px",
+              "fontWeight": "600"
+            }
+          ],
+          "headline-xl-mobile": [
+            "26px",
+            {
+              "lineHeight": "34px",
+              "fontWeight": "700"
+            }
+          ],
+          "headline-lg": [
+            "24px",
+            {
+              "lineHeight": "32px",
+              "fontWeight": "700"
+            }
+          ],
+          "headline-md": [
+            "20px",
+            {
+              "lineHeight": "28px",
+              "fontWeight": "600"
+            }
+          ],
+          "label-md": [
+            "12px",
+            {
+              "lineHeight": "16px",
+              "fontWeight": "600"
+            }
+          ],
+          "headline-xl": [
+            "36px",
+            {
+              "lineHeight": "44px",
+              "fontWeight": "700"
+            }
+          ],
+          "stat-counter": [
+            "28px",
+            {
+              "lineHeight": "32px",
+              "fontWeight": "800"
+            }
+          ],
+          "display-hero-mobile": [
+            "32px",
+            {
+              "lineHeight": "40px",
+              "fontWeight": "800"
+            }
+          ]
+        }
+      },
+    },
+  }</script></head><body class="bg-surface font-body-md text-body-md text-on-surface antialiased selection:bg-secondary-fixed selection:text-on-secondary-fixed"><header class="fixed top-0 left-0 right-0 z-50 bg-surface-container-lowest/90 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)]"><div class="h-20 max-w-[1240px] mx-auto px-margin flex items-center justify-between gap-gutter"><div class="flex items-center gap-space-lg"><a class="flex items-center gap-space-xs" data-path="explore-trip" href="#"><div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-primary to-primary-container flex items-center justify-center shadow-md shadow-primary/20"><span class="material-symbols-outlined text-on-primary text-[24px]">explore</span></div><div class="flex flex-col"><span class="font-headline-lg text-headline-lg tracking-tight text-primary leading-none">DOLAN</span><span class="font-label-sm text-label-sm tracking-widest text-secondary font-bold uppercase mt-0.5">Expedition</span></div></a><nav class="hidden lg:flex items-center gap-space-xs" data-active-classes="bg-surface-container-high text-primary font-bold rounded-full px-4 py-2"><a class="font-label-lg text-label-lg text-on-surface-variant hover:text-on-surface px-3 py-2 rounded-full transition-colors" data-path="explore-trip" href="#">Explore Trip</a><a class="font-label-lg text-label-lg text-on-surface-variant hover:text-on-surface px-3 py-2 rounded-full transition-colors" data-path="buat-trip" href="#">Buat Trip</a><a class="font-label-lg text-label-lg text-on-surface-variant hover:text-on-surface px-3 py-2 rounded-full transition-colors" data-path="komunitas" href="#">Komunitas</a><a class="font-label-lg text-label-lg text-on-surface-variant hover:text-on-surface px-3 py-2 rounded-full transition-colors" data-path="chat-rombongan" href="#">Chat &amp; Rombongan</a><a class="font-label-lg text-label-lg text-on-surface-variant hover:text-on-surface px-3 py-2 rounded-full transition-colors" data-path="dolanbot-ai" href="#">DolanBot AI</a></nav></div><div class="flex items-center gap-space-md"><div class="relative"><button class="w-10 h-10 rounded-full bg-surface-container-low hover:bg-surface-container-high text-on-surface flex items-center justify-center transition-colors relative" type="button"><span class="material-symbols-outlined text-[20px]">notifications</span><span class="absolute top-2 right-2 w-2.5 h-2.5 bg-secondary-container rounded-full ring-2 ring-surface-container-lowest"></span></button></div><div class="flex items-center gap-space-sm pl-space-xs"><div class="hidden md:flex flex-col items-end text-right"><div class="flex items-center gap-1"><span class="font-label-lg text-label-lg text-on-surface">Dimas Anggara</span><span class="material-symbols-outlined text-primary text-[16px]">verified</span></div><span class="font-label-sm text-label-sm text-on-surface-variant">Verified Backpacker</span></div><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center shadow-sm"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div><span class="material-symbols-outlined text-on-surface-variant text-[18px] hidden md:inline-block">expand_more</span></div></div></div></header><main class="w-full pt-20 bg-surface min-h-screen"><div class="flex flex-col w-full">
+<div class="w-full max-w-[1440px] mx-auto px-margin py-space-md">
+<!-- Top Sub-Navigation / Breadcrumb Bar -->
+<div class="flex flex-wrap items-center justify-between gap-space-sm mb-space-md">
+<div class="flex items-center gap-space-xs text-on-surface-variant font-label-md text-label-md">
+<a class="hover:text-primary transition-colors flex items-center gap-1" data-path="explore-trip" href="#">
+<span class="material-symbols-outlined text-[16px]">home</span>
+<span>Beranda</span>
+</a>
+<span>/</span>
+<a class="hover:text-primary transition-colors" data-path="chat-rombongan" href="#">Chat &amp; Rombongan</a>
+<span>/</span>
+<span class="text-primary font-bold">KM Phinisi Bintang Bajo (Live Sailing)</span>
+</div>
+<div class="flex items-center gap-space-xs">
+<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-secondary-fixed text-on-secondary-fixed font-label-sm text-label-sm font-bold shadow-sm">
+<span class="w-2 h-2 rounded-full bg-secondary animate-pulse"></span>
+          GPS Waypoint Live: Selat Kelor
+        </span>
+<button class="flex items-center gap-1.5 px-3 py-1 rounded-full bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-label-sm text-label-sm transition-all shadow-sm" id="toggleAudioBrief" type="button">
+<span class="material-symbols-outlined text-[16px] text-primary">campaign</span>
+<span>Breifing Suara (Host)</span>
+</button>
+</div>
+</div>
+<!-- MAIN 3-COLUMN LAYOUT -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter items-start">
+<!-- ========================================================================= -->
+<!-- COLUMN 1: LEFT SIDEBAR - List Room Chat & Saluran Aktif (3 cols = ~300px) -->
+<!-- ========================================================================= -->
+<aside class="lg:col-span-3 flex flex-col gap-space-md w-full">
+<div class="bg-surface-container-lowest rounded-xl shadow-sm p-space-md flex flex-col gap-space-sm">
+<!-- Header Room List -->
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<h2 class="font-headline-sm text-headline-sm text-on-surface font-bold">Pesan Rombongan</h2>
+<span class="px-2 py-0.5 rounded-full bg-secondary-container text-on-secondary-container font-label-sm text-label-sm font-bold">3 Baru</span>
+</div>
+<button class="w-8 h-8 rounded-full bg-surface-container-low hover:bg-surface-container-high text-primary flex items-center justify-center transition-all" title="Buat Grup Baru" type="button">
+<span class="material-symbols-outlined text-[18px]">add</span>
+</button>
+</div>
+<!-- Search Bar -->
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-2.5 text-on-surface-variant text-[18px]">search</span>
+<input class="w-full bg-surface-container-low text-on-surface placeholder:text-on-surface-variant/70 font-body-sm text-body-sm pl-9 pr-3 py-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all" placeholder="Cari obrolan, trip, kawan..." type="text"/>
+</div>
+<!-- Filter Pills -->
+<div class="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+<button class="px-3 py-1 rounded-full bg-primary text-on-primary font-label-sm text-label-sm whitespace-nowrap shadow-sm" type="button">Semua</button>
+<button class="px-3 py-1 rounded-full bg-surface-container-low hover:bg-surface-container-high text-on-surface-variant font-label-sm text-label-sm whitespace-nowrap transition-colors" type="button">Trip Aktif (3)</button>
+<button class="px-3 py-1 rounded-full bg-surface-container-low hover:bg-surface-container-high text-on-surface-variant font-label-sm text-label-sm whitespace-nowrap transition-colors" type="button">Selesai</button>
+<button class="px-3 py-1 rounded-full bg-surface-container-low hover:bg-surface-container-high text-on-surface-variant font-label-sm text-label-sm whitespace-nowrap transition-colors" type="button">Komunitas</button>
+</div>
+<!-- Room List Stream -->
+<div class="flex flex-col gap-2 mt-1">
+<!-- Room 1 (ACTIVE ITEM) -->
+<div class="relative group p-3 rounded-xl bg-surface-container-high shadow-sm cursor-pointer transition-all">
+<div class="absolute left-0 top-2 bottom-2 w-1 bg-primary rounded-r-full"></div>
+<div class="flex items-start gap-3 pl-1">
+<div class="relative flex-shrink-0">
+<div class="w-11 h-11 rounded-xl bg-gradient-to-tr from-primary to-primary-container text-on-primary flex items-center justify-center shadow-md">
+<span class="material-symbols-outlined text-[22px]">sailing</span>
+</div>
+<span class="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-emerald-500 rounded-full ring-2 ring-surface-container-lowest"></span>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center justify-between gap-1 mb-0.5">
+<h3 class="font-headline-sm text-[13px] leading-tight text-on-surface font-bold truncate">Sailing Phinisi Komodo 4D3N</h3>
+<span class="font-label-sm text-label-sm text-primary font-bold whitespace-nowrap">08:35</span>
+</div>
+<div class="flex items-center gap-1.5 mb-1">
+<span class="px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-label-sm text-[10px] leading-tight font-bold uppercase tracking-wider">Live Sailing</span>
+<span class="font-body-sm text-[11px] text-on-surface-variant truncate">Rombongan 04</span>
+</div>
+<div class="flex items-center justify-between gap-2">
+<p class="font-body-sm text-[12px] text-on-surface truncate">
+<span class="font-bold text-on-surface">Sita:</span> SIMAKSI sudah terbit &amp; siap...
+                    </p>
+<span class="flex-shrink-0 w-4 h-4 rounded-full bg-secondary text-on-secondary font-label-sm text-[10px] flex items-center justify-center font-bold">3</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Room 2 -->
+<div class="p-3 rounded-xl bg-surface-container-low hover:bg-surface-container hover:shadow-sm cursor-pointer transition-all">
+<div class="flex items-start gap-3">
+<div class="relative flex-shrink-0">
+<div class="w-11 h-11 rounded-xl bg-surface-container-highest text-tertiary flex items-center justify-center">
+<span class="material-symbols-outlined text-[22px]">landscape</span>
+</div>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center justify-between gap-1 mb-0.5">
+<h3 class="font-headline-sm text-[13px] leading-tight text-on-surface font-bold truncate">Ekspedisi Rinjani - Torean</h3>
+<span class="font-label-sm text-label-sm text-on-surface-variant whitespace-nowrap">Kemarin</span>
+</div>
+<div class="flex items-center gap-1.5 mb-1">
+<span class="px-1.5 py-0.5 rounded-full bg-secondary-fixed text-on-secondary-fixed font-label-sm text-[10px] font-bold">H-7 Berangkat</span>
+</div>
+<div class="flex items-center justify-between gap-2">
+<p class="font-body-sm text-[12px] text-on-surface-variant truncate">
+<span class="font-semibold text-on-surface">Arga:</span> Porter tambahan sudah confirm...
+                    </p>
+<span class="flex-shrink-0 w-4 h-4 rounded-full bg-primary text-on-primary font-label-sm text-[10px] flex items-center justify-center font-bold">1</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Room 3 -->
+<div class="p-3 rounded-xl bg-surface-container-low hover:bg-surface-container hover:shadow-sm cursor-pointer transition-all">
+<div class="flex items-start gap-3">
+<div class="relative flex-shrink-0">
+<div class="w-11 h-11 rounded-xl bg-surface-container-highest text-secondary flex items-center justify-center">
+<span class="material-symbols-outlined text-[22px]">directions_car</span>
+</div>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center justify-between gap-1 mb-0.5">
+<h3 class="font-headline-sm text-[13px] leading-tight text-on-surface font-bold truncate">Roadtrip Dieng &amp; Prau</h3>
+<span class="font-label-sm text-label-sm text-on-surface-variant whitespace-nowrap">Sel</span>
+</div>
+<div class="flex items-center gap-1.5 mb-1">
+<span class="px-1.5 py-0.5 rounded-full bg-surface-variant text-primary font-label-sm text-[10px] font-bold">Tahap Diskusi</span>
+</div>
+<div class="flex items-center justify-between gap-2">
+<p class="font-body-sm text-[12px] text-on-surface-variant truncate">
+<span class="font-semibold text-on-surface">Dinda:</span> Voting homestay dibuka ya!
+                    </p>
+<span class="material-symbols-outlined text-[16px] text-primary">done_all</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Room 4 -->
+<div class="p-3 rounded-xl bg-surface-container-low hover:bg-surface-container hover:shadow-sm cursor-pointer transition-all">
+<div class="flex items-start gap-3">
+<div class="relative flex-shrink-0">
+<div class="w-11 h-11 rounded-xl bg-surface-container-highest text-tertiary-container flex items-center justify-center">
+<span class="material-symbols-outlined text-[22px]">groups</span>
+</div>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center justify-between gap-1 mb-0.5">
+<h3 class="font-headline-sm text-[13px] leading-tight text-on-surface font-bold truncate">Klub Solo Backpacker Jatim</h3>
+<span class="font-label-sm text-label-sm text-on-surface-variant whitespace-nowrap">2 Mei</span>
+</div>
+<div class="flex items-center gap-1.5 mb-1">
+<span class="px-1.5 py-0.5 rounded-full bg-surface-variant text-tertiary font-label-sm text-[10px] font-bold">Komunitas</span>
+</div>
+<p class="font-body-sm text-[12px] text-on-surface-variant truncate">
+<span class="font-semibold text-on-surface">Rizky:</span> Ada yang mau tebengan ke Bromo?
+                  </p>
+</div>
+</div>
+</div>
+<!-- Room 5 -->
+<div class="p-3 rounded-xl bg-surface-container-low hover:bg-surface-container hover:shadow-sm cursor-pointer transition-all">
+<div class="flex items-start gap-3">
+<div class="relative flex-shrink-0">
+<div class="w-11 h-11 rounded-xl bg-surface-container-highest text-on-surface-variant flex items-center justify-center">
+<span class="material-symbols-outlined text-[22px]">beach_access</span>
+</div>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center justify-between gap-1 mb-0.5">
+<h3 class="font-headline-sm text-[13px] leading-tight text-on-surface font-bold truncate">Sunset Snorkeling Karimunjawa</h3>
+<span class="font-label-sm text-label-sm text-on-surface-variant whitespace-nowrap">28 Apr</span>
+</div>
+<div class="flex items-center gap-1.5 mb-1">
+<span class="px-1.5 py-0.5 rounded-full bg-surface-variant text-on-surface-variant font-label-sm text-[10px] font-bold">Trip Selesai</span>
+</div>
+<p class="font-body-sm text-[12px] text-on-surface-variant truncate">
+                    Galeri foto 100+ file sudah diupload
+                  </p>
+</div>
+</div>
+</div>
+</div>
+<!-- Bottom PWA Status Banner -->
+<div class="mt-2 p-2.5 rounded-xl bg-surface-container-low flex items-center gap-2.5">
+<span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+<div class="flex flex-col">
+<span class="font-label-sm text-[11px] font-bold text-on-surface">Mode Offline Siaga</span>
+<span class="font-body-sm text-[10px] text-on-surface-variant leading-tight">Chat &amp; rute kompas tersimpan di memori perangkat</span>
+</div>
+</div>
+</div>
+</aside>
+<!-- ========================================================================= -->
+<!-- COLUMN 2: CENTER CHAT STREAM & ACTIONS (6 cols = Main focus)              -->
+<!-- ========================================================================= -->
+<main class="lg:col-span-6 flex flex-col bg-surface-container-lowest rounded-xl shadow-sm overflow-hidden min-h-[780px]">
+<!-- Center Header -->
+<div class="p-space-md bg-surface-container-lowest shadow-sm flex flex-col gap-space-xs z-10">
+<div class="flex items-start justify-between gap-space-sm">
+<div class="flex items-center gap-3">
+<div class="w-12 h-12 rounded-xl bg-gradient-to-tr from-primary to-tertiary text-on-primary flex items-center justify-center shadow-md flex-shrink-0">
+<span class="material-symbols-outlined text-[26px]">directions_boat</span>
+</div>
+<div class="flex flex-col">
+<div class="flex items-center gap-2">
+<h1 class="font-headline-sm text-headline-sm text-on-surface font-bold">Sailing Phinisi Komodo 4D3N</h1>
+<span class="material-symbols-outlined text-primary text-[18px]">verified</span>
+</div>
+<div class="flex flex-wrap items-center gap-2 text-on-surface-variant font-label-sm text-[11px]">
+<span>Rombongan 04</span>
+<span>•</span>
+<span>KM Phinisi Bintang Bajo</span>
+<span>•</span>
+<span class="text-tertiary font-bold">VHF Marine Ch. 16</span>
+</div>
+</div>
+</div>
+<!-- Quick Trip Tools Callout -->
+<div class="flex items-center gap-1.5">
+<button class="w-9 h-9 rounded-full bg-surface-container-low hover:bg-surface-container-high text-primary flex items-center justify-center transition-colors" title="Panggilan Darurat SOS / Radio" type="button">
+<span class="material-symbols-outlined text-[20px]">fmd_good</span>
+</button>
+<button class="w-9 h-9 rounded-full bg-surface-container-low hover:bg-surface-container-high text-on-surface flex items-center justify-center transition-colors" title="Pengaturan Obrolan" type="button">
+<span class="material-symbols-outlined text-[20px]">more_vert</span>
+</button>
+</div>
+</div>
+<!-- Metadata Quick Action Pills -->
+<div class="flex flex-wrap items-center gap-2 pt-1">
+<button class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 hover:bg-primary/20 text-primary font-label-sm text-label-sm font-semibold transition-all" type="button">
+<span class="material-symbols-outlined text-[16px]">route</span>
+<span>Peta Rute Live</span>
+</button>
+<button class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-label-sm text-label-sm font-semibold transition-all" type="button">
+<span class="material-symbols-outlined text-[16px]">event_note</span>
+<span>Rundown (H-1/4)</span>
+</button>
+<button class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-secondary-fixed hover:bg-secondary-fixed-dim text-on-secondary-fixed font-label-sm text-label-sm font-bold transition-all" type="button">
+<span class="material-symbols-outlined text-[16px]">account_balance_wallet</span>
+<span>Kas Patungan (Rp 2.4 Jt Sisa)</span>
+</button>
+</div>
+</div>
+<!-- Pinned Announcement Box -->
+<div class="mx-space-md mt-space-sm p-3 rounded-xl bg-secondary-fixed/50 shadow-sm flex items-start gap-3 transition-all" id="pinnedBox">
+<div class="w-8 h-8 rounded-lg bg-secondary text-on-secondary flex items-center justify-center flex-shrink-0 mt-0.5">
+<span class="material-symbols-outlined text-[18px]">push_pin</span>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-label-sm font-bold text-on-secondary-fixed uppercase tracking-wider">Pengumuman Host Trip</span>
+<button class="text-on-secondary-fixed/70 hover:text-on-secondary-fixed" onclick="document.getElementById('pinnedBox').classList.add('hidden')" type="button">
+<span class="material-symbols-outlined text-[16px]">close</span>
+</button>
+</div>
+<p class="font-body-sm text-body-sm text-on-secondary-fixed mt-0.5">
+              Seluruh peserta wajib kumpul di <strong>Dermaga Marina Gate B5 pkl 09:30 WITA</strong>. Cek kembali perlengkapan trekking sepatu karang &amp; drybag!
+            </p>
+<a class="inline-flex items-center gap-1 mt-1 text-secondary font-label-sm text-label-sm font-bold hover:underline" href="#">
+<span>Buka Petunjuk Titik Kumpul Marina</span>
+<span class="material-symbols-outlined text-[14px]">arrow_forward</span>
+</a>
+</div>
+</div>
+<!-- Conversation Stream Container -->
+<div class="flex-1 p-space-md overflow-y-auto space-y-space-md bg-gradient-to-b from-surface-bright to-surface-container-low/30">
+<!-- Date Separator -->
+<div class="flex items-center justify-center my-space-xs">
+<span class="px-3 py-1 rounded-full bg-surface-container-high text-on-surface-variant font-label-sm text-label-sm shadow-sm">
+              Hari Ini • 12 Desember 2025
+            </span>
+</div>
+<!-- Message 1: Host Message -->
+<div class="flex items-start gap-3 max-w-[88%]">
+<div class="relative flex-shrink-0">
+<div class="w-9 h-9 rounded-full bg-primary text-on-primary flex items-center justify-center font-bold text-[13px] shadow-sm">
+                DA
+              </div>
+<span class="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-secondary rounded-full flex items-center justify-center text-[8px] text-white">★</span>
+</div>
+<div class="flex flex-col gap-1">
+<div class="flex items-baseline gap-2">
+<span class="font-label-lg text-label-lg text-on-surface font-bold">Dimas Anggara</span>
+<span class="px-1.5 py-0.5 rounded bg-primary/10 text-primary font-label-sm text-[10px] font-bold">Host Inisiator</span>
+<span class="font-label-sm text-[11px] text-on-surface-variant">08:15 WITA</span>
+</div>
+<div class="p-3.5 rounded-2xl rounded-tl-sm bg-surface-container-lowest text-on-surface shadow-sm font-body-md text-body-md">
+                Halo rekan petualang! Logistik makan 4D3N dan sewa alat snorkeling sudah selesai di-load ke lambung kapal. Mohon pastikan baterai kamera &amp; powerbank sudah terisi penuh ya. Kita akan mulai berlayar menuju Pulau Kelor segera setelah briefing kapten.
+              </div>
+<div class="flex items-center gap-1.5 mt-0.5">
+<button class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-label-sm text-[11px]" type="button">
+<span>⛵</span> <span class="font-bold">5</span>
+</button>
+<button class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-label-sm text-[11px]" type="button">
+<span>👍</span> <span class="font-bold">4</span>
+</button>
+<button class="w-6 h-6 rounded-full bg-surface-container-low hover:bg-surface-container-high text-on-surface-variant flex items-center justify-center text-[14px]" type="button">
+<span class="material-symbols-outlined text-[14px]">add_reaction</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Message 2: Photo Message by Sita -->
+<div class="flex items-start gap-3 max-w-[90%]">
+<div class="w-9 h-9 rounded-full bg-tertiary text-on-tertiary flex items-center justify-center font-bold text-[13px] shadow-sm flex-shrink-0">
+              SL
+            </div>
+<div class="flex flex-col gap-1">
+<div class="flex items-baseline gap-2">
+<span class="font-label-lg text-label-lg text-on-surface font-bold">Sita Lestari</span>
+<span class="px-1.5 py-0.5 rounded bg-tertiary/10 text-tertiary font-label-sm text-[10px] font-bold">Dokumentasi</span>
+<span class="font-label-sm text-[11px] text-on-surface-variant">08:26 WITA</span>
+</div>
+<div class="p-3.5 rounded-2xl rounded-tl-sm bg-surface-container-lowest text-on-surface shadow-sm flex flex-col gap-2 font-body-md text-body-md">
+<p>Kapal kita sudah ready bersandar di dermaga timur! KM Phinisi Bintang Bajo terlihat gagah banget, deck atas lega buat sunset nanti sore 🌅✨</p>
+<!-- Rich Image Card -->
+<div class="relative rounded-xl overflow-hidden shadow-md group">
+<img alt="KM Phinisi Bintang Bajo" class="w-full h-52 object-cover transition-transform duration-300 group-hover:scale-105" data-alt="A magnificent traditional wooden Phinisi boat anchored in the crystal-clear turquoise waters of Labuan Bajo under an open sunny blue sky. Bright morning sunlight reflects on the ocean waves, dramatic green mountainous islands rise in the tropical distance, evoking an authentic daylight Indonesian adventure expedition with crisp warm natural highlights." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC8xy7HoPJ_UjK1tfFTkdDOTAuDZ_f0j51StHiAIaAQzyCKzEMB6iY1BNS-BEUaM-rGbQU8MmGS94mPlteHr4el0cJ0zad8cXUlgyIlWDQDdi3m7jsaIpS-lOp4v-v-yLU3cwJnFAPmDXwj_rB7cBT7enEdZBWOX-t4V7xPVvfspoAB0vCwA4BhHZPf607GHOwK68r1jXUC8mHfd8Y2Btf17n8NvLkanrs1TMRL41Nw0KUUa32yFTM6Ww"/>
+<div class="absolute bottom-2 left-2 right-2 flex items-center justify-between px-3 py-1.5 rounded-lg bg-inverse-surface/75 backdrop-blur-md text-inverse-on-surface">
+<div class="flex items-center gap-1.5 font-label-sm text-label-sm truncate">
+<span class="material-symbols-outlined text-[16px]">photo_camera</span>
+<span class="truncate">Phinisi-Bajo-Dermaga-01.jpg (3.8 MB)</span>
+</div>
+<div class="flex items-center gap-2">
+<button class="hover:text-primary-fixed-dim transition-colors" title="Unduh Foto" type="button">
+<span class="material-symbols-outlined text-[18px]">download</span>
+</button>
+<button class="hover:text-primary-fixed-dim transition-colors" title="Perbesar" type="button">
+<span class="material-symbols-outlined text-[18px]">fullscreen</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Message 3: DolanBot AI Maritim Real-Time Sync (Special Embedded Card) -->
+<div class="flex items-start gap-3 max-w-[92%]">
+<div class="w-9 h-9 rounded-full bg-gradient-to-tr from-primary to-secondary text-on-primary flex items-center justify-center font-bold shadow-md flex-shrink-0">
+<span class="material-symbols-outlined text-[18px]">smart_toy</span>
+</div>
+<div class="flex flex-col gap-1 w-full">
+<div class="flex items-baseline gap-2">
+<span class="font-label-lg text-label-lg text-primary font-bold">DolanBot AI Maritim</span>
+<span class="px-2 py-0.5 rounded-full bg-primary text-on-primary font-label-sm text-[9px] font-extrabold uppercase tracking-wider">BMKG Sync Real-Time</span>
+<span class="font-label-sm text-[11px] text-on-surface-variant">08:30 WITA</span>
+</div>
+<div class="p-4 rounded-2xl rounded-tl-sm bg-gradient-to-br from-surface-container-high/90 to-surface-variant/40 shadow-sm flex flex-col gap-3">
+<div class="flex items-center justify-between pb-2">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[22px]">tsunami</span>
+<span class="font-headline-sm text-[14px] text-on-surface font-bold">Radar Cuaca &amp; Oseanografi: Selat Padar</span>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Update 10m lalu</span>
+</div>
+<!-- 4 Metrics Bento Inside Bot Card -->
+<div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
+<div class="p-2.5 rounded-xl bg-surface-container-lowest shadow-sm flex flex-col items-center">
+<span class="font-label-sm text-[10px] text-on-surface-variant uppercase">Tinggi Ombak</span>
+<span class="font-stat-counter text-[18px] text-primary font-bold">0.2 - 0.4 m</span>
+<span class="font-label-sm text-[10px] text-emerald-600 font-bold">Sangat Tenang</span>
+</div>
+<div class="p-2.5 rounded-xl bg-surface-container-lowest shadow-sm flex flex-col items-center">
+<span class="font-label-sm text-[10px] text-on-surface-variant uppercase">Visibilitas Snorkel</span>
+<span class="font-stat-counter text-[18px] text-tertiary font-bold">18 Meter</span>
+<span class="font-label-sm text-[10px] text-emerald-600 font-bold">Kristal Jernih</span>
+</div>
+<div class="p-2.5 rounded-xl bg-surface-container-lowest shadow-sm flex flex-col items-center">
+<span class="font-label-sm text-[10px] text-on-surface-variant uppercase">Kecepatan Angin</span>
+<span class="font-stat-counter text-[18px] text-on-surface font-bold">8 Knots</span>
+<span class="font-label-sm text-[10px] text-on-surface-variant font-medium">Barat Laut</span>
+</div>
+<div class="p-2.5 rounded-xl bg-surface-container-lowest shadow-sm flex flex-col items-center">
+<span class="font-label-sm text-[10px] text-on-surface-variant uppercase">Indeks UV</span>
+<span class="font-stat-counter text-[18px] text-secondary font-bold">UV 7</span>
+<span class="font-label-sm text-[10px] text-secondary font-bold">Wajib Sunblock</span>
+</div>
+</div>
+<div class="flex items-center justify-between text-on-surface font-body-sm text-[12px] pt-1">
+<span class="flex items-center gap-1 text-tertiary font-semibold">
+<span class="material-symbols-outlined text-[16px]">eco</span>
+                    Harap gunakan sunblock ramah terumbu (Reef-Safe)!
+                  </span>
+<button class="text-primary font-label-sm text-label-sm font-bold hover:underline" type="button">Rincian Pasut →</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Message 4: Interactive Polling by Dinda -->
+<div class="flex items-start gap-3 max-w-[88%]">
+<div class="w-9 h-9 rounded-full bg-secondary text-on-secondary flex items-center justify-center font-bold text-[13px] shadow-sm flex-shrink-0">
+              DW
+            </div>
+<div class="flex flex-col gap-1 w-full max-w-md">
+<div class="flex items-baseline gap-2">
+<span class="font-label-lg text-label-lg text-on-surface font-bold">Dinda Wardani</span>
+<span class="px-1.5 py-0.5 rounded bg-secondary/10 text-secondary font-label-sm text-[10px] font-bold">Bendahara Kas</span>
+<span class="font-label-sm text-[11px] text-on-surface-variant">08:33 WITA</span>
+</div>
+<div class="p-4 rounded-2xl rounded-tl-sm bg-surface-container-lowest text-on-surface shadow-sm flex flex-col gap-3">
+<div class="flex items-start justify-between gap-2">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary text-[20px]">how_to_vote</span>
+<h4 class="font-headline-sm text-[14px] font-bold text-on-surface">Polling Menu Makan Malam Hari-2</h4>
+</div>
+<span class="font-label-sm text-[10px] px-2 py-0.5 rounded-full bg-secondary-fixed text-on-secondary-fixed font-bold">Sisa 3 Jam</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Chef kapal menanyakan preferensi tangkapan segar malam kedua di anchorage Padar:</p>
+<!-- Polling Option A -->
+<label class="group flex flex-col gap-1.5 p-2.5 rounded-xl bg-surface-container-low hover:bg-surface-container-high transition-all cursor-pointer">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<input checked="" class="w-4 h-4 text-secondary focus:ring-secondary accent-secondary" name="dinnerPoll" type="radio"/>
+<span class="font-label-md text-label-md text-on-surface font-bold">Ikan Kerapu Bakar Bumbu Jimbaran</span>
+</div>
+<span class="font-label-sm text-label-sm font-bold text-secondary">75% (3 Suara)</span>
+</div>
+<div class="w-full h-2 rounded-full bg-surface-variant overflow-hidden">
+<div class="h-full bg-secondary-container rounded-full" style="width: 75%"></div>
+</div>
+</label>
+<!-- Polling Option B -->
+<label class="group flex flex-col gap-1.5 p-2.5 rounded-xl bg-surface-container-low hover:bg-surface-container-high transition-all cursor-pointer">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<input class="w-4 h-4 text-secondary focus:ring-secondary accent-secondary" name="dinnerPoll" type="radio"/>
+<span class="font-label-md text-label-md text-on-surface font-bold">Sup Kakap Kuah Asam Segar Rempah</span>
+</div>
+<span class="font-label-sm text-label-sm font-bold text-on-surface-variant">25% (1 Suara)</span>
+</div>
+<div class="w-full h-2 rounded-full bg-surface-variant overflow-hidden">
+<div class="h-full bg-outline-variant rounded-full" style="width: 25%"></div>
+</div>
+</label>
+<div class="flex items-center justify-between text-on-surface-variant font-label-sm text-[11px] pt-1">
+<span>Total 4 suara masuk (Anonim)</span>
+<span class="text-primary font-bold">Kamu memilih Kerapu Bakar</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Message 5: Self User Message (Right-aligned) -->
+<div class="flex items-start justify-end gap-3 ml-auto max-w-[85%]">
+<div class="flex flex-col items-end gap-1">
+<div class="flex items-baseline gap-2">
+<span class="font-label-sm text-[11px] text-on-surface-variant">08:42 WITA</span>
+<span class="font-label-lg text-label-lg text-on-surface font-bold">Kamu</span>
+</div>
+<div class="p-3.5 rounded-2xl rounded-tr-sm bg-primary text-on-primary shadow-md font-body-md text-body-md text-left">
+                Mantap kawan-kawan! Saya bawa kotak P3K darurat cadangan dan 2 waterproof pouch buat action cam pas lompat tebing nanti di Kelor. Sampai jumpa di Gate B5 Marina!
+              </div>
+<div class="flex items-center gap-1 font-label-sm text-[11px] text-on-surface-variant">
+<span>Terkirim 08:42</span>
+<span class="material-symbols-outlined text-[16px] text-primary">done_all</span>
+</div>
+</div>
+<div class="w-9 h-9 rounded-full bg-primary-container text-on-primary flex items-center justify-center font-bold text-[13px] shadow-sm flex-shrink-0">
+              DA
+            </div>
+</div>
+</div>
+<!-- Quick Action Suggestion Chips above Input -->
+<div class="px-space-md pt-2 pb-1 bg-surface-container-lowest flex items-center gap-2 overflow-x-auto no-scrollbar">
+<span class="font-label-sm text-[11px] text-on-surface-variant whitespace-nowrap">Aksi Cepat:</span>
+<button class="px-2.5 py-1 rounded-full bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-label-sm text-[11px] whitespace-nowrap transition-colors" type="button">
+            🌊 Cek Pasang Surut
+          </button>
+<button class="px-2.5 py-1 rounded-full bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-label-sm text-[11px] whitespace-nowrap transition-colors" type="button">
+            🧴 Pinjam Sunblock
+          </button>
+<button class="px-2.5 py-1 rounded-full bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-label-sm text-[11px] whitespace-nowrap transition-colors" type="button">
+            📍 Titik Temu Dek Kapal
+          </button>
+<button class="px-2.5 py-1 rounded-full bg-tertiary-fixed text-on-tertiary-fixed font-label-sm text-[11px] font-bold whitespace-nowrap transition-colors" type="button">
+            🤖 DolanBot: Rekomendasi Spot Penyu
+          </button>
+</div>
+<!-- Rich Input Bar Area -->
+<div class="p-space-md bg-surface-container-lowest shadow-sm">
+<div class="flex items-end gap-2 bg-surface-container-low rounded-2xl p-2 focus-within:ring-2 focus-within:ring-primary/20 transition-all">
+<!-- Attachment Button -->
+<button class="w-9 h-9 rounded-xl bg-surface-container-lowest hover:bg-surface-container-high text-on-surface-variant flex items-center justify-center transition-colors flex-shrink-0" title="Lampirkan File / Foto" type="button">
+<span class="material-symbols-outlined text-[20px]">attach_file</span>
+</button>
+<button class="w-9 h-9 rounded-xl bg-surface-container-lowest hover:bg-surface-container-high text-on-surface-variant flex items-center justify-center transition-colors flex-shrink-0" title="Kamera Cepat" type="button">
+<span class="material-symbols-outlined text-[20px]">photo_camera</span>
+</button>
+<!-- Textarea Auto Expand -->
+<textarea class="flex-1 bg-transparent border-none focus:outline-none resize-none font-body-md text-body-md text-on-surface placeholder:text-on-surface-variant/70 py-1.5 px-2 max-h-24" placeholder="Tulis pesan atau koordinasi untuk rombongan Phinisi..." rows="1"></textarea>
+<!-- Emoji Picker -->
+<button class="w-9 h-9 rounded-xl bg-surface-container-lowest hover:bg-surface-container-high text-on-surface-variant flex items-center justify-center transition-colors flex-shrink-0" title="Sisipkan Emoji" type="button">
+<span class="material-symbols-outlined text-[20px]">sentiment_satisfied</span>
+</button>
+<!-- Audio Voice Note -->
+<button class="w-9 h-9 rounded-xl bg-surface-container-lowest hover:bg-surface-container-high text-on-surface-variant flex items-center justify-center transition-colors flex-shrink-0" title="Rekam Catatan Suara" type="button">
+<span class="material-symbols-outlined text-[20px]">mic</span>
+</button>
+<!-- Send Sunrise Orange CTA Button -->
+<button class="w-10 h-10 rounded-xl bg-gradient-to-tr from-secondary to-secondary-container hover:shadow-lg hover:shadow-secondary/30 text-on-secondary flex items-center justify-center transition-all flex-shrink-0" title="Kirim Pesan" type="button">
+<span class="material-symbols-outlined text-[20px]">send</span>
+</button>
+</div>
+<div class="flex items-center justify-between text-on-surface-variant font-label-sm text-[10px] mt-1.5 px-1">
+<span>Tekan <strong>Enter</strong> untuk kirim, <strong>Shift + Enter</strong> untuk baris baru</span>
+<span class="flex items-center gap-1 text-emerald-600 font-semibold">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+              Enkripsi End-to-End DolanSafe Guard Aktif
+            </span>
+</div>
+</div>
+</main>
+<!-- ========================================================================= -->
+<!-- COLUMN 3: RIGHT SIDEBAR - Awak Rombongan & Atribut (3 cols = ~320px)       -->
+<!-- ========================================================================= -->
+<aside class="lg:col-span-3 flex flex-col gap-space-md w-full">
+<!-- Member List Container -->
+<div class="bg-surface-container-lowest rounded-xl shadow-sm p-space-md flex flex-col gap-space-sm">
+<div class="flex items-center justify-between">
+<div>
+<h2 class="font-headline-sm text-headline-sm text-on-surface font-bold">Awak Rombongan</h2>
+<div class="flex items-center gap-1.5 font-label-sm text-label-sm text-on-surface-variant">
+<span>5 dari 7 Kuota Terisi</span>
+<span>•</span>
+<span class="text-secondary font-bold">2 Slot Terbuka</span>
+</div>
+</div>
+<button class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-secondary/10 hover:bg-secondary/20 text-secondary font-label-sm text-label-sm font-bold transition-all" type="button">
+<span class="material-symbols-outlined text-[14px]">person_add</span>
+<span>Ajak</span>
+</button>
+</div>
+<!-- Quick Member Filter -->
+<div class="relative">
+<span class="material-symbols-outlined absolute left-2.5 top-2 text-on-surface-variant text-[16px]">search</span>
+<input class="w-full bg-surface-container-low text-on-surface placeholder:text-on-surface-variant/70 font-body-sm text-[12px] pl-8 pr-3 py-1.5 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary/30" placeholder="Cari nama kawan rombongan..." type="text"/>
+</div>
+<!-- Members Stack -->
+<div class="flex flex-col gap-2 mt-1">
+<!-- Member 1: Dimas (Host / You) -->
+<div class="p-2.5 rounded-xl bg-surface-container-low flex items-center justify-between gap-2">
+<div class="flex items-center gap-2.5 min-w-0">
+<div class="relative flex-shrink-0">
+<div class="w-10 h-10 rounded-full bg-primary text-on-primary flex items-center justify-center font-bold text-label-md">
+                    DA
+                  </div>
+<span class="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-secondary text-on-secondary rounded-full flex items-center justify-center text-[9px] font-bold">★</span>
+</div>
+<div class="flex flex-col min-w-0">
+<div class="flex items-center gap-1">
+<span class="font-label-md text-label-md text-on-surface font-bold truncate">Dimas Anggara</span>
+<span class="px-1 rounded bg-primary/15 text-primary text-[9px] font-bold">Anda</span>
+</div>
+<div class="flex items-center gap-1 text-[11px] text-on-surface-variant">
+<span class="text-secondary font-bold">★ 4.98</span>
+<span>•</span>
+<span class="truncate">Host &amp; Inisiator</span>
+</div>
+</div>
+</div>
+<span class="material-symbols-outlined text-primary text-[18px]" title="Identitas KTP &amp; Face ID Terverifikasi">verified</span>
+</div>
+<!-- Member 2: Sita Lestari -->
+<div class="p-2.5 rounded-xl bg-surface-container-low flex items-center justify-between gap-2">
+<div class="flex items-center gap-2.5 min-w-0">
+<div class="w-10 h-10 rounded-full bg-tertiary text-on-tertiary flex items-center justify-center font-bold text-label-md flex-shrink-0">
+                  SL
+                </div>
+<div class="flex flex-col min-w-0">
+<div class="flex items-center gap-1">
+<span class="font-label-md text-label-md text-on-surface font-bold truncate">Sita Lestari</span>
+<span class="material-symbols-outlined text-primary text-[14px]">verified</span>
+</div>
+<span class="text-[11px] text-on-surface-variant truncate">Dokumentasi &amp; SIMAKSI</span>
+</div>
+</div>
+<button class="w-7 h-7 rounded-full bg-surface-container hover:bg-surface-container-high text-on-surface-variant flex items-center justify-center transition-colors" title="Kirim Pesan Pribadi" type="button">
+<span class="material-symbols-outlined text-[16px]">chat</span>
+</button>
+</div>
+<!-- Member 3: Gilang Ramadhan -->
+<div class="p-2.5 rounded-xl bg-surface-container-low flex items-center justify-between gap-2">
+<div class="flex items-center gap-2.5 min-w-0">
+<div class="relative flex-shrink-0">
+<div class="w-10 h-10 rounded-full bg-surface-container-highest text-on-surface flex items-center justify-center font-bold text-label-md">
+                    GR
+                  </div>
+<span class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full ring-2 ring-surface-container-lowest"></span>
+</div>
+<div class="flex flex-col min-w-0">
+<div class="flex items-center gap-1">
+<span class="font-label-md text-label-md text-on-surface font-bold truncate">Gilang Ramadhan</span>
+<span class="material-symbols-outlined text-primary text-[14px]">verified</span>
+</div>
+<span class="text-[11px] text-on-surface-variant truncate">Koordinator Logistik &amp; Gear</span>
+</div>
+</div>
+<button class="w-7 h-7 rounded-full bg-surface-container hover:bg-surface-container-high text-on-surface-variant flex items-center justify-center transition-colors" type="button">
+<span class="material-symbols-outlined text-[16px]">chat</span>
+</button>
+</div>
+<!-- Member 4: Arya Kusuma -->
+<div class="p-2.5 rounded-xl bg-surface-container-low flex items-center justify-between gap-2">
+<div class="flex items-center gap-2.5 min-w-0">
+<div class="w-10 h-10 rounded-full bg-surface-container-highest text-on-surface flex items-center justify-center font-bold text-label-md flex-shrink-0">
+                  AK
+                </div>
+<div class="flex flex-col min-w-0">
+<div class="flex items-center gap-1">
+<span class="font-label-md text-label-md text-on-surface font-bold truncate">Arya Kusuma</span>
+<span class="material-symbols-outlined text-primary text-[14px]">verified</span>
+</div>
+<span class="text-[11px] text-on-surface-variant truncate">Medic &amp; Safety Lead</span>
+</div>
+</div>
+<button class="w-7 h-7 rounded-full bg-surface-container hover:bg-surface-container-high text-on-surface-variant flex items-center justify-center transition-colors" type="button">
+<span class="material-symbols-outlined text-[16px]">chat</span>
+</button>
+</div>
+<!-- Member 5: Dinda Wardani -->
+<div class="p-2.5 rounded-xl bg-surface-container-low flex items-center justify-between gap-2">
+<div class="flex items-center gap-2.5 min-w-0">
+<div class="w-10 h-10 rounded-full bg-secondary/20 text-secondary font-bold flex items-center justify-center text-label-md flex-shrink-0">
+                  DW
+                </div>
+<div class="flex flex-col min-w-0">
+<div class="flex items-center gap-1">
+<span class="font-label-md text-label-md text-on-surface font-bold truncate">Dinda Wardani</span>
+<span class="material-symbols-outlined text-primary text-[14px]">verified</span>
+</div>
+<span class="text-[11px] text-on-surface-variant truncate">Bendahara Kas Swadaya</span>
+</div>
+</div>
+<button class="w-7 h-7 rounded-full bg-surface-container hover:bg-surface-container-high text-on-surface-variant flex items-center justify-center transition-colors" type="button">
+<span class="material-symbols-outlined text-[16px]">chat</span>
+</button>
+</div>
+<!-- Open Slot Card (Community Open Join) -->
+<div class="p-3 rounded-xl bg-surface-variant/30 flex flex-col items-center justify-center text-center gap-1.5 transition-all">
+<div class="flex items-center gap-1 text-secondary font-label-sm text-label-sm font-bold">
+<span class="material-symbols-outlined text-[16px]">group_add</span>
+<span>+2 Slot Kuota Masih Terbuka</span>
+</div>
+<p class="font-body-sm text-[11px] text-on-surface-variant">
+                Biaya patungan sewa kapal makin hemat jika kuota terpenuhi (7 pax).
+              </p>
+<button class="mt-1 px-3 py-1 rounded-full bg-surface-container-lowest hover:bg-surface-container text-primary font-label-sm text-label-sm font-bold shadow-sm transition-all flex items-center gap-1" type="button">
+<span class="material-symbols-outlined text-[14px]">share</span>
+<span>Bagikan Tautan Undangan</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Atribut 1: Transparansi Kas Patungan Widget -->
+<div class="bg-surface-container-lowest rounded-xl shadow-sm p-space-md flex flex-col gap-space-sm">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-secondary text-[20px]">account_balance_wallet</span>
+<h3 class="font-headline-sm text-[14px] text-on-surface font-bold">Transparansi Kas Swadaya</h3>
+</div>
+<span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-label-sm text-[10px] font-bold">Surplus Kas</span>
+</div>
+<div class="p-3 rounded-xl bg-surface-container-low flex items-center justify-between">
+<div>
+<span class="font-label-sm text-[10px] text-on-surface-variant uppercase tracking-wider block">Sisa Saldo Kas Siap Refund</span>
+<span class="font-stat-counter text-[20px] text-on-surface font-extrabold text-primary">Rp 2.400.000</span>
+</div>
+<div class="text-right">
+<span class="font-label-sm text-[10px] text-on-surface-variant block">Total Terkumpul</span>
+<span class="font-label-sm text-label-sm text-on-surface font-semibold">Rp 9.250.000</span>
+</div>
+</div>
+<!-- Visual Progress Chart -->
+<div class="space-y-1">
+<div class="flex items-center justify-between font-label-sm text-[11px]">
+<span class="text-on-surface-variant">Realisasi Pengeluaran (74%)</span>
+<span class="text-on-surface font-bold">Rp 6.850.000</span>
+</div>
+<div class="w-full h-2 rounded-full bg-surface-variant flex overflow-hidden">
+<div class="h-full bg-primary" style="width: 45%" title="Sewa Kapal &amp; BBM (45%)"></div>
+<div class="h-full bg-secondary-container" style="width: 20%" title="Logistik Makanan 4D3N (20%)"></div>
+<div class="h-full bg-tertiary" style="width: 9%" title="Tiket Masuk TN Komodo (9%)"></div>
+</div>
+</div>
+<div class="flex items-center justify-between pt-1">
+<button class="text-primary font-label-sm text-label-sm font-bold hover:underline flex items-center gap-1" type="button">
+<span>Unduh Rekap Kwitansi (PDF)</span>
+<span class="material-symbols-outlined text-[14px]">download</span>
+</button>
+<span class="font-label-sm text-[10px] text-on-surface-variant">Audit oleh Dinda</span>
+</div>
+</div>
+<!-- Atribut 2: Live Waypoint Radar -->
+<div class="bg-surface-container-lowest rounded-xl shadow-sm p-space-md flex flex-col gap-space-sm">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-primary text-[20px]">explore</span>
+<h3 class="font-headline-sm text-[14px] text-on-surface font-bold">Live Waypoint Radar</h3>
+</div>
+<span class="font-label-sm text-[11px] text-secondary font-bold animate-pulse">Berlayar</span>
+</div>
+<!-- Radar Steps Timeline -->
+<div class="space-y-3 relative pl-4 mt-1">
+<div class="absolute left-1.5 top-2 bottom-2 w-0.5 bg-surface-variant"></div>
+<!-- Stop 1: Done -->
+<div class="relative flex items-center gap-2.5">
+<span class="absolute -left-4 w-3.5 h-3.5 rounded-full bg-primary flex items-center justify-center text-[9px] text-white">✓</span>
+<div>
+<span class="font-label-md text-label-md text-on-surface font-bold block">Marina Labuan Bajo</span>
+<span class="font-body-sm text-[10px] text-on-surface-variant">Dermaga Utama • Selesai Boarding</span>
+</div>
+</div>
+<!-- Stop 2: Current -->
+<div class="relative flex items-center gap-2.5">
+<span class="absolute -left-4 w-3.5 h-3.5 rounded-full bg-secondary ring-4 ring-secondary-fixed flex items-center justify-center text-[9px] text-white animate-pulse">●</span>
+<div class="p-2 rounded-lg bg-secondary-fixed/30 w-full">
+<span class="font-label-md text-label-md text-on-secondary-fixed font-bold block">Pulau Kelor (Current Spot)</span>
+<span class="font-body-sm text-[10px] text-on-secondary-fixed">Trekking Viewpoint &amp; Snorkel Karang</span>
+</div>
+</div>
+<!-- Stop 3: Next -->
+<div class="relative flex items-center gap-2.5 opacity-60">
+<span class="absolute -left-4 w-3.5 h-3.5 rounded-full bg-outline-variant"></span>
+<div>
+<span class="font-label-md text-label-md text-on-surface font-semibold block">Pulau Manjarite</span>
+<span class="font-body-sm text-[10px] text-on-surface-variant">Snorkeling Ikan Badut &amp; Coral Garden</span>
+</div>
+</div>
+<!-- Stop 4: Next -->
+<div class="relative flex items-center gap-2.5 opacity-60">
+<span class="absolute -left-4 w-3.5 h-3.5 rounded-full bg-outline-variant"></span>
+<div>
+<span class="font-label-md text-label-md text-on-surface font-semibold block">Pulau Padar (Sunset Peak)</span>
+<span class="font-body-sm text-[10px] text-on-surface-variant">Anchorage malam pertama</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Atribut 3: Shared Media & Dokumen Quick Drawer -->
+<div class="bg-surface-container-lowest rounded-xl shadow-sm p-space-md flex flex-col gap-space-sm">
+<div class="flex items-center justify-between">
+<h3 class="font-headline-sm text-[14px] text-on-surface font-bold">Media &amp; Dokumen Bersama</h3>
+<span class="material-symbols-outlined text-on-surface-variant text-[18px]">folder_shared</span>
+</div>
+<!-- Drawer Mini Tabs -->
+<div class="flex items-center gap-1 pb-1">
+<button class="px-2.5 py-1 rounded-lg bg-surface-container-high text-primary font-label-sm text-[11px] font-bold" type="button">Foto (24)</button>
+<button class="px-2.5 py-1 rounded-lg hover:bg-surface-container text-on-surface-variant font-label-sm text-[11px]" type="button">File SIMAKSI (3)</button>
+<button class="px-2.5 py-1 rounded-lg hover:bg-surface-container text-on-surface-variant font-label-sm text-[11px]" type="button">Tautan (5)</button>
+</div>
+<!-- Shared Media Thumbnails Grid -->
+<div class="grid grid-cols-3 gap-1.5 mt-1">
+<div class="relative rounded-lg overflow-hidden h-16 group cursor-pointer shadow-sm">
+<img alt="Snorkeling Spot" class="w-full h-full object-cover group-hover:scale-110 transition-transform" data-alt="Close up of a vibrant coral reef garden with colorful damselfish and crystal clear tropical seawater under direct sunlight in Komodo National park, realistic photo." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBICE_01E51Y-3IsggYV_cBAifrzbFMuzTpUiEfEfJ6vUyhRU4QYdoyhGjJZXBQb03ICxcV39M0ByxO1e2GCCh-6r0F8lszjRGTY-5bt20tCpUJ8AqvnItYgPViILIfCJ3E-IrmFLHwqjbURj736m5CqucTl7CdXP_641hMa3RZ_ZBFIZh3jBwOPvpSR55LzaHV7cFsH0_0-gUhNEBhxohSYD5HhlaZL01-ReyAXzvS5lTJh0Zq1ACjUQ"/>
+</div>
+<div class="relative rounded-lg overflow-hidden h-16 group cursor-pointer shadow-sm">
+<img alt="Padar Peak" class="w-full h-full object-cover group-hover:scale-110 transition-transform" data-alt="Panoramic aerial landscape view of Padar Island tri-colored beaches and dramatic green hills surrounded by azure ocean under warm sunrise daylight in Indonesia, high quality travel photography." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC7qFSLvzsUiqFabIPddhxoEcO8axQsRNCH7lSFBFsEz3tysefxb_zlBKqsW3849y9yZwpCqf0DS_L6Lh1_HoYzAGf0VXhg8WuT5fllL1KJAdoKNUZybhhZi_tP1wLGzbqknyYQEdE7bjRqWNwaaMHGEe_UOH_WL1XnZ_GZy5Ig1CHiw0Fkwths210yioAWmpoy1YXIEnfxbxWkqXwXUpajXofP0pM3pmKF8b-hPVn_seck68_lfWtM9w"/>
+</div>
+<div class="relative rounded-lg overflow-hidden h-16 bg-surface-container-highest flex items-center justify-center cursor-pointer hover:bg-surface-variant transition-colors">
+<span class="font-label-sm text-label-sm text-primary font-bold">+22 Foto</span>
+</div>
+</div>
+<div class="flex items-center justify-between pt-1 font-body-sm text-[11px] text-on-surface-variant">
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">cloud_done</span>
+              Auto-sync Google Drive Dolan
+            </span>
+<button class="text-primary font-bold hover:underline" type="button">Buka Folder</button>
+</div>
+</div>
+</aside>
+</div>
+</div>
+</div>
+<script>
+  // Simple micro-interaction for interactive poll click feedback
+  document.querySelectorAll('input[name="dinnerPoll"]').forEach(input => {
+    input.addEventListener('change', function() {
+      const parentLabel = this.closest('label');
+      if (parentLabel) {
+        parentLabel.classList.add('scale-[1.02]');
+        setTimeout(() => {
+          parentLabel.classList.remove('scale-[1.02]');
+        }, 150);
+      }
+    });
+  });
+
+  // Audio briefing toggle micro-interaction
+  const audioBtn = document.getElementById('toggleAudioBrief');
+  if (audioBtn) {
+    audioBtn.addEventListener('click', () => {
+      const isPlaying = audioBtn.classList.contains('bg-secondary');
+      if (!isPlaying) {
+        audioBtn.classList.remove('bg-surface-container-high', 'text-on-surface');
+        audioBtn.classList.add('bg-secondary', 'text-on-secondary');
+        audioBtn.innerHTML = '<span class="material-symbols-outlined text-[16px] animate-spin">sync</span><span>Memutar Briefing...</span>';
+      } else {
+        audioBtn.classList.add('bg-surface-container-high', 'text-on-surface');
+        audioBtn.classList.remove('bg-secondary', 'text-on-secondary');
+        audioBtn.innerHTML = '<span class="material-symbols-outlined text-[16px] text-primary">campaign</span><span>Briefing Suara (Host)</span>';
+      }
+    });
+  }
+</script></main><footer class="w-full bg-surface-container-low mt-space-xl py-space-xl"><div class="max-w-[1240px] mx-auto px-margin"><div class="grid grid-cols-1 md:grid-cols-4 gap-space-lg pb-space-lg"><div class="space-y-space-sm"><div class="flex items-center gap-space-xs"><div class="w-8 h-8 rounded-lg bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-on-primary text-[18px]">explore</span></div><span class="font-headline-sm text-headline-sm text-primary font-bold">DOLAN</span></div><p class="font-body-sm text-body-sm text-on-surface-variant">Platform open-trip dan social travel terpercaya. Temukan kawan petualang baru menjelajahi alam nusantara.</p></div><div><h4 class="font-label-lg text-label-lg text-on-surface mb-space-sm">Eksplorasi</h4><ul class="space-y-space-xs font-body-sm text-body-sm text-on-surface-variant"><li><a class="hover:text-primary transition-colors" data-path="explore-trip" href="#">Semua Destinasi</a></li><li><a class="hover:text-primary transition-colors" data-path="buat-trip" href="#">Mulai Trip Baru</a></li><li><a class="hover:text-primary transition-colors" data-path="komunitas" href="#">Leader &amp; Guide Lokal</a></li></ul></div><div><h4 class="font-label-lg text-label-lg text-on-surface mb-space-sm">Komunitas</h4><ul class="space-y-space-xs font-body-sm text-body-sm text-on-surface-variant"><li><a class="hover:text-primary transition-colors" data-path="chat-rombongan" href="#">Rombongan Aktif</a></li><li><a class="hover:text-primary transition-colors" data-path="komunitas" href="#">Diskusi Jalur</a></li><li><a class="hover:text-primary transition-colors" data-path="dolanbot-ai" href="#">Asisten DolanBot AI</a></li></ul></div><div><h4 class="font-label-lg text-label-lg text-on-surface mb-space-sm">Keamanan &amp; Etika</h4><p class="font-body-sm text-body-sm text-on-surface-variant mb-space-xs">Setiap open trip diawasi sistem verifikasi identitas dan panduan keselamatan outdoor.</p><div class="flex items-center gap-space-xs text-primary font-label-sm text-label-sm"><span class="material-symbols-outlined text-[16px]">shield</span><span>Garansi DolanSafe Guard</span></div></div></div><div class="pt-space-md flex flex-col md:flex-row items-center justify-between gap-space-sm text-on-surface-variant font-body-sm text-body-sm"><p>© 2025 DOLAN Social Travel Platform. Hak cipta dilindungi undang-undang.</p><div class="flex items-center gap-space-md"><a class="hover:text-on-surface transition-colors" href="#">Syarat &amp; Ketentuan</a><a class="hover:text-on-surface transition-colors" href="#">Kebijakan Privasi</a><a class="hover:text-on-surface transition-colors" href="#">Bantuan Support</a></div></div></div></footer></body></html>

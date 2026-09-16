@@ -1,5 +1,6 @@
 import {
   createTripSchema,
+  deleteTripBodySchema,
   publishTripSchema,
   updateTripSchema,
   type MyTripRole,
@@ -91,6 +92,8 @@ export async function handleUpdateTripRequest(
 export async function handleDeleteTripRequest(request: Request): Promise<Response> {
   const sessionId = requireSession(request);
   if (!sessionId) return jsonResult(createApiError("UNAUTHORIZED", "Tidak sah"), statusForCode("UNAUTHORIZED"));
+  const parsed = deleteTripBodySchema.safeParse(await readBody(request));
+  if (!parsed.success) return validationError(parsed.error);
   return jsonResult({ success: true, data: { deleted: true } }, 200);
 }
 

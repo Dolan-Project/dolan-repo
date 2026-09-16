@@ -14,6 +14,9 @@ import {
   ticketLineDetail,
   TOTAL_ESTIMATE_LABEL,
   visitWindowSummary,
+  formatItineraryDateRange,
+  itinerarySourceLabel,
+  itineraryVersionOptionLabel,
 } from "./itinerary-stop-view";
 import type { EditableItineraryStop } from "@dolan/shared";
 
@@ -87,16 +90,36 @@ describe("itinerary stop view", () => {
     const travel = analyzeStopTravel(uluwatu, tanahLot, false);
     expect(travel).not.toBeNull();
     expect(travel!.km).toBeGreaterThan(20);
-    expect(["ojek", "drive"]).toContain(travel!.vehicle);
+    expect(travel!.vehicle).toBe("drive");
     expect(travel!.minutes).toBe(minutesForVehicleKm(travel!.km, travel!.vehicle));
-    expect(formatTravelToStop(uluwatu, tanahLot, false)).toMatch(/Ojek|Mobil/);
+    expect(travel!.minutes).toBeGreaterThan(40);
+    const impliedKmh = travel!.km / (travel!.minutes / 60);
+    expect(impliedKmh).toBeGreaterThan(15);
+    expect(impliedKmh).toBeLessThan(55);
+    expect(formatTravelToStop(uluwatu, tanahLot, false)).toMatch(/Mobil/);
     expect(formatTravelToStop(uluwatu, tanahLot, false)).toMatch(/mnt|jam/);
     expect(formatTravelToStop(uluwatu, tanahLot, false)).not.toMatch(/estimasi kasar|belum ada rute/i);
     expect(formatTravelToStop(uluwatu, tanahLot, true)).toBeNull();
   });
 
-  it("prefers routing minutes when Google marks the leg available", () => {
-    expect(formatTravelToStop(stop({
+  it("ignores stored travelDurationMinutes and times the leg from distance", () => {
+    const fakeMinutes = stop({
+      ...uluwatu,
+      routeStatus: "AVAILABLE",
+      travelDurationMinutes: 12,
+      travelDistanceMeters: 40_000,
+    });
+    const travel = analyzeStopTravel(fakeMinutes, tanahLot, false);
+    expect(travel).not.toBeNull();
+    expect(travel!.km).toBeCloseTo(40, 5);
+    expect(travel!.minutes).toBe(minutesForVehicleKm(40, travel!.vehicle));
+    expect(travel!.minutes).not.toBe(12);
+    expect(travel!.minutes).toBeGreaterThan(50);
+    expect(formatTravelToStop(fakeMinutes, tanahLot, false)).not.toMatch(/12 mnt/);
+  });
+
+  it("uses Maps road distance for km, not the stored duration", () => {
+    const bromo = stop({
       customTitle: "Gunung Bromo",
       routeStatus: "AVAILABLE",
       travelDistanceMeters: 18_000,
@@ -113,7 +136,14 @@ describe("itinerary stop view", () => {
         photoName: null,
         googleMapsUrl: "",
       },
-    }), tanahLot, false)).toBe("Jeep · 18,0 km · 42 mnt");
+    });
+    const travel = analyzeStopTravel(bromo, tanahLot, false);
+    expect(travel!.vehicle).toBe("jeep");
+    expect(travel!.km).toBeCloseTo(18, 5);
+    expect(travel!.minutes).toBe(minutesForVehicleKm(18, "jeep"));
+    expect(travel!.minutes).not.toBe(42);
+    expect(formatTravelToStop(bromo, tanahLot, false)).toBe(travel!.label);
+    expect(travel!.label).not.toMatch(/42 mnt/);
   });
 
   it("uses a mountain visit length for large-area parks", () => {
@@ -128,6 +158,13 @@ describe("itinerary stop view", () => {
     expect(TOTAL_ESTIMATE_LABEL).toMatch(/tiket & transportasi/);
     expect(activityTypeLabel("VISIT")).toBe("Kunjungan");
     expect(roundEstimateRupiah(613_642)).toBe(614_000);
+  });
+
+  it("formats editor dates and version options in plain Indonesian", () => {
+    expect(formatItineraryDateRange("2026-09-17", "2026-09-21")).toBe("17 Sep 2026 - 21 Sep 2026");
+    expect(itinerarySourceLabel("MANUAL")).toBe("Disusun manual");
+    expect(itineraryVersionOptionLabel(2, "MANUAL", true)).toBe("Versi 2 - Disusun manual - Sedang dipakai");
+    expect(itineraryVersionOptionLabel(1, "AI", false)).toBe("Versi 1 - Dari AI");
   });
 
   it("maps list ids to display numbers in order", () => {

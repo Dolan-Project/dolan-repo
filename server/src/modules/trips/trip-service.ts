@@ -3,7 +3,10 @@ import {
   AuthErrorCode,
   TripErrorCode,
   apiPage,
+  deleteTripBodySchema,
   idempotencyKeySchema,
+  presentInboxNotification,
+  tripDeletedHostMessage,
   type AuthIdentity,
   type CreateCommentBody,
   type CreateTripBody,
@@ -21,7 +24,6 @@ import {
   type UpdateTripBody,
   type VisibilityBody,
   type PublicUser,
-  presentInboxNotification,
 } from "@dolan/shared";
 import {
   badRequest,
@@ -48,6 +50,7 @@ export type TripRealtime = {
   onMemberJoined?(tripId: string, userId: string): Promise<unknown> | unknown;
   onJoinClosed?(tripId: string, userId: string): Promise<unknown> | unknown;
   onCancelled?(tripId: string): Promise<unknown> | unknown;
+  onTripDeleted?(tripId: string, hostUserId: string, reason: string): Promise<unknown> | unknown;
   onCommentCreated?(tripId: string, comment: TripComment): Promise<unknown> | unknown;
   onCommentUpdated?(tripId: string, comment: TripComment): Promise<unknown> | unknown;
   onCommentDeleted?(tripId: string, payload: { tripId: string; commentId: string }): Promise<unknown> | unknown;
@@ -186,7 +189,16 @@ export class TripService {
         body.publicMeetingPointLongitude === undefined
           ? trip.publicMeetingPointLongitude
           : body.publicMeetingPointLongitude,
-      preferences: body.preferences === undefined ? trip.preferences : body.preferences,
+      preferences: body.preferences === undefined
+        ? trip.preferences
+        : {
+            ...(trip.preferences ?? {}),
+            ...body.preferences,
+            coverPlace:
+              (body.preferences.coverPlace as unknown)
+              ?? (trip.preferences as Record<string, unknown> | null)?.coverPlace
+              ?? undefined,
+          },
     });
     if (trip.status !== "DRAFT") {
       await this.notifyMembers(updated, requireUser(actor), "trip.updated");
@@ -194,10 +206,29 @@ export class TripService {
     return this.toDetail(updated, requireUser(actor));
   }
 
-  async deleteDraft(actor: SessionActor, tripId: string) {
+  async deleteDraft(actor: SessionActor, tripId: string, body?: { reason?: string }) {
+    return this.deleteTrip(actor, tripId, body);
+  }
+
+  async deleteTrip(actor: SessionActor, tripId: string, body?: { reason?: string }) {
+    const parsed = deleteTripBodySchema.safeParse(body ?? {});
+    if (!parsed.success) {
+      throw badRequest(TripErrorCode.INVALID_PLAN_INPUT, parsed.error.issues[0]?.message ?? "Alasan penghapusan wajib diisi");
+    }
+    const user = requireUser(actor);
     const trip = await this.requireHostTrip(actor, tripId);
-    if (trip.status !== "DRAFT") {
-      throw badRequest(TripErrorCode.INVALID_TRANSITION, "Only drafts can be deleted");
+    const reason = parsed.data.reason;
+    const hostMessage = tripDeletedHostMessage(reason);
+    await this.notifyMembers(trip, user, "trip.deleted", {
+      reason,
+      preview: hostMessage,
+      actorName: user.displayName || user.username || "Host",
+      ...(user.username ? { actorUsername: user.username } : {}),
+    });
+    try {
+      await this.realtime?.onTripDeleted?.(tripId, user.id, reason);
+    } catch {
+      /* chat teardown is best-effort; the trip still must be deleted */
     }
     await this.store.withTripLock(tripId, async () => {
       await this.store.deleteTrip(tripId);
@@ -913,7 +944,7 @@ export class TripService {
     return "none";
   }
 
-  private async notifyMembers(trip: StoredTrip, actor: AuthIdentity, type: string) {
+  private async notifyMembers(trip: StoredTrip, actor: AuthIdentity, type: string, extra: Record<string, unknown> = {}) {
     const members = await this.store.listMembers(trip.id);
     const recipients = new Set<string>([trip.hostUserId]);
     for (const member of members) {
@@ -927,7 +958,7 @@ export class TripService {
         type,
         targetType: "trip",
         targetId: trip.id,
-        data: { tripTitle: trip.title },
+        data: { tripTitle: trip.title, ...extra },
       });
     }
   }

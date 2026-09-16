@@ -33,10 +33,11 @@ export async function proxyToExpress(
   if (token) headers.set("authorization", `Bearer ${token}`);
   const cookie = request.headers.get("cookie");
   if (cookie) headers.set("cookie", cookie);
-  const idempotencyKey = request.headers.get("idempotency-key");
-  if (idempotencyKey) headers.set("idempotency-key", idempotencyKey);
-
   const method = (options?.method ?? request.method).toUpperCase();
+  const mutating = method !== "GET" && method !== "HEAD";
+  const idempotencyKey = request.headers.get("idempotency-key")
+    ?? (mutating ? crypto.randomUUID() : null);
+  if (idempotencyKey) headers.set("idempotency-key", idempotencyKey);
   let body: BodyInit | undefined;
   if (options?.json !== undefined) {
     headers.set("content-type", "application/json");

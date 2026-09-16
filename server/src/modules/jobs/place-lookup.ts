@@ -192,7 +192,7 @@ export function createPlaceLookup(
           activityType: "wisata",
           startTime: null,
           durationMinutes: 90,
-          travelDurationMinutes: 20,
+          travelDurationMinutes: null,
           notes: "Tempat terdekat di koridor yang sama — satu hari tidak cukup diisi satu destinasi.",
           isLocked: false,
         });

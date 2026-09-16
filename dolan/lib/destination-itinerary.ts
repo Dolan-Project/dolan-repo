@@ -590,7 +590,8 @@ export function destinationCoverUrl(city: string) {
   if (key.includes("bandung")) {
     return `https://images.unsplash.com/photo-1555899434-94d10b8c0b5a?auto=format&fit=crop&w=1200&q=80&sig=${tag}`;
   }
-  return `https://loremflickr.com/1200/800/${tag},indonesia,travel`;
+  const seed = encodeURIComponent((city.trim() || "indonesia").toLocaleLowerCase("id-ID").replace(/\s+/g, "-"));
+  return `https://picsum.photos/seed/${seed}-dolan/1200/800`;
 }
 
 const KOMODO_STOP_PATTERN = /pink beach|bandara komodo|pulau padar|manta point|pulau kanawa/i;

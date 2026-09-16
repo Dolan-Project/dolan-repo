@@ -2,10 +2,12 @@ import { describe, expect, it } from "vitest";
 import {
   createTripBodySchema,
   createTripSchema,
+  deleteTripBodySchema,
   idempotencyKeySchema,
   joinReviewBodySchema,
   myTripsQuerySchema,
   publishTripSchema,
+  tripDeletedHostMessage,
 } from "./trip.ts";
 
 describe("trip schemas", () => {
@@ -128,5 +130,19 @@ describe("publishTripSchema", () => {
       visibility: "PRIVATE",
     });
     expect(result.success).toBe(true);
+  });
+});
+
+describe("deleteTripBodySchema", () => {
+  it("requires a reason of at least 3 characters", () => {
+    expect(deleteTripBodySchema.safeParse({}).success).toBe(false);
+    expect(deleteTripBodySchema.safeParse({ reason: "ab" }).success).toBe(false);
+    expect(deleteTripBodySchema.parse({ reason: "  Rencana berubah.  " }).reason).toBe("Rencana berubah.");
+  });
+
+  it("builds a host goodbye that includes the reason", () => {
+    expect(tripDeletedHostMessage("Kuota tidak cukup.")).toBe(
+      "Grup trip ini dihapus host. Alasan: Kuota tidak cukup.",
+    );
   });
 });

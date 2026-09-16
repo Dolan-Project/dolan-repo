@@ -7,7 +7,8 @@ import { Field } from "@/components/auth/Field";
 import { Icon } from "@/components/ui/Icon";
 import { PlacePicker } from "@/components/trip/PlacePicker";
 import { CreateTripItineraryStep } from "@/components/trip/CreateTripItineraryStep";
-import type { EditableItineraryDay, EditableItineraryStop, ItineraryEditorSnapshot, ItineraryTemplateDetail, ItineraryTemplateSummary, UseTemplateResult } from "@dolan/shared";
+import { OverBudgetConfirmDialog } from "@/components/trip/OverBudgetConfirmDialog";
+import type { EditableItineraryDay, EditableItineraryStop, ItineraryEditorSnapshot, ItineraryTemplateDetail, ItineraryTemplateSummary, PlaceSummary, UseTemplateResult } from "@dolan/shared";
 import type { ApiError, CreateTripInput, TripDetail } from "@/lib/contracts";
 import { ROUTES } from "@/lib/routes";
 import { shouldUseMockApi } from "@/lib/auth/use-mock";
@@ -37,6 +38,7 @@ import {
 } from "@/lib/template-itinerary";
 import { generateAlternative, generateInitialItinerary, saveItineraryVersion } from "@/features/itinerary/api";
 import { INITIAL_BUDGET_ITEMS, createBudgetSummary } from "@/features/itinerary/mock-data";
+import { coverMatchesDestination, fetchDestinationCover, hasCoverPhoto, toDestinationCover } from "@/lib/destination-cover";
 import { provinceCoverUrl } from "@/lib/province-cover";
 import { PackingListField } from "@/components/trip/PackingListField";
 import { TemplateRoutePeek } from "@/components/trip/TemplateRoutePeek";
@@ -109,6 +111,7 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
   const [step, setStep] = useState(templateId ? 2 : 1);
   const [path, setPath] = useState<WizardPath>(templateId ? "template" : "create");
   const [destinationCity, setDestinationCity] = useState(initialDestination ?? "");
+  const [destinationCover, setDestinationCover] = useState<PlaceSummary | null>(null);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [transport, setTransport] = useState("Transportasi umum + sewa lokal");
@@ -140,12 +143,19 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
   const [itineraryReady, setItineraryReady] = useState(false);
   const [packingItems, setPackingItems] = useState<string[]>([]);
   const [fromGroq, setFromGroq] = useState(false);
+  const [budgetConfirm, setBudgetConfirm] = useState<"invite" | "finish" | null>(null);
+  const [overBudgetAccepted, setOverBudgetAccepted] = useState(false);
 
   const tripTitle = tripTitleFromDestination(destinationCity, templateTitle);
   const budgetPlan = useMemo(
     () => estimateItineraryBudget(days, availableBudgetPool(budgetAmount, budgetBasis, partySize), partySize),
     [days, budgetAmount, budgetBasis, partySize],
   );
+
+  useEffect(() => {
+    if (pending) return;
+    setOverBudgetAccepted(false);
+  }, [budgetPlan.total, budgetPlan.pool, budgetPlan.overBudget, pending]);
 
   useEffect(() => {
     if (!templateId) return;
@@ -228,12 +238,29 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
     };
   }, [templateQuery]);
 
+  useEffect(() => {
+    const query = destinationCity.trim();
+    if (query.length < 2) return;
+    if (hasCoverPhoto(destinationCover) && coverMatchesDestination(destinationCover, query)) return;
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => {
+      void fetchDestinationCover(query, controller.signal).then((cover) => {
+        if (!controller.signal.aborted && cover && hasCoverPhoto(cover)) setDestinationCover(cover);
+      });
+    }, 350);
+    return () => {
+      controller.abort();
+      window.clearTimeout(timer);
+    };
+  }, [destinationCity, destinationCover]);
+
   function applyChosenTemplate(detail: ItineraryTemplateDetail) {
     const prefill = applyTemplatePrefill(detail);
     setTemplateDetail(detail);
     setSelectedTemplateId(detail.id);
     setTemplateTitle(detail.title);
     setDestinationCity(prefill.destinationCity);
+    if (detail.coverPlace) setDestinationCover(detail.coverPlace);
     setTransport(prefill.transport);
     setPath("template");
   }
@@ -260,6 +287,7 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
       companionNote: "",
       pace: "SEIMBANG",
       genderRule,
+      coverPlace: destinationCover ?? undefined,
     };
   }
 
@@ -292,6 +320,15 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
     setStep(2);
   }
 
+  async function resolveDestinationCover(query = destinationCity) {
+    if (hasCoverPhoto(destinationCover) && coverMatchesDestination(destinationCover, query)) {
+      return destinationCover;
+    }
+    const cover = await fetchDestinationCover(query);
+    if (cover && hasCoverPhoto(cover)) setDestinationCover(cover);
+    return cover && hasCoverPhoto(cover) ? cover : null;
+  }
+
   function goFromStep2() {
     const errors = validateWizardBasics({ destinationCity, startDate, endDate, budgetAmount, partySize, budgetBasis });
     setFieldErrors(errors);
@@ -303,7 +340,7 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
     setItineraryReady(false);
     setDays([]);
     setStep(3);
-    void prepareItinerary({ force: true });
+    void resolveDestinationCover().then(() => prepareItinerary({ force: true }));
   }
 
   function finalizeWizardDays(raw: EditableItineraryDay[]) {
@@ -314,6 +351,8 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
 
   async function ensureDraftTrip() {
     if (tripId) return tripId;
+    const cover = await resolveDestinationCover();
+    if (cover) setDestinationCover(cover);
     const activeTemplateId = path === "template" ? (selectedTemplateId || templateId) : undefined;
     const created = await fetch(activeTemplateId ? `/api/v1/templates/${encodeURIComponent(activeTemplateId)}/use` : "/api/v1/trips", {
       method: "POST",
@@ -332,7 +371,8 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
         planningPartySize: partySize,
         budgetAmount: String(budgetAmount),
         budgetBasis,
-      } : payload()),
+        preferences: cover ? { coverPlace: cover } : undefined,
+      } : { ...payload(), coverPlace: cover ?? undefined }),
     });
     const json = (await created.json()) as { success: true; data: TripDetail | UseTemplateResult } | ApiError;
     if (!json.success) {
@@ -629,12 +669,22 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
       await savePacking(createdTripId);
       setSnapshot({ ...saved, tripId: createdTripId });
       setDays(saved.versions[0]?.days?.length ? saved.versions[0].days : packed);
+      setBudgetConfirm(null);
       setStep(4);
     } catch (error) {
       setFormError(error instanceof Error ? error.message : "Gagal menyimpan itinerary.");
     } finally {
       setPending(false);
     }
+  }
+
+  function requestPersistItineraryThenInvite() {
+    if (pending || generating) return;
+    if (budgetPlan.overBudget && !overBudgetAccepted) {
+      setBudgetConfirm("invite");
+      return;
+    }
+    void persistItineraryThenInvite();
   }
 
   async function persistCurrentItinerary(createdTripId: string) {
@@ -703,6 +753,7 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
           return;
         }
       }
+      setBudgetConfirm(null);
       router.push(ROUTES.tripSaya);
       router.refresh();
     } catch (error) {
@@ -710,6 +761,15 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
     } finally {
       setPending(false);
     }
+  }
+
+  function requestFinish() {
+    if (pending) return;
+    if (budgetPlan.overBudget && !overBudgetAccepted) {
+      setBudgetConfirm("finish");
+      return;
+    }
+    void finish();
   }
 
   const templates = catalogTemplates;
@@ -860,7 +920,37 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
               id="destinationCity"
               label="Destinasi / tujuan"
               value={destinationCity}
-              onChange={setDestinationCity}
+              onChange={(next) => {
+                setDestinationCity(next);
+                if (
+                  destinationCover
+                  && destinationCover.name !== next
+                  && destinationCover.city !== next
+                ) {
+                  setDestinationCover(null);
+                }
+              }}
+              onSelectPlace={(place) => {
+                setDestinationCity(place.city || place.label);
+                const cover = toDestinationCover({
+                  googlePlaceId: place.id,
+                  name: place.label,
+                  city: place.city || place.label,
+                  latitude: place.latitude,
+                  longitude: place.longitude,
+                  formattedAddress: place.formattedAddress,
+                  photoName: place.photoName,
+                  photoUri: place.photoUri,
+                });
+                if (hasCoverPhoto(cover)) {
+                  setDestinationCover(cover);
+                  return;
+                }
+                setDestinationCover(null);
+                void fetchDestinationCover(place.city || place.label).then((resolved) => {
+                  if (resolved && hasCoverPhoto(resolved)) setDestinationCover(resolved);
+                });
+              }}
               error={fieldErrors.destinationCity}
               placeholder="Ketik destinasi, misal Jambi atau Lampung"
             />
@@ -990,14 +1080,17 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
               onAddStop={addStop}
               onRemoveStop={removeStop}
               onRegenerate={() => void regenerate()}
+              mapFooter={
+                <Nav
+                  compact
+                  onBack={() => setStep(2)}
+                  onNext={() => requestPersistItineraryThenInvite()}
+                  nextLabel={pending ? "Menyimpan…" : "Setuju & lanjut undang"}
+                  nextDisabled={pending || generating || days.length === 0 || Boolean(validateWizardBasics({ destinationCity, startDate, endDate, budgetAmount, partySize, budgetBasis }).budgetAmount)}
+                />
+              }
             />
           )}
-          <Nav
-            onBack={() => setStep(2)}
-            onNext={() => void persistItineraryThenInvite()}
-            nextLabel={pending ? "Menyimpan…" : "Setuju & lanjut undang"}
-            nextDisabled={pending || generating || days.length === 0 || Boolean(validateWizardBasics({ destinationCity, startDate, endDate, budgetAmount, partySize, budgetBasis }).budgetAmount)}
-          />
         </>
       ) : null}
 
@@ -1052,7 +1145,7 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
           </div>
           <div className="mt-6 flex flex-wrap justify-between gap-3">
             <button type="button" className="btn-ghost" onClick={() => setStep(3)}>Kembali</button>
-            <button type="button" className="btn-primary" disabled={pending} onClick={() => void finish()}>
+            <button type="button" className="btn-primary" disabled={pending} onClick={() => requestFinish()}>
               {pending ? "Menyimpan…" : "Simpan ke Trip Saya"}
               <Icon name="arrow_forward" className="text-[16px]" />
             </button>
@@ -1062,6 +1155,21 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
 
       {formError ? <p className="type-body mt-4 text-error" role="alert">{formError}</p> : null}
       {templateLoading ? <p className="type-caption mt-3 text-on-surface-variant">Memuat template…</p> : null}
+      {budgetConfirm ? (
+        <OverBudgetConfirmDialog
+          estimate={budgetPlan.total}
+          available={budgetPlan.pool}
+          pending={pending}
+          onCancel={() => setBudgetConfirm(null)}
+          onContinue={() => {
+            setOverBudgetAccepted(true);
+            const kind = budgetConfirm;
+            setBudgetConfirm(null);
+            if (kind === "invite") void persistItineraryThenInvite();
+            else void finish();
+          }}
+        />
+      ) : null}
     </div>
   );
 }
@@ -1188,14 +1296,16 @@ function Nav({
   onNext,
   nextLabel = "Lanjut",
   nextDisabled = false,
+  compact = false,
 }: {
   onBack?: () => void;
   onNext: () => void;
   nextLabel?: string;
   nextDisabled?: boolean;
+  compact?: boolean;
 }) {
   return (
-    <div className="mt-6 flex justify-between gap-3">
+    <div className={`flex justify-between gap-3 ${compact ? "" : "mt-6"}`}>
       {onBack ? (
         <button type="button" className="btn-ghost" onClick={onBack}>Kembali</button>
       ) : (

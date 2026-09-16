@@ -191,6 +191,17 @@ export class MemoryChatStore implements ChatStore {
     item.readAt = new Date().toISOString();
     return item;
   }
+
+  async getRoomId(tripId: string): Promise<string | null> {
+    return this.trips.get(tripId)?.roomId ?? null;
+  }
+
+  async deleteRoom(tripId: string): Promise<void> {
+    this.trips.delete(tripId);
+    const leftover = this.messages.filter((message) => message.tripId !== tripId);
+    this.messages.length = 0;
+    this.messages.push(...leftover);
+  }
 }
 
 export function senderFromId(userId: string): PublicUser {

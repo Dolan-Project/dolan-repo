@@ -28,6 +28,9 @@ export function tripChatBridge(store: MemoryChatStore, chat: ChatService): TripR
     onCancelled(tripId) {
       store.setReadOnly(tripId, true);
     },
+    onTripDeleted(tripId, hostUserId, reason) {
+      return chat.announceTripDeleted(tripId, hostUserId, reason);
+    },
     onNotificationCreated(userId, payload) {
       return chat.onNotificationCreated(userId, payload);
     },

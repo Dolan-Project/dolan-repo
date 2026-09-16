@@ -13,11 +13,13 @@ export type PlaceSuggestion = {
   latitude?: number;
   longitude?: number;
   formattedAddress?: string | null;
+  photoName?: string | null;
+  photoUri?: string | null;
 };
 
 async function searchLivePlaces(query: string, signal: AbortSignal): Promise<PlaceSuggestion[]> {
   const baseUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api/v1";
-  const params = new URLSearchParams({ q: query, page: "1", limit: "6" });
+  const params = new URLSearchParams({ q: query, page: "1", limit: "8" });
   const response = await fetch(`${baseUrl}/search/places?${params}`, {
     signal,
     credentials: "include",
@@ -33,6 +35,8 @@ async function searchLivePlaces(query: string, signal: AbortSignal): Promise<Pla
       latitude?: number;
       longitude?: number;
       formattedAddress?: string | null;
+      photoName?: string | null;
+      photoUri?: string | null;
     }>;
   };
   if (!payload.success || !Array.isArray(payload.data)) return [];
@@ -43,6 +47,8 @@ async function searchLivePlaces(query: string, signal: AbortSignal): Promise<Pla
     latitude: place.latitude,
     longitude: place.longitude,
     formattedAddress: place.formattedAddress ?? null,
+    photoName: place.photoName ?? null,
+    photoUri: place.photoUri ?? null,
   }));
 }
 
@@ -58,6 +64,7 @@ export function PlacePicker({
   excludeLabel,
   placeholder,
   icon = "location_on",
+  autoSelectOnBlur = true,
 }: {
   id: string;
   label: string;
@@ -70,15 +77,23 @@ export function PlacePicker({
   excludeLabel?: string;
   placeholder?: string;
   icon?: string;
+  autoSelectOnBlur?: boolean;
 }) {
   const listId = useId();
   const [open, setOpen] = useState(false);
+  const [focused, setFocused] = useState(false);
+  const [draft, setDraft] = useState(value);
   const [liveSuggestions, setLiveSuggestions] = useState<PlaceSuggestion[]>([]);
   const useMock = shouldUseMockApi();
+  const query = focused ? draft : value;
+
+  useEffect(() => {
+    if (!focused) setDraft(value);
+  }, [value, focused]);
 
   const mockSuggestions = useMemo(
     () =>
-      searchGeoPlaces(value, { excludeLabel, nearbyCity }).slice(0, 6).map((place) => ({
+      searchGeoPlaces(query, { excludeLabel, nearbyCity }).slice(0, 6).map((place) => ({
         id: place.id,
         label: place.label,
         city: place.city,
@@ -86,17 +101,17 @@ export function PlacePicker({
         longitude: place.longitude,
         formattedAddress: place.label,
       })),
-    [value, excludeLabel, nearbyCity],
+    [query, excludeLabel, nearbyCity],
   );
 
   useEffect(() => {
-    if (useMock || value.trim().length < 2) {
+    if (useMock || query.trim().length < 2) {
       setLiveSuggestions([]);
       return;
     }
     const controller = new AbortController();
     const timer = window.setTimeout(() => {
-      void searchLivePlaces(value.trim(), controller.signal)
+      void searchLivePlaces(query.trim(), controller.signal)
         .then((rows) => {
           if (controller.signal.aborted) return;
           setLiveSuggestions(
@@ -114,7 +129,7 @@ export function PlacePicker({
       controller.abort();
       window.clearTimeout(timer);
     };
-  }, [value, useMock, excludeLabel]);
+  }, [query, useMock, excludeLabel]);
 
   const suggestions = liveSuggestions.length > 0 ? liveSuggestions : mockSuggestions;
 
@@ -124,7 +139,7 @@ export function PlacePicker({
         <input
           id={id}
           className="field-input field-input-icon"
-          value={value}
+          value={query}
           placeholder={placeholder}
           autoComplete="off"
           role="combobox"
@@ -132,28 +147,34 @@ export function PlacePicker({
           aria-controls={listId}
           aria-autocomplete="list"
           onFocus={(event) => {
+            setFocused(true);
             setOpen(true);
-            if (onSelectPlace) event.currentTarget.select();
+            if (onSelectPlace && autoSelectOnBlur) event.currentTarget.select();
           }}
           onChange={(event) => {
-            onChange(event.target.value);
+            const next = event.target.value;
+            setDraft(next);
+            onChange(next);
             setOpen(true);
           }}
           onBlur={() => {
+            const typed = draft.trim();
             window.setTimeout(() => {
               setOpen(false);
-              if (!onSelectPlace) return;
-              const typed = value.trim();
+              setFocused(false);
+              if (!onSelectPlace || !autoSelectOnBlur) return;
               if (!typed) return;
               const pool = suggestions.length ? suggestions : mockSuggestions;
+              const photographed = pool.find((row) => ("photoName" in row && row.photoName) || ("photoUri" in row && row.photoUri));
               const exact = pool.find((place) => place.label.toLocaleLowerCase("id-ID") === typed.toLocaleLowerCase("id-ID"));
-              const hit = exact ?? pool[0] ?? searchGeoPlaces(typed, { nearbyCity, excludeLabel })[0];
+              const hit = exact ?? photographed ?? pool[0] ?? searchGeoPlaces(typed, { nearbyCity, excludeLabel })[0];
               if (!hit) return;
               const needle = typed.toLocaleLowerCase("id-ID");
-              const label = hit.label.toLocaleLowerCase("id-ID");
+              const hitLabel = hit.label.toLocaleLowerCase("id-ID");
               const city = hit.city.toLocaleLowerCase("id-ID");
-              const matches = label === needle || city === needle || label.startsWith(needle) || (needle.length >= 3 && label.includes(needle));
+              const matches = hitLabel === needle || city === needle || hitLabel.startsWith(needle) || (needle.length >= 3 && hitLabel.includes(needle));
               if (!matches && exact == null) return;
+              setDraft(hit.label);
               onChange(hit.label);
               onSelectPlace({
                 id: hit.id,
@@ -162,6 +183,8 @@ export function PlacePicker({
                 latitude: hit.latitude,
                 longitude: hit.longitude,
                 formattedAddress: "formattedAddress" in hit ? hit.formattedAddress : hit.label,
+                photoName: "photoName" in hit ? hit.photoName : null,
+                photoUri: "photoUri" in hit ? hit.photoUri : null,
               });
             }, 140);
           }}
@@ -174,12 +197,13 @@ export function PlacePicker({
             className="absolute z-50 mt-1 max-h-56 w-full overflow-auto rounded-xl border border-outline-variant/40 bg-white p-1 shadow-lg"
           >
             {suggestions.map((place) => (
-              <li key={place.id} role="option" aria-selected={place.label === value}>
+              <li key={place.id} role="option" aria-selected={place.label === query}>
                 <button
                   type="button"
                   className="flex w-full flex-col rounded-lg px-3 py-2.5 text-left hover:bg-surface-container-low"
                   onMouseDown={(event) => event.preventDefault()}
                   onClick={() => {
+                    setDraft(place.label);
                     onChange(place.label);
                     onSelectPlace?.(place);
                     setOpen(false);

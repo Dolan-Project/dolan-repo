@@ -4,6 +4,7 @@ import {
   markReadSchema,
   presentInboxNotification,
   sendMessageSchema,
+  tripDeletedHostMessage,
   type ChatMessage,
   type JoinRequest,
   type JoinReviewDecision,
@@ -223,5 +224,35 @@ export class ChatService {
       throw new HttpError(404, "NOT_FOUND", "Notification not found");
     }
     return item;
+  }
+
+  async announceTripDeleted(tripId: string, hostUserId: string, reason: string) {
+    const members = await this.store.listActiveMemberIds(tripId);
+    const roomId = await this.store.getRoomId(tripId);
+    if (roomId) {
+      try {
+        const message = await this.store.createMessage({
+          roomId,
+          tripId,
+          sender: await this.store.resolveSender(hostUserId).catch(() => this.toSender(hostUserId)),
+          clientMessageId: `trip-deleted-${tripId}`,
+          body: tripDeletedHostMessage(reason),
+        });
+        this.realtime.emitToRoom(tripId, "message.created", message);
+      } catch {
+        /* still close the room even if the goodbye message fails */
+      }
+    }
+    const payload = { tripId, reason };
+    for (const memberId of members) {
+      this.realtime.emitToUser(memberId, "trip.deleted", payload);
+      this.realtime.leaveRoom(memberId, tripId);
+    }
+    this.realtime.emitToRoom(tripId, "trip.deleted", payload);
+    await this.store.deleteRoom(tripId);
+  }
+
+  onTripDeleted(tripId: string, hostUserId: string, reason: string) {
+    return this.announceTripDeleted(tripId, hostUserId, reason);
   }
 }

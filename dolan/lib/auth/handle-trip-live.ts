@@ -2,6 +2,7 @@ import {
   API_V1_PREFIX,
   EXPRESS_PATHS,
   createTripSchema,
+  deleteTripBodySchema,
   publishTripSchema,
   tripLeavePath,
   tripPath,
@@ -93,7 +94,12 @@ export async function proxyUpdateTrip(
 }
 
 export async function proxyDeleteTrip(request: Request, tripId: string): Promise<Response> {
-  return proxyToExpress(request, `${API_V1_PREFIX}${tripPath(tripId)}`, { method: "DELETE" });
+  const parsed = deleteTripBodySchema.safeParse(await readBody(request));
+  if (!parsed.success) return validationError(parsed.error);
+  return proxyToExpress(request, `${API_V1_PREFIX}${tripPath(tripId)}`, {
+    method: "DELETE",
+    json: parsed.data,
+  });
 }
 
 export async function proxyPublishTrip(

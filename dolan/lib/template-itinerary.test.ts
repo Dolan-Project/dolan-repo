@@ -10,6 +10,7 @@ import {
   hydrateItineraryPlaces,
   itineraryMapMarkers,
   MAX_ITINERARY_REGENERATES,
+  overBudgetSaveMessage,
   moveStopInDay,
   packItinerarySchedule,
   placeFromTemplateStop,
@@ -89,6 +90,8 @@ describe("create trip wizard helpers", () => {
     expect(foodAmounts.every((amount) => amount !== 55_000 * 2)).toBe(true);
     const fitted = estimateItineraryBudget(days, 5_000_000, 2);
     expect(fitted.overBudget).toBe(false);
+    expect(overBudgetSaveMessage(1_500_000, 1_000_000)).toMatch(/melebihi budget yang tersedia/);
+    expect(overBudgetSaveMessage(1_500_000, 1_000_000)).toMatch(/Kekurangan sekitar/);
   });
 
   it("does not invent tickets for free public places like Bundaran HI and Braga", () => {
@@ -233,6 +236,40 @@ describe("create trip wizard helpers", () => {
     expect(days[0].stops[1].place?.longitude).toBeCloseTo(107.6, 1);
     expect(itineraryMapMarkers(days, null)).toHaveLength(2);
     expect(googleMapsDirectionsUrl(itineraryMapMarkers(days, null))).toContain("google.com/maps/dir");
+  });
+
+  it("keeps an emptied destination title empty instead of restoring the place name", () => {
+    const days = hydrateItineraryPlaces([{
+      id: "d1",
+      dayNumber: 1,
+      date: "2026-09-17",
+      title: "Hari 1",
+      stops: [{
+        id: "s1",
+        sequence: 1,
+        place: {
+          googlePlaceId: "ChIJ-lasiana",
+          name: "Pantai Lasiana",
+          formattedAddress: "Lasiana, Kupang",
+          city: "Kupang",
+          latitude: -10.13,
+          longitude: 123.66,
+          rating: null,
+          userRatingCount: null,
+          photoName: null,
+          googleMapsUrl: null,
+        },
+        customTitle: "",
+        activityType: "Wisata",
+        startTime: "09:00",
+        durationMinutes: 90,
+        travelDurationMinutes: 0,
+        notes: null,
+        isLocked: false,
+      }],
+    }], "Kupang");
+    expect(days[0].stops[0].customTitle).toBe("");
+    expect(days[0].stops[0].place?.name).toBe("Pantai Lasiana");
   });
 
   it("prefills wizard 2 from a chosen template", () => {

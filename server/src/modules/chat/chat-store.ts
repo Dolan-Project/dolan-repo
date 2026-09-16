@@ -51,4 +51,6 @@ export type ChatStore = {
   markNotificationRead(userId: string, id: string): Promise<StoredNotification | null>;
   evictMember(tripId: string, userId: string, status?: "LEFT" | "REMOVED"): Promise<void>;
   resolveSender(userId: string): Promise<PublicUser>;
+  getRoomId(tripId: string): Promise<string | null>;
+  deleteRoom(tripId: string): Promise<void>;
 };

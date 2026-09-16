@@ -5,6 +5,14 @@ export function itineraryStopColor(indexZeroBased: number) {
   return ITINERARY_STOP_COLORS[indexZeroBased % ITINERARY_STOP_COLORS.length]!;
 }
 
+export function itineraryStopTint(indexZeroBased: number, alpha = 0.14) {
+  const hex = itineraryStopColor(indexZeroBased).replace("#", "");
+  const r = Number.parseInt(hex.slice(0, 2), 16);
+  const g = Number.parseInt(hex.slice(2, 4), 16);
+  const b = Number.parseInt(hex.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
 export function itineraryStopBadgeStyle(indexZeroBased: number) {
   const backgroundColor = itineraryStopColor(indexZeroBased);
   return {

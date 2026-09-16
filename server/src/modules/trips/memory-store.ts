@@ -3,6 +3,7 @@ import type { AuthIdentity, JoinRequestStatus, MembershipStatus, PlaceSummary } 
 import { TripErrorCode } from "@dolan/shared";
 import { notFound } from "../../lib/api-error.ts";
 import { createSeededMemoryUsers } from "../auth/user-repository.ts";
+import { coverPlaceFromPreferences } from "./cover-place.ts";
 import type {
   PageResult,
   StoredComment,
@@ -135,7 +136,10 @@ export class MemoryTripStore implements TripStore {
   }
 
   async getCoverPlace(tripId: string) {
-    return this.coverPlaces.get(tripId) ?? null;
+    const mapped = this.coverPlaces.get(tripId);
+    if (mapped) return mapped;
+    const trip = this.trips.find((row) => row.id === tripId);
+    return coverPlaceFromPreferences(trip?.preferences ?? null);
   }
 
   setCoverPlace(tripId: string, place: PlaceSummary) {
