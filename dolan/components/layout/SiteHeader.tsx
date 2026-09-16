@@ -8,6 +8,7 @@ import { ROUTES, type NavKey } from "@/lib/routes";
 import { Icon } from "@/components/ui/Icon";
 import { NotificationBell } from "@/components/layout/NotificationBell";
 import { UserAvatar } from "@/components/ui/UserAvatar";
+import logoDolan from "@/app/logo_dolan.png";
 
 const desktopLinks: { key: NavKey; href: string; label: string }[] = [
   { key: "beranda", href: ROUTES.beranda, label: "Beranda" },
@@ -58,11 +59,16 @@ export function SiteHeader({
     >
       <div className="mx-auto flex h-14 max-w-[1280px] items-center gap-3 px-4 md:h-16 md:px-6">
         <Link href={ROUTES.beranda} className="flex shrink-0 items-center" aria-label="DOLAN beranda">
-          <DolanWordmark height={32} />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={logoDolan.src}
+            alt="DOLAN"
+            className="h-8 w-auto object-contain object-left mix-blend-multiply md:h-9"
+          />
         </Link>
 
         <form
-          className="hidden min-w-0 flex-1 items-center gap-2 rounded-full border border-[#e4e9f0] bg-[#f4f6f9] px-3.5 py-2 md:flex md:max-w-[22rem]"
+          className="hidden min-w-0 flex-1 items-center gap-2 rounded-full border border-[#e4e9f0] bg-[#f4f6f9] px-3.5 py-2 md:flex md:max-w-[14rem] xl:max-w-[20rem]"
           action={ROUTES.jelajah}
           onSubmit={(event) => {
             event.preventDefault();
@@ -99,10 +105,15 @@ export function SiteHeader({
             );
           })}
           <Link
-            href={`${ROUTES.jelajah}?tab=template`}
-            className="type-label hidden rounded-full px-3 py-2 text-on-surface-variant transition-colors hover:bg-surface-container-low hover:text-on-surface xl:inline"
+            href={ROUTES.rekomendasi}
+            aria-current={pathname.startsWith("/rekomendasi") ? "page" : undefined}
+            className={
+              pathname.startsWith("/rekomendasi")
+                ? "type-label hidden shrink-0 whitespace-nowrap rounded-full bg-primary/10 px-3 py-2 text-primary lg:inline"
+                : "type-label hidden shrink-0 whitespace-nowrap rounded-full px-3 py-2 text-on-surface-variant transition-colors hover:bg-surface-container-low hover:text-on-surface lg:inline"
+            }
           >
-            Rute Populer
+            Rekomendasi
           </Link>
         </nav>
 

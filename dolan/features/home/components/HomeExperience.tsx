@@ -5,10 +5,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/ui/Icon";
 import { ASSETS } from "@/lib/assets";
+import { provinceCoverUrl } from "@/lib/province-cover";
 import { ROUTES } from "@/lib/routes";
 import { findProvince, searchProvinces } from "@/lib/provinces";
 import type { GuestHomePayload } from "../load-guest-home";
-import { isLiveGuestHome } from "../load-guest-home";
+import { featuredGuestProvinces, isLiveGuestHome } from "../load-guest-home";
 import { GlobeCanvas } from "./GlobeCanvas";
 import styles from "./home.module.css";
 
@@ -31,18 +32,26 @@ const unsplash={
  ijen:"https://images.unsplash.com/photo-1596402184320-417e7178b2cd?auto=format&fit=crop&w=1600&q=88",
  komodo:"https://images.unsplash.com/photo-1573790387438-4da905039392?auto=format&fit=crop&w=1600&q=88",
 } as const;
-const mockDestinations=[
- {name:"Bromo & Semeru",meta:"Jawa Timur · Jeep & Sunrise",image:unsplash.bromo,size:"large" as const,href:ROUTES.provinsi},
- {name:"Nusa Penida",meta:"Bali · Tebing & Snorkeling",image:unsplash.bali,size:"tall" as const,href:ROUTES.provinsi},
- {name:"Kawah Ijen",meta:"Banyuwangi · Blue Fire",image:unsplash.ijen,size:"small" as const,href:ROUTES.provinsi},
- {name:"Kepulauan Komodo",meta:"NTT · Sailing & Island Hopping",image:unsplash.komodo,size:"small" as const,href:ROUTES.provinsi},
-];
+const natureScenes=[
+ {slug:"sumatera-utara",name:"Sumatera Utara",label:"Danau Toba"},
+ {slug:"lampung",name:"Lampung",label:"Anak Krakatau"},
+ {slug:"jawa-barat",name:"Jawa Barat",label:"Kawah Putih"},
+ {slug:"jawa-timur",name:"Jawa Timur",label:"Gunung Bromo"},
+ {slug:"bali",name:"Bali",label:"Tanah Lot"},
+ {slug:"nusa-tenggara-barat",name:"Nusa Tenggara Barat",label:"Rinjani"},
+ {slug:"nusa-tenggara-timur",name:"Nusa Tenggara Timur",label:"Pulau Padar"},
+ {slug:"papua-barat-daya",name:"Papua Barat Daya",label:"Raja Ampat"},
+ {slug:"sulawesi-utara",name:"Sulawesi Utara",label:"Bunaken"},
+ {slug:"kalimantan-timur",name:"Kalimantan Timur",label:"Derawan"},
+ {slug:"banten",name:"Banten",label:"Ujung Kulon"},
+ {slug:"papua",name:"Papua",label:"Danau Sentani"},
+] as const;
 
 type HomeExperienceProps = { live?: GuestHomePayload | null };
 
 export function HomeExperience({ live = null }: HomeExperienceProps){
  const useLive=isLiveGuestHome();
- const destinations=useLive?(live?.destinations??[]):mockDestinations;
+ const destinations=live?.destinations?.length?live.destinations:featuredGuestProvinces();
  const publicTrips=useLive?(live?.trips??[]):[];
  const feedError=useLive?live?.loadError??null:null;
  const router=useRouter();
@@ -76,7 +85,22 @@ export function HomeExperience({ live = null }: HomeExperienceProps){
   </div></div>
  </section>
 
- <section className={`${styles.section} ${styles.destinations}`}><SectionHeading eyebrow="Pilihan minggu ini" title="Destinasi yang bikin ingin segera berangkat" copy={useLive?"Kurasi provinsi Dolan — data dari katalog lokal, bukan foto stock.":"Kurasi marketing Dolan — bukan ranking aktivitas otomatis. Cari provinsi di atas untuk mulai menjelajah destinasi."} action="Lihat 38 provinsi" href={ROUTES.provinsi}/>{feedError&&destinations.length===0?<FeedStateBox title="Destinasi belum bisa dimuat" copy={feedError} action="Jelajahi provinsi" href={ROUTES.provinsi}/>:destinations.length===0?<FeedStateBox title="Belum ada destinasi kurasi" copy="Jelajahi provinsi untuk mulai menemukan tempat wisata." action="Jelajahi provinsi" href={ROUTES.provinsi}/>:<div className={styles.bento}>{destinations.map(item=><Link href={"href" in item?item.href:ROUTES.provinsi} className={`${styles.destinationCard} ${styles[item.size]}`} key={item.name}>{item.image?<Image src={item.image} alt={item.name} fill unoptimized sizes="(min-width:900px) 45vw,100vw"/>:<div className={styles.destinationFallback} aria-hidden="true"/>}<div><span>{useLive?"Kurasi Dolan":"Kurasi Dolan"}</span><h3>{item.name}</h3><p>{item.meta}</p></div></Link>)}</div>}</section>
+ <div className={styles.natureMarquee} aria-hidden="true">
+  <div className={styles.natureTrack}>
+   {[0,1].map((copy)=>
+    <div className={styles.natureRow} key={copy}>
+     {natureScenes.map((scene)=>
+      <figure className={styles.natureCard} key={`${copy}-${scene.slug}`}>
+       <Image src={provinceCoverUrl(scene)} alt="" fill unoptimized sizes="280px"/>
+       <figcaption>{scene.label}</figcaption>
+      </figure>
+     )}
+    </div>
+   )}
+  </div>
+ </div>
+
+ <section className={`${styles.section} ${styles.destinations}`}><SectionHeading eyebrow="Jelajah daerah" title="Provinsi yang bikin ingin segera berangkat" copy="Kartu ini adalah daerah, bukan destinasi tunggal. Ketuk untuk buka halaman provinsi." action="Lihat 38 provinsi" href={ROUTES.rekomendasi}/>{destinations.length===0?<FeedStateBox title="Provinsi belum tersedia" copy="Buka katalog daerah untuk mulai memilih tujuan." action="Lihat 38 provinsi" href={ROUTES.rekomendasi}/>:<div className={styles.bento}>{destinations.map(item=><Link href={item.href} className={`${styles.destinationCard} ${styles[item.size]}`} key={item.name}>{item.image?<Image src={item.image} alt={item.name} fill unoptimized sizes="(min-width:900px) 45vw,100vw"/>:<div className={styles.destinationFallback} aria-hidden="true"/>}<div><span>Provinsi</span><h3>{item.name}</h3><p>{item.meta}</p></div></Link>)}</div>}</section>
 
  <section className={`${styles.section} ${styles.tripSection}`}><SectionHeading eyebrow="Temukan teman seperjalanan" title="Trip publik yang sedang membuka slot" copy={useLive?"Dari database Dolan — bukan contoh marketing.":"Baca rencananya, cek profil host, lalu kenalan di diskusi sebelum mengajukan join."} action="Jelajahi semua trip" href={`${ROUTES.jelajah}?tab=trip`}/>{feedError&&publicTrips.length===0?<FeedStateBox title="Trip publik belum bisa dimuat" copy={feedError} action="Coba jelajah trip" href={`${ROUTES.jelajah}?tab=trip`}/>:publicTrips.length===0?<FeedStateBox title="Belum ada trip publik" copy="Jadilah yang pertama membuka slot, atau jelajahi template itinerary." action="Lihat 38 provinsi" href={ROUTES.provinsi}/>:<div className={styles.tripGrid}>{publicTrips.map(trip=>{const tripHref=ROUTES.trip(trip.id);return <article className={styles.tripCard} key={trip.id}><div className={styles.tripCover}>{trip.image?<Image src={trip.image} alt={trip.title} fill unoptimized sizes="400px"/>:<div className={styles.tripCoverFallback} aria-hidden="true"/>}<span>Join gratis</span></div><div className={styles.tripBody}><h3>{trip.title}</h3><p><Icon name="location_on"/> {trip.place}</p><p><Icon name="calendar_month"/> {trip.date}{trip.seats>0?` · Sisa ${trip.seats} slot`:""}</p><div className={styles.tripActions}><Link href={tripHref}>Lihat rencana</Link><Link href={`${tripHref}#join`}>Gabung</Link></div></div></article>})}</div>}</section>
 

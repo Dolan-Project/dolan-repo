@@ -14,6 +14,7 @@ Untuk data wisata nyata dan alur P0 tanpa simulasi:
 | `GOOGLE_OAUTH_CLIENT_ID` / `SECRET` / `REDIRECT_URI` | Tombol **Akun Google** (Express OAuth, tanpa Supabase) |
 | `DATABASE_URL` (+ migrate, including local-auth migration) | Persistence for users/sessions |
 | `GOOGLE_MAPS_SERVER_KEY` | Places Text Search / Details / Photos / Routes **at runtime**; also one-shot photo download during `db:seed` / `db:seed:photos` |
+| `REDIS_URL` | Optional. Short-lived Places cache in Express (Jelajah, detail wisata, foto live, job place-lookup). Empty = in-memory per process |
 | `NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_KEY` | Maps JS on Explore / My Trip |
 | `GROQ_API_KEY` (+ optional `GROQ_MODEL`) | AI itinerary / destination candidates |
 | `IMAGEKIT_*` | Avatar/cover CDN |
@@ -84,7 +85,15 @@ Melebihi batas → `429 RATE_LIMITED` plus header `Retry-After`. `/health` dan `
 
 ## Quota Places
 
-`PLACES_MAX_REQUESTS_PER_USER_PER_DAY` (default 50) ditulis ke `api_usage_counters` bersama `estimated_cost`. Biaya per request di `PLACES_ESTIMATED_COST_PER_REQUEST` (default 0.01, placeholder sampai SKU Google diukur). Increment memakai `WHERE request_count < limit`. Saat penuh → `429 QUOTA_EXCEEDED`.
+`PLACES_MAX_REQUESTS_PER_USER_PER_DAY` (default 50) ditulis ke `api_usage_counters` bersama `estimated_cost`. Biaya per request di `PLACES_ESTIMATED_COST_PER_REQUEST` (default 0.01, placeholder sampai SKU Google diukur). Increment memakai `WHERE request_count < limit`. Saat penuh → `429 QUOTA_EXCEEDED`. Cache hit Redis (atau in-memory jika `REDIS_URL` kosong) **tidak** memotong kuota dan **tidak** memanggil Google.
+
+Lokal:
+
+```bash
+docker run -p 6379:6379 redis:7-alpine
+```
+
+Lalu set `REDIS_URL=redis://127.0.0.1:6379` di `.env`. TTL opsional: `PLACES_CACHE_TTL_SEARCH_SEC` (default 86400), `PLACES_CACHE_TTL_DETAILS_SEC` (604800), `PLACES_CACHE_TTL_PHOTO_SEC` (43200). Postgres `places` tetap menyimpan Place ID + foto seed; Redis hanya cache hasil Places ber-TTL.
 
 ## Index (audit + koreksi D4)
 

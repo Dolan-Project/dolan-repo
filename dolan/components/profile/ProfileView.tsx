@@ -35,48 +35,93 @@ export function ProfileView({ user, action }: ProfileViewProps) {
         </div>
 
         <div className="relative px-1 pb-3 sm:px-6 sm:pb-4">
-          <div className="flex flex-col justify-between gap-4 pt-4 lg:flex-row lg:items-end">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:gap-5">
-              <div className="-mt-16 shrink-0 sm:-mt-24">
-                <ProfileMediaHover
-                  kind="avatar"
-                  src={user.avatarUrl}
-                  alt={`Foto profil ${user.displayName}`}
-                  canEdit={action === "edit"}
-                  className="h-28 w-28 cursor-pointer overflow-hidden rounded-2xl border-4 border-white bg-white shadow-xl sm:h-36 sm:w-36"
-                />
-                <span className="-mt-3 ml-2 inline-flex items-center gap-1.5 rounded-full bg-[#087f8c] px-3 py-1 type-micro font-bold text-white shadow-md">
-                  <Icon name="verified" className="text-[12px]" />
-                  Traveler Terverifikasi
-                </span>
-              </div>
-              <div className="pb-1">
-                <h1 className="text-2xl font-black tracking-tight text-on-surface sm:text-3xl">
-                  {user.displayName || "Traveler Dolan"}
-                </h1>
-                <div className="mt-1.5 flex flex-wrap items-center gap-2.5">
-                  <span className="rounded-full bg-primary-fixed px-2.5 py-0.5 type-micro font-bold text-primary">
-                    {user.username ? `@${user.username}` : "Username belum diatur"}
-                  </span>
-                  <span className="flex items-center gap-1 type-caption font-medium text-on-surface-variant">
-                    <Icon name="location_on" className="text-[15px] text-primary" />
-                    {user.domicile || "Domisili belum diisi"}
-                  </span>
-                </div>
-                <ProfileSocialLinks
-                  instagramUrl={user.instagramUrl}
-                  tiktokUrl={user.tiktokUrl}
-                  className="mt-2.5"
-                />
-                {action === "edit" && !user.instagramUrl && !user.tiktokUrl ? (
-                  <p className="mt-2 type-caption text-on-surface-variant">
-                    Tambah Instagram atau TikTok di Edit Profil supaya traveler lain
-                    bisa mengecek akunmu.
-                  </p>
-                ) : null}
-              </div>
+          <div className="flex flex-col gap-4 pt-4 sm:flex-row sm:items-start sm:gap-6">
+            <div className="-mt-16 shrink-0 sm:-mt-24">
+              <ProfileMediaHover
+                kind="avatar"
+                src={user.avatarUrl}
+                alt={`Foto profil ${user.displayName}`}
+                canEdit={action === "edit"}
+                className="h-28 w-28 cursor-pointer overflow-hidden rounded-2xl border-4 border-white bg-white shadow-xl sm:h-36 sm:w-36"
+              />
+              <span className="-mt-3 ml-2 inline-flex items-center gap-1.5 rounded-full bg-[#087f8c] px-3 py-1 type-micro font-bold text-white shadow-md">
+                <Icon name="verified" className="text-[12px]" />
+                Traveler Terverifikasi
+              </span>
             </div>
-            <div className="flex flex-wrap items-center gap-2.5 pb-1">
+
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between md:gap-8">
+                <div className="min-w-0">
+                  <h1 className="text-2xl font-black tracking-tight text-on-surface sm:text-3xl">
+                    {user.displayName || "Traveler Dolan"}
+                  </h1>
+                  <div className="mt-1.5 flex flex-wrap items-center gap-2.5">
+                    <span className="rounded-full bg-primary-fixed px-2.5 py-0.5 type-micro font-bold text-primary">
+                      {user.username ? `@${user.username}` : "Username belum diatur"}
+                    </span>
+                    <span className="flex items-center gap-1 type-caption font-medium text-on-surface-variant">
+                      <Icon name="location_on" className="text-[15px] text-primary" />
+                      {user.domicile || "Domisili belum diisi"}
+                    </span>
+                  </div>
+                  <ProfileSocialLinks
+                    instagramUrl={user.instagramUrl}
+                    tiktokUrl={user.tiktokUrl}
+                    className="mt-2.5"
+                  />
+                  {action === "edit" && !user.instagramUrl && !user.tiktokUrl ? (
+                    <p className="mt-2 type-caption text-on-surface-variant">
+                      Tambah Instagram atau TikTok di Edit Profil supaya traveler lain
+                      bisa mengecek akunmu.
+                    </p>
+                  ) : null}
+                </div>
+
+                <div className="flex shrink-0 items-start justify-around gap-5 sm:justify-start sm:gap-7">
+                  <ProfileStat
+                    value={tripTotal}
+                    label="trip"
+                    href={user.username ? ROUTES.profilRiwayat(user.username) : undefined}
+                  />
+                  <ProfileStat
+                    value={user.followersCount}
+                    label="pengikut"
+                    href={user.username ? ROUTES.profilPengikut(user.username) : undefined}
+                  />
+                  <ProfileStat
+                    value={user.followingCount}
+                    label="mengikuti"
+                    href={user.username ? ROUTES.profilMengikuti(user.username) : undefined}
+                  />
+                  <ProfileStat
+                    value={rating}
+                    label="rating"
+                    href={user.username ? ROUTES.profilUlasan(user.username) : undefined}
+                  />
+                </div>
+              </div>
+
+              {action === "follow" && user.username ? (
+                <div className="mt-5 rounded-2xl border border-primary/10 bg-surface-container-low p-4">
+                  <p className="type-label font-extrabold text-on-surface">Keamanan komunitas</p>
+                  <p className="type-caption mt-1 text-on-surface-variant">
+                    Blokir menghapus follow dan mencegah follow atau join. Laporan masuk ke antrian admin.
+                  </p>
+                  <div className="mt-3">
+                    <BlockReportActions username={user.username} targetUserId={user.id} />
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
+            <p className="min-w-0 flex-1 type-body-lg text-on-surface-variant">
+              {user.bio ||
+                "Bagikan gaya traveling, daerah favorit, dan tipe teman perjalanan yang kamu cari."}
+            </p>
+            <div className="flex shrink-0 flex-wrap items-center justify-end gap-2.5">
               {action === "edit" ? (
                 <>
                   <Link href={ROUTES.profilEdit} className="btn-primary !min-h-11">
@@ -90,80 +135,6 @@ export function ProfileView({ user, action }: ProfileViewProps) {
               ) : null}
             </div>
           </div>
-
-          <p className="mt-5 max-w-4xl type-body-lg text-on-surface-variant">
-            {user.bio ||
-              "Bagikan gaya traveling, daerah favorit, dan tipe teman perjalanan yang kamu cari."}
-          </p>
-
-          <div className="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <StatTile
-              icon="hiking"
-              iconClass="bg-secondary-fixed text-secondary"
-              title={`${tripTotal} Trip`}
-              subtitle={`${user.hostTripCount} Host · ${user.participantTripCount} Peserta`}
-            />
-            <StatTile
-              href={user.username ? ROUTES.profilPengikut(user.username) : undefined}
-              icon="groups"
-              iconClass="bg-primary-fixed text-primary"
-              title={`${user.followersCount + user.followingCount} Teman`}
-              subtitle={`${user.followersCount} Pengikut · ${user.followingCount} Mengikuti`}
-            />
-            <StatTile
-              href={user.username ? ROUTES.profilUlasan(user.username) : undefined}
-              icon="star"
-              iconClass="bg-amber-100 text-amber-600"
-              title={`${rating} Rating`}
-              subtitle={`${user.rating.reviewCount} ulasan rekan trip`}
-            />
-            <StatTile
-              href={user.username ? ROUTES.profilRiwayat(user.username) : undefined}
-              icon="verified_user"
-              iconClass="bg-emerald-100 text-emerald-700"
-              title="Riwayat publik"
-              subtitle="Trip selesai yang diizinkan tampil"
-            />
-          </div>
-
-          {user.username ? (
-            <div className="mt-4 flex flex-wrap gap-2">
-              <Link href={ROUTES.profilPengikut(user.username)} className="btn-ghost !min-h-11">
-                Pengikut
-              </Link>
-              <Link href={ROUTES.profilMengikuti(user.username)} className="btn-ghost !min-h-11">
-                Mengikuti
-              </Link>
-              <Link href={ROUTES.profilUlasan(user.username)} className="btn-ghost !min-h-11">
-                Ulasan
-              </Link>
-              <Link href={ROUTES.profilRiwayat(user.username)} className="btn-ghost !min-h-11">
-                Riwayat
-              </Link>
-              {action === "edit" ? (
-                <Link href={ROUTES.adminLaporan} className="btn-ghost !min-h-11">
-                  Moderasi laporan
-                </Link>
-              ) : null}
-            </div>
-          ) : null}
-
-          {action === "follow" && user.username ? (
-            <div className="mt-5 rounded-2xl border border-primary/10 bg-surface-container-low p-4">
-              <p className="type-label font-extrabold text-on-surface">Keamanan komunitas</p>
-              <p className="type-caption mt-1 text-on-surface-variant">
-                Blokir menghapus follow dan mencegah follow atau join. Laporan masuk ke antrian admin.
-              </p>
-              <div className="mt-3">
-                <BlockReportActions username={user.username} targetUserId={user.id} />
-              </div>
-            </div>
-          ) : null}
-
-          <p className="mt-2.5 flex items-center gap-1.5 type-micro italic text-on-surface-variant">
-            <Icon name="info" className="text-[12px] text-primary" />
-            Statistik di atas hanya menghitung trip publik. Trip private dan draft tidak dipublikasikan.
-          </p>
         </div>
       </section>
 
@@ -244,35 +215,26 @@ export function ProfileView({ user, action }: ProfileViewProps) {
   );
 }
 
-function StatTile({
-  icon,
-  iconClass,
-  title,
-  subtitle,
+function ProfileStat({
+  value,
+  label,
   href,
 }: {
-  icon: string;
-  iconClass: string;
-  title: string;
-  subtitle: string;
+  value: string | number;
+  label: string;
   href?: string;
 }) {
   const content = (
-    <div className="flex min-h-24 items-center gap-3 rounded-2xl bg-surface-container-low p-3 sm:p-4">
-      <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${iconClass}`}>
-        <Icon name={icon} className="text-[21px]" />
-      </div>
-      <div>
-        <p className="type-label font-extrabold text-on-surface">{title}</p>
-        <p className="mt-0.5 type-caption text-on-surface-variant">{subtitle}</p>
-      </div>
-    </div>
+    <span className="flex min-w-[4.25rem] flex-col items-center text-center">
+      <strong className="text-lg font-black tabular-nums leading-none text-on-surface sm:text-xl">{value}</strong>
+      <span className="mt-1 type-caption capitalize text-on-surface-variant">{label}</span>
+    </span>
   );
   if (!href) return content;
   return (
     <Link
       href={href}
-      className="block rounded-2xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+      className="rounded-lg px-1 py-0.5 transition hover:opacity-75 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
     >
       {content}
     </Link>

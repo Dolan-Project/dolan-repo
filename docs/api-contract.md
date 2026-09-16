@@ -122,7 +122,7 @@ Hotel/resto diturunkan kecuali query memang lodging/makan. `sort=popular` memaka
 | `QUOTA_EXCEEDED` | 429 |
 | `PROVIDER_UNAVAILABLE` | 502/503 |
 
-Quota Places: `PLACES_MAX_REQUESTS_PER_USER_PER_DAY` (default 50), dicatat di `api_usage_counters`.
+Quota Places: `PLACES_MAX_REQUESTS_PER_USER_PER_DAY` (default 50), dicatat di `api_usage_counters`. Cache hit Places (Redis / in-memory) tidak memotong kuota.
 
 ---
 
