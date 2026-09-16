@@ -4,6 +4,7 @@ import { useEffect, useId, useMemo, useState } from "react";
 import { Field } from "@/components/auth/Field";
 import { Icon } from "@/components/ui/Icon";
 import { shouldUseMockApi } from "@/lib/auth/use-mock";
+import { isAdministrativeRegionName } from "@/lib/region-names";
 import { searchGeoPlaces } from "@/mocks/geo";
 
 export type PlaceSuggestion = {
@@ -17,14 +18,36 @@ export type PlaceSuggestion = {
   photoUri?: string | null;
 };
 
-async function searchLivePlaces(query: string, signal: AbortSignal): Promise<PlaceSuggestion[]> {
-  const baseUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api/v1";
+export type PlacePickerKind = "destination" | "place";
+
+function mergeSuggestions(
+  primary: PlaceSuggestion[],
+  secondary: PlaceSuggestion[],
+  limit = 8,
+): PlaceSuggestion[] {
+  const seen = new Set<string>();
+  const out: PlaceSuggestion[] = [];
+  for (const row of [...primary, ...secondary]) {
+    const key = row.label.trim().toLocaleLowerCase("id-ID");
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    out.push(row);
+    if (out.length >= limit) break;
+  }
+  return out;
+}
+
+function livePlaceUrls(query: string, nearbyCity?: string): string[] {
   const params = new URLSearchParams({ q: query, page: "1", limit: "8" });
-  const response = await fetch(`${baseUrl}/search/places?${params}`, {
-    signal,
-    credentials: "include",
-    headers: { Accept: "application/json" },
-  });
+  if (nearbyCity?.trim()) params.set("city", nearbyCity.trim());
+  const search = params.toString();
+  const sameOrigin = `/api/v1/search/places?${search}`;
+  const expressBase = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api/v1").replace(/\/$/, "");
+  const express = `${expressBase}/search/places?${search}`;
+  return express.endsWith(sameOrigin) ? [sameOrigin] : [sameOrigin, express];
+}
+
+async function parseLivePlaces(response: Response): Promise<PlaceSuggestion[]> {
   if (!response.ok) return [];
   const payload = (await response.json()) as {
     success?: boolean;
@@ -52,6 +75,24 @@ async function searchLivePlaces(query: string, signal: AbortSignal): Promise<Pla
   }));
 }
 
+async function searchLivePlaces(query: string, signal: AbortSignal, nearbyCity?: string): Promise<PlaceSuggestion[]> {
+  for (const url of livePlaceUrls(query, nearbyCity)) {
+    try {
+      const sameOrigin = url.startsWith("/");
+      const response = await fetch(url, {
+        signal,
+        credentials: sameOrigin ? "include" : "omit",
+        headers: { Accept: "application/json" },
+      });
+      const rows = await parseLivePlaces(response);
+      if (rows.length) return rows;
+    } catch {
+      if (signal.aborted) return [];
+    }
+  }
+  return [];
+}
+
 export function PlacePicker({
   id,
   label,
@@ -65,6 +106,7 @@ export function PlacePicker({
   placeholder,
   icon = "location_on",
   autoSelectOnBlur = true,
+  kind = "destination",
 }: {
   id: string;
   label: string;
@@ -78,6 +120,7 @@ export function PlacePicker({
   placeholder?: string;
   icon?: string;
   autoSelectOnBlur?: boolean;
+  kind?: PlacePickerKind;
 }) {
   const listId = useId();
   const [open, setOpen] = useState(false);
@@ -86,14 +129,15 @@ export function PlacePicker({
   const [liveSuggestions, setLiveSuggestions] = useState<PlaceSuggestion[]>([]);
   const useMock = shouldUseMockApi();
   const query = focused ? draft : value;
+  const includeRegions = kind === "destination";
 
   useEffect(() => {
     if (!focused) setDraft(value);
   }, [value, focused]);
 
-  const mockSuggestions = useMemo(
+  const catalogSuggestions = useMemo(
     () =>
-      searchGeoPlaces(query, { excludeLabel, nearbyCity }).slice(0, 6).map((place) => ({
+      searchGeoPlaces(query, { excludeLabel, nearbyCity, includeRegions }).slice(0, 8).map((place) => ({
         id: place.id,
         label: place.label,
         city: place.city,
@@ -101,7 +145,7 @@ export function PlacePicker({
         longitude: place.longitude,
         formattedAddress: place.label,
       })),
-    [query, excludeLabel, nearbyCity],
+    [query, excludeLabel, nearbyCity, includeRegions],
   );
 
   useEffect(() => {
@@ -111,13 +155,16 @@ export function PlacePicker({
     }
     const controller = new AbortController();
     const timer = window.setTimeout(() => {
-      void searchLivePlaces(query.trim(), controller.signal)
+      void searchLivePlaces(query.trim(), controller.signal, nearbyCity)
         .then((rows) => {
           if (controller.signal.aborted) return;
+          const filtered = excludeLabel
+            ? rows.filter((row) => row.label.toLocaleLowerCase("id-ID") !== excludeLabel.toLocaleLowerCase("id-ID"))
+            : rows;
           setLiveSuggestions(
-            excludeLabel
-              ? rows.filter((row) => row.label.toLocaleLowerCase("id-ID") !== excludeLabel.toLocaleLowerCase("id-ID"))
-              : rows,
+            includeRegions
+              ? filtered
+              : filtered.filter((row) => !isAdministrativeRegionName(row.label)),
           );
         })
         .catch(() => {
@@ -129,9 +176,14 @@ export function PlacePicker({
       controller.abort();
       window.clearTimeout(timer);
     };
-  }, [query, useMock, excludeLabel]);
+  }, [query, useMock, excludeLabel, nearbyCity, includeRegions]);
 
-  const suggestions = liveSuggestions.length > 0 ? liveSuggestions : mockSuggestions;
+  const suggestions = useMemo(() => {
+    const preferCatalog = includeRegions && isAdministrativeRegionName(query);
+    return preferCatalog
+      ? mergeSuggestions(catalogSuggestions, liveSuggestions)
+      : mergeSuggestions(liveSuggestions, catalogSuggestions);
+  }, [catalogSuggestions, liveSuggestions, includeRegions, query]);
 
   return (
     <Field id={id} label={label} hint={open ? undefined : hint} error={error || undefined}>
@@ -164,10 +216,10 @@ export function PlacePicker({
               setFocused(false);
               if (!onSelectPlace || !autoSelectOnBlur) return;
               if (!typed) return;
-              const pool = suggestions.length ? suggestions : mockSuggestions;
+              const pool = suggestions;
               const photographed = pool.find((row) => ("photoName" in row && row.photoName) || ("photoUri" in row && row.photoUri));
               const exact = pool.find((place) => place.label.toLocaleLowerCase("id-ID") === typed.toLocaleLowerCase("id-ID"));
-              const hit = exact ?? photographed ?? pool[0] ?? searchGeoPlaces(typed, { nearbyCity, excludeLabel })[0];
+              const hit = exact ?? photographed ?? pool[0];
               if (!hit) return;
               const needle = typed.toLocaleLowerCase("id-ID");
               const hitLabel = hit.label.toLocaleLowerCase("id-ID");
@@ -210,7 +262,7 @@ export function PlacePicker({
                   }}
                 >
                   <span className="type-label text-on-surface">{place.label}</span>
-                  {place.city ? (
+                  {place.city && place.city.toLocaleLowerCase("id-ID") !== place.label.toLocaleLowerCase("id-ID") ? (
                     <span className="type-caption text-on-surface-variant">{place.city}</span>
                   ) : null}
                 </button>

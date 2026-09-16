@@ -60,11 +60,102 @@ export function largeAreaGate(name: string) {
   return LARGE_AREA_GATES.find((item) => item.test.test(value)) ?? null;
 }
 
-export function suggestedVisitMinutes(name: string, durationMinutes: number) {
+export type VisitDurationBounds = {
+  min: number;
+  preferred: number;
+  max: number;
+  stretchable: boolean;
+};
+
+const FOOD_PLACE =
+  /warung|rumah makan|\bresto\b|restaurant|\bkedai\b|\bcafe\b|\bkafe\b|coffee shop|kedai kopi|bakery|\bkuliner\b/i;
+
+export function visitDurationBounds(name: string): VisitDurationBounds {
   const gate = largeAreaGate(name);
-  const baseline = Math.max(15, durationMinutes || 60);
-  if (!gate) return Math.min(480, baseline);
-  return Math.min(480, Math.max(baseline, gate.minMinutes));
+  if (gate) {
+    return { min: gate.minMinutes, preferred: Math.max(gate.minMinutes, 240), max: 360, stretchable: true };
+  }
+  const value = name.trim();
+  if (FOOD_PLACE.test(value)) return { min: 45, preferred: 60, max: 75, stretchable: false };
+  if (/^tempat(\s+\d+)?$/i.test(value)) return { min: 45, preferred: 60, max: 75, stretchable: true };
+  if (/pasar|market|malioboro|braga/i.test(value)) return { min: 60, preferred: 90, max: 120, stretchable: true };
+  if (
+    /museum|candi|pura|keraton|istana|borobudur|prambanan|uluwatu|tanah lot|lawang sewu|sonobudoyo|saung|mansion/i.test(
+      value,
+    )
+  ) {
+    return { min: 75, preferred: 120, max: 180, stretchable: true };
+  }
+  if (/pantai|beach|taman|kebun|park|danau|air terjun|waterfall|snorkel|gili/i.test(value)) {
+    return { min: 75, preferred: 120, max: 180, stretchable: true };
+  }
+  if (/mall|belanja|factory outlet|trans studio|dufan|seaworld|farmhouse|floating market/i.test(value)) {
+    return { min: 90, preferred: 120, max: 150, stretchable: true };
+  }
+  return { min: 60, preferred: 90, max: 150, stretchable: true };
+}
+
+export function suggestedVisitMinutes(name: string, durationMinutes: number) {
+  const bounds = visitDurationBounds(name);
+  const baseline = Math.max(bounds.min, durationMinutes || bounds.preferred);
+  return Math.min(bounds.max, baseline);
+}
+
+const DAY_END_TARGET = 20 * 60;
+const DAY_END_MAX = 21 * 60 + 15;
+
+export function planDayVisitDurations(input: {
+  names: string[];
+  startMinutes: number;
+  travelMinutes: number[];
+  requestedMinutes?: number[];
+}): number[] {
+  const bounds = input.names.map((name) => visitDurationBounds(name));
+  const durations = bounds.map((item, index) => {
+    const requested = input.requestedMinutes?.[index];
+    if (typeof requested === "number" && Number.isFinite(requested) && requested > 0) {
+      return Math.min(item.max, Math.max(item.min, Math.round(requested)));
+    }
+    return item.preferred;
+  });
+  const dayEnd = () => {
+    let cursor = input.startMinutes;
+    durations.forEach((duration, index) => {
+      cursor += Math.max(0, input.travelMinutes[index] ?? 0);
+      cursor += duration;
+    });
+    return cursor;
+  };
+  const target = input.startMinutes >= 15 * 60 ? 21 * 60 : DAY_END_TARGET;
+  const maxEnd = input.startMinutes >= 15 * 60 ? 22 * 60 : DAY_END_MAX;
+  const step = 15;
+  while (dayEnd() > maxEnd) {
+    let index = -1;
+    for (let i = durations.length - 1; i >= 0; i -= 1) {
+      if (durations[i]! > bounds[i]!.min) {
+        index = i;
+        break;
+      }
+    }
+    if (index < 0) break;
+    durations[index] = Math.max(bounds[index]!.min, durations[index]! - step);
+  }
+  while (dayEnd() < target) {
+    let best = -1;
+    let room = 0;
+    durations.forEach((duration, index) => {
+      const item = bounds[index]!;
+      if (!item.stretchable) return;
+      const leftover = item.max - duration;
+      if (leftover > room) {
+        room = leftover;
+        best = index;
+      }
+    });
+    if (best < 0 || room < step) break;
+    durations[best] = durations[best]! + Math.min(step, room);
+  }
+  return durations;
 }
 
 export type TravelVehicle = "walk" | "ojek" | "drive" | "jeep" | "boat";
@@ -280,9 +371,9 @@ export function formatItineraryDateRange(startDate: string, endDate: string) {
 }
 
 export function itinerarySourceLabel(source: ItinerarySource | string) {
-  if (source === "AI") return "Dari AI";
+  if (source === "AI") return "Dari Dolan";
   if (source === "TEMPLATE") return "Dari template";
-  if (source === "REGENERATED") return "Hasil regenerate";
+  if (source === "REGENERATED") return "Versi susunan ulang";
   return "Disusun manual";
 }
 

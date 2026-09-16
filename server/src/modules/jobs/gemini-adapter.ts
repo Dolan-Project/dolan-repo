@@ -213,7 +213,7 @@ export class GeminiAdapter implements GenerationModel {
               role: "user",
               parts: [
                 {
-                  text: `Buat itinerary JSON untuk trip ${input.tripId}. Hanya Google Place ID nyata (awalan ChIJ) yang bisa diverifikasi. Jangan hitung total budget. Preferences trip: ${JSON.stringify(input.preferences ?? {})}`,
+                  text: `Buat itinerary JSON untuk trip ${input.tripId}. Hanya Google Place ID nyata (awalan ChIJ) yang bisa diverifikasi. Setiap destinasi maksimal dikunjungi satu kali dalam seluruh rencana (jangan ulangi tempat yang sama di hari berbeda). Setiap hari terisi dari pagi sampai malam (08:00–20:00) dengan 4-6 tempat berdekatan. Durasi realistis: warung/kafe 45-75 menit, museum/candi 90-150 menit; jangan memanjangkan makan kalau jam masih longgar — tambah destinasi terdekat. Kelompokkan stop yang berdekatan di hari yang sama agar rute Google Maps masuk akal. Jangan hitung total budget. Preferences trip: ${JSON.stringify(input.preferences ?? {})}`,
                 },
               ],
             },

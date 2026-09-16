@@ -135,4 +135,36 @@ describe("place lookup hydrate", () => {
     expect(hydrated.days[0]?.stops.length).toBeGreaterThanOrEqual(2);
     expect(hydrated.days[0]?.stops.some((stop) => stop.place?.name.includes("Malioboro") || stop.place?.name.includes("Prambanan"))).toBe(true);
   });
+
+  it("does not repeat a resolved destination across days", async () => {
+    const lookup = createPlaceLookup(new FakePlacesClient(), { requireKnownPlace: true });
+    const hydrated = await lookup.hydratePlaces(
+      {
+        ...base,
+        days: [
+          base.days[0]!,
+          {
+            dayNumber: 2,
+            date: "2026-10-02",
+            title: "Hari 2",
+            stops: [
+              {
+                ...base.days[0]!.stops[0]!,
+                place: {
+                  googlePlaceId: "ChIJZ4l5Y3l1xkcRZ3kRk5v0t0g",
+                  name: "Candi Prambanan",
+                  city: "Yogyakarta",
+                },
+              },
+            ],
+          },
+        ],
+      },
+      { destinationCity: "Yogyakarta", minStopsPerDay: 2, maxStopsPerDay: 4 },
+    );
+    const ids = hydrated.days.flatMap((day) => day.stops.map((stop) => stop.place?.googlePlaceId).filter(Boolean));
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(hydrated.days).toHaveLength(2);
+    expect(hydrated.days.some((day) => day.stops.some((stop) => stop.place?.name.includes("Malioboro")))).toBe(true);
+  });
 });

@@ -10,6 +10,7 @@ import {
   stopDisplayNumber,
   stopPinColorIndex,
   stopPlaceHeading,
+  planDayVisitDurations,
   suggestedVisitMinutes,
   ticketLineDetail,
   TOTAL_ESTIMATE_LABEL,
@@ -151,6 +152,25 @@ describe("itinerary stop view", () => {
     expect(stopPlaceHeading(stop({ customTitle: "Gunung Bromo" })).subLocation).toMatch(/Penanjakan/);
   });
 
+  it("keeps meals short and stretches attractions toward evening", () => {
+    expect(suggestedVisitMinutes("Warung Nasi", 300)).toBeLessThanOrEqual(75);
+    expect(suggestedVisitMinutes("Gedung Sate", 90)).toBeGreaterThan(75);
+    const durations = planDayVisitDurations({
+      names: ["Gedung Sate", "Museum Geologi Bandung", "Jalan Braga", "Taman Lansia", "Cihampelas Walk"],
+      startMinutes: 8 * 60,
+      travelMinutes: [0, 15, 15, 15, 15],
+    });
+    expect(durations.every((minutes) => minutes <= 180)).toBe(true);
+    const end = durations.reduce((cursor, minutes, index) => cursor + (index === 0 ? 0 : 15) + minutes, 8 * 60);
+    expect(end).toBeGreaterThanOrEqual(19 * 60);
+    const meal = planDayVisitDurations({
+      names: ["Warung Nasi", "Gedung Sate", "Museum Geologi Bandung"],
+      startMinutes: 8 * 60,
+      travelMinutes: [0, 15, 15],
+    });
+    expect(meal[0]).toBeLessThanOrEqual(75);
+  });
+
   it("strips system notes and labels tickets as unverified estimates", () => {
     expect(sanitizeStopNotes("Detail foto, rating, alamat... ditampilkan dari Google Places")).toBeNull();
     expect(sanitizeStopNotes("Sunset di pura tepi laut.")).toBe("Sunset di pura tepi laut.");
@@ -164,7 +184,7 @@ describe("itinerary stop view", () => {
     expect(formatItineraryDateRange("2026-09-17", "2026-09-21")).toBe("17 Sep 2026 - 21 Sep 2026");
     expect(itinerarySourceLabel("MANUAL")).toBe("Disusun manual");
     expect(itineraryVersionOptionLabel(2, "MANUAL", true)).toBe("Versi 2 - Disusun manual - Sedang dipakai");
-    expect(itineraryVersionOptionLabel(1, "AI", false)).toBe("Versi 1 - Dari AI");
+    expect(itineraryVersionOptionLabel(1, "AI", false)).toBe("Versi 1 - Dari Dolan");
   });
 
   it("maps list ids to display numbers in order", () => {

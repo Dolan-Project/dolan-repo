@@ -3,6 +3,7 @@ import { INDONESIA_PROVINCES, type CuratedProvince } from "@/lib/provinces";
 import { resolvePlaceCoordinates } from "@/lib/place-coordinates";
 import { haversineKm, orderStopsWithoutBacktrack, planEfficientDays, selectCompactStops } from "@/lib/route-optimize";
 import { addDaysToIso, packItinerarySchedule, placeFromTemplateStop, PROVINCE_CENTERS } from "@/lib/template-itinerary";
+import { administrativeRegionHub, isAdministrativeRegionName } from "@/lib/region-names";
 import { ASSETS } from "@/lib/assets";
 
 export type DestinationStopSeed = {
@@ -303,23 +304,52 @@ function nearbyProvinceStops(destination: string, hub: { lat: number; lng: numbe
     .map(({ name, lat, lng, notes }) => ({ name, lat, lng, notes }));
 }
 
+function nearbyCityRouteStops(destination: string): DestinationStopSeed[] {
+  const hub = administrativeRegionHub(destination) ?? routeHub(destination);
+  const nearby: DestinationStopSeed[] = [];
+  const seen = new Set<string>();
+  CITY_ROUTES.forEach((route) => {
+    route.stops.forEach((stop) => {
+      const key = stop.name.trim().toLocaleLowerCase("id-ID");
+      if (!key || seen.has(key)) return;
+      if (haversineKm(hub, stop) > 140) return;
+      seen.add(key);
+      nearby.push(stop);
+    });
+  });
+  return nearby;
+}
+
 export function destinationStopSeeds(destination: string): DestinationStopSeed[] {
-  if (isProvinceDestination(destination)) {
-    const provinceStops = provinceRouteStops(destination);
+  const rejectRegionName = (stops: DestinationStopSeed[]) =>
+    stops.filter((stop) => !isAdministrativeRegionName(stop.name));
+  if (isProvinceDestination(destination) || isAdministrativeRegionName(destination)) {
+    const provinceStops = rejectRegionName(provinceRouteStops(destination));
     if (provinceStops.length) return provinceStops;
+    const nearbyCities = rejectRegionName(nearbyCityRouteStops(destination));
+    if (nearbyCities.length) return nearbyCities;
   }
-  const cityStops = cityRouteStops(destination);
+  const cityStops = rejectRegionName(cityRouteStops(destination));
   if (cityStops.length) return cityStops;
   const hub = routeHub(destination);
-  const nearby = nearbyProvinceStops(destination, hub, 6);
+  const nearby = rejectRegionName(nearbyProvinceStops(destination, hub, 6));
   if (nearby.length >= 2) return nearby;
+  if (isAdministrativeRegionName(destination)) {
+    const aroundHub = rejectRegionName(nearbyCityRouteStops(destination));
+    if (aroundHub.length) return aroundHub;
+  }
   const named = resolvePlaceCoordinates(destination, destination);
-  if (named) {
-    const aroundNamed = nearbyProvinceStops(destination, named, 6);
+  if (named && !isAdministrativeRegionName(destination)) {
+    const aroundNamed = rejectRegionName(nearbyProvinceStops(destination, named, 6));
     if (aroundNamed.length >= 2) return aroundNamed;
     return [{ name: destination.trim(), lat: named.lat, lng: named.lng, notes: `Kunjungan ke ${destination.trim()}.` }];
   }
+  const fallbackStops = rejectRegionName(nearbyCityRouteStops(destination));
+  if (fallbackStops.length) return fallbackStops;
   const fallback = seedCoords(destination.trim() || "Indonesia", destination.trim() || "Indonesia");
+  if (isAdministrativeRegionName(destination.trim())) {
+    return [];
+  }
   return [{ name: destination.trim() || "Destinasi", lat: fallback.lat, lng: fallback.lng, notes: "Rute awal. Sesuaikan titik di peta." }];
 }
 
@@ -420,8 +450,8 @@ export function buildDestinationItinerary(input: {
   const clusters = selectCompactStops(localPool.length ? localPool : pool, daysTotal, hub, {
     excludeNames: input.excludeNames,
     variant,
-    minPerDay: cityTrip ? (daysTotal === 1 ? 7 : 5) : 4,
-    maxPerDay: cityTrip ? (daysTotal === 1 ? 8 : 7) : 6,
+    minPerDay: cityTrip ? (daysTotal === 1 ? 6 : daysTotal === 2 ? 5 : daysTotal >= 4 ? 2 : 3) : 3,
+    maxPerDay: cityTrip ? (daysTotal === 1 ? 8 : daysTotal === 2 ? 6 : daysTotal >= 4 ? 4 : 5) : 5,
     maxRadiusKm,
   });
   const days = clusters.length
@@ -477,8 +507,8 @@ export function ensureMultiStopDays(
   options?: { minPerDay?: number; maxPerDay?: number },
 ): EditableItineraryDay[] {
   const cityTrip = !isProvinceDestination(destination);
-  const minPerDay = options?.minPerDay ?? (cityTrip ? 7 : 5);
-  const maxPerDay = options?.maxPerDay ?? (cityTrip ? 8 : 7);
+  const minPerDay = options?.minPerDay ?? (cityTrip ? 4 : 4);
+  const maxPerDay = options?.maxPerDay ?? (cityTrip ? 6 : 6);
   if (!days.length) return days;
   const maxKm = cityTrip ? 22 : 40;
   const pool = destinationCandidatePool(destination, { minStops: days.length * maxPerDay });
@@ -490,12 +520,11 @@ export function ensureMultiStopDays(
     const hub = hasValidCoords(hubStop?.place?.latitude, hubStop?.place?.longitude)
       ? { lat: hubStop!.place!.latitude, lng: hubStop!.place!.longitude }
       : routeHub(destination);
-    const usedToday = new Set(day.stops.map(stopLabel).filter(Boolean));
     const need = maxPerDay - day.stops.length;
     let extras = pickNearbySeeds(pool, hub, maxKm, usedGlobally, need);
     if (extras.length + day.stops.length < minPerDay) {
       extras = extras.concat(
-        pickNearbySeeds(pool, hub, maxKm, usedToday, need - extras.length).filter(
+        pickNearbySeeds(pool, hub, maxKm * 1.6, usedGlobally, need - extras.length).filter(
           (seed) => !extras.some((item) => item.name === seed.name),
         ),
       );

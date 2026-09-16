@@ -23,6 +23,7 @@ import {
   withGlobalStopNumbers,
   addDaysToIso,
 } from "@/lib/template-itinerary";
+import { clearDayRoadRoutes, replaceItineraryRoads } from "@/lib/route-travel";
 
 type Tab = "itinerary" | "checklist";
 type Notice = { tone: "success" | "error" | "info"; text: string } | null;
@@ -117,7 +118,10 @@ export function ItineraryEditorExperience({ tripId }: { tripId: string }) {
   const updateStop = (dayId: string, stopId: string, patch: Partial<EditableItineraryStop>) => {
     const next = days.map((day) => day.id === dayId ? { ...day, stops: day.stops.map((stop) => stop.id === stopId ? { ...stop, ...patch } : stop) } : day);
     if (patch.place) {
-      changeDays(packItinerarySchedule(next));
+      const cleared = next.map((day) => (day.id === dayId ? clearDayRoadRoutes(day) : day));
+      const packed = packItinerarySchedule(cleared);
+      changeDays(packed);
+      void replaceItineraryRoads(packed, (routed) => changeDays(packItinerarySchedule(routed)));
       return;
     }
     setDays(next);
@@ -196,12 +200,12 @@ export function ItineraryEditorExperience({ tripId }: { tripId: string }) {
     if (!snapshot || generating) return;
     setGenerating(true);
     setJob({ id: crypto.randomUUID(), status: "PROCESSING", attemptCount: 1, resultVersionId: null, errorCode: null });
-    setNotice({
-      tone: "info",
-      text: regenerateMode === "cheaper"
-        ? "Groq sedang menyusun rute hemat. Draft aktif tetap aman."
-        : "AI sedang mengoptimalkan rute. Draft aktif tetap aman.",
-    });
+      setNotice({
+        tone: "info",
+        text: regenerateMode === "cheaper"
+          ? "Tunggu sebentar, Dolan sedang menyusun rute yang lebih hemat. Draft-mu aman."
+          : "Tunggu sebentar, Dolan sedang merapikan rute. Draft-mu aman.",
+      });
     try {
       const next = await generateAlternative(snapshot, days, budgetItems, regenerateMode);
       setSnapshot(next.snapshot);
@@ -209,12 +213,12 @@ export function ItineraryEditorExperience({ tripId }: { tripId: string }) {
       setJob(next.job
         ? { id: next.job.id, status: next.job.status, attemptCount: next.job.attemptCount, resultVersionId: next.job.resultVersionId, errorCode: next.job.errorCode }
         : { id: crypto.randomUUID(), status: "SUCCEEDED", attemptCount: 1, resultVersionId: next.snapshot.versions[0]?.id ?? null, errorCode: null });
-      setNotice({ tone: "success", text: `Versi AI ${next.snapshot.versions[0]?.versionNumber ?? ""} siap ditinjau. Klik Jadikan aktif jika kamu menyukainya.` });
+      setNotice({ tone: "success", text: `Dolan sudah siapin versi baru. Cek dulu, lalu jadikan aktif kalau kamu suka.` });
     } catch (error) {
       setJob({ id: crypto.randomUUID(), status: "FAILED", attemptCount: 1, resultVersionId: null, errorCode: "GENERATION_FAILED" });
       setNotice({
         tone: "error",
-        text: error instanceof Error ? error.message : "Generate gagal. Draft dan versi aktif tidak berubah; silakan coba lagi.",
+        text: error instanceof Error ? error.message : "Dolan belum bisa menyusun itinerary. Draft-mu tetap aman, coba lagi ya.",
       });
     } finally {
       setGenerating(false);
@@ -330,12 +334,12 @@ export function ItineraryEditorExperience({ tripId }: { tripId: string }) {
             ))}
           </select>
           <div className="flex flex-wrap items-center gap-2">
-            <select aria-label="Mode regenerate AI" value={regenerateMode} onChange={(event) => setRegenerateMode(event.target.value as typeof regenerateMode)} className="min-h-11 rounded-full border border-outline-variant bg-white px-4 type-label outline-none focus:border-primary">
-              <option value="balanced">Regenerate biasa</option>
+            <select aria-label="Cara Dolan menyusun ulang" value={regenerateMode} onChange={(event) => setRegenerateMode(event.target.value as typeof regenerateMode)} className="min-h-11 rounded-full border border-outline-variant bg-white px-4 type-label outline-none focus:border-primary">
+              <option value="balanced">Susun ulang biasa</option>
               <option value="cheaper">Alternatif hemat</option>
               <option value="alternative">Rute alternatif</option>
             </select>
-            <button type="button" onClick={() => void generate()} disabled={generating} className="btn-primary"><Icon name="rocket_launch" /> {generating ? "Mengoptimalkan…" : "Optimalkan dengan AI"}</button>
+            <button type="button" onClick={() => void generate()} disabled={generating} className="btn-primary"><Icon name="rocket_launch" /> {generating ? "Tunggu sebentar…" : "Minta Dolan susun ulang"}</button>
           </div>
           <SaveOfflineItineraryButton
             id={tripId}
@@ -348,7 +352,7 @@ export function ItineraryEditorExperience({ tripId }: { tripId: string }) {
       </header>
 
       {notice && <div role="status" className={`mb-4 rounded-2xl border px-4 py-3 type-label ${notice.tone === "error" ? "border-error/30 bg-error-container text-on-error-container" : notice.tone === "success" ? "border-success/30 bg-emerald-50 text-emerald-800" : "border-primary/20 bg-primary-fixed text-on-primary-fixed"}`}>{notice.text}{generatedVersionId && <><button type="button" className="ml-3 underline" onClick={() => chooseVersion(generatedVersionId)}>Tinjau versi</button><button type="button" className="ml-3 underline" onClick={() => chooseVersion(generatedVersionId, true)}>Jadikan aktif</button></>}</div>}
-      {job && <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-outline-variant bg-white px-4 py-3"><span className="type-label">Generation job <code className="text-xs text-on-surface-variant">{job.id}</code></span><span className={`chip ${job.status === "SUCCEEDED" ? "bg-emerald-50 text-emerald-800" : job.status === "FAILED" ? "bg-error-container text-error" : "bg-secondary-fixed text-secondary"}`}>{job.status === "PROCESSING" ? "Sedang diproses" : job.status === "SUCCEEDED" ? "Berhasil" : "Gagal"} · percobaan {job.attemptCount}</span></div>}
+      {job && <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-outline-variant bg-white px-4 py-3"><span className="type-label">Status penyusunan itinerary</span><span className={`chip ${job.status === "SUCCEEDED" ? "bg-emerald-50 text-emerald-800" : job.status === "FAILED" ? "bg-error-container text-error" : "bg-secondary-fixed text-secondary"}`}>{job.status === "PROCESSING" ? "Dolan sedang menyusun" : job.status === "SUCCEEDED" ? "Siap ditinjau" : "Belum berhasil"} · percobaan {job.attemptCount}</span></div>}
 
       <div className="mb-4 flex items-center gap-1 overflow-x-auto rounded-2xl bg-surface-container-low p-1.5">
         {([ ["itinerary", "Itinerary", "alt_route"], ["checklist", "Checklist", "check_circle"] ] as const).map(([key, label, icon]) => <button key={key} type="button" onClick={() => setTab(key)} className={`flex min-h-10 min-w-max flex-1 items-center justify-center gap-2 rounded-xl px-4 type-label transition ${tab === key ? "bg-white text-primary shadow-sm" : "text-on-surface-variant hover:bg-white/60"}`}><Icon name={icon} /> {label}</button>)}
@@ -383,10 +387,36 @@ export function ItineraryEditorExperience({ tripId }: { tripId: string }) {
                 setEditingStopId(id);
               }}
               onCloseEdit={() => setEditingStopId(null)}
-              onReorderStops={(dayId, fromIndex, toIndex) => changeDays(reorderStopsInDay(days, dayId, fromIndex, toIndex))}
+              onReorderStops={(dayId, fromIndex, toIndex) => {
+                const packed = packItinerarySchedule(
+                  reorderStopsInDay(days, dayId, fromIndex, toIndex).map((day) =>
+                    day.id === dayId ? clearDayRoadRoutes(day) : day,
+                  ),
+                );
+                changeDays(packed);
+                void replaceItineraryRoads(packed, (routed) => changeDays(packItinerarySchedule(routed)));
+              }}
               onUpdateStop={updateStop}
-              onAddStop={(dayId, place) => changeDays(appendVisitStop(days, dayId, { ...place, lock: true }))}
-              onRemoveStop={(dayId, stopId) => changeDays(packItinerarySchedule(days.map((day) => day.id === dayId ? { ...day, stops: day.stops.filter((stop) => stop.id !== stopId) } : day)))}
+              onAddStop={(dayId, place) => {
+                const packed = packItinerarySchedule(
+                  appendVisitStop(days, dayId, { ...place, lock: true }).map((day) =>
+                    day.id === dayId ? clearDayRoadRoutes(day) : day,
+                  ),
+                );
+                changeDays(packed);
+                void replaceItineraryRoads(packed, (routed) => changeDays(packItinerarySchedule(routed)));
+              }}
+              onRemoveStop={(dayId, stopId) => {
+                const packed = packItinerarySchedule(
+                  days.map((day) =>
+                    day.id === dayId
+                      ? clearDayRoadRoutes({ ...day, stops: day.stops.filter((stop) => stop.id !== stopId) })
+                      : day,
+                  ),
+                );
+                changeDays(packed);
+                void replaceItineraryRoads(packed, (routed) => changeDays(packItinerarySchedule(routed)));
+              }}
               onAddDay={addDay}
               onRegenerate={() => void generate()}
               mapFooter={

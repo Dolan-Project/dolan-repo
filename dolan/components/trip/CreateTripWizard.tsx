@@ -40,6 +40,7 @@ import { generateAlternative, generateInitialItinerary, saveItineraryVersion } f
 import { INITIAL_BUDGET_ITEMS, createBudgetSummary } from "@/features/itinerary/mock-data";
 import { coverMatchesDestination, fetchDestinationCover, hasCoverPhoto, toDestinationCover } from "@/lib/destination-cover";
 import { provinceCoverUrl } from "@/lib/province-cover";
+import { clearDayRoadRoutes, replaceItineraryRoads } from "@/lib/route-travel";
 import { PackingListField } from "@/components/trip/PackingListField";
 import { TemplateRoutePeek } from "@/components/trip/TemplateRoutePeek";
 
@@ -444,15 +445,15 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
           budgetBasis,
           transport,
           regenerateMode: "balanced",
-          minStopsPerDay: 7,
-          maxStopsPerDay: 8,
+          minStopsPerDay: 4,
+          maxStopsPerDay: 6,
         },
         fallbackDays,
         budgetItems: INITIAL_BUDGET_ITEMS,
         sourceLabel: "AI",
       }).catch(async (error) => {
         // Live Groq often fails on place verification / provider — keep wizard usable.
-        const message = error instanceof Error ? error.message : "Generate Groq gagal.";
+        const message = error instanceof Error ? error.message : "Dolan belum bisa menyusun itinerary.";
         return {
           snapshot: {
             tripId: createdTripId,
@@ -466,7 +467,7 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
               tripId: createdTripId,
               versionNumber: 1,
               source: "AI" as const,
-              summary: `Cadangan lokal untuk ${destinationCity} setelah Groq gagal.`,
+              summary: `Dolan pakai rute cadangan dulu untuk ${destinationCity}.`,
               assumptions: [message],
               days: fallbackDays,
               budget: createBudgetSummary(INITIAL_BUDGET_ITEMS),
@@ -519,24 +520,37 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
         previous?.place?.longitude !== patch.place.longitude ||
         Boolean(patch.customTitle && patch.customTitle !== (previous?.customTitle || previous?.place?.name));
       if (!placeChanged) return next;
-      const packed = packItinerarySchedule(next);
-      return visibility === "PUBLIC" ? applyPublicMeetingPoint(packed, true) : packed;
+      const cleared = next.map((day) => (day.id === dayId ? clearDayRoadRoutes(day) : day));
+      const packed = packItinerarySchedule(visibility === "PUBLIC" ? applyPublicMeetingPoint(cleared, true) : cleared);
+      void replaceItineraryRoads(packed, (routed) => {
+        setDays(packItinerarySchedule(visibility === "PUBLIC" ? applyPublicMeetingPoint(routed, true) : routed));
+      });
+      return packed;
     });
   }
 
-  function addStop(dayId: string, pick: { name: string; city: string; latitude?: number; longitude?: number }) {
+  function addStop(dayId: string, pick: { name: string; city: string; latitude?: number; longitude?: number; googlePlaceId?: string }) {
     setDays((current) => {
       const next = appendVisitStop(current, dayId, { ...pick, city: pick.city || destinationCity, lock: true });
-      return visibility === "PUBLIC" ? applyPublicMeetingPoint(next, true) : next;
+      const cleared = next.map((day) => (day.id === dayId ? clearDayRoadRoutes(day) : day));
+      const packed = packItinerarySchedule(visibility === "PUBLIC" ? applyPublicMeetingPoint(cleared, true) : cleared);
+      void replaceItineraryRoads(packed, (routed) => {
+        setDays(packItinerarySchedule(visibility === "PUBLIC" ? applyPublicMeetingPoint(routed, true) : routed));
+      });
+      return packed;
     });
   }
 
   function removeStop(dayId: string, stopId: string) {
     setDays((current) => {
-      const next = packItinerarySchedule(current.map((day) => (
+      const next = current.map((day) => (
         day.id === dayId ? { ...day, stops: day.stops.filter((stop) => stop.id !== stopId) } : day
-      )));
-      return visibility === "PUBLIC" ? applyPublicMeetingPoint(next, true) : next;
+      ));
+      const packed = packItinerarySchedule(visibility === "PUBLIC" ? applyPublicMeetingPoint(next.map((day) => (day.id === dayId ? clearDayRoadRoutes(day) : day)), true) : next.map((day) => (day.id === dayId ? clearDayRoadRoutes(day) : day)));
+      void replaceItineraryRoads(packed, (routed) => {
+        setDays(packItinerarySchedule(visibility === "PUBLIC" ? applyPublicMeetingPoint(routed, true) : routed));
+      });
+      return packed;
     });
   }
 
@@ -575,8 +589,8 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
           budgetAmount,
           budgetBasis,
           transport,
-          minStopsPerDay: 7,
-          maxStopsPerDay: 8,
+          minStopsPerDay: 4,
+          maxStopsPerDay: 6,
         },
       ).catch(() => ({
         snapshot: {
@@ -613,7 +627,7 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
       setFromGroq(!shouldUseMockApi());
       setRegenerateUsed((used) => used + 1);
     } catch (error) {
-      setFormError(error instanceof Error ? error.message : "Regenerate gagal.");
+      setFormError(error instanceof Error ? error.message : "Dolan belum bisa menyusun ulang. Coba lagi ya.");
     } finally {
       setGenerating(false);
     }
@@ -662,7 +676,7 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
       const items = budgetItemsFromPlan(packed, budgetPlan);
       const saved = await saveItineraryVersion(current, {
         baseVersionId: current.activeVersionId || "wizard-v1",
-        summary: path === "template" ? "Itinerary dari template, disesuaikan di wizard" : "Itinerary AI yang sudah disetujui sesuai budget",
+        summary: path === "template" ? "Itinerary dari template, disesuaikan di wizard" : "Itinerary dari Dolan yang sudah kamu setujui sesuai budget",
         days: toItinerarySaveDays(packed, startDate),
         budgetItems: items.length ? items : INITIAL_BUDGET_ITEMS,
       });
@@ -705,7 +719,7 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
     const items = budgetItemsFromPlan(packed, budgetPlan);
     await saveItineraryVersion(current, {
       baseVersionId: current.activeVersionId || "wizard-v1",
-      summary: path === "template" ? "Itinerary dari template, disesuaikan di wizard" : "Itinerary AI yang sudah disetujui sesuai budget",
+      summary: path === "template" ? "Itinerary dari template, disesuaikan di wizard" : "Itinerary dari Dolan yang sudah kamu setujui sesuai budget",
       days: toItinerarySaveDays(packed, startDate),
       budgetItems: items.length ? items : INITIAL_BUDGET_ITEMS,
     });
@@ -779,7 +793,7 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
       <p className="type-micro font-extrabold uppercase tracking-[0.18em] text-primary">Buat trip</p>
       <h1 className="type-title mt-2 text-on-surface">Rencana perjalanan, empat langkah</h1>
       <p className="type-body mt-2 max-w-2xl text-on-surface-variant">
-        Destinasi, jumlah orang, dan budget dulu. AI lalu menyusun rute sekaligus estimasi biaya per tempat.
+        Destinasi, jumlah orang, dan budget dulu. Nanti Dolan bantu susun rutenya, lengkap dengan perkiraan biayanya.
       </p>
 
       <WizardProgress step={step} />
@@ -806,7 +820,7 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
               <span className="grid h-11 w-11 place-items-center rounded-2xl bg-primary-fixed text-primary"><Icon name="alt_route" className="text-[22px]" /></span>
               <h2 className="type-subtitle mt-3 text-on-surface">Buat itinerary baru</h2>
               <p className="type-body mt-2 text-on-surface-variant">
-                Isi destinasi, jumlah orang, tanggal, dan budget. AI mengoptimalkan rute plus estimasi biaya.
+                Isi destinasi, jumlah orang, tanggal, dan budget. Dolan bantu susun rute plus perkiraan biayanya.
               </p>
             </button>
             <button
@@ -931,7 +945,7 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
                 }
               }}
               onSelectPlace={(place) => {
-                setDestinationCity(place.city || place.label);
+                setDestinationCity(place.label);
                 const cover = toDestinationCover({
                   googlePlaceId: place.id,
                   name: place.label,
@@ -951,8 +965,9 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
                   if (resolved && hasCoverPhoto(resolved)) setDestinationCover(resolved);
                 });
               }}
+              kind="destination"
               error={fieldErrors.destinationCity}
-              placeholder="Ketik destinasi, misal Jambi atau Lampung"
+              placeholder="Cari kota, provinsi, atau tempat wisata, misalnya Jawa Barat"
             />
             <div className="grid gap-4 md:grid-cols-2">
               <Field id="startDate" label="Tanggal mulai" error={fieldErrors.startDate}>
@@ -1028,7 +1043,7 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
               <PackingListField items={packingItems} onChange={setPackingItems} />
             </div>
           </div>
-          <Nav onBack={path === "template" ? undefined : () => setStep(1)} onNext={goFromStep2} nextLabel={path === "template" ? "Lihat rute + biaya" : "Generate itinerary"} />
+          <Nav onBack={path === "template" ? undefined : () => setStep(1)} onNext={goFromStep2} nextLabel={path === "template" ? "Lihat rute + biaya" : "Minta Dolan susun itinerary"} />
         </>
       ) : null}
 
@@ -1037,10 +1052,12 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
           {generating && days.length === 0 ? (
             <div className="card-surface p-8 text-center">
               <p className="type-subtitle text-on-surface">
-                {path === "template" ? "Menyiapkan rute template…" : "Groq sedang menyusun rekomendasi itinerary…"}
+                {path === "template"
+                  ? "Tunggu sebentar, Dolan sedang menyiapkan rute dari template…"
+                  : "Tunggu sebentar, Dolan sedang menyusun itinerary-mu…"}
               </p>
               <p className="type-body mt-2 text-on-surface-variant">
-                Destinasi, tanggal, jumlah orang, dan budget dikirim ke AI. Setelah siap, kamu bisa edit tempat atau urutan per hari.
+                Dolan merangkai destinasi, tanggal, dan budget-mu jadi rencana harian. Nanti kamu masih bisa ubah tempat atau urutannya.
               </p>
             </div>
           ) : (
@@ -1072,8 +1089,14 @@ export function CreateTripWizard({ templateId, initialPlaceId, initialDestinatio
               onCloseEdit={() => setEditingStopId(null)}
               onReorderStops={(dayId, fromIndex, toIndex) => {
                 setDays((current) => {
-                  const next = reorderStopsInDay(current, dayId, fromIndex, toIndex);
-                  return visibility === "PUBLIC" ? applyPublicMeetingPoint(next, true) : next;
+                  const next = reorderStopsInDay(current, dayId, fromIndex, toIndex).map((day) =>
+                    day.id === dayId ? clearDayRoadRoutes(day) : day,
+                  );
+                  const packed = packItinerarySchedule(visibility === "PUBLIC" ? applyPublicMeetingPoint(next, true) : next);
+                  void replaceItineraryRoads(packed, (routed) => {
+                    setDays(packItinerarySchedule(visibility === "PUBLIC" ? applyPublicMeetingPoint(routed, true) : routed));
+                  });
+                  return packed;
                 });
               }}
               onUpdateStop={updateStop}

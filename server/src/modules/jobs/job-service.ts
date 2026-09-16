@@ -12,6 +12,7 @@ import { buildBudgetSummary } from "./budget.ts";
 import { parseGeminiItinerary, type GenerationModel } from "./gemini-adapter.ts";
 import type { JobRecord, JobRepository } from "./job-repository.ts";
 import { applyLockedStops, type LockedStop } from "./locked-stops.ts";
+import { dropDuplicateStops, packGeneratedSchedule, refineGeneratedBudget } from "./itinerary-optimize.ts";
 import { assertRealPlaces } from "./place-guard.ts";
 import { applyRouteLegs, type LatLng, type RoutesClient } from "./routes-adapter.ts";
 
@@ -190,14 +191,21 @@ export class GenerationJobService {
     if (this.options.hydratePlaces) {
       itinerary = await this.options.hydratePlaces(itinerary, {
         destinationCity,
-        minStopsPerDay: Number(preferences?.minStopsPerDay ?? 2),
-        maxStopsPerDay: Number(preferences?.maxStopsPerDay ?? 4),
+        minStopsPerDay: Number(preferences?.minStopsPerDay ?? 4),
+        maxStopsPerDay: Number(preferences?.maxStopsPerDay ?? 6),
       });
     }
     assertRealPlaces(itinerary);
     await this.options.verifyPlaces?.(itinerary);
     const locked = (await this.options.loadLockedStops?.(claimed.selectedVersionId)) ?? [];
-    itinerary = applyLockedStops(itinerary, locked);
+    itinerary = dropDuplicateStops(applyLockedStops(itinerary, locked), true);
+    itinerary = {
+      ...itinerary,
+      days: itinerary.days.filter((day) => day.stops.length > 0),
+    };
+    if (!itinerary.days.length) {
+      throw new Error("INVALID_GENERATION");
+    }
     if (this.options.routes) {
       await this.options.consumeRoutes?.(claimed.requestedBy);
       const coords = (await this.options.resolveCoords?.(itinerary)) ?? itinerary.days.flatMap((day) =>
@@ -205,6 +213,8 @@ export class GenerationJobService {
       );
       itinerary = await applyRouteLegs(itinerary, coords, this.options.routes);
     }
+    itinerary = packGeneratedSchedule(itinerary);
+    itinerary = refineGeneratedBudget(itinerary, preferences);
 
     const budget = buildBudgetSummary(itinerary.budgetItems);
     const versionId = this.options.persistVersion

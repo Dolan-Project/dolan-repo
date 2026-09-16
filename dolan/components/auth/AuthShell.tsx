@@ -18,7 +18,7 @@ const SHOWCASE = {
       </>
     ),
     copy: "Masuk untuk lanjutkan rencana, diskusi trip, dan temukan teman seperjalanan di seluruh Indonesia.",
-    chips: ["Join gratis", "Profil terverifikasi", "Itinerary AI"],
+    chips: ["Join gratis", "Profil terverifikasi", "Itinerary dari Dolan"],
     sideHref: ROUTES.daftar,
     sideLabel: "Daftar",
   },
