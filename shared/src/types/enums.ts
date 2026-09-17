@@ -1,0 +1,16 @@
+export type UserRole = "USER" | "ADMIN";
+export type UserStatus = "ACTIVE" | "RESTRICTED" | "SUSPENDED";
+export type TripMemberRole = "HOST" | "PARTICIPANT";
+export type MembershipStatus = "ACTIVE" | "LEFT" | "REMOVED";
+export type JoinRequestStatus = "PENDING" | "ACCEPTED" | "REJECTED" | "WITHDRAWN";
+export type TripVisibility = "PRIVATE" | "PUBLIC";
+export type TripStatus = "DRAFT" | "OPEN" | "CLOSED" | "ONGOING" | "COMPLETED" | "CANCELLED";
+export type TemplateSource = "CURATED" | "USER_TRIP";
+export type TemplatePublicationStatus = "DRAFT" | "PUBLISHED" | "ARCHIVED";
+export type GenerationJobStatus = "QUEUED" | "PROCESSING" | "SUCCEEDED" | "FAILED";
+export type GenerationJobType = "RECOMMEND_DESTINATIONS" | "GENERATE_ITINERARY" | "REGENERATE_ITINERARY";
+export type ItinerarySource = "MANUAL" | "AI" | "TEMPLATE" | "REGENERATED";
+export type BudgetBasis = "PER_PERSON" | "GROUP";
+export type PlaceSort = "relevance" | "popular" | "nearest";
+export type TripSort = "popular" | "nearest" | "soonest" | "recent";
+export type TemplateSort = "recent" | "popular";

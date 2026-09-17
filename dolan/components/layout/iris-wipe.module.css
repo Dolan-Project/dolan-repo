@@ -1,0 +1,6 @@
+.iris{position:fixed;inset:0;z-index:9998;pointer-events:none;background:radial-gradient(circle at 50% 50%,rgba(0,0,0,.78) 0%,rgba(0,0,0,.86) 48%,rgba(0,0,0,.9) 100%);opacity:0;will-change:opacity}
+.iris.in{animation:irisIn .75s ease-in-out forwards;pointer-events:auto}
+.iris.out{animation:irisOut .8s ease-in-out forwards;pointer-events:none}
+@keyframes irisIn{0%{opacity:0}100%{opacity:1}}
+@keyframes irisOut{0%{opacity:1}100%{opacity:0}}
+@media(prefers-reduced-motion:reduce){.iris.in,.iris.out{animation:none}.iris.in{opacity:1}.iris.out{opacity:0}}
