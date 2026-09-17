@@ -34,6 +34,7 @@ export function ReviewForm({ username, tripId: preferredTripId = null }: ReviewF
   const [message, setMessage] = useState<string | null>(null);
   const [trip, setTrip] = useState<TripForFeedback | null>(null);
   const [loadingTrip, setLoadingTrip] = useState(true);
+  const [saved, setSaved] = useState(false);
   const [items, setItems] = useState<
     Array<{ id: string; communication: number; attitude: number; comment: string | null }>
   >([]);
@@ -70,6 +71,7 @@ export function ReviewForm({ username, tripId: preferredTripId = null }: ReviewF
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
+    if (saved) return;
     setMessage(null);
     if (!trip) {
       setMessage("Belum ada trip selesai bersama pengguna ini.");
@@ -95,6 +97,7 @@ export function ReviewForm({ username, tripId: preferredTripId = null }: ReviewF
       return;
     }
     setMessage("Ulasan tersimpan.");
+    setSaved(true);
     await loadReviews();
   }
 
@@ -152,10 +155,21 @@ export function ReviewForm({ username, tripId: preferredTripId = null }: ReviewF
             placeholder="Ceritakan komunikasi dan sikap di trip ini"
           />
         </label>
-        <button type="submit" className="btn-primary !min-h-11" disabled={!trip}>
-          Kirim ulasan trip selesai
-        </button>
-        {message ? <p className="type-body text-on-surface-variant">{message}</p> : null}
+        {saved ? (
+          <>
+            {message ? <p className="type-body text-on-surface-variant">{message}</p> : null}
+            <Link href={ROUTES.tripSaya} className="btn-primary !min-h-11 inline-flex items-center justify-center">
+              OK
+            </Link>
+          </>
+        ) : (
+          <>
+            <button type="submit" className="btn-primary !min-h-11" disabled={!trip}>
+              Kirim ulasan trip selesai
+            </button>
+            {message ? <p className="type-body text-on-surface-variant">{message}</p> : null}
+          </>
+        )}
       </form>
       <ul className="mt-5 grid gap-2">
         {items.map((row) => (

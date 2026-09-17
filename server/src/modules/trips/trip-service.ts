@@ -364,6 +364,27 @@ export class TripService {
     };
   }
 
+  async getAttendance(actor: SessionActor, tripId: string) {
+    const user = requireUser(actor);
+    const trip = await this.store.getTrip(tripId);
+    if (!trip) throw hiddenTrip();
+    if (trip.status !== "COMPLETED") {
+      throw badRequest("NOT_ELIGIBLE", "Attendance can only be confirmed on a completed trip");
+    }
+    const members = await this.store.listMembers(tripId);
+    const member = members.find((row) => row.userId === user.id && row.membershipStatus === "ACTIVE");
+    if (!member) {
+      throw forbidden("NOT_ELIGIBLE", "Only trip participants can view attendance");
+    }
+    return {
+      tripId,
+      confirmed: member.attendanceConfirmed,
+      disputed: member.attendanceDisputed,
+      hostAttendance: member.hostAttendance,
+      selfAttendance: member.selfAttendance,
+    };
+  }
+
   async reviewEligibility(tripId: string, reviewerId: string, revieweeId: string) {
     const trip = await this.store.getTrip(tripId);
     if (!trip || trip.status !== "COMPLETED") return { allowed: false as const };

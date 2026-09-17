@@ -5,6 +5,7 @@ import {
   handleAttemptJoinRequest,
   handleBlockRequest,
   handleConfirmAttendanceRequest,
+  handleGetAttendanceRequest,
   handleCreateReportRequest,
   handleCreateReviewRequest,
   handleFollowRequest,
@@ -225,6 +226,52 @@ describe("attendance", () => {
     const body = await json(response);
     expect(body.success).toBe(true);
     expect(body.data?.confirmed).toBe(true);
+  });
+
+  it("rejects attendance status without a session or on an unfinished trip", async () => {
+    const anonymous = await json(
+      await handleGetAttendanceRequest(
+        new Request("http://localhost/api/v1/trips/trip_completed/attendance", { method: "GET" }),
+        "trip_completed",
+      ),
+    );
+    expect(anonymous.error?.code).toBe("UNAUTHORIZED");
+
+    const open = await json(
+      await handleGetAttendanceRequest(
+        authed("http://localhost/api/v1/trips/trip_open/attendance", { method: "GET" }),
+        "trip_open",
+      ),
+    );
+    expect(open.error?.code).toBe("NOT_ELIGIBLE");
+  });
+
+  it("returns the saved confirmation on a later get", async () => {
+    const before = await json(
+      await handleGetAttendanceRequest(
+        authed("http://localhost/api/v1/trips/trip_completed/attendance", { method: "GET" }),
+        "trip_completed",
+      ),
+    );
+    expect(before.success).toBe(true);
+    expect(before.data?.confirmed).toBe(false);
+
+    await handleConfirmAttendanceRequest(
+      authed("http://localhost/api/v1/trips/trip_completed/attendance", {
+        body: { confirmed: true },
+      }),
+      "trip_completed",
+    );
+
+    const after = await json(
+      await handleGetAttendanceRequest(
+        authed("http://localhost/api/v1/trips/trip_completed/attendance", { method: "GET" }),
+        "trip_completed",
+      ),
+    );
+    expect(after.success).toBe(true);
+    expect(after.data?.confirmed).toBe(true);
+    expect(after.data?.selfAttendance).toBe("PRESENT");
   });
 });
 

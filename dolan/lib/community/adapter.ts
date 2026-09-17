@@ -3,6 +3,7 @@ import {
   handleAttemptJoinRequest,
   handleBlockRequest,
   handleConfirmAttendanceRequest,
+  handleGetAttendanceRequest,
   handleCreateReportRequest,
   handleCreateReviewRequest,
   handleFollowRequest,
@@ -75,12 +76,20 @@ export const communityRouteHandlers = {
       (req) => handleGetHistoryRequest(req, username),
       `/api/v1/users/${encodeURIComponent(username)}/history`,
     ),
-  attendance: (request: Request, tripId: string) =>
-    withMockOrUnavailable(
-      request,
-      (req) => handleConfirmAttendanceRequest(req, tripId),
-      `/api/v1/trips/${encodeURIComponent(tripId)}/attendance`,
-    ),
+  attendance: {
+    GET: (request: Request, tripId: string) =>
+      withMockOrUnavailable(
+        request,
+        (req) => handleGetAttendanceRequest(req, tripId),
+        `/api/v1/trips/${encodeURIComponent(tripId)}/attendance`,
+      ),
+    POST: (request: Request, tripId: string) =>
+      withMockOrUnavailable(
+        request,
+        (req) => handleConfirmAttendanceRequest(req, tripId),
+        `/api/v1/trips/${encodeURIComponent(tripId)}/attendance`,
+      ),
+  },
   join: (request: Request, tripId: string) =>
     withMockOrUnavailable(
       request,

@@ -28,6 +28,7 @@ export function AttendanceConfirm({
   const [disputed, setDisputed] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const [statusLoaded, setStatusLoaded] = useState(false);
   const [markPresent, setMarkPresent] = useState(true);
   const [peers, setPeers] = useState<ReviewPeer[]>(
     reviewUsername ? [{ username: reviewUsername, label: reviewUsername }] : [],
@@ -36,10 +37,25 @@ export function AttendanceConfirm({
   useEffect(() => {
     const controller = new AbortController();
     void (async () => {
-      const [tripResponse, meResponse] = await Promise.all([
+      const [tripResponse, meResponse, attendanceResponse] = await Promise.all([
         fetch(`/api/v1/trips/${encodeURIComponent(tripId)}`, { credentials: "include", signal: controller.signal }),
         fetch("/api/v1/users/me", { credentials: "include", signal: controller.signal }),
+        fetch(`/api/v1/trips/${encodeURIComponent(tripId)}/attendance`, {
+          credentials: "include",
+          signal: controller.signal,
+        }),
       ]);
+      if (attendanceResponse.ok) {
+        const attendanceJson = (await attendanceResponse.json()) as {
+          success?: boolean;
+          data?: { confirmed?: boolean; disputed?: boolean; selfAttendance?: string };
+        };
+        if (attendanceJson.success) {
+          const selfAttendance = attendanceJson.data?.selfAttendance ?? "UNCONFIRMED";
+          setConfirmed(Boolean(attendanceJson.data?.confirmed) || selfAttendance !== "UNCONFIRMED");
+          setDisputed(Boolean(attendanceJson.data?.disputed) || selfAttendance === "DISPUTED");
+        }
+      }
       if (!tripResponse.ok) return;
       const tripJson = (await tripResponse.json()) as {
         success?: boolean;
@@ -55,7 +71,11 @@ export function AttendanceConfirm({
       if (others.length > 0) {
         setPeers(others.map((member) => ({ username: member.username, label: member.displayName || member.username })));
       }
-    })().catch(() => undefined);
+    })()
+      .catch(() => undefined)
+      .finally(() => {
+        if (!controller.signal.aborted) setStatusLoaded(true);
+      });
     return () => controller.abort();
   }, [tripId]);
 
@@ -78,7 +98,7 @@ export function AttendanceConfirm({
       setMessage(json.error?.message ?? "Konfirmasi gagal");
       return;
     }
-    setConfirmed(Boolean(json.data?.confirmed));
+    setConfirmed(Boolean(json.data?.confirmed) || (!body.targetUserId && body.confirmed));
     setDisputed(Boolean(json.data?.disputed));
     setMessage(
       json.data?.disputed
@@ -100,7 +120,7 @@ export function AttendanceConfirm({
       <button
         type="button"
         className="btn-primary mt-3 !min-h-11"
-        disabled={pending || confirmed}
+        disabled={pending || confirmed || !statusLoaded}
         onClick={() => void submit({ confirmed: true })}
       >
         {confirmed ? "Sudah konfirmasi diri" : pending ? "Memproses…" : "Konfirmasi kehadiran saya"}

@@ -110,6 +110,18 @@ export function createSocialRouter(authService: AuthService, social: SocialQuery
     },
   );
 
+  router.get(
+    "/trips/:tripId/attendance",
+    requireLogin,
+    async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        res.json(apiSuccess(await service.getAttendance(req.actor!, param(req.params.tripId))));
+      } catch (error) {
+        next(error);
+      }
+    },
+  );
+
   router.post(
     "/trips/:tripId/attendance",
     requireLogin,

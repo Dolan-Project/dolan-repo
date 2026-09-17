@@ -227,6 +227,32 @@ export async function handleGetHistoryRequest(request: Request, username: string
   return jsonResult({ success: true, data: { items } }, 200);
 }
 
+export async function handleGetAttendanceRequest(request: Request, tripId: string) {
+  const { actor, error } = requireActor(request);
+  if (!actor) return error;
+  const trip = communityStore().trips.find((row) => row.id === tripId);
+  if (!trip || trip.status !== "COMPLETED") {
+    return fail("NOT_ELIGIBLE", "Konfirmasi kehadiran hanya untuk trip selesai");
+  }
+  if (!completedTogether(tripId, actor.user.id, trip.hostId) && actor.user.id !== trip.hostId) {
+    return fail("NOT_ELIGIBLE", "Hanya peserta trip yang dapat konfirmasi kehadiran");
+  }
+  const existing = communityStore().attendance.find((row) => row.tripId === tripId && row.userId === actor.user.id);
+  return jsonResult(
+    {
+      success: true,
+      data: {
+        tripId,
+        confirmed: Boolean(existing?.confirmed),
+        disputed: false,
+        selfAttendance: existing?.confirmed ? "PRESENT" : "UNCONFIRMED",
+        hostAttendance: "UNCONFIRMED",
+      },
+    },
+    200,
+  );
+}
+
 export async function handleConfirmAttendanceRequest(request: Request, tripId: string) {
   const { actor, error } = requireActor(request);
   if (!actor) return error;

@@ -32,6 +32,10 @@ export class SocialService {
     });
   }
 
+  async getAttendance(actor: SessionActor, tripId: string) {
+    return this.trips.getAttendance(actor, tripId);
+  }
+
   async createReview(actor: SessionActor, username: string, body: unknown) {
     const user = requireUser(actor);
     const target = await this.auth.resolveUser(username);

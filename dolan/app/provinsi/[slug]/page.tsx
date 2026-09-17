@@ -64,7 +64,6 @@ export default async function ProvincePage({ params }: { params: Promise<{ slug:
   const catalog = INDONESIA_PROVINCES.find((item) => item.slug === slug);
   const atlas = PROVINCE_ATLAS.find((item) => item.slug === slug);
   if (!live && !catalog && !atlas) notFound();
-  const usingCatalogFallback = !live && Boolean(catalog);
 
   const name = live?.name ?? catalog?.name ?? atlas!.name;
   const capital = live?.capital ?? catalog?.capital ?? atlas!.capital;
@@ -127,11 +126,6 @@ export default async function ProvincePage({ params }: { params: Promise<{ slug:
   return (
     <AppShell>
       <main className="min-h-screen bg-surface px-margin pb-20 pt-8 md:px-margin-desktop md:pt-12">
-        {usingCatalogFallback ? (
-          <p className="mx-auto mb-4 max-w-7xl rounded-xl bg-secondary-container px-4 py-3 text-sm text-on-secondary-container" role="status">
-            Data live API tidak tersedia. Menampilkan katalog lokal sebagai cadangan.
-          </p>
-        ) : null}
         <section className="relative mx-auto max-w-7xl overflow-hidden rounded-[2rem] text-white shadow-xl">
           {cover ? (
             // eslint-disable-next-line @next/next/no-img-element
