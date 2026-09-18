@@ -347,7 +347,7 @@ describe("create trip wizard helpers", () => {
           { id: "s4", sequence: 2, place: null, customTitle: "GWK", activityType: "VISIT", startTime: "10:00", durationMinutes: 60, travelDurationMinutes: 0, notes: null, isLocked: false },
         ],
       },
-    ], "Bali");
+    ]);
     expect(days[0].stops.map((stop) => stop.sequence)).toEqual([1, 2]);
     expect(days[1].stops.map((stop) => stop.sequence)).toEqual([3, 4]);
     const markers = itineraryMapMarkers(days, null, "Bali");

@@ -33,6 +33,7 @@ describe("trip mocks", () => {
       title: "Trip milik saya",
       description: "",
       origin: "Jakarta",
+      meetingPoint: "Stasiun Bandung",
       destinationCity: "Bandung",
       startDate: "2026-11-01",
       endDate: "2026-11-03",

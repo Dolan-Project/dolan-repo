@@ -44,7 +44,7 @@ const BY_SLUG: Record<string, string> = {
   "papua-pegunungan": WM("Dani people traditional house near Wamena, Papua, Indonesia 01.jpg"),
 };
 
-export function provinceCoverUrl(province: Pick<CuratedProvince, "slug" | "name" | "heroQuery">) {
+export function provinceCoverUrl(province: Pick<CuratedProvince, "slug" | "name"> & { heroQuery?: string }) {
   if (BY_SLUG[province.slug]) return BY_SLUG[province.slug]!;
   const tag = encodeURIComponent((province.heroQuery || `${province.name}, Indonesia`).split(",")[0]!.trim());
   return `https://loremflickr.com/1400/800/${tag},indonesia,travel`;

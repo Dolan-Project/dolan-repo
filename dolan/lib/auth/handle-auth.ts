@@ -106,9 +106,12 @@ type LocalAuthPayload = {
 
 async function parseAuthPayload(response: Response): Promise<LocalAuthPayload | null> {
   try {
-    const json = (await response.json()) as LocalAuthPayload & { success?: boolean };
-    if (!json || json.success === false || !json.data) return null;
-    return json;
+    const json = (await response.json()) as {
+      success?: boolean;
+      data?: LocalAuthPayload["data"];
+    };
+    if (!json?.data || json.success === false) return null;
+    return { success: true, data: json.data };
   } catch {
     return null;
   }

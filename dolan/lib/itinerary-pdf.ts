@@ -72,7 +72,9 @@ export function renderItineraryPdfBytes(title: string, lines: string[]): Uint8Ar
 
 export function itineraryPdfResponse(title: string, lines: string[]) {
   const bytes = renderItineraryPdfBytes(title, lines);
-  return new Response(bytes, {
+  const payload = new ArrayBuffer(bytes.byteLength);
+  new Uint8Array(payload).set(bytes);
+  return new Response(payload, {
     status: 200,
     headers: {
       "content-type": "application/pdf",

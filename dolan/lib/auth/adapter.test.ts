@@ -61,8 +61,8 @@ describe("tripRouteHandlers live proxy", () => {
       }),
     );
 
-    const tripCall = fetchMock.mock.calls.find(
-      ([url]) => url === "http://localhost:4000/api/v1/trips",
+    const tripCall = (fetchMock.mock.calls as unknown as Array<[unknown, RequestInit]>).find(
+      (call) => call[0] === "http://localhost:4000/api/v1/trips",
     );
     expect(tripCall).toBeTruthy();
     const [url, init] = tripCall as unknown as [string, RequestInit];
