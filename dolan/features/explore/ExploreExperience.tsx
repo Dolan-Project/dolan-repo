@@ -66,7 +66,7 @@ export function ExploreExperience() {
   const [tab, setTab] = useState<ExploreTab>(urlTab ?? "wisata");
   const [draftQuery, setDraftQuery] = useState(urlQuery);
   const [query, setQuery] = useState(initialCategory && initialCategory === urlQuery.toLowerCase() ? "" : urlQuery);
-  const [category, setCategory] = useState(initialCategory);
+  const [category, setCategory] = useState<string>(initialCategory);
   const [dateFrom, setDateFrom] = useState("");
   const [sort, setSort] = useState<ExploreSort>(tabSort(urlTab ?? "wisata"));
   const [result, setResult] = useState<ExplorePage | null>(null);
